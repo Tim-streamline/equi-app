@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="nl">
+<head>
+<meta charset="utf-8" />
+<title>Spacing scale</title>
+<link rel="stylesheet" href="../colors_and_type.css" />
+<style>
+  body { margin: 0; padding: 22px; background: var(--canvas); }
+  .row { display: flex; align-items: center; gap: 14px; height: 22px; }
+  .row + .row { margin-top: 8px; }
+  .label { font-family: var(--font-sans); font-size: 11px; color: var(--ink-70); letter-spacing: 0.14em; text-transform: uppercase; font-weight: 600; width: 70px; flex-shrink: 0; }
+  .bar { background: var(--mint-300); height: 16px; border-radius: 4px; }
+  .px { font-family: var(--font-sans); font-size: 11px; color: var(--ink-50); font-feature-settings: 'tnum'; }
+</style>
+</head>
+<body>
+  <div class="row"><span class="label">space-1</span><div class="bar" style="width:4px"></div><span class="px">4px</span></div>
+  <div class="row"><span class="label">space-2</span><div class="bar" style="width:8px"></div><span class="px">8px</span></div>
+  <div class="row"><span class="label">space-3</span><div class="bar" style="width:12px"></div><span class="px">12px</span></div>
+  <div class="row"><span class="label">space-4</span><div class="bar" style="width:16px"></div><span class="px">16px</span></div>
+  <div class="row"><span class="label">space-5</span><div class="bar" style="width:24px"></div><span class="px">24px</span></div>
+  <div class="row"><span class="label">space-6</span><div class="bar" style="width:32px"></div><span class="px">32px</span></div>
+  <div class="row"><span class="label">space-7</span><div class="bar" style="width:48px"></div><span class="px">48px</span></div>
+  <div class="row"><span class="label">space-8</span><div class="bar" style="width:64px"></div><span class="px">64px</span></div>
+  <div class="row"><span class="label">space-9</span><div class="bar" style="width:96px"></div><span class="px">96px</span></div>
+  <div class="row"><span class="label">space-10</span><div class="bar" style="width:128px"></div><span class="px">128px</span></div>
+</body>
+</html>

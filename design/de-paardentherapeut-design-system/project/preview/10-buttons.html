@@ -1,0 +1,18 @@
+<!doctype html>
+<html lang="nl">
+<head>
+<meta charset="utf-8" />
+<title>Buttons</title>
+<link rel="stylesheet" href="../colors_and_type.css" />
+<style>
+  body { margin: 0; padding: 28px; background: var(--canvas); display: grid; grid-template-columns: 1fr 1fr; gap: 14px 18px; align-items: center; }
+  .label { font-size: 11px; color: var(--ink-50); letter-spacing: 0.14em; text-transform: uppercase; font-weight: 600; }
+</style>
+</head>
+<body>
+  <span class="label">Primary</span>      <div><button class="btn btn--primary">Plan een gratis intake →</button></div>
+  <span class="label">Deep</span>         <div><button class="btn btn--deep">Ik meld me aan</button></div>
+  <span class="label">Ghost</span>        <div><button class="btn btn--ghost">Lees meer »</button></div>
+  <span class="label">Disabled</span>     <div><button class="btn btn--primary" disabled style="opacity:0.4;cursor:not-allowed">Niet beschikbaar</button></div>
+</body>
+</html>

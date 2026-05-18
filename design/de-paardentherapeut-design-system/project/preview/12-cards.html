@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="nl">
+<head>
+<meta charset="utf-8" />
+<title>Card patterns</title>
+<link rel="stylesheet" href="../colors_and_type.css" />
+<style>
+  body { margin: 0; padding: 22px; background: var(--canvas); display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
+  .card { background: white; border-radius: 24px; padding: 22px; box-shadow: var(--shadow-sm); border: 1px solid var(--ink-08); display: flex; flex-direction: column; gap: 10px; }
+  .card .eyebrow { color: var(--mint-700); }
+  .card h4 { color: var(--blue-green); }
+  .card .small { color: var(--ink-70); }
+  .card--deep { background: var(--bg-green-700); color: var(--canvas); border: 0; }
+  .card--deep h4, .card--deep .eyebrow, .card--deep .small { color: var(--canvas); }
+  .card--deep .eyebrow { color: var(--mint-200); }
+  .icon-circle { width: 40px; height: 40px; border-radius: 999px; background: var(--mint-50); display: grid; place-items: center; }
+  .card--deep .icon-circle { background: rgba(255,255,255,0.12); }
+</style>
+</head>
+<body>
+  <div class="card">
+    <div class="icon-circle">🌿</div>
+    <span class="eyebrow">Cursus</span>
+    <h4>Gezond Paard Programma</h4>
+    <p class="small">Voor passievolle eigenaren die op natuurlijke wijze willen ondersteunen.</p>
+  </div>
+  <div class="card card--deep">
+    <span class="eyebrow">Behandeling</span>
+    <h4>1-op-1 met Shelley</h4>
+    <p class="small">Holistische behandeling op locatie, ≤30 min vanaf Rotterdam.</p>
+  </div>
+</body>
+</html>

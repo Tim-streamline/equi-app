@@ -1,0 +1,22 @@
+<!doctype html>
+<html lang="nl">
+<head>
+<meta charset="utf-8" />
+<title>Radii</title>
+<link rel="stylesheet" href="../colors_and_type.css" />
+<style>
+  body { margin: 0; padding: 22px; background: var(--canvas); display: grid; grid-template-columns: repeat(6, 1fr); gap: 12px; }
+  .b { aspect-ratio: 1 / 1; background: var(--mint-100); border: 1px solid var(--mint-300); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; }
+  .name { font-family: var(--font-sans); font-size: 11px; font-weight: 600; color: var(--bg-green-800); letter-spacing: 0.06em; text-transform: uppercase; }
+  .px { font-family: var(--font-sans); font-size: 10px; color: var(--ink-50); font-feature-settings: 'tnum'; }
+</style>
+</head>
+<body>
+  <div class="b" style="border-radius:4px"><span class="name">xs</span><span class="px">4px</span></div>
+  <div class="b" style="border-radius:8px"><span class="name">sm</span><span class="px">8px</span></div>
+  <div class="b" style="border-radius:12px"><span class="name">md</span><span class="px">12px</span></div>
+  <div class="b" style="border-radius:16px"><span class="name">lg</span><span class="px">16px</span></div>
+  <div class="b" style="border-radius:24px"><span class="name">xl</span><span class="px">24px</span></div>
+  <div class="b" style="border-radius:9999px"><span class="name">pill</span><span class="px">9999</span></div>
+</body>
+</html>

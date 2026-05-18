@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="nl">
+<head>
+<meta charset="utf-8" />
+<title>Mint ramp</title>
+<link rel="stylesheet" href="../colors_and_type.css" />
+<style>
+  body { margin: 0; padding: 18px; background: var(--canvas); }
+  .row { display: grid; grid-template-columns: repeat(10, 1fr); gap: 6px; }
+  .step { aspect-ratio: 1 / 1.05; border-radius: 12px; padding: 8px; display: flex; flex-direction: column; justify-content: space-between; font-family: var(--font-sans); font-size: 10px; font-weight: 600; }
+  .step .n { letter-spacing: 0.06em; opacity: 0.85; }
+  .step .h { font-feature-settings: 'tnum'; opacity: 0.7; font-size: 9px; }
+  .light { color: var(--ink); }
+  .dark  { color: white; }
+</style>
+</head>
+<body>
+  <div class="row">
+    <div class="step light" style="background: var(--mint-50)"><span class="n">50</span><span class="h">EAFBF9</span></div>
+    <div class="step light" style="background: var(--mint-100)"><span class="n">100</span><span class="h">C9F3EE</span></div>
+    <div class="step light" style="background: var(--mint-200)"><span class="n">200</span><span class="h">99E8DF</span></div>
+    <div class="step light" style="background: var(--mint-300)"><span class="n">300</span><span class="h">5FD7CB</span></div>
+    <div class="step dark"  style="background: var(--mint-400)"><span class="n">400</span><span class="h">30C7BA</span></div>
+    <div class="step dark"  style="background: var(--mint-500)"><span class="n">500</span><span class="h">18BAB0</span></div>
+    <div class="step dark"  style="background: var(--mint-600)"><span class="n">600</span><span class="h">14A39A</span></div>
+    <div class="step dark"  style="background: var(--mint-700)"><span class="n">700</span><span class="h">108A82</span></div>
+    <div class="step dark"  style="background: var(--mint-800)"><span class="n">800</span><span class="h">0E6F69</span></div>
+    <div class="step dark"  style="background: var(--mint-900)"><span class="n">900</span><span class="h">0A4F4B</span></div>
+  </div>
+</body>
+</html>

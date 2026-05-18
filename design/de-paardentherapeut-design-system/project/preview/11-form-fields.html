@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="nl">
+<head>
+<meta charset="utf-8" />
+<title>Form fields</title>
+<link rel="stylesheet" href="../colors_and_type.css" />
+<style>
+  body { margin: 0; padding: 24px; background: var(--canvas); display: flex; flex-direction: column; gap: 14px; }
+  label { font-family: var(--font-sans); font-size: 13px; font-weight: 600; color: var(--ink); display: block; margin-bottom: 6px; letter-spacing: 0.02em; }
+  .field {
+    width: 100%; box-sizing: border-box;
+    background: white; border: 1px solid var(--ink-15);
+    border-radius: 12px; padding: 12px 16px;
+    font-family: var(--font-sans); font-size: 15px; color: var(--ink);
+    transition: border-color var(--dur-fast) var(--ease-base), box-shadow var(--dur-fast) var(--ease-base);
+  }
+  .field:focus { outline: none; border-color: var(--mint-500); box-shadow: 0 0 0 3px var(--mint-100); }
+  .row { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  .check { display: flex; align-items: center; gap: 10px; font-size: 14px; color: var(--ink); }
+  .check input { accent-color: var(--mint-600); width: 18px; height: 18px; }
+</style>
+</head>
+<body>
+  <div class="row">
+    <div><label>Jouw naam</label><input class="field" placeholder="Shelley" /></div>
+    <div><label>Naam van je paard</label><input class="field" placeholder="Pink Lady" value="Pink Lady" /></div>
+  </div>
+  <div><label>Wat speelt er?</label><textarea class="field" rows="2" placeholder="Vertel kort wat je merkt aan je paard…"></textarea></div>
+  <label class="check"><input type="checkbox" checked /> Houd me op de hoogte van nieuwe cursussen</label>
+</body>
+</html>

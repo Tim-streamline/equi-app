@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="nl">
+<head>
+<meta charset="utf-8" />
+<title>Type — display</title>
+<link rel="stylesheet" href="../colors_and_type.css" />
+<style>
+  body { margin: 0; padding: 24px; background: var(--canvas); }
+  .row { display: flex; flex-direction: column; gap: 14px; }
+  .item { display: grid; grid-template-columns: 110px 1fr; gap: 18px; align-items: baseline; padding-bottom: 12px; border-bottom: 1px solid var(--ink-08); }
+  .item:last-child { border-bottom: 0; }
+  .meta { font-size: 11px; color: var(--ink-50); letter-spacing: 0.14em; text-transform: uppercase; font-weight: 600; }
+</style>
+</head>
+<body>
+  <div class="row">
+    <div class="item">
+      <div class="meta">H1 · 64/64</div>
+      <h1 style="font-size: 56px;">PAARDENGEZONDHEID</h1>
+    </div>
+    <div class="item">
+      <div class="meta">H2 · 40/48</div>
+      <h2 style="font-size: 36px;">WERK 1-OP-1 MET MIJ</h2>
+    </div>
+    <div class="item">
+      <div class="meta">Subtitle · italic</div>
+      <div class="subtitle">Holistisch, op lange termijn — écht.</div>
+    </div>
+  </div>
+</body>
+</html>

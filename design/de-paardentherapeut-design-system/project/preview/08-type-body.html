@@ -1,0 +1,23 @@
+<!doctype html>
+<html lang="nl">
+<head>
+<meta charset="utf-8" />
+<title>Type — body</title>
+<link rel="stylesheet" href="../colors_and_type.css" />
+<style>
+  body { margin: 0; padding: 24px; background: var(--canvas); }
+  .row { display: flex; flex-direction: column; gap: 12px; }
+  .item { display: grid; grid-template-columns: 110px 1fr; gap: 18px; align-items: baseline; padding-bottom: 10px; border-bottom: 1px solid var(--ink-08); }
+  .item:last-child { border-bottom: 0; }
+  .meta { font-size: 11px; color: var(--ink-50); letter-spacing: 0.14em; text-transform: uppercase; font-weight: 600; }
+</style>
+</head>
+<body>
+  <div class="row">
+    <div class="item"><div class="meta">H3 · 24/30</div><h3>Specialist in jeuk, staakgedrag &amp; darmproblemen</h3></div>
+    <div class="item"><div class="meta">Lead · 20/30</div><p class="lead">Ik help spirituele paardeneigenaren met het verbeteren van de prestaties, gezondheid en het geluk van hun paard.</p></div>
+    <div class="item"><div class="meta">Body · 16/25</div><p>We combineren biomechanica, voeding, stofwisseling, natuurgeneeskunde en gedragsleer om paarden <em>écht</em> te begrijpen.</p></div>
+    <div class="item"><div class="meta">Small · 14/22</div><p class="small">Mijn werkgebied is 45 min enkele reis vanaf Rotterdam (3068TK).</p></div>
+  </div>
+</body>
+</html>

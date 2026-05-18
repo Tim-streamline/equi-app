@@ -1,0 +1,20 @@
+<!doctype html>
+<html lang="nl">
+<head>
+<meta charset="utf-8" />
+<title>Shadows</title>
+<link rel="stylesheet" href="../colors_and_type.css" />
+<style>
+  body { margin: 0; padding: 32px 22px; background: var(--canvas); display: grid; grid-template-columns: repeat(4, 1fr); gap: 18px; }
+  .b { aspect-ratio: 1 / 0.85; background: white; border-radius: 16px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; }
+  .name { font-family: var(--font-sans); font-size: 11px; font-weight: 600; color: var(--bg-green-700); letter-spacing: 0.06em; text-transform: uppercase; }
+  .px { font-family: var(--font-sans); font-size: 9px; color: var(--ink-50); }
+</style>
+</head>
+<body>
+  <div class="b" style="box-shadow: var(--shadow-xs)"><span class="name">xs</span><span class="px">subtle</span></div>
+  <div class="b" style="box-shadow: var(--shadow-sm)"><span class="name">sm</span><span class="px">cards</span></div>
+  <div class="b" style="box-shadow: var(--shadow-md)"><span class="name">md</span><span class="px">floating</span></div>
+  <div class="b" style="box-shadow: var(--shadow-lg)"><span class="name">lg</span><span class="px">modals</span></div>
+</body>
+</html>
