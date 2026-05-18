@@ -7,14 +7,16 @@ import { IconButton } from '@/components/ui/IconButton';
 import { Chip } from '@/components/ui/Chip';
 import { Avatar } from '@/components/ui/Avatar';
 import { COMMUNITY } from '@/data/mock';
+import { useTabBarPadding } from '@/hooks/useTabBarPadding';
 
 const FILTERS = ['Alles', 'Mijn focus', 'Vraag Shelley', 'Reviews', 'Diensten'];
 
 export default function CommunityScreen() {
+  const padBottom = useTabBarPadding();
   return (
     <View className="flex-1 bg-canvas">
       <SafeAreaView edges={['top']} style={{ flex: 1 }}>
-        <ScrollView contentContainerStyle={{ paddingBottom: 120 }}>
+        <ScrollView contentContainerStyle={{ paddingBottom: padBottom }}>
           <AppHeader
             greet="Community"
             title="Vraag & deel"

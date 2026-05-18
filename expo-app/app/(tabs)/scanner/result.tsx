@@ -11,6 +11,7 @@ import { Eyebrow } from '@/components/ui/Eyebrow';
 import { Chip } from '@/components/ui/Chip';
 import { Button } from '@/components/ui/Button';
 import { SCAN_RESULT } from '@/data/mock';
+import { useTabBarPadding } from '@/hooks/useTabBarPadding';
 
 const DOT: Record<string, string> = { good: '#2EA875', warn: '#D9A441', danger: '#C2543E' };
 const CHIP: Record<string, 'success' | 'warn' | 'danger'> = {
@@ -23,6 +24,7 @@ export default function ScannerResultScreen() {
   const r = SCAN_RESULT;
   const chipVariant: 'success' | 'warn' | 'danger' =
     r.score >= 75 ? 'success' : r.score >= 50 ? 'warn' : 'danger';
+  const padBottom = useTabBarPadding();
 
   return (
     <View className="flex-1 bg-canvas">
@@ -36,7 +38,7 @@ export default function ScannerResultScreen() {
             </IconButton>
           }
         />
-        <ScrollView contentContainerStyle={{ paddingBottom: 120 }}>
+        <ScrollView contentContainerStyle={{ paddingBottom: padBottom }}>
           <View className="flex-row items-center gap-4 px-5 pb-5">
             <ScoreRing score={r.score} size={96} stroke={6} />
             <View className="flex-1">

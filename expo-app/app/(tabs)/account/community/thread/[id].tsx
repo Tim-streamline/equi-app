@@ -9,9 +9,13 @@ import { SubHeader } from '@/components/ui/SubHeader';
 import { IconButton } from '@/components/ui/IconButton';
 import { Avatar } from '@/components/ui/Avatar';
 import { Chip } from '@/components/ui/Chip';
+import { TAB_BAR_BASE_HEIGHT } from '@/hooks/useTabBarPadding';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 export default function ThreadScreen() {
   const [reply, setReply] = useState('');
+  const insets = useSafeAreaInsets();
+  const tabBarHeight = TAB_BAR_BASE_HEIGHT + insets.bottom;
   return (
     <View className="flex-1 bg-canvas">
       <SafeAreaView edges={['top']} style={{ flex: 1 }}>
@@ -94,7 +98,10 @@ export default function ThreadScreen() {
             </View>
           </ScrollView>
 
-          <View className="border-t border-ink-8 bg-white px-4 pb-4 pt-3">
+          <View
+            className="border-t border-ink-8 bg-white px-4 pt-3"
+            style={{ paddingBottom: 12, marginBottom: tabBarHeight }}
+          >
             <View className="flex-row items-center gap-2">
               <TextInput
                 value={reply}

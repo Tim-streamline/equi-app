@@ -10,6 +10,8 @@ import { Bigchip } from '@/components/ui/Bigchip';
 import { StickyCTA } from '@/components/ui/StickyCTA';
 import { Button } from '@/components/ui/Button';
 import { HORSE } from '@/data/mock';
+import { TAB_BAR_BASE_HEIGHT } from '@/hooks/useTabBarPadding';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 const MOOD = ['😞', '😕', '😐', '🙂', '😊'];
 const MOOD_LBL = ['slecht', 'minder', 'ok', 'goed', 'top'];
@@ -19,6 +21,9 @@ export default function LogEntryScreen() {
   const [mood, setMood] = useState(3);
   const [score, setScore] = useState('B');
   const [note, setNote] = useState('');
+  const insets = useSafeAreaInsets();
+  // sticky CTA height (~ 16 + 56 button + 16) plus tab bar = need bottom padding for content
+  const padBottom = TAB_BAR_BASE_HEIGHT + insets.bottom + 96;
 
   return (
     <View className="flex-1 bg-canvas">
@@ -32,7 +37,7 @@ export default function LogEntryScreen() {
             </Pressable>
           }
         />
-        <ScrollView contentContainerStyle={{ padding: 20, paddingBottom: 140 }}>
+        <ScrollView contentContainerStyle={{ padding: 20, paddingBottom: padBottom }}>
           <Field
             label="WAT MERK JE OP?"
             rows={3}
@@ -81,7 +86,7 @@ export default function LogEntryScreen() {
             className="bg-mint-50 border-transparent"
           />
         </ScrollView>
-        <StickyCTA>
+        <StickyCTA inTabs>
           <Button title="Observatie opslaan" onPress={() => router.back()} />
         </StickyCTA>
       </SafeAreaView>

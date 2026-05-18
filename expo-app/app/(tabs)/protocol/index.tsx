@@ -13,6 +13,7 @@ import {
   PROTOCOL_CALENDAR,
   type DayState,
 } from '@/data/mock';
+import { useTabBarPadding } from '@/hooks/useTabBarPadding';
 
 type Tab = 'protocol' | 'kalender' | 'analyse';
 
@@ -24,6 +25,7 @@ const ADVICE_ICONS: Record<string, (props: { size: number; color: string }) => a
 
 export default function ProtocolListScreen() {
   const [tab, setTab] = useState<Tab>('protocol');
+  const padBottom = useTabBarPadding();
   const sub =
     tab === 'protocol'
       ? PROTOCOL_META.subtitleProtocol
@@ -42,7 +44,7 @@ export default function ProtocolListScreen() {
             </IconButton>
           }
         />
-        <ScrollView contentContainerStyle={{ paddingBottom: 140 }}>
+        <ScrollView contentContainerStyle={{ paddingBottom: padBottom }}>
           <View className="mx-4 mb-4 rounded-2xl bg-white border border-ink-8 overflow-hidden shadow-sm">
             <View className="p-4 pb-3">
               <Text className="font-bold text-ink" style={{ fontSize: 22, lineHeight: 26 }}>

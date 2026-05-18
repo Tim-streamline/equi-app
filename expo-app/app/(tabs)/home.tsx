@@ -12,13 +12,15 @@ import { ProgressRing } from '@/components/ui/ProgressRing';
 import { IconButton } from '@/components/ui/IconButton';
 import { Chip } from '@/components/ui/Chip';
 import { HORSE, TODAY_PROTOCOL, SEASONAL, LIBRARY_FEATURED } from '@/data/mock';
+import { useTabBarPadding } from '@/hooks/useTabBarPadding';
 
 export default function HomeScreen() {
   const done = TODAY_PROTOCOL.filter((p) => p.done).length;
+  const padBottom = useTabBarPadding();
   return (
     <View className="flex-1 bg-canvas">
       <SafeAreaView edges={['top']} style={{ flex: 1 }}>
-        <ScrollView contentContainerStyle={{ paddingBottom: 120 }}>
+        <ScrollView contentContainerStyle={{ paddingBottom: padBottom }}>
           <AppHeader
             greet="Goedemorgen,"
             title="Marit"

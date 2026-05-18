@@ -10,6 +10,7 @@ import { SectionTitle } from '@/components/ui/SectionTitle';
 import { Card } from '@/components/ui/Card';
 import { Bigchip } from '@/components/ui/Bigchip';
 import { Chip } from '@/components/ui/Chip';
+import { useTabBarPadding } from '@/hooks/useTabBarPadding';
 
 const ROWS = [
   { ic: Bell, t: 'Meldingen', s: '3 reminders aan' },
@@ -20,10 +21,11 @@ const ROWS = [
 ];
 
 export default function AccountScreen() {
+  const padBottom = useTabBarPadding();
   return (
     <View className="flex-1 bg-canvas">
       <SafeAreaView edges={['top']} style={{ flex: 1 }}>
-        <ScrollView contentContainerStyle={{ paddingBottom: 120 }}>
+        <ScrollView contentContainerStyle={{ paddingBottom: padBottom }}>
           <AppHeader title="Mijn account" avatar="M" />
 
           <View className="px-4 mb-4">

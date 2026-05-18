@@ -24,8 +24,20 @@ const LABELS: Record<string, string> = {
   account: 'Account',
 };
 
+function isScannerCameraFocused(state: BottomTabBarProps['state']): boolean {
+  const focused = state.routes[state.index];
+  if (focused.name !== 'scanner') return false;
+  const nested = (focused as any).state;
+  if (!nested) return true; // default landing on scanner = camera
+  const inner = nested.routes[nested.index];
+  return inner?.name === 'index';
+}
+
 function CustomTabBar({ state, navigation }: BottomTabBarProps) {
   const insets = useSafeAreaInsets();
+
+  if (isScannerCameraFocused(state)) return null;
+
   return (
     <View
       style={{
@@ -33,58 +45,63 @@ function CustomTabBar({ state, navigation }: BottomTabBarProps) {
         left: 0,
         right: 0,
         bottom: 0,
-        paddingBottom: insets.bottom,
       }}
     >
       <BlurView
         intensity={Platform.OS === 'ios' ? 60 : 100}
         tint="light"
         style={{
-          flexDirection: 'row',
           paddingHorizontal: 8,
-          paddingTop: 8,
-          paddingBottom: 6,
           borderTopWidth: 1,
           borderTopColor: 'rgba(27,42,42,0.08)',
           backgroundColor: 'rgba(255,255,255,0.92)',
         }}
       >
-        {state.routes.map((route, index) => {
-          const focused = state.index === index;
-          const Icon = ICONS[route.name];
-          if (!Icon) return null;
-          const onPress = () => {
-            const event = navigation.emit({
-              type: 'tabPress',
-              target: route.key,
-              canPreventDefault: true,
-            });
-            if (!focused && !event.defaultPrevented) {
-              navigation.navigate(route.name, route.params);
-            }
-          };
-          const color = focused ? '#127A79' : 'rgba(27,42,42,0.5)';
-          return (
-            <Pressable
-              key={route.key}
-              onPress={onPress}
-              style={{ flex: 1, alignItems: 'center', justifyContent: 'center', gap: 2, paddingVertical: 4 }}
-              hitSlop={8}
-            >
-              <Icon size={22} color={color} strokeWidth={focused ? 2.4 : 2} />
-              <Text
+        <View style={{ flexDirection: 'row', paddingTop: 8, paddingBottom: 8 }}>
+          {state.routes.map((route, index) => {
+            const focused = state.index === index;
+            const Icon = ICONS[route.name];
+            if (!Icon) return null;
+            const onPress = () => {
+              const event = navigation.emit({
+                type: 'tabPress',
+                target: route.key,
+                canPreventDefault: true,
+              });
+              if (!focused && !event.defaultPrevented) {
+                navigation.navigate(route.name, route.params);
+              }
+            };
+            const color = focused ? '#127A79' : 'rgba(27,42,42,0.5)';
+            return (
+              <Pressable
+                key={route.key}
+                onPress={onPress}
                 style={{
-                  fontSize: 10,
-                  color,
-                  fontFamily: focused ? 'SourceSans3_600SemiBold' : 'SourceSans3_500Medium',
-                  letterSpacing: 0.2,
+                  flex: 1,
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: 2,
+                  paddingVertical: 4,
                 }}
+                hitSlop={8}
               >
-                {LABELS[route.name]}
-              </Text>
-            </Pressable>
-          );
-        })}
+                <Icon size={22} color={color} strokeWidth={focused ? 2.4 : 2} />
+                <Text
+                  style={{
+                    fontSize: 10,
+                    color,
+                    fontFamily: focused ? 'SourceSans3_600SemiBold' : 'SourceSans3_500Medium',
+                    letterSpacing: 0.2,
+                  }}
+                >
+                  {LABELS[route.name]}
+                </Text>
+              </Pressable>
+            );
+          })}
+        </View>
+        <View style={{ height: insets.bottom }} />
       </BlurView>
     </View>
   );

@@ -6,8 +6,10 @@ import { SubHeader } from '@/components/ui/SubHeader';
 import { IconButton } from '@/components/ui/IconButton';
 import { Eyebrow } from '@/components/ui/Eyebrow';
 import { Chip } from '@/components/ui/Chip';
+import { useTabBarPadding } from '@/hooks/useTabBarPadding';
 
 export default function ArticleScreen() {
+  const padBottom = useTabBarPadding();
   return (
     <View className="flex-1 bg-canvas">
       <SafeAreaView edges={['top']} style={{ flex: 1 }}>
@@ -20,7 +22,7 @@ export default function ArticleScreen() {
             </IconButton>
           }
         />
-        <ScrollView contentContainerStyle={{ padding: 20, paddingBottom: 120 }}>
+        <ScrollView contentContainerStyle={{ padding: 20, paddingBottom: padBottom }}>
           <View
             className="mb-5 overflow-hidden rounded-2xl"
             style={{ height: 200, backgroundColor: '#0D5C5B', position: 'relative', alignItems: 'center', justifyContent: 'center' }}

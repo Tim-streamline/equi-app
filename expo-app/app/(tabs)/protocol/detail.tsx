@@ -10,6 +10,7 @@ import { SectionTitle } from '@/components/ui/SectionTitle';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { TODAY_PROTOCOL, type ProtocolItem } from '@/data/mock';
+import { useTabBarPadding } from '@/hooks/useTabBarPadding';
 
 export default function ProtocolDetailScreen() {
   const [items, setItems] = useState<ProtocolItem[]>(TODAY_PROTOCOL);
@@ -18,6 +19,7 @@ export default function ProtocolDetailScreen() {
   const done = items.filter((p) => p.done).length;
   const morning = items.filter((p) => p.meta === 'Ochtendvoer');
   const obs = items.filter((p) => p.meta !== 'Ochtendvoer');
+  const padBottom = useTabBarPadding();
 
   return (
     <View className="flex-1 bg-canvas">
@@ -31,7 +33,7 @@ export default function ProtocolDetailScreen() {
             </IconButton>
           }
         />
-        <ScrollView contentContainerStyle={{ paddingBottom: 120 }}>
+        <ScrollView contentContainerStyle={{ paddingBottom: padBottom }}>
           <Coach tag="Toelichting">
             Vandaag iets minder lijnzaad, omdat de mest gisteren al iets losser was. Voeg{' '}
             <Text className="font-italic">één eetlepel</Text> brandnetel toe — vers is best.

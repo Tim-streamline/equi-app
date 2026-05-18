@@ -9,8 +9,10 @@ import { Card } from '@/components/ui/Card';
 import { Chip } from '@/components/ui/Chip';
 import { Bigchip } from '@/components/ui/Bigchip';
 import { SectionTitle } from '@/components/ui/SectionTitle';
+import { useTabBarPadding } from '@/hooks/useTabBarPadding';
 
 export default function MyHorsesScreen() {
+  const padBottom = useTabBarPadding();
   return (
     <View className="flex-1 bg-canvas">
       <SafeAreaView edges={['top']} style={{ flex: 1 }}>
@@ -23,7 +25,7 @@ export default function MyHorsesScreen() {
             </IconButton>
           }
         />
-        <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 120, gap: 12 }}>
+        <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: padBottom, gap: 12 }}>
           <Card onPress={() => router.push('/(tabs)/account/horse-profile')}>
             <View className="flex-row items-start gap-3">
               <LinearGradient

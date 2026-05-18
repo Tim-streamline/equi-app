@@ -8,6 +8,7 @@ import { SectionTitle } from '@/components/ui/SectionTitle';
 import { Chip } from '@/components/ui/Chip';
 import { IconButton } from '@/components/ui/IconButton';
 import { HORSE } from '@/data/mock';
+import { useTabBarPadding } from '@/hooks/useTabBarPadding';
 
 const STATS = [
   { l: 'Gewicht', v: '540 kg', t: 'stabiel' },
@@ -23,6 +24,7 @@ const TIMELINE = [
 ];
 
 export default function HorseProfileScreen() {
+  const padBottom = useTabBarPadding();
   return (
     <View className="flex-1 bg-canvas">
       <SafeAreaView edges={['top']} style={{ flex: 1 }}>
@@ -34,7 +36,7 @@ export default function HorseProfileScreen() {
             </IconButton>
           }
         />
-        <ScrollView contentContainerStyle={{ paddingBottom: 120 }}>
+        <ScrollView contentContainerStyle={{ paddingBottom: padBottom }}>
           <View className="mx-4 mb-4 overflow-hidden rounded-2xl">
             <LinearGradient
               colors={['#30C7BA', '#0D5C5B']}

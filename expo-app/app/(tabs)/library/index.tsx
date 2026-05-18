@@ -7,14 +7,16 @@ import { SectionTitle } from '@/components/ui/SectionTitle';
 import { Card } from '@/components/ui/Card';
 import { Chip } from '@/components/ui/Chip';
 import { LIBRARY_FEATURED, LIBRARY_LIST } from '@/data/mock';
+import { useTabBarPadding } from '@/hooks/useTabBarPadding';
 
 const CATS = ['Aanbevolen', 'Voor jeuk', 'Voor darmen', 'Voeding', 'Kruiden', 'Cursussen'];
 
 export default function LibraryScreen() {
+  const padBottom = useTabBarPadding();
   return (
     <View className="flex-1 bg-canvas">
       <SafeAreaView edges={['top']} style={{ flex: 1 }}>
-        <ScrollView contentContainerStyle={{ paddingBottom: 120 }}>
+        <ScrollView contentContainerStyle={{ paddingBottom: padBottom }}>
           <AppHeader greet="Bibliotheek" title="Wijzer worden" avatar="M" />
 
           <View className="px-5 pb-3">

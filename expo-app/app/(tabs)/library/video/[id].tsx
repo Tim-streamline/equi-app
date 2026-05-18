@@ -8,6 +8,7 @@ import { IconButton } from '@/components/ui/IconButton';
 import { SectionTitle } from '@/components/ui/SectionTitle';
 import { Chip } from '@/components/ui/Chip';
 import { LIBRARY_FEATURED } from '@/data/mock';
+import { useTabBarPadding } from '@/hooks/useTabBarPadding';
 
 const CHAPTERS = [
   { t: 'Wanneer brandnetel plukken', d: '0:00' },
@@ -17,6 +18,7 @@ const CHAPTERS = [
 ];
 
 export default function VideoScreen() {
+  const padBottom = useTabBarPadding();
   return (
     <View className="flex-1 bg-canvas">
       <SafeAreaView edges={['top']} style={{ flex: 1 }}>
@@ -28,7 +30,7 @@ export default function VideoScreen() {
             </IconButton>
           }
         />
-        <ScrollView contentContainerStyle={{ paddingBottom: 120 }}>
+        <ScrollView contentContainerStyle={{ paddingBottom: padBottom }}>
           <View className="mx-4 overflow-hidden rounded-2xl" style={{ height: 260 }}>
             <LinearGradient
               colors={['#0D5C5B', '#083635']}

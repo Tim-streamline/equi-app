@@ -6,6 +6,7 @@ import { SubHeader } from '@/components/ui/SubHeader';
 import { SectionTitle } from '@/components/ui/SectionTitle';
 import { Chip } from '@/components/ui/Chip';
 import { Button } from '@/components/ui/Button';
+import { useTabBarPadding } from '@/hooks/useTabBarPadding';
 
 const BENEFITS = [
   'Onbeperkte scans + AI-advies',
@@ -21,11 +22,12 @@ const PAYMENTS = [
 ];
 
 export default function SubscriptionScreen() {
+  const padBottom = useTabBarPadding();
   return (
     <View className="flex-1 bg-canvas">
       <SafeAreaView edges={['top']} style={{ flex: 1 }}>
         <SubHeader title="Abonnement" onBack={() => router.back()} />
-        <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 120 }}>
+        <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: padBottom }}>
           <View className="mb-3.5 rounded-card bg-teal-700 p-[18px]">
             <View className="flex-row justify-between">
               <View className="self-start rounded-pill bg-mint-500 px-3 py-1">

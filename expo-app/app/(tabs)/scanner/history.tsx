@@ -6,13 +6,15 @@ import { SubHeader } from '@/components/ui/SubHeader';
 import { ScoreRing } from '@/components/ui/ScoreRing';
 import { Chip } from '@/components/ui/Chip';
 import { SCAN_HISTORY } from '@/data/mock';
+import { useTabBarPadding } from '@/hooks/useTabBarPadding';
 
 export default function ScannerHistoryScreen() {
+  const padBottom = useTabBarPadding();
   return (
     <View className="flex-1 bg-canvas">
       <SafeAreaView edges={['top']} style={{ flex: 1 }}>
         <SubHeader title="Eerdere scans" onBack={() => router.back()} />
-        <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 120, gap: 10 }}>
+        <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: padBottom, gap: 10 }}>
           {SCAN_HISTORY.map((s) => {
             const cls: 'success' | 'warn' | 'danger' =
               s.score >= 75 ? 'success' : s.score >= 50 ? 'warn' : 'danger';
