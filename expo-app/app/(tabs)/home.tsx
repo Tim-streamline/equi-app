@@ -11,20 +11,36 @@ import { Bigchip } from '@/components/ui/Bigchip';
 import { ProgressRing } from '@/components/ui/ProgressRing';
 import { IconButton } from '@/components/ui/IconButton';
 import { Chip } from '@/components/ui/Chip';
-import { HORSE, TODAY_PROTOCOL, SEASONAL, LIBRARY_FEATURED } from '@/data/mock';
 import { useTabBarPadding } from '@/hooks/useTabBarPadding';
+import {
+  useActiveProtocolForHorse,
+  useActiveSeasonalTip,
+  useCurrentUser,
+  useHorse,
+  useLibraryFeatured,
+  useTodayTasks,
+  useValue,
+} from '@/db/hooks';
 
 export default function HomeScreen() {
-  const done = TODAY_PROTOCOL.filter((p) => p.done).length;
+  const user = useCurrentUser();
+  const horse = useHorse();
+  const seasonal = useActiveSeasonalTip();
+  const featured = useLibraryFeatured();
+  const protocol = useActiveProtocolForHorse();
+  const todayIso = '2026-05-16';
+  const tasks = useTodayTasks(protocol?.id ?? '', todayIso);
+  const done = tasks.filter((t) => t.done).length;
   const padBottom = useTabBarPadding();
+
   return (
     <View className="flex-1 bg-canvas">
       <SafeAreaView edges={['top']} style={{ flex: 1 }}>
         <ScrollView contentContainerStyle={{ paddingBottom: padBottom }}>
           <AppHeader
             greet="Goedemorgen,"
-            title="Marit"
-            avatar="M"
+            title={(user.name as string)?.split(' ')[0] ?? ''}
+            avatar={(user.avatarInitial as string) ?? 'M'}
             right={
               <IconButton>
                 <Bell size={20} color="#1B2A2A" />
@@ -32,7 +48,9 @@ export default function HomeScreen() {
             }
           />
 
-          <Coach tag={`Seizoenstip · ${SEASONAL.month}`}>{SEASONAL.tip}</Coach>
+          {seasonal && (
+            <Coach tag={`Seizoenstip · ${seasonal.month}`}>{seasonal.body}</Coach>
+          )}
 
           <View className="mb-3.5 flex-row gap-2.5 px-4">
             <Tile
@@ -50,7 +68,7 @@ export default function HomeScreen() {
           </View>
 
           <SectionTitle action="Open protocol" onAction={() => router.push('/(tabs)/protocol/detail')}>
-            Vandaag · {HORSE.name}
+            Vandaag · {horse.name}
           </SectionTitle>
           <View className="px-4 mb-4">
             <Card onPress={() => router.push('/(tabs)/protocol/detail')}>
@@ -58,13 +76,13 @@ export default function HomeScreen() {
                 <Text className="font-bold text-ink text-[15px]">Dagelijks protocol</Text>
                 <View className="flex-row items-center gap-2">
                   <Text className="text-[12px] text-ink-50">
-                    {done} van {TODAY_PROTOCOL.length} gedaan
+                    {done} van {tasks.length} gedaan
                   </Text>
-                  <ProgressRing value={(done / TODAY_PROTOCOL.length) * 100} size={28} stroke={3} />
+                  <ProgressRing value={tasks.length ? (done / tasks.length) * 100 : 0} size={28} stroke={3} />
                 </View>
               </View>
               <View className="gap-2 mt-2">
-                {TODAY_PROTOCOL.slice(0, 3).map((p) => (
+                {tasks.slice(0, 3).map((p) => (
                   <View key={p.id} className="flex-row items-center gap-3">
                     <View
                       className={`h-5 w-5 items-center justify-center rounded-full border-2 ${
@@ -87,58 +105,62 @@ export default function HomeScreen() {
             </Card>
           </View>
 
-          <SectionTitle action="Alles" onAction={() => router.push('/(tabs)/library')}>
-            Voor jou geselecteerd
-          </SectionTitle>
-          <View className="px-4 mb-4">
-            <Card onPress={() => router.push({ pathname: '/(tabs)/library/video/[id]', params: { id: LIBRARY_FEATURED.id } } as any)}>
-              <View
-                className="overflow-hidden rounded-2xl"
-                style={{ height: 140, backgroundColor: '#0D5C5B', position: 'relative' }}
-              >
-                <Image
-                  source={require('@/assets/images/logo-horse-white.png')}
-                  style={{ position: 'absolute', top: '50%', left: '50%', width: 90, height: 90, marginLeft: -45, marginTop: -45, opacity: 0.35, resizeMode: 'contain' }}
-                />
-                <View style={{ position: 'absolute', top: 10, left: 10 }}>
-                  <Chip variant="tag" label={LIBRARY_FEATURED.kind} />
-                </View>
-                <View
-                  style={{
-                    position: 'absolute',
-                    top: '50%',
-                    left: '50%',
-                    width: 56,
-                    height: 56,
-                    marginLeft: -28,
-                    marginTop: -28,
-                    borderRadius: 28,
-                    backgroundColor: 'rgba(255,255,255,0.95)',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                  }}
-                >
-                  <Play size={22} color="#0D5C5B" fill="#0D5C5B" />
-                </View>
-                <Text
-                  className="font-semi text-white"
-                  style={{ position: 'absolute', bottom: 10, right: 10, fontSize: 12 }}
-                >
-                  {LIBRARY_FEATURED.dur}
-                </Text>
+          {featured && (
+            <>
+              <SectionTitle action="Alles" onAction={() => router.push('/(tabs)/library')}>
+                Voor jou geselecteerd
+              </SectionTitle>
+              <View className="px-4 mb-4">
+                <Card onPress={() => router.push({ pathname: '/(tabs)/library/video/[id]', params: { id: featured.id } } as any)}>
+                  <View
+                    className="overflow-hidden rounded-2xl"
+                    style={{ height: 140, backgroundColor: '#0D5C5B', position: 'relative' }}
+                  >
+                    <Image
+                      source={require('@/assets/images/logo-horse-white.png')}
+                      style={{ position: 'absolute', top: '50%', left: '50%', width: 90, height: 90, marginLeft: -45, marginTop: -45, opacity: 0.35, resizeMode: 'contain' }}
+                    />
+                    <View style={{ position: 'absolute', top: 10, left: 10 }}>
+                      <Chip variant="tag" label={featured.kind as string} />
+                    </View>
+                    <View
+                      style={{
+                        position: 'absolute',
+                        top: '50%',
+                        left: '50%',
+                        width: 56,
+                        height: 56,
+                        marginLeft: -28,
+                        marginTop: -28,
+                        borderRadius: 28,
+                        backgroundColor: 'rgba(255,255,255,0.95)',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                      }}
+                    >
+                      <Play size={22} color="#0D5C5B" fill="#0D5C5B" />
+                    </View>
+                    <Text
+                      className="font-semi text-white"
+                      style={{ position: 'absolute', bottom: 10, right: 10, fontSize: 12 }}
+                    >
+                      {featured.durationLabel as string}
+                    </Text>
+                  </View>
+                  <Text className="mt-2 font-bold text-ink" style={{ fontSize: 16 }}>
+                    {featured.title as string}
+                  </Text>
+                  <Text className="mt-1 text-[13px] text-ink-50">{featured.description as string}</Text>
+                </Card>
               </View>
-              <Text className="mt-2 font-bold text-ink" style={{ fontSize: 16 }}>
-                {LIBRARY_FEATURED.t}
-              </Text>
-              <Text className="mt-1 text-[13px] text-ink-50">{LIBRARY_FEATURED.desc}</Text>
-            </Card>
-          </View>
+            </>
+          )}
 
           <SectionTitle>Vraag Nova</SectionTitle>
           <View className="px-4 pb-5">
             <Bigchip
               title="Stel een vraag aan Nova"
-              description="AI-assistent — getraind op Shelley's werk"
+              description={(useValue('novaSubtitle') as string) || ''}
               icon={<Sparkles size={20} color="#127A79" />}
               onPress={() => router.push('/nova-chat')}
               trailing={<ChevronRight size={18} color="rgba(27,42,42,0.5)" />}
@@ -149,7 +171,7 @@ export default function HomeScreen() {
             onPress={() => router.push('/(tabs)/account/horse-profile' as any)}
             className="mx-4 -mt-2 mb-4 self-start"
           >
-            <Text className="font-semi text-mint-700 text-[13px]">Bekijk Nova&apos;s paardprofiel →</Text>
+            <Text className="font-semi text-mint-700 text-[13px]">Bekijk {horse.name}&apos;s paardprofiel →</Text>
           </Pressable>
         </ScrollView>
       </SafeAreaView>

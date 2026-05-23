@@ -11,22 +11,44 @@ import { Card } from '@/components/ui/Card';
 import { Bigchip } from '@/components/ui/Bigchip';
 import { Chip } from '@/components/ui/Chip';
 import { useTabBarPadding } from '@/hooks/useTabBarPadding';
+import {
+  useAccountSettings,
+  useActiveSubscription,
+  useCurrentUser,
+  useHorsesByOwner,
+  usePlan,
+} from '@/db/hooks';
 
-const ROWS = [
-  { ic: Bell, t: 'Meldingen', s: '3 reminders aan' },
-  { ic: MessageCircle, t: 'Community', s: 'Vraag & deel met paardenmensen', go: '/(tabs)/account/community' },
-  { ic: Download, t: 'Exporteer mijn data', s: 'CSV of PDF dagboek' },
-  { ic: Settings, t: 'Voorkeuren', s: 'Eenheden, taal' },
-  { ic: Heart, t: 'Steun De Paardentherapeut', s: '' },
-];
+const SETTINGS_ICONS: Record<string, any> = {
+  bell: Bell,
+  messageCircle: MessageCircle,
+  download: Download,
+  settings: Settings,
+  heart: Heart,
+};
+
+function formatJoinedLabel(createdAt?: string) {
+  if (!createdAt) return '';
+  const d = new Date(createdAt);
+  const months = ['januari', 'februari', 'maart', 'april', 'mei', 'juni', 'juli', 'augustus', 'september', 'oktober', 'november', 'december'];
+  return `Sinds ${months[d.getMonth()]} ${d.getFullYear()}`;
+}
 
 export default function AccountScreen() {
   const padBottom = useTabBarPadding();
+  const user = useCurrentUser();
+  const horses = useHorsesByOwner();
+  const subscription = useActiveSubscription();
+  const plan = usePlan(subscription?.planId ?? 'plan-plus');
+  const settings = useAccountSettings();
+
+  const active = horses.find((h) => h.status === 'active');
+
   return (
     <View className="flex-1 bg-canvas">
       <SafeAreaView edges={['top']} style={{ flex: 1 }}>
         <ScrollView contentContainerStyle={{ paddingBottom: padBottom }}>
-          <AppHeader title="Mijn account" avatar="M" />
+          <AppHeader title="Mijn account" avatar={(user.avatarInitial as string) ?? 'M'} />
 
           <View className="px-4 mb-4">
             <Card onPress={() => router.push('/(tabs)/account/my-horses')}>
@@ -37,11 +59,15 @@ export default function AccountScreen() {
                   end={{ x: 1, y: 1 }}
                   style={{ width: 48, height: 48, borderRadius: 24, alignItems: 'center', justifyContent: 'center' }}
                 >
-                  <Text className="font-bold text-white" style={{ fontSize: 16 }}>M</Text>
+                  <Text className="font-bold text-white" style={{ fontSize: 16 }}>
+                    {(user.avatarInitial as string) ?? 'M'}
+                  </Text>
                 </LinearGradient>
                 <View className="flex-1">
-                  <Text className="font-bold text-ink" style={{ fontSize: 17 }}>Marit van der Berg</Text>
-                  <Text className="text-[12px] text-ink-50">marit@voorbeeld.nl · Sinds april 2026</Text>
+                  <Text className="font-bold text-ink" style={{ fontSize: 17 }}>{user.name as string}</Text>
+                  <Text className="text-[12px] text-ink-50">
+                    {(user.email as string) ?? ''} · {formatJoinedLabel(user.createdAt as string)}
+                  </Text>
                 </View>
                 <ChevronRight size={18} color="rgba(27,42,42,0.5)" />
               </View>
@@ -50,21 +76,25 @@ export default function AccountScreen() {
 
           <SectionTitle>Paarden</SectionTitle>
           <View className="px-4 gap-2.5 mb-4">
-            <Card flat onPress={() => router.push('/(tabs)/account/horse-profile')}>
-              <View className="flex-row items-center gap-3">
-                <View className="h-11 w-11 items-center justify-center rounded-full bg-mint-100">
-                  <Image
-                    source={require('@/assets/images/logo-horse-mark.png')}
-                    style={{ width: 28, height: 28, resizeMode: 'contain' }}
-                  />
+            {active && (
+              <Card flat onPress={() => router.push('/(tabs)/account/horse-profile')}>
+                <View className="flex-row items-center gap-3">
+                  <View className="h-11 w-11 items-center justify-center rounded-full bg-mint-100">
+                    <Image
+                      source={require('@/assets/images/logo-horse-mark.png')}
+                      style={{ width: 28, height: 28, resizeMode: 'contain' }}
+                    />
+                  </View>
+                  <View className="flex-1">
+                    <Text className="font-bold text-ink text-[15px]">{active.name as string}</Text>
+                    <Text className="text-[12px] text-ink-50">
+                      {(active.breed as string)} · {active.age as number} jr
+                    </Text>
+                  </View>
+                  <Chip label="Actief" variant="success" />
                 </View>
-                <View className="flex-1">
-                  <Text className="font-bold text-ink text-[15px]">Nova</Text>
-                  <Text className="text-[12px] text-ink-50">Friese kruising · 9 jr</Text>
-                </View>
-                <Chip label="Actief" variant="success" />
-              </View>
-            </Card>
+              </Card>
+            )}
             <Bigchip
               title="Voeg paard toe"
               dashed
@@ -73,44 +103,48 @@ export default function AccountScreen() {
             />
           </View>
 
-          <SectionTitle>Abonnement</SectionTitle>
-          <View className="px-4 mb-4">
-            <Pressable
-              onPress={() => router.push('/(tabs)/account/subscription')}
-              className="rounded-card bg-teal-700 p-[18px]"
-            >
-              <View className="flex-row items-start justify-between">
-                <View>
-                  <View className="self-start rounded-pill bg-mint-500 px-3 py-1">
-                    <Text className="font-semi text-white text-[12px]">Plus</Text>
+          {subscription && (
+            <>
+              <SectionTitle>Abonnement</SectionTitle>
+              <View className="px-4 mb-4">
+                <Pressable
+                  onPress={() => router.push('/(tabs)/account/subscription')}
+                  className="rounded-card bg-teal-700 p-[18px]"
+                >
+                  <View className="flex-row items-start justify-between">
+                    <View>
+                      <View className="self-start rounded-pill bg-mint-500 px-3 py-1">
+                        <Text className="font-semi text-white text-[12px]">{plan.label as string}</Text>
+                      </View>
+                      <Text className="font-bold text-white mt-2.5" style={{ fontSize: 20 }}>
+                        {plan.name as string}
+                      </Text>
+                      <Text className="text-white/70 mt-0.5 text-[12px]">
+                        {(subscription.renewsLabel as string) ?? ''} · € {((subscription.priceCents as number) / 100).toFixed(0)} {plan.priceSuffix as string}
+                      </Text>
+                    </View>
+                    <ChevronRight size={18} color="rgba(255,255,255,0.7)" />
                   </View>
-                  <Text className="font-bold text-white mt-2.5" style={{ fontSize: 20 }}>
-                    EquiNova Plus
-                  </Text>
-                  <Text className="text-white/70 mt-0.5 text-[12px]">
-                    Verlengt 22 mei · € 12 / maand
-                  </Text>
-                </View>
-                <ChevronRight size={18} color="rgba(255,255,255,0.7)" />
+                </Pressable>
               </View>
-            </Pressable>
-          </View>
+            </>
+          )}
 
           <SectionTitle>Algemeen</SectionTitle>
           <View className="px-4 pb-4">
-            {ROWS.map((r, i) => {
-              const Icon = r.ic;
+            {settings.map((r) => {
+              const Icon = SETTINGS_ICONS[r.iconKey as string] ?? Settings;
               return (
                 <Pressable
-                  key={i}
-                  onPress={() => r.go && router.push(r.go as any)}
+                  key={r.id}
+                  onPress={() => r.route && router.push(r.route as any)}
                   className="flex-row items-center justify-between border-b border-ink-8 py-3"
                 >
                   <View className="flex-row items-center gap-3">
                     <Icon size={20} color="rgba(27,42,42,0.7)" />
                     <View>
-                      <Text className="font-medium text-ink text-[14px]">{r.t}</Text>
-                      {r.s ? <Text className="text-[11px] text-ink-50">{r.s}</Text> : null}
+                      <Text className="font-medium text-ink text-[14px]">{r.title as string}</Text>
+                      {r.subtitle ? <Text className="text-[11px] text-ink-50">{r.subtitle as string}</Text> : null}
                     </View>
                   </View>
                   <ChevronRight size={16} color="rgba(27,42,42,0.5)" />

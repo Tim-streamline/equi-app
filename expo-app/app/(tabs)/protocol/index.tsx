@@ -6,14 +6,18 @@ import { MoreHorizontal, Check, Plus, ChevronLeft, ChevronRight, Leaf, Footprint
 import { SubHeader } from '@/components/ui/SubHeader';
 import { IconButton } from '@/components/ui/IconButton';
 import { Button } from '@/components/ui/Button';
-import {
-  PROTOCOL_META,
-  PROTOCOL_PHASES,
-  PROTOCOL_ANALYSE,
-  PROTOCOL_CALENDAR,
-  type DayState,
-} from '@/data/mock';
 import { useTabBarPadding } from '@/hooks/useTabBarPadding';
+import {
+  useActiveProtocolForHorse,
+  usePhaseItems,
+  useProtocolAnalysis,
+  useProtocolPhases,
+  useProtocolTasks,
+  useStoreMutations,
+  useTable,
+  useValue,
+  useCurrentHorseId,
+} from '@/db/hooks';
 
 type Tab = 'protocol' | 'kalender' | 'analyse';
 
@@ -26,12 +30,24 @@ const ADVICE_ICONS: Record<string, (props: { size: number; color: string }) => a
 export default function ProtocolListScreen() {
   const [tab, setTab] = useState<Tab>('protocol');
   const padBottom = useTabBarPadding();
+  const protocol = useActiveProtocolForHorse();
+
+  if (!protocol) {
+    return (
+      <View className="flex-1 bg-canvas">
+        <SafeAreaView edges={['top']} style={{ flex: 1 }}>
+          <SubHeader onBack={() => router.push('/(tabs)/home')} />
+        </SafeAreaView>
+      </View>
+    );
+  }
+
   const sub =
     tab === 'protocol'
-      ? PROTOCOL_META.subtitleProtocol
+      ? (protocol.subtitleProtocol as string)
       : tab === 'kalender'
-        ? PROTOCOL_META.subtitleCalendar
-        : PROTOCOL_META.subtitleAnalyse;
+        ? (protocol.subtitleCalendar as string)
+        : (protocol.subtitleAnalyse as string);
 
   return (
     <View className="flex-1 bg-canvas">
@@ -48,7 +64,7 @@ export default function ProtocolListScreen() {
           <View className="mx-4 mb-4 rounded-2xl bg-white border border-ink-8 overflow-hidden shadow-sm">
             <View className="p-4 pb-3">
               <Text className="font-bold text-ink" style={{ fontSize: 22, lineHeight: 26 }}>
-                {PROTOCOL_META.horseName}&apos;s plan
+                {protocol.title as string}
               </Text>
               <Text className="mt-1 text-[13px] text-ink-50">{sub}</Text>
             </View>
@@ -77,116 +93,138 @@ export default function ProtocolListScreen() {
             </View>
           </View>
 
-          {tab === 'protocol' && <ProtocolPhases />}
-          {tab === 'kalender' && <ProtocolCalendar />}
-          {tab === 'analyse' && (
-            <View className="px-4">
-              <View className="mb-4 rounded-2xl bg-mint-50 p-4">
-                <Text className="font-semi uppercase text-mint-700" style={{ fontSize: 10, letterSpacing: 1.2 }}>
-                  Waarschijnlijkste oorzaak
-                </Text>
-                <Text className="mt-2 text-[15px] text-ink leading-[22px]">{PROTOCOL_ANALYSE.cause}</Text>
-              </View>
-              <Text className="font-bold text-ink mb-2 px-1" style={{ fontSize: 16 }}>
-                Advies
-              </Text>
-              <View className="gap-2">
-                {PROTOCOL_ANALYSE.advice.map((a) => {
-                  const Icon = ADVICE_ICONS[a.icon];
-                  return (
-                    <View key={a.id} className="flex-row gap-3 rounded-2xl border border-ink-8 bg-white p-4">
-                      <View className="h-9 w-9 items-center justify-center rounded-xl bg-mint-50">
-                        {Icon && Icon({ size: 18, color: '#0D5C5B' })}
-                      </View>
-                      <View className="flex-1">
-                        <Text className="font-bold text-ink text-[15px]">{a.t}</Text>
-                        <Text className="mt-1 text-[13px] text-ink-50 leading-[18px]">{a.d}</Text>
-                      </View>
-                    </View>
-                  );
-                })}
-              </View>
-            </View>
-          )}
+          {tab === 'protocol' && <ProtocolPhasesView protocolId={protocol.id} />}
+          {tab === 'kalender' && <ProtocolCalendar protocolId={protocol.id} />}
+          {tab === 'analyse' && <ProtocolAnalyseView protocolId={protocol.id} />}
         </ScrollView>
       </SafeAreaView>
     </View>
   );
 }
 
-function ProtocolPhases() {
+function ProtocolPhasesView({ protocolId }: { protocolId: string }) {
+  const phases = useProtocolPhases(protocolId);
   return (
     <View className="px-4 gap-2.5">
-      {PROTOCOL_PHASES.map((p) => {
-        const tone =
-          p.state === 'done'
-            ? { border: 'border-mint-200', chipBg: 'bg-mint-50', chipText: 'text-mint-700' }
-            : p.state === 'active'
-              ? { border: 'border-mint-500', chipBg: 'bg-mint-500', chipText: 'text-white' }
-              : { border: 'border-ink-8', chipBg: 'bg-ink-8', chipText: 'text-ink-70' };
-        return (
-          <View key={p.id} className={`rounded-2xl border-2 bg-white p-4 ${tone.border}`}>
-            <View className="flex-row items-start justify-between">
-              <Text className="flex-1 font-bold text-ink text-[15px] pr-3">{p.t}</Text>
-              <View className={`flex-row items-center gap-1 rounded-pill px-2.5 py-1 ${tone.chipBg}`}>
-                {p.state === 'done' && <Check size={11} color="#108A82" strokeWidth={3} />}
-                <Text className={`font-semi text-[11px] ${tone.chipText}`}>{p.chip}</Text>
+      {phases.map((p: any) => (
+        <PhaseCard key={p.id} phase={p} />
+      ))}
+    </View>
+  );
+}
+
+function PhaseCard({ phase }: { phase: any }) {
+  const items = usePhaseItems(phase.id);
+  const tone =
+    phase.state === 'done'
+      ? { border: 'border-mint-200', chipBg: 'bg-mint-50', chipText: 'text-mint-700' }
+      : phase.state === 'active'
+        ? { border: 'border-mint-500', chipBg: 'bg-mint-500', chipText: 'text-white' }
+        : { border: 'border-ink-8', chipBg: 'bg-ink-8', chipText: 'text-ink-70' };
+  return (
+    <View className={`rounded-2xl border-2 bg-white p-4 ${tone.border}`}>
+      <View className="flex-row items-start justify-between">
+        <Text className="flex-1 font-bold text-ink text-[15px] pr-3">{phase.title}</Text>
+        <View className={`flex-row items-center gap-1 rounded-pill px-2.5 py-1 ${tone.chipBg}`}>
+          {phase.state === 'done' && <Check size={11} color="#108A82" strokeWidth={3} />}
+          <Text className={`font-semi text-[11px] ${tone.chipText}`}>{phase.chipLabel}</Text>
+        </View>
+      </View>
+      {items.length > 0 && (
+        <View className="mt-3 gap-1.5">
+          {items.map((it: any) => (
+            <View key={it.id} className="flex-row items-start gap-2">
+              <View className="mt-2 h-1 w-1 rounded-full bg-mint-500" />
+              <Text className="flex-1 text-[13.5px] text-ink-70 leading-[20px]">{it.label}</Text>
+            </View>
+          ))}
+        </View>
+      )}
+    </View>
+  );
+}
+
+function ProtocolAnalyseView({ protocolId }: { protocolId: string }) {
+  const analysis = useProtocolAnalysis(protocolId);
+  if (!analysis) return null;
+  return (
+    <View className="px-4">
+      <View className="mb-4 rounded-2xl bg-mint-50 p-4">
+        <Text className="font-semi uppercase text-mint-700" style={{ fontSize: 10, letterSpacing: 1.2 }}>
+          Waarschijnlijkste oorzaak
+        </Text>
+        <Text className="mt-2 text-[15px] text-ink leading-[22px]">{analysis.cause}</Text>
+      </View>
+      <Text className="font-bold text-ink mb-2 px-1" style={{ fontSize: 16 }}>
+        Advies
+      </Text>
+      <View className="gap-2">
+        {analysis.advice.map((a: any) => {
+          const Icon = ADVICE_ICONS[a.iconKey];
+          return (
+            <View key={a.id} className="flex-row gap-3 rounded-2xl border border-ink-8 bg-white p-4">
+              <View className="h-9 w-9 items-center justify-center rounded-xl bg-mint-50">
+                {Icon && Icon({ size: 18, color: '#0D5C5B' })}
+              </View>
+              <View className="flex-1">
+                <Text className="font-bold text-ink text-[15px]">{a.title}</Text>
+                <Text className="mt-1 text-[13px] text-ink-50 leading-[18px]">{a.body}</Text>
               </View>
             </View>
-            {p.items && (
-              <View className="mt-3 gap-1.5">
-                {p.items.map((it, i) => (
-                  <View key={i} className="flex-row items-start gap-2">
-                    <View className="mt-2 h-1 w-1 rounded-full bg-mint-500" />
-                    <Text className="flex-1 text-[13.5px] text-ink-70 leading-[20px]">{it}</Text>
-                  </View>
-                ))}
-              </View>
-            )}
-          </View>
-        );
-      })}
+          );
+        })}
+      </View>
     </View>
   );
 }
 
 const DOW = ['ma', 'di', 'wo', 'do', 'vr', 'za', 'zo'];
 
-function ProtocolCalendar() {
-  const cal = PROTOCOL_CALENDAR;
-  const ITEMS = cal.today.items;
-  const todayDay = cal.todayDay;
+type CalCell = { d: number; s: 'done' | 'today' | 'upcoming' | 'empty' };
 
-  const initState = useMemo(() => {
-    const map: Record<number, boolean[]> = {};
-    cal.weeks.flat().forEach((cell) => {
-      if (!cell) return;
-      if (cell.s === 'done') map[cell.d] = ITEMS.map(() => true);
-      else if (cell.s === 'today') map[cell.d] = [true, true, false, false];
-      else map[cell.d] = ITEMS.map(() => false);
+const CALENDAR_WEEKS: (CalCell | null)[][] = [
+  [{ d: 1, s: 'done' }, { d: 2, s: 'done' }, { d: 3, s: 'done' }, { d: 4, s: 'done' }, { d: 5, s: 'done' }, { d: 6, s: 'done' }, { d: 7, s: 'done' }],
+  [{ d: 8, s: 'done' }, { d: 9, s: 'done' }, { d: 10, s: 'today' }, { d: 11, s: 'upcoming' }, { d: 12, s: 'upcoming' }, { d: 13, s: 'upcoming' }, { d: 14, s: 'upcoming' }],
+  [{ d: 15, s: 'upcoming' }, { d: 16, s: 'upcoming' }, { d: 17, s: 'upcoming' }, { d: 18, s: 'upcoming' }, { d: 19, s: 'upcoming' }, { d: 20, s: 'upcoming' }, { d: 21, s: 'empty' }],
+  [{ d: 22, s: 'empty' }, { d: 23, s: 'empty' }, { d: 24, s: 'empty' }, { d: 25, s: 'empty' }, { d: 26, s: 'empty' }, { d: 27, s: 'empty' }, { d: 28, s: 'empty' }],
+  [{ d: 29, s: 'empty' }, { d: 30, s: 'empty' }, { d: 31, s: 'empty' }, null, null, null, null],
+];
+
+function dateForDay(day: number) {
+  return `2026-05-${String(day).padStart(2, '0')}`;
+}
+
+function ProtocolCalendar({ protocolId }: { protocolId: string }) {
+  const monthLabel = useValue('currentMonthLabel') as string;
+  const todayDay = useValue('currentMonthDay') as number;
+  const horseId = useCurrentHorseId();
+  const tasks = useProtocolTasks(protocolId);
+  const allCompletions = useTable('protocolTaskCompletions');
+  const mutations = useStoreMutations();
+
+  const [selected, setSelected] = useState<number>(todayDay);
+
+  const completionsByDay = useMemo(() => {
+    const map: Record<number, Record<string, boolean>> = {};
+    Object.values(allCompletions as any).forEach((c: any) => {
+      const m = c.date?.match(/2026-05-(\d{2})/);
+      if (!m) return;
+      const day = parseInt(m[1], 10);
+      if (!map[day]) map[day] = {};
+      map[day][c.taskId] = !!c.done;
     });
     return map;
-  }, []);
+  }, [allCompletions]);
 
-  const [selected, setSelected] = useState(todayDay);
-  const [checks, setChecks] = useState<Record<number, boolean[]>>(initState);
-
-  const toggle = (day: number, idx: number) => {
-    setChecks((prev) => ({
-      ...prev,
-      [day]: prev[day].map((v, i) => (i === idx ? !v : v)),
-    }));
-  };
-
-  const sel = checks[selected] || ITEMS.map(() => false);
-  const doneCount = sel.filter(Boolean).length;
-
-  const cellState = (cell: { d: number; s: DayState }): string => {
+  const cellState = (cell: CalCell): string => {
     if (cell.d === selected) return 'selected';
     if (cell.d === todayDay) return 'today';
-    const c = checks[cell.d];
-    if (c && c.every(Boolean)) return 'done';
-    if (c && c.some(Boolean)) return 'partial';
+    const c = completionsByDay[cell.d];
+    if (c && Object.keys(c).length > 0) {
+      const values = Object.values(c);
+      if (values.every(Boolean)) return 'done';
+      if (values.some(Boolean)) return 'partial';
+    }
     return cell.s;
   };
 
@@ -207,12 +245,16 @@ function ProtocolCalendar() {
     }
   };
 
+  const selectedDate = dateForDay(selected);
+  const dayCompletions = completionsByDay[selected] ?? {};
+  const doneCount = tasks.filter((t: any) => dayCompletions[t.id]).length;
+
   return (
     <>
       <View className="mx-4 mb-4 rounded-2xl border border-ink-8 bg-white p-4">
         <View className="mb-3 flex-row items-center justify-between">
           <IconButton><ChevronLeft size={18} color="#1B2A2A" /></IconButton>
-          <Text className="font-bold text-ink text-[15px]">{cal.monthLabel}</Text>
+          <Text className="font-bold text-ink text-[15px]">{monthLabel}</Text>
           <IconButton><ChevronRight size={18} color="#1B2A2A" /></IconButton>
         </View>
         <View className="flex-row mb-2">
@@ -227,7 +269,7 @@ function ProtocolCalendar() {
           ))}
         </View>
         <View className="flex-row flex-wrap">
-          {cal.weeks.flatMap((wk, wi) =>
+          {CALENDAR_WEEKS.flatMap((wk, wi) =>
             wk.map((cell, ci) => {
               const key = `${wi}-${ci}`;
               if (!cell) {
@@ -248,7 +290,7 @@ function ProtocolCalendar() {
                   </Pressable>
                 </View>
               );
-            })
+            }),
           )}
         </View>
         <View className="mt-3 flex-row gap-3">
@@ -275,28 +317,31 @@ function ProtocolCalendar() {
             {selected} mei
           </Text>
           <Text className="mt-0.5 text-[12px] text-ink-50">
-            {doneCount} van {ITEMS.length} afgevinkt
+            {doneCount} van {tasks.length} afgevinkt
           </Text>
         </View>
         <View className="gap-2">
-          {ITEMS.map((it, i) => (
-            <Pressable
-              key={i}
-              onPress={() => toggle(selected, i)}
-              className="flex-row items-center gap-3 rounded-xl border border-ink-8 bg-canvas p-3"
-            >
-              <View
-                className={`h-5 w-5 items-center justify-center rounded-full border-2 ${
-                  sel[i] ? 'border-mint-500 bg-mint-500' : 'border-ink-15 bg-white'
-                }`}
+          {tasks.map((t: any) => {
+            const done = !!dayCompletions[t.id];
+            return (
+              <Pressable
+                key={t.id}
+                onPress={() => mutations.toggleTaskCompletion(t.id, selectedDate, horseId)}
+                className="flex-row items-center gap-3 rounded-xl border border-ink-8 bg-canvas p-3"
               >
-                {sel[i] && <Check size={12} color="#fff" strokeWidth={3} />}
-              </View>
-              <Text className={`flex-1 text-[14px] ${sel[i] ? 'text-ink-50 line-through' : 'text-ink'}`}>
-                {it}
-              </Text>
-            </Pressable>
-          ))}
+                <View
+                  className={`h-5 w-5 items-center justify-center rounded-full border-2 ${
+                    done ? 'border-mint-500 bg-mint-500' : 'border-ink-15 bg-white'
+                  }`}
+                >
+                  {done && <Check size={12} color="#fff" strokeWidth={3} />}
+                </View>
+                <Text className={`flex-1 text-[14px] ${done ? 'text-ink-50 line-through' : 'text-ink'}`}>
+                  {t.label}
+                </Text>
+              </Pressable>
+            );
+          })}
         </View>
         <View className="mt-3">
           <Button

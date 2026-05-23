@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { View, Text, ScrollView, Pressable } from 'react-native';
 import { router } from 'expo-router';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Camera } from 'lucide-react-native';
 import { SubHeader } from '@/components/ui/SubHeader';
 import { Field } from '@/components/ui/Field';
@@ -9,21 +9,33 @@ import { SectionTitle } from '@/components/ui/SectionTitle';
 import { Bigchip } from '@/components/ui/Bigchip';
 import { StickyCTA } from '@/components/ui/StickyCTA';
 import { Button } from '@/components/ui/Button';
-import { HORSE } from '@/data/mock';
 import { TAB_BAR_BASE_HEIGHT } from '@/hooks/useTabBarPadding';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import {
+  useCurrentHorseId,
+  useCurrentUserId,
+  useHorse,
+  useStoreMutations,
+} from '@/db/hooks';
 
 const MOOD = ['😞', '😕', '😐', '🙂', '😊'];
 const MOOD_LBL = ['slecht', 'minder', 'ok', 'goed', 'top'];
 const SCORES = ['A', 'B', 'C', 'D'];
 
 export default function LogEntryScreen() {
+  const horse = useHorse();
+  const horseId = useCurrentHorseId();
+  const userId = useCurrentUserId();
+  const { saveObservation } = useStoreMutations();
   const [mood, setMood] = useState(3);
   const [score, setScore] = useState('B');
   const [note, setNote] = useState('');
   const insets = useSafeAreaInsets();
-  // sticky CTA height (~ 16 + 56 button + 16) plus tab bar = need bottom padding for content
   const padBottom = TAB_BAR_BASE_HEIGHT + insets.bottom + 96;
+
+  const submit = () => {
+    saveObservation({ horseId, authorId: userId, note, mood, stoolScore: score });
+    router.back();
+  };
 
   return (
     <View className="flex-1 bg-canvas">
@@ -32,7 +44,7 @@ export default function LogEntryScreen() {
           title="Nieuwe observatie"
           onBack={() => router.back()}
           right={
-            <Pressable onPress={() => router.back()} hitSlop={8}>
+            <Pressable onPress={submit} hitSlop={8}>
               <Text className="font-semi text-mint-700 text-[14px]">Klaar</Text>
             </Pressable>
           }
@@ -46,7 +58,7 @@ export default function LogEntryScreen() {
             onChangeText={setNote}
           />
 
-          <SectionTitle>Hoe voelt {HORSE.name} zich?</SectionTitle>
+          <SectionTitle>Hoe voelt {horse.name as string} zich?</SectionTitle>
           <View className="flex-row gap-2 px-1 pb-4">
             {[1, 2, 3, 4, 5].map((n) => {
               const active = mood === n;
@@ -87,7 +99,7 @@ export default function LogEntryScreen() {
           />
         </ScrollView>
         <StickyCTA inTabs>
-          <Button title="Observatie opslaan" onPress={() => router.back()} />
+          <Button title="Observatie opslaan" onPress={submit} />
         </StickyCTA>
       </SafeAreaView>
     </View>

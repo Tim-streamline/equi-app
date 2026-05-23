@@ -5,26 +5,17 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { MoreHorizontal } from 'lucide-react-native';
 import { SubHeader } from '@/components/ui/SubHeader';
 import { SectionTitle } from '@/components/ui/SectionTitle';
-import { Chip } from '@/components/ui/Chip';
 import { IconButton } from '@/components/ui/IconButton';
-import { HORSE } from '@/data/mock';
 import { useTabBarPadding } from '@/hooks/useTabBarPadding';
-
-const STATS = [
-  { l: 'Gewicht', v: '540 kg', t: 'stabiel' },
-  { l: 'Energie', v: '7 / 10', t: '↑ +1 deze week' },
-  { l: 'Mest-score', v: 'B+', t: 'stabiel' },
-];
-
-const TIMELINE = [
-  { when: 'vandaag', what: 'Brandnetel toegevoegd aan protocol (mei-seizoenstip)', now: true },
-  { when: '3 dagen geleden', what: 'Foto van mest geüpload — Score B+' },
-  { when: '2 weken geleden', what: 'Intake met Shelley · jeukklachten + spijsvertering' },
-  { when: '3 weken geleden', what: 'Nova toegevoegd aan EquiNova' },
-];
+import { useFocusForHorse, useHorse, useHorseStats, useTimeline } from '@/db/hooks';
 
 export default function HorseProfileScreen() {
   const padBottom = useTabBarPadding();
+  const horse = useHorse();
+  const stats = useHorseStats();
+  const focus = useFocusForHorse();
+  const timeline = useTimeline();
+
   return (
     <View className="flex-1 bg-canvas">
       <SafeAreaView edges={['top']} style={{ flex: 1 }}>
@@ -47,10 +38,10 @@ export default function HorseProfileScreen() {
               <View className="flex-row items-start justify-between">
                 <View>
                   <Text className="font-bold text-white" style={{ fontSize: 32, lineHeight: 36 }}>
-                    {HORSE.name}
+                    {horse.name as string}
                   </Text>
                   <Text className="mt-1 text-white/80 text-[13px]">
-                    {HORSE.breed} · {HORSE.age} jr · {HORSE.sex}
+                    {horse.breed as string} · {horse.age as number} jr · {horse.sex as string}
                   </Text>
                 </View>
                 <Image
@@ -59,9 +50,11 @@ export default function HorseProfileScreen() {
                 />
               </View>
               <View className="mt-4 flex-row flex-wrap gap-1.5">
-                {HORSE.focus.map((f) => (
-                  <View key={f} className="rounded-pill bg-white/20 px-3 py-1">
-                    <Text className="font-semi text-white text-[12px]">{f}</Text>
+                {focus.map((f) => (
+                  <View key={f.id} className="rounded-pill bg-white/20 px-3 py-1">
+                    <Text className="font-semi text-white text-[12px]">
+                      {(f.extraLabel as string) || (f.topic.title as string)}
+                    </Text>
                   </View>
                 ))}
               </View>
@@ -69,13 +62,13 @@ export default function HorseProfileScreen() {
           </View>
 
           <View className="mb-4 flex-row gap-2.5 px-4">
-            {STATS.map((s) => (
-              <View key={s.l} className="flex-1 rounded-card border border-ink-8 bg-white p-3">
+            {stats.map((s: any) => (
+              <View key={s.id} className="flex-1 rounded-card border border-ink-8 bg-white p-3">
                 <Text className="font-semi uppercase text-ink-50" style={{ fontSize: 10, letterSpacing: 1.2 }}>
-                  {s.l}
+                  {s.label}
                 </Text>
-                <Text className="mt-1 font-bold text-ink" style={{ fontSize: 18 }}>{s.v}</Text>
-                <Text className="mt-0.5 text-[11px] text-ink-50">{s.t}</Text>
+                <Text className="mt-1 font-bold text-ink" style={{ fontSize: 18 }}>{s.valueLabel}</Text>
+                <Text className="mt-0.5 text-[11px] text-ink-50">{s.trend}</Text>
               </View>
             ))}
           </View>
@@ -84,21 +77,21 @@ export default function HorseProfileScreen() {
             Tijdlijn
           </SectionTitle>
           <View className="px-7 pb-4">
-            {TIMELINE.map((step, i) => (
-              <View key={i} className="flex-row gap-3.5 pb-4">
+            {timeline.map((step: any, i: number) => (
+              <View key={step.id} className="flex-row gap-3.5 pb-4">
                 <View className="items-center" style={{ width: 14 }}>
                   <View
-                    className={`mt-1 h-3 w-3 rounded-full ${step.now ? 'bg-mint-500' : 'bg-ink-15'}`}
+                    className={`mt-1 h-3 w-3 rounded-full ${step.isNow ? 'bg-mint-500' : 'bg-ink-15'}`}
                   />
-                  {i < TIMELINE.length - 1 && (
+                  {i < timeline.length - 1 && (
                     <View className="flex-1 w-px bg-ink-8" style={{ minHeight: 30 }} />
                   )}
                 </View>
                 <View className="flex-1">
                   <Text className="font-semi uppercase text-ink-50" style={{ fontSize: 10, letterSpacing: 1.2 }}>
-                    {step.when}
+                    {step.whenLabel}
                   </Text>
-                  <Text className="mt-1 text-[14px] text-ink">{step.what}</Text>
+                  <Text className="mt-1 text-[14px] text-ink">{step.message}</Text>
                 </View>
               </View>
             ))}

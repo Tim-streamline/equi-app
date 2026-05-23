@@ -1,0 +1,132 @@
+services:
+    laravel.test:
+        build:
+            context: './vendor/laravel/sail/runtimes/8.5'
+            dockerfile: Dockerfile
+            args:
+                WWWGROUP: '${WWWGROUP}'
+        image: 'sail-8.5/app'
+        extra_hosts:
+            - 'host.docker.internal:host-gateway'
+        ports:
+            - '${APP_PORT:-80}:80'
+            - '${VITE_PORT:-5173}:${VITE_PORT:-5173}'
+        environment:
+            WWWUSER: '${WWWUSER}'
+            LARAVEL_SAIL: 1
+            SUPERVISOR_PHP_COMMAND: "/usr/bin/php -d variables_order=EGPCS /var/www/html/artisan octane:start --server=frankenphp --host=0.0.0.0 --admin-port=2019 --port='${APP_PORT:-80}'"
+            XDG_CONFIG_HOME: /var/www/html/config
+            XDG_DATA_HOME: /var/www/html/data
+            XDEBUG_MODE: '${SAIL_XDEBUG_MODE:-off}'
+            XDEBUG_CONFIG: '${SAIL_XDEBUG_CONFIG:-client_host=host.docker.internal}'
+            IGNITION_LOCAL_SITES_PATH: '${PWD}'
+        volumes:
+            - '.:/var/www/html'
+        networks:
+            - sail
+        depends_on:
+            - pgsql
+
+    pgsql:
+        image: 'postgres:18-alpine'
+        # wal_level=logical is required for PowerSync to consume the WAL
+        # via logical replication. PowerSync also needs the `powersync_role`
+        # database user + the `powersync` publication — both created by
+        # powersync/init-postgres.sql which docker-entrypoint runs on a
+        # fresh volume.
+        command: ['postgres', '-c', 'wal_level=logical', '-c', 'max_replication_slots=10', '-c', 'max_wal_senders=10']
+        ports:
+            - '${FORWARD_DB_PORT:-5432}:5432'
+        environment:
+            PGPASSWORD: '${DB_PASSWORD:-secret}'
+            POSTGRES_DB: '${DB_DATABASE}'
+            POSTGRES_USER: '${DB_USERNAME}'
+            POSTGRES_PASSWORD: '${DB_PASSWORD:-secret}'
+            POWERSYNC_PG_PASSWORD: '${POWERSYNC_PG_PASSWORD:-powersync_password}'
+        volumes:
+            - 'sail-pgsql:/var/lib/postgresql'
+            - './vendor/laravel/sail/database/pgsql/create-testing-database.sql:/docker-entrypoint-initdb.d/10-create-testing-database.sql'
+            - './powersync/init-postgres.sh:/docker-entrypoint-initdb.d/20-powersync.sh'
+        networks:
+            - sail
+        healthcheck:
+            test:
+                - CMD
+                - pg_isready
+                - '-q'
+                - '-d'
+                - '${DB_DATABASE}'
+                - '-U'
+                - '${DB_USERNAME}'
+            retries: 3
+            timeout: 5s
+
+    # PowerSync uses MongoDB as its sync-bucket storage by default. The
+    # service requires a replica-set (single-node is fine for local dev).
+    mongo:
+        image: mongo:7.0
+        restart: unless-stopped
+        command: --replSet rs0 --bind_ip_all --quiet
+        ports:
+            - '${FORWARD_MONGO_PORT:-27017}:27017'
+        volumes:
+            - 'sail-mongo:/data/db'
+        networks:
+            - sail
+
+    # One-shot job that initialises the single-node replica set on `mongo`.
+    # PowerSync will wait for this to finish successfully before starting.
+    mongo-rs-init:
+        image: mongo:7.0
+        depends_on:
+            - mongo
+        restart: on-failure
+        networks:
+            - sail
+        entrypoint:
+            - bash
+            - -c
+            - 'mongosh --host mongo:27017 --eval ''try{rs.status().ok && quit(0)} catch {} rs.initiate({_id: "rs0", version: 1, members: [{ _id: 0, host : "mongo:27017" }]})'''
+
+    powersync:
+        image: journeyapps/powersync-service:latest
+        restart: unless-stopped
+        command: ['start', '-r', 'unified']
+        depends_on:
+            pgsql:
+                condition: service_healthy
+            mongo-rs-init:
+                condition: service_completed_successfully
+        environment:
+            POWERSYNC_CONFIG_PATH: /config/service.yaml
+            NODE_OPTIONS: '--max-old-space-size=1000'
+            # All variables read by service.yaml must start with PS_.
+            PS_DATA_SOURCE_URI: 'postgresql://powersync_role:${POWERSYNC_PG_PASSWORD:-powersync_password}@pgsql:5432/${DB_DATABASE}'
+            PS_MONGO_URI: 'mongodb://mongo:27017/powersync'
+            PS_JWKS_URL: '${POWERSYNC_JWKS_URL:-http://laravel.test/.well-known/jwks.json}'
+            PS_PORT: '8080'
+        ports:
+            - '${POWERSYNC_PORT:-8080}:8080'
+        volumes:
+            - './powersync:/config'
+        networks:
+            - sail
+        healthcheck:
+            test:
+                - CMD
+                - node
+                - '-e'
+                - "fetch('http://localhost:8080/probes/liveness').then(r => r.ok ? process.exit(0) : process.exit(1)).catch(() => process.exit(1))"
+            interval: 5s
+            timeout: 1s
+            retries: 30
+
+networks:
+    sail:
+        driver: bridge
+
+volumes:
+    sail-pgsql:
+        driver: local
+    sail-mongo:
+        driver: local

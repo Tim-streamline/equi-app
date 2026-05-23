@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { View, Text, ScrollView } from 'react-native';
 import { router } from 'expo-router';
 import { ArrowRight, Check } from 'lucide-react-native';
@@ -8,15 +8,37 @@ import { ProgressBar } from '@/components/ui/ProgressBar';
 import { StickyCTA } from '@/components/ui/StickyCTA';
 import { Button } from '@/components/ui/Button';
 import { Bigchip } from '@/components/ui/Bigchip';
-import { FOCUS_OPTIONS } from '@/data/mock';
+import {
+  useCurrentHorseId,
+  useFocusForHorse,
+  useFocusTopics,
+  useStoreMutations,
+} from '@/db/hooks';
 
 export default function FocusScreen() {
-  const [picked, setPicked] = useState<Set<string>>(new Set(['jeuk', 'darm']));
+  const topics = useFocusTopics();
+  const horseId = useCurrentHorseId();
+  const existing = useFocusForHorse(horseId);
+  const { addHorseFocus, removeHorseFocus } = useStoreMutations();
+
+  const initial = useMemo(
+    () => new Set(existing.map((e: any) => e.focusTopicId)),
+    [existing],
+  );
+  const [picked, setPicked] = useState<Set<string>>(initial);
+
   const toggle = (id: string) => {
     const next = new Set(picked);
-    next.has(id) ? next.delete(id) : next.add(id);
+    if (next.has(id)) {
+      next.delete(id);
+      removeHorseFocus(horseId, id);
+    } else {
+      next.add(id);
+      addHorseFocus(horseId, id);
+    }
     setPicked(next);
   };
+
   return (
     <View className="flex-1 bg-canvas">
       <SubHeader title="Waar focus je op?" onBack={() => router.back()} />
@@ -33,16 +55,16 @@ export default function FocusScreen() {
         </Text>
 
         <View className="gap-2.5">
-          {FOCUS_OPTIONS.map((f) => {
+          {topics.map((f: any) => {
             const active = picked.has(f.id);
             return (
               <Bigchip
                 key={f.id}
-                title={f.t}
-                description={f.d}
+                title={f.title}
+                description={f.description}
                 active={active}
                 onPress={() => toggle(f.id)}
-                icon={<Text style={{ fontSize: 20 }}>{f.ic}</Text>}
+                icon={<Text style={{ fontSize: 20 }}>{f.icon}</Text>}
                 trailing={
                   <View
                     className="items-center justify-center rounded-full border-2"

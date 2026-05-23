@@ -1,0 +1,423 @@
+%% EquiNova data model — generated from datamodel.md
+%% Paste into any Mermaid renderer (mermaid.live, GitHub, VS Code, etc.)
+
+erDiagram
+
+  %% ---------- identity ----------
+  USER ||--o{ HORSE : owns
+  USER ||--o{ HORSE_SHARE : grants
+  USER ||--|| SUBSCRIPTION : has
+  USER ||--|| NOTIFICATION_PREFERENCE : has
+  USER ||--o{ ACCOUNT_SETTING : configures
+  USER ||--o{ DATA_EXPORT : requests
+  USER ||--o{ SCAN_RESULT : performs
+  USER ||--o{ LIBRARY_BOOKMARK : saves
+  USER ||--o{ LIBRARY_PROGRESS : tracks
+  USER ||--o{ COMMUNITY_POST : authors
+  USER ||--o{ COMMUNITY_REPLY : authors
+  USER ||--o{ COMMUNITY_REACTION : reacts
+  USER ||--o{ CHAT_SESSION : starts
+  USER ||--o{ INTAKE_BOOKING : books
+  USER ||--o{ OBSERVATION : authors
+
+  THERAPIST ||--o{ HORSE_SHARE : invited_to
+  THERAPIST ||--o{ PROTOCOL : authors
+  THERAPIST ||--o{ LIBRARY_ITEM : authors
+  THERAPIST ||--o{ COMMUNITY_REPLY : expert_reply
+  THERAPIST ||--o{ INTAKE_BOOKING : conducts
+
+  %% ---------- horse domain ----------
+  HORSE ||--o{ HORSE_FOCUS : tagged_with
+  HORSE ||--o{ HORSE_SHARE : shared_via
+  HORSE ||--o{ HORSE_STAT : measured_by
+  HORSE ||--o{ OBSERVATION : about
+  HORSE ||--o{ TIMELINE_EVENT : on
+  HORSE ||--o{ PROTOCOL : assigned
+  HORSE ||--o{ PROTOCOL_TASK_COMPLETION : applies_to
+  HORSE ||--o{ SCAN_RESULT : context
+  HORSE ||--o{ CHAT_SESSION : about
+  HORSE ||--o{ INTAKE_BOOKING : about
+  HORSE ||--o{ DATA_EXPORT : about
+
+  FOCUS_TOPIC ||--o{ HORSE_FOCUS : selected_by
+  FOCUS_TOPIC ||--o{ LIBRARY_ITEM_FOCUS : tags
+
+  %% ---------- protocol ----------
+  PROTOCOL ||--o{ PROTOCOL_PHASE : contains
+  PROTOCOL ||--|| PROTOCOL_ANALYSIS : analyzed_by
+  PROTOCOL ||--o{ PROTOCOL_TASK : schedules
+  PROTOCOL_ANALYSIS ||--o{ PROTOCOL_ADVICE : recommends
+  PROTOCOL_PHASE ||--o{ PROTOCOL_PHASE_ITEM : lists
+  PROTOCOL_PHASE ||--o{ PROTOCOL_TASK : groups
+  PROTOCOL_TASK ||--o{ PROTOCOL_TASK_COMPLETION : completed_as
+  PROTOCOL_TASK }o--o| LIBRARY_ITEM : referenced_from
+
+  %% ---------- observations / timeline ----------
+  OBSERVATION ||--o{ OBSERVATION_PHOTO : has
+  OBSERVATION }o--o| PROTOCOL_TASK : logged_for
+
+  %% ---------- scanner ----------
+  SCAN_RESULT }o--o| PRODUCT : scans
+  SCAN_RESULT ||--o{ SCAN_INGREDIENT : breaks_down
+  INGREDIENT ||--o{ SCAN_INGREDIENT : appears_in
+
+  %% ---------- library ----------
+  LIBRARY_ITEM ||--o{ LIBRARY_CHAPTER : chapters
+  LIBRARY_ITEM ||--o{ LIBRARY_ARTICLE_SECTION : sections
+  LIBRARY_ITEM ||--o{ LIBRARY_ITEM_CATEGORY : in
+  LIBRARY_ITEM ||--o{ LIBRARY_ITEM_FOCUS : tagged_with
+  LIBRARY_ITEM ||--o{ LIBRARY_BOOKMARK : bookmarked_as
+  LIBRARY_ITEM ||--o{ LIBRARY_PROGRESS : progressed_as
+  LIBRARY_CATEGORY ||--o{ LIBRARY_ITEM_CATEGORY : groups
+  LIBRARY_ITEM }o--o| SEASONAL_TIP : cta_for
+
+  %% ---------- community ----------
+  COMMUNITY_CATEGORY ||--o{ COMMUNITY_POST : groups
+  COMMUNITY_POST ||--o{ COMMUNITY_REPLY : has
+  COMMUNITY_POST ||--o{ COMMUNITY_POST_TAG : tagged_with
+  COMMUNITY_TAG ||--o{ COMMUNITY_POST_TAG : applies_to
+  COMMUNITY_POST ||--o{ COMMUNITY_REACTION : reacted_to
+  COMMUNITY_REPLY ||--o{ COMMUNITY_REACTION : reacted_to
+
+  %% ---------- subscription ----------
+  SUBSCRIPTION }o--|| PLAN : on
+  PLAN ||--o{ PLAN_BENEFIT : lists
+  SUBSCRIPTION ||--o{ PAYMENT : billed_via
+
+  %% ---------- chat ----------
+  CHAT_SESSION ||--o{ CHAT_MESSAGE : contains
+
+  %% ---------- attributes (key fields only — see datamodel.md for full list) ----------
+  USER {
+    string id PK
+    string email
+    string name
+    string locale
+    string unitsSystem
+    boolean notificationsOn
+    timestamp onboardedAt
+    timestamp createdAt
+  }
+  THERAPIST {
+    string id PK
+    string name
+    string title
+    boolean verified
+  }
+  HORSE {
+    string id PK
+    string ownerId FK
+    string name
+    string breed
+    int age
+    string sex
+    int weightKg
+    string stable
+    string status
+  }
+  FOCUS_TOPIC {
+    string id PK
+    string icon
+    string title
+    string description
+  }
+  HORSE_FOCUS {
+    string id PK
+    string horseId FK
+    string focusTopicId FK
+    string extraLabel
+  }
+  HORSE_SHARE {
+    string id PK
+    string horseId FK
+    string granteeUserId FK
+    string therapistId FK
+    string role
+    date since
+  }
+  HORSE_STAT {
+    string id PK
+    string horseId FK
+    date measuredAt
+    int weightKg
+    int energy
+    string stoolScore
+  }
+  PROTOCOL {
+    string id PK
+    string horseId FK
+    string therapistId FK
+    string title
+    int totalWeeks
+    int currentWeek
+    string status
+  }
+  PROTOCOL_PHASE {
+    string id PK
+    string protocolId FK
+    int order
+    string title
+    string state
+    int weekStart
+    int weekEnd
+  }
+  PROTOCOL_PHASE_ITEM {
+    string id PK
+    string phaseId FK
+    int order
+    string label
+  }
+  PROTOCOL_ANALYSIS {
+    string id PK
+    string protocolId FK
+    text cause
+  }
+  PROTOCOL_ADVICE {
+    string id PK
+    string analysisId FK
+    string iconKey
+    string title
+    text body
+  }
+  PROTOCOL_TASK {
+    string id PK
+    string protocolId FK
+    string phaseId FK
+    string label
+    string meta
+    string kind
+  }
+  PROTOCOL_TASK_COMPLETION {
+    string id PK
+    string taskId FK
+    string horseId FK
+    date date
+    boolean done
+    timestamp doneAt
+  }
+  OBSERVATION {
+    string id PK
+    string horseId FK
+    string authorId FK
+    date date
+    text note
+    int mood
+    string stoolScore
+    string protocolTaskId FK
+  }
+  OBSERVATION_PHOTO {
+    string id PK
+    string observationId FK
+    string url
+    string kind
+  }
+  TIMELINE_EVENT {
+    string id PK
+    string horseId FK
+    timestamp occurredAt
+    string kind
+    text message
+  }
+  PRODUCT {
+    string id PK
+    string brand
+    string name
+    string barcode
+    string category
+  }
+  INGREDIENT {
+    string id PK
+    string name
+    text description
+    string defaultTag
+  }
+  SCAN_RESULT {
+    string id PK
+    string userId FK
+    string horseId FK
+    string productId FK
+    int score
+    string rating
+    text advice
+    boolean bookmarked
+  }
+  SCAN_INGREDIENT {
+    string id PK
+    string scanId FK
+    string ingredientId FK
+    string tag
+    text description
+  }
+  LIBRARY_ITEM {
+    string id PK
+    string slug
+    string kind
+    string format
+    string title
+    string durationLabel
+    string authorTherapistId FK
+    boolean isPlus
+    boolean isFeatured
+  }
+  LIBRARY_CHAPTER {
+    string id PK
+    string itemId FK
+    int order
+    string title
+    int startSec
+  }
+  LIBRARY_ARTICLE_SECTION {
+    string id PK
+    string itemId FK
+    int order
+    string heading
+    text body
+  }
+  LIBRARY_CATEGORY {
+    string id PK
+    string label
+    int order
+  }
+  LIBRARY_ITEM_CATEGORY {
+    string itemId FK
+    string categoryId FK
+  }
+  LIBRARY_ITEM_FOCUS {
+    string itemId FK
+    string focusTopicId FK
+  }
+  LIBRARY_BOOKMARK {
+    string id PK
+    string userId FK
+    string itemId FK
+    timestamp createdAt
+  }
+  LIBRARY_PROGRESS {
+    string id PK
+    string userId FK
+    string itemId FK
+    int positionSec
+    float progress
+    boolean completed
+  }
+  SEASONAL_TIP {
+    string id PK
+    string month
+    text body
+    string ctaItemId FK
+    boolean active
+  }
+  COMMUNITY_CATEGORY {
+    string id PK
+    string label
+    int order
+  }
+  COMMUNITY_POST {
+    string id PK
+    string authorUserId FK
+    string categoryId FK
+    text body
+    int likesCount
+    int repliesCount
+    boolean hasExpertReply
+  }
+  COMMUNITY_TAG {
+    string id PK
+    string label
+  }
+  COMMUNITY_POST_TAG {
+    string postId FK
+    string tagId FK
+  }
+  COMMUNITY_REPLY {
+    string id PK
+    string postId FK
+    string authorUserId FK
+    string authorTherapistId FK
+    text body
+    boolean authorIsExpert
+    int likesCount
+  }
+  COMMUNITY_REACTION {
+    string id PK
+    string userId FK
+    string targetType
+    string targetId
+    string kind
+  }
+  PLAN {
+    string id PK
+    string label
+    string name
+    int priceCents
+    string interval
+  }
+  PLAN_BENEFIT {
+    string id PK
+    string planId FK
+    string label
+    int order
+  }
+  SUBSCRIPTION {
+    string id PK
+    string userId FK
+    string planId FK
+    string status
+    int priceCents
+    date startedAt
+    date renewsAt
+    int maxHorses
+  }
+  PAYMENT {
+    string id PK
+    string subscriptionId FK
+    date date
+    int amountCents
+    string status
+  }
+  NOTIFICATION_PREFERENCE {
+    string id PK
+    string userId FK
+    boolean reminderProtocol
+    boolean reminderCommunity
+    boolean reminderSeasonalTips
+    int activeRemindersCount
+  }
+  ACCOUNT_SETTING {
+    string id PK
+    string userId FK
+    string iconKey
+    string title
+    string route
+    int order
+  }
+  DATA_EXPORT {
+    string id PK
+    string userId FK
+    string horseId FK
+    string format
+    timestamp requestedAt
+    timestamp completedAt
+  }
+  CHAT_SESSION {
+    string id PK
+    string userId FK
+    string horseId FK
+    timestamp startedAt
+  }
+  CHAT_MESSAGE {
+    string id PK
+    string sessionId FK
+    string role
+    text body
+    timestamp createdAt
+  }
+  INTAKE_BOOKING {
+    string id PK
+    string userId FK
+    string horseId FK
+    string therapistId FK
+    timestamp scheduledAt
+    int durationMinutes
+    string status
+  }

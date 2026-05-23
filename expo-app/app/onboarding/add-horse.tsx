@@ -8,14 +8,36 @@ import { ProgressBar } from '@/components/ui/ProgressBar';
 import { Field } from '@/components/ui/Field';
 import { StickyCTA } from '@/components/ui/StickyCTA';
 import { Button } from '@/components/ui/Button';
+import { useCurrentHorseId, useCurrentUserId, useHorse, useStoreMutations } from '@/db/hooks';
 
 export default function AddHorseScreen() {
-  const [name, setName] = useState('Nova');
-  const [breed, setBreed] = useState('Friese kruising');
-  const [age, setAge] = useState('9 jaar');
-  const [sex, setSex] = useState('merrie');
-  const [weight, setWeight] = useState('540 kg');
-  const [stall, setStall] = useState('Manege De Hoeve · Box 4');
+  const horse = useHorse();
+  const horseId = useCurrentHorseId();
+  const ownerId = useCurrentUserId();
+  const { upsertHorse } = useStoreMutations();
+
+  const [name, setName] = useState((horse.name as string) ?? '');
+  const [breed, setBreed] = useState((horse.breed as string) ?? '');
+  const [age, setAge] = useState(horse.age ? `${horse.age} jaar` : '');
+  const [sex, setSex] = useState((horse.sex as string) ?? '');
+  const [weight, setWeight] = useState(horse.weightKg ? `${horse.weightKg} kg` : '');
+  const [stall, setStall] = useState((horse.stable as string) ?? '');
+
+  const next = () => {
+    const ageMatch = age.match(/\d+/);
+    const weightMatch = weight.match(/\d+/);
+    upsertHorse(horseId, {
+      ownerId,
+      name,
+      breed,
+      age: ageMatch ? parseInt(ageMatch[0], 10) : (horse.age as number) || 0,
+      sex,
+      weightKg: weightMatch ? parseInt(weightMatch[0], 10) : (horse.weightKg as number) || 0,
+      stable: stall,
+      status: 'active',
+    });
+    router.push('/onboarding/focus');
+  };
 
   return (
     <View className="flex-1 bg-canvas">
@@ -44,11 +66,7 @@ export default function AddHorseScreen() {
         <Field label="STALLING" value={stall} onChangeText={setStall} />
       </ScrollView>
       <StickyCTA>
-        <Button
-          title="Volgende"
-          onPress={() => router.push('/onboarding/focus')}
-          trailing={<ArrowRight size={18} color="#fff" />}
-        />
+        <Button title="Volgende" onPress={next} trailing={<ArrowRight size={18} color="#fff" />} />
       </StickyCTA>
     </View>
   );

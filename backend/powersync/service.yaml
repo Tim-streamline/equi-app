@@ -1,0 +1,46 @@
+# PowerSync self-hosted service config.
+# Schema: https://unpkg.com/@powersync/service-schema@latest/json-schema/powersync-config.json
+#
+# Values prefixed with !env are pulled from the container environment (only
+# PS_-prefixed names are allowed). The defaults in compose.yaml are tuned for
+# local development against the Sail Postgres + a single-node MongoDB.
+
+telemetry:
+    disable_telemetry_sharing: true
+
+# Source database — Laravel's Postgres.
+replication:
+    connections:
+        - type: postgresql
+          uri: !env PS_DATA_SOURCE_URI
+          # 'disable' is acceptable on a private docker network, not in prod.
+          sslmode: disable
+
+# Sync-bucket storage — MongoDB replica set defined in compose.yaml.
+storage:
+    type: mongodb
+    uri: !env PS_MONGO_URI
+
+port: !env PS_PORT
+
+sync_config:
+    path: sync_rules.yaml
+
+client_auth:
+    # In local dev, point this at any URL that returns a JWKS document.
+    # When you wire up auth on the Laravel side (e.g. expose
+    # /.well-known/jwks.json signed with the same key the app uses to mint
+    # PowerSync tokens), the service will pick it up automatically.
+    jwks_uri: !env PS_JWKS_URL
+    # Allow http:// and other internal URLs to work for jwks_uri in dev.
+    allow_local_jwks: true
+    audience: ['powersync', 'powersync-dev', 'equinova']
+
+api:
+    tokens:
+        - replace_this_for_local_admin_only
+
+system:
+    logging:
+        level: info
+        format: text

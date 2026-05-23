@@ -11,14 +11,19 @@ import Animated, {
   Easing,
 } from 'react-native-reanimated';
 import { X, Zap, History, QrCode } from 'lucide-react-native';
+import { useScanResults, useValue } from '@/db/hooks';
 
 export default function ScannerCameraScreen() {
   const y = useSharedValue(0);
+  const hint = useValue('scannerHintText') as string;
+  const scans = useScanResults();
+  const lastScan = scans.find((s: any) => s.score === 62) ?? scans[0];
+
   useEffect(() => {
     y.value = withRepeat(
       withTiming(1, { duration: 2200, easing: Easing.inOut(Easing.quad) }),
       -1,
-      true
+      true,
     );
   }, [y]);
 
@@ -30,28 +35,19 @@ export default function ScannerCameraScreen() {
     <View className="flex-1" style={{ backgroundColor: '#0a1414' }}>
       <StatusBar style="light" />
       <SafeAreaView style={{ flex: 1 }} edges={['top']}>
-        {/* radial washes simulated with absolute circles */}
         <View
           pointerEvents="none"
           style={{
-            position: 'absolute',
-            top: -120,
-            left: -80,
-            width: 320,
-            height: 320,
-            borderRadius: 160,
+            position: 'absolute', top: -120, left: -80,
+            width: 320, height: 320, borderRadius: 160,
             backgroundColor: 'rgba(18,122,121,0.18)',
           }}
         />
         <View
           pointerEvents="none"
           style={{
-            position: 'absolute',
-            bottom: -100,
-            right: -80,
-            width: 280,
-            height: 280,
-            borderRadius: 140,
+            position: 'absolute', bottom: -100, right: -80,
+            width: 280, height: 280, borderRadius: 140,
             backgroundColor: 'rgba(24,186,176,0.10)',
           }}
         />
@@ -70,15 +66,7 @@ export default function ScannerCameraScreen() {
         </View>
 
         <View className="flex-1 items-center justify-center">
-          <View
-            style={{
-              width: 240,
-              height: 240,
-              position: 'relative',
-              borderRadius: 20,
-              overflow: 'hidden',
-            }}
-          >
+          <View style={{ width: 240, height: 240, position: 'relative', borderRadius: 20, overflow: 'hidden' }}>
             {(['tl', 'tr', 'bl', 'br'] as const).map((c) => {
               const base = { position: 'absolute' as const, width: 28, height: 28, borderColor: '#18BAB0', borderRadius: 4 };
               const map: Record<typeof c, any> = {
@@ -92,22 +80,16 @@ export default function ScannerCameraScreen() {
             <Animated.View
               style={[
                 {
-                  position: 'absolute',
-                  left: 16,
-                  right: 16,
-                  top: '50%',
-                  height: 2,
-                  backgroundColor: '#18BAB0',
-                  shadowColor: '#18BAB0',
-                  shadowOpacity: 0.8,
-                  shadowRadius: 8,
+                  position: 'absolute', left: 16, right: 16, top: '50%',
+                  height: 2, backgroundColor: '#18BAB0',
+                  shadowColor: '#18BAB0', shadowOpacity: 0.8, shadowRadius: 8,
                 },
                 lineStyle,
               ]}
             />
           </View>
           <Text className="mt-6 text-white/70 text-[13px] px-10 text-center leading-[20px]">
-            Richt de camera op een verpakking, ingrediëntenlijst of voederzak.
+            {hint}
           </Text>
         </View>
 
@@ -120,7 +102,12 @@ export default function ScannerCameraScreen() {
               <History size={20} color="#fff" />
             </Pressable>
             <Pressable
-              onPress={() => router.push('/(tabs)/scanner/result')}
+              onPress={() =>
+                router.push({
+                  pathname: '/(tabs)/scanner/result',
+                  params: { id: lastScan?.id ?? '' },
+                } as any)
+              }
               className="h-20 w-20 items-center justify-center rounded-full bg-white"
             >
               <View className="h-16 w-16 rounded-full border-4 border-[#0a1414]" />

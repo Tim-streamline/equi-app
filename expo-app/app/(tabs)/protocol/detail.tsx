@@ -1,4 +1,3 @@
-import { useState } from 'react';
 import { View, Text, ScrollView, Pressable } from 'react-native';
 import { router } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -9,23 +8,36 @@ import { Coach } from '@/components/ui/Coach';
 import { SectionTitle } from '@/components/ui/SectionTitle';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
-import { TODAY_PROTOCOL, type ProtocolItem } from '@/data/mock';
 import { useTabBarPadding } from '@/hooks/useTabBarPadding';
+import {
+  useActiveProtocolForHorse,
+  useCurrentHorseId,
+  useScreenCopy,
+  useStoreMutations,
+  useTodayTasks,
+  useValue,
+} from '@/db/hooks';
+
+const TODAY_ISO = '2026-05-16';
 
 export default function ProtocolDetailScreen() {
-  const [items, setItems] = useState<ProtocolItem[]>(TODAY_PROTOCOL);
-  const toggle = (id: number) =>
-    setItems(items.map((p) => (p.id === id ? { ...p, done: !p.done } : p)));
-  const done = items.filter((p) => p.done).length;
+  const padBottom = useTabBarPadding();
+  const protocol = useActiveProtocolForHorse();
+  const horseId = useCurrentHorseId();
+  const items = useTodayTasks(protocol?.id ?? '', TODAY_ISO);
+  const mutations = useStoreMutations();
+  const headerLabel = useValue('detailTodayLabel') as string;
+  const copy = useScreenCopy('protocolDetail');
+
   const morning = items.filter((p) => p.meta === 'Ochtendvoer');
   const obs = items.filter((p) => p.meta !== 'Ochtendvoer');
-  const padBottom = useTabBarPadding();
+  const done = items.filter((p) => p.done).length;
 
   return (
     <View className="flex-1 bg-canvas">
       <SafeAreaView edges={['top']} style={{ flex: 1 }}>
         <SubHeader
-          title="Vandaag · 16 mei"
+          title={headerLabel}
           onBack={() => router.back()}
           right={
             <IconButton>
@@ -34,10 +46,7 @@ export default function ProtocolDetailScreen() {
           }
         />
         <ScrollView contentContainerStyle={{ paddingBottom: padBottom }}>
-          <Coach tag="Toelichting">
-            Vandaag iets minder lijnzaad, omdat de mest gisteren al iets losser was. Voeg{' '}
-            <Text className="font-italic">één eetlepel</Text> brandnetel toe — vers is best.
-          </Coach>
+          {copy.coach ? <Coach tag="Toelichting">{copy.coach}</Coach> : null}
 
           <SectionTitle>Ochtend</SectionTitle>
           <View className="px-4 mb-4">
@@ -49,7 +58,7 @@ export default function ProtocolDetailScreen() {
                   style={{ paddingVertical: idx === 0 ? 0 : 8 }}
                 >
                   <Pressable
-                    onPress={() => toggle(p.id)}
+                    onPress={() => mutations.toggleTaskCompletion(p.id, TODAY_ISO, horseId)}
                     className={`h-5 w-5 items-center justify-center rounded-full border-2 ${
                       p.done ? 'border-mint-500 bg-mint-500' : 'border-ink-15 bg-white'
                     }`}
@@ -74,7 +83,7 @@ export default function ProtocolDetailScreen() {
               {obs.map((p) => (
                 <View key={p.id} className="flex-row items-center gap-3 py-1">
                   <Pressable
-                    onPress={() => toggle(p.id)}
+                    onPress={() => mutations.toggleTaskCompletion(p.id, TODAY_ISO, horseId)}
                     className={`h-5 w-5 items-center justify-center rounded-full border-2 ${
                       p.done ? 'border-mint-500 bg-mint-500' : 'border-ink-15 bg-white'
                     }`}

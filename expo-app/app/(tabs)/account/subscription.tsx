@@ -7,22 +7,35 @@ import { SectionTitle } from '@/components/ui/SectionTitle';
 import { Chip } from '@/components/ui/Chip';
 import { Button } from '@/components/ui/Button';
 import { useTabBarPadding } from '@/hooks/useTabBarPadding';
-
-const BENEFITS = [
-  'Onbeperkte scans + AI-advies',
-  'Toegang tot alle bibliotheek-content',
-  'Direct vragen stellen aan Shelley',
-  'Tot 3 paarden',
-];
-
-const PAYMENTS = [
-  { d: '22 apr 2026', v: '€ 12,00' },
-  { d: '22 mrt 2026', v: '€ 12,00' },
-  { d: '22 feb 2026', v: '€ 12,00' },
-];
+import {
+  useActiveSubscription,
+  usePayments,
+  usePlan,
+  usePlanBenefits,
+  useTable,
+} from '@/db/hooks';
 
 export default function SubscriptionScreen() {
   const padBottom = useTabBarPadding();
+  const subscription = useActiveSubscription();
+  const plan = usePlan(subscription?.planId ?? 'plan-plus');
+  const benefits = usePlanBenefits(plan.id);
+  const payments = usePayments(subscription?.id ?? '');
+
+  const plans = Object.entries(useTable('plans')).map(([id, row]) => ({ id, ...(row as any) }));
+  const upgradePlan = plans.find((p: any) => p.isRecommended);
+  const upgradeBenefits = usePlanBenefits(upgradePlan?.id ?? '');
+
+  if (!subscription) {
+    return (
+      <View className="flex-1 bg-canvas">
+        <SafeAreaView edges={['top']} style={{ flex: 1 }}>
+          <SubHeader title="Abonnement" onBack={() => router.back()} />
+        </SafeAreaView>
+      </View>
+    );
+  }
+
   return (
     <View className="flex-1 bg-canvas">
       <SafeAreaView edges={['top']} style={{ flex: 1 }}>
@@ -31,50 +44,69 @@ export default function SubscriptionScreen() {
           <View className="mb-3.5 rounded-card bg-teal-700 p-[18px]">
             <View className="flex-row justify-between">
               <View className="self-start rounded-pill bg-mint-500 px-3 py-1">
-                <Text className="font-semi text-white text-[12px]">Plus · Actief</Text>
+                <Text className="font-semi text-white text-[12px]">{plan.label as string} · Actief</Text>
               </View>
-              <Text className="text-white/70 text-[12px]">Sinds april 2026</Text>
+              <Text className="text-white/70 text-[12px]">{subscription.startedLabel as string}</Text>
             </View>
             <View className="mt-3 flex-row items-baseline">
-              <Text className="font-bold text-white" style={{ fontSize: 32 }}>€ 12</Text>
-              <Text className="font-medium text-white/70 ml-1.5" style={{ fontSize: 14 }}>/ maand</Text>
+              <Text className="font-bold text-white" style={{ fontSize: 32 }}>
+                € {((subscription.priceCents as number) / 100).toFixed(0)}
+              </Text>
+              <Text className="font-medium text-white/70 ml-1.5" style={{ fontSize: 14 }}>
+                {plan.priceSuffix as string}
+              </Text>
             </View>
-            <Text className="text-white/75 text-[13px] mt-1">Verlengt automatisch op 22 mei</Text>
+            <Text className="text-white/75 text-[13px] mt-1">
+              Verlengt automatisch op {monthDayLabel(subscription.renewsAt as string)}
+            </Text>
 
             <View className="mt-4 pt-4 gap-2" style={{ borderTopWidth: 1, borderTopColor: 'rgba(255,255,255,0.12)' }}>
-              {BENEFITS.map((b) => (
-                <View key={b} className="flex-row items-center gap-2.5">
+              {benefits.map((b: any) => (
+                <View key={b.id} className="flex-row items-center gap-2.5">
                   <Check size={16} color="#5FD7CB" strokeWidth={2.5} />
-                  <Text className="text-white text-[13px]">{b}</Text>
+                  <Text className="text-white text-[13px]">{b.label}</Text>
                 </View>
               ))}
             </View>
           </View>
 
-          <SectionTitle>Upgrade pad</SectionTitle>
-          <View className="rounded-card border border-mint-300 bg-white p-[18px] mb-4">
-            <View className="flex-row items-start justify-between">
-              <View className="flex-1">
-                <View className="self-start"><Chip label="Aanbevolen" /></View>
-                <Text className="font-bold text-ink mt-2" style={{ fontSize: 18 }}>Opleiding bundel</Text>
-                <Text className="text-[12px] text-ink-50 mt-0.5">EquiNova Plus + 8-maands opleiding</Text>
+          {upgradePlan && (
+            <>
+              <SectionTitle>Upgrade pad</SectionTitle>
+              <View className="rounded-card border border-mint-300 bg-white p-[18px] mb-4">
+                <View className="flex-row items-start justify-between">
+                  <View className="flex-1">
+                    <View className="self-start"><Chip label={upgradePlan.label as string} /></View>
+                    <Text className="font-bold text-ink mt-2" style={{ fontSize: 18 }}>{upgradePlan.name as string}</Text>
+                    <Text className="text-[12px] text-ink-50 mt-0.5">{upgradePlan.description as string}</Text>
+                    {upgradeBenefits.length > 0 && (
+                      <View className="mt-2 gap-1">
+                        {upgradeBenefits.map((b: any) => (
+                          <Text key={b.id} className="text-[12px] text-ink-70">• {b.label}</Text>
+                        ))}
+                      </View>
+                    )}
+                  </View>
+                  <View className="items-end">
+                    <Text className="font-bold text-ink text-[15px]">
+                      € {((upgradePlan.priceCents as number) / 100).toLocaleString('nl-NL')}
+                    </Text>
+                    <Text className="text-[11px] text-ink-50">{upgradePlan.priceSuffix as string}</Text>
+                  </View>
+                </View>
+                <View className="mt-3">
+                  <Button title="Bekijk opleiding" trailing={<ArrowRight size={18} color="#fff" />} />
+                </View>
               </View>
-              <View className="items-end">
-                <Text className="font-bold text-ink text-[15px]">€ 4.997</Text>
-                <Text className="text-[11px] text-ink-50">eenmalig</Text>
-              </View>
-            </View>
-            <View className="mt-3">
-              <Button title="Bekijk opleiding" trailing={<ArrowRight size={18} color="#fff" />} />
-            </View>
-          </View>
+            </>
+          )}
 
           <SectionTitle>Betalingen</SectionTitle>
           <View className="px-1">
-            {PAYMENTS.map((p) => (
-              <View key={p.d} className="flex-row justify-between border-b border-ink-8 py-3">
-                <Text className="text-ink text-[14px]">{p.d}</Text>
-                <Text className="font-semi text-ink text-[14px]">{p.v}</Text>
+            {payments.map((p: any) => (
+              <View key={p.id} className="flex-row justify-between border-b border-ink-8 py-3">
+                <Text className="text-ink text-[14px]">{p.dateLabel}</Text>
+                <Text className="font-semi text-ink text-[14px]">{p.amountLabel}</Text>
               </View>
             ))}
           </View>
@@ -86,4 +118,11 @@ export default function SubscriptionScreen() {
       </SafeAreaView>
     </View>
   );
+}
+
+function monthDayLabel(iso?: string) {
+  if (!iso) return '';
+  const d = new Date(iso);
+  const months = ['jan', 'feb', 'mrt', 'apr', 'mei', 'jun', 'jul', 'aug', 'sep', 'okt', 'nov', 'dec'];
+  return `${d.getDate()} ${months[d.getMonth()]}`;
 }

@@ -1,0 +1,284 @@
+# PowerSync sync rules.
+# Schema: https://unpkg.com/@powersync/service-sync-rules@latest/schema/sync_rules.json
+#
+# The mobile client authenticates with a JWT whose `sub` is the Laravel user
+# UUID. Reference/catalog/community content is public to signed-in clients.
+# User, horse, protocol, scan, billing, settings, chat, and intake rows are
+# scoped to the current user or to horses visible through ownership/sharing.
+
+config:
+    edition: 3
+
+streams:
+    public_reference:
+        auto_subscribe: true
+        queries:
+            # identity/reference
+            - SELECT * FROM therapists
+            - SELECT * FROM focus_topics
+
+            # scanner catalog
+            - SELECT * FROM products
+            - SELECT * FROM ingredients
+
+            # library/catalog content
+            - SELECT * FROM library_items
+            - SELECT * FROM library_chapters
+            - SELECT * FROM library_article_sections
+            - SELECT * FROM library_categories
+            - SELECT * FROM library_item_categories
+            - SELECT * FROM library_item_focus
+            - SELECT * FROM seasonal_tips
+
+            # community is intentionally public inside the signed-in app
+            - SELECT * FROM community_categories
+            - SELECT * FROM community_tags
+            - SELECT * FROM community_posts
+            - SELECT * FROM community_post_tags
+            - SELECT * FROM community_replies
+            - SELECT * FROM community_reactions
+
+            # billing catalog
+            - SELECT * FROM plans
+            - SELECT * FROM plan_benefits
+
+            # static assistant copy
+            - SELECT * FROM nova_fallback_replies
+
+    user_private:
+        auto_subscribe: true
+        queries:
+            # Current user plus user rows needed to render visible horse shares.
+            - |
+                SELECT * FROM users
+                WHERE id = request.user_id()
+                   OR id IN (
+                        SELECT hs.grantee_user_id
+                        FROM horse_shares hs
+                        JOIN horses h ON h.id = hs.horse_id
+                        WHERE h.owner_id = request.user_id()
+                          AND hs.grantee_user_id IS NOT NULL
+                   )
+                   OR id IN (
+                        SELECT h.owner_id
+                        FROM horses h
+                        JOIN horse_shares hs ON hs.horse_id = h.id
+                        WHERE hs.grantee_user_id = request.user_id()
+                   )
+
+            # User-owned engagement/account rows.
+            - SELECT * FROM library_bookmarks WHERE user_id = request.user_id()
+            - SELECT * FROM library_progress WHERE user_id = request.user_id()
+            - SELECT * FROM subscriptions WHERE user_id = request.user_id()
+            - |
+                SELECT * FROM payments
+                WHERE subscription_id IN (
+                    SELECT id FROM subscriptions WHERE user_id = request.user_id()
+                )
+            - SELECT * FROM notification_preferences WHERE user_id = request.user_id()
+            - SELECT * FROM account_settings WHERE user_id = request.user_id()
+            - SELECT * FROM data_exports WHERE user_id = request.user_id()
+            - SELECT * FROM chat_sessions WHERE user_id = request.user_id()
+            - |
+                SELECT * FROM chat_messages
+                WHERE session_id IN (
+                    SELECT id FROM chat_sessions WHERE user_id = request.user_id()
+                )
+            - SELECT * FROM intake_bookings WHERE user_id = request.user_id()
+
+    horse_private:
+        auto_subscribe: true
+        queries:
+            # A horse is visible to its owner and to users it has been shared with.
+            - |
+                SELECT * FROM horses
+                WHERE owner_id = request.user_id()
+                   OR id IN (
+                        SELECT horse_id
+                        FROM horse_shares
+                        WHERE grantee_user_id = request.user_id()
+                   )
+            - |
+                SELECT * FROM horse_focus
+                WHERE horse_id IN (
+                    SELECT id FROM horses
+                    WHERE owner_id = request.user_id()
+                       OR id IN (
+                            SELECT horse_id
+                            FROM horse_shares
+                            WHERE grantee_user_id = request.user_id()
+                       )
+                )
+            - |
+                SELECT * FROM horse_shares
+                WHERE horse_id IN (
+                    SELECT id FROM horses
+                    WHERE owner_id = request.user_id()
+                       OR id IN (
+                            SELECT horse_id
+                            FROM horse_shares
+                            WHERE grantee_user_id = request.user_id()
+                       )
+                )
+            - |
+                SELECT * FROM horse_stats
+                WHERE horse_id IN (
+                    SELECT id FROM horses
+                    WHERE owner_id = request.user_id()
+                       OR id IN (
+                            SELECT horse_id
+                            FROM horse_shares
+                            WHERE grantee_user_id = request.user_id()
+                       )
+                )
+            - |
+                SELECT * FROM timeline_events
+                WHERE horse_id IN (
+                    SELECT id FROM horses
+                    WHERE owner_id = request.user_id()
+                       OR id IN (
+                            SELECT horse_id
+                            FROM horse_shares
+                            WHERE grantee_user_id = request.user_id()
+                       )
+                )
+
+            # Protocol data for visible horses.
+            - |
+                SELECT * FROM protocols
+                WHERE horse_id IN (
+                    SELECT id FROM horses
+                    WHERE owner_id = request.user_id()
+                       OR id IN (
+                            SELECT horse_id
+                            FROM horse_shares
+                            WHERE grantee_user_id = request.user_id()
+                       )
+                )
+            - |
+                SELECT * FROM protocol_phases
+                WHERE protocol_id IN (
+                    SELECT p.id FROM protocols p
+                    JOIN horses h ON h.id = p.horse_id
+                    WHERE h.owner_id = request.user_id()
+                       OR h.id IN (
+                            SELECT horse_id
+                            FROM horse_shares
+                            WHERE grantee_user_id = request.user_id()
+                       )
+                )
+            - |
+                SELECT * FROM protocol_phase_items
+                WHERE phase_id IN (
+                    SELECT pp.id FROM protocol_phases pp
+                    JOIN protocols p ON p.id = pp.protocol_id
+                    JOIN horses h ON h.id = p.horse_id
+                    WHERE h.owner_id = request.user_id()
+                       OR h.id IN (
+                            SELECT horse_id
+                            FROM horse_shares
+                            WHERE grantee_user_id = request.user_id()
+                       )
+                )
+            - |
+                SELECT * FROM protocol_analyses
+                WHERE protocol_id IN (
+                    SELECT p.id FROM protocols p
+                    JOIN horses h ON h.id = p.horse_id
+                    WHERE h.owner_id = request.user_id()
+                       OR h.id IN (
+                            SELECT horse_id
+                            FROM horse_shares
+                            WHERE grantee_user_id = request.user_id()
+                       )
+                )
+            - |
+                SELECT * FROM protocol_advice
+                WHERE analysis_id IN (
+                    SELECT pa.id FROM protocol_analyses pa
+                    JOIN protocols p ON p.id = pa.protocol_id
+                    JOIN horses h ON h.id = p.horse_id
+                    WHERE h.owner_id = request.user_id()
+                       OR h.id IN (
+                            SELECT horse_id
+                            FROM horse_shares
+                            WHERE grantee_user_id = request.user_id()
+                       )
+                )
+            - |
+                SELECT * FROM protocol_tasks
+                WHERE protocol_id IN (
+                    SELECT p.id FROM protocols p
+                    JOIN horses h ON h.id = p.horse_id
+                    WHERE h.owner_id = request.user_id()
+                       OR h.id IN (
+                            SELECT horse_id
+                            FROM horse_shares
+                            WHERE grantee_user_id = request.user_id()
+                       )
+                )
+            - |
+                SELECT * FROM protocol_task_completions
+                WHERE horse_id IN (
+                    SELECT id FROM horses
+                    WHERE owner_id = request.user_id()
+                       OR id IN (
+                            SELECT horse_id
+                            FROM horse_shares
+                            WHERE grantee_user_id = request.user_id()
+                       )
+                )
+
+            # Observations for visible horses.
+            - |
+                SELECT * FROM observations
+                WHERE horse_id IN (
+                    SELECT id FROM horses
+                    WHERE owner_id = request.user_id()
+                       OR id IN (
+                            SELECT horse_id
+                            FROM horse_shares
+                            WHERE grantee_user_id = request.user_id()
+                       )
+                )
+            - |
+                SELECT * FROM observation_photos
+                WHERE observation_id IN (
+                    SELECT o.id FROM observations o
+                    JOIN horses h ON h.id = o.horse_id
+                    WHERE h.owner_id = request.user_id()
+                       OR h.id IN (
+                            SELECT horse_id
+                            FROM horse_shares
+                            WHERE grantee_user_id = request.user_id()
+                       )
+                )
+
+            # Scans for visible horses or scans made directly by the user.
+            - |
+                SELECT * FROM scan_results
+                WHERE user_id = request.user_id()
+                   OR horse_id IN (
+                        SELECT id FROM horses
+                        WHERE owner_id = request.user_id()
+                           OR id IN (
+                                SELECT horse_id
+                                FROM horse_shares
+                                WHERE grantee_user_id = request.user_id()
+                           )
+                   )
+            - |
+                SELECT * FROM scan_ingredients
+                WHERE scan_id IN (
+                    SELECT sr.id FROM scan_results sr
+                    WHERE sr.user_id = request.user_id()
+                       OR sr.horse_id IN (
+                            SELECT id FROM horses
+                            WHERE owner_id = request.user_id()
+                               OR id IN (
+                                    SELECT horse_id
+                                    FROM horse_shares
+                                    WHERE grantee_user_id = request.user_id()
+                               )
+                       )
+                )

@@ -6,37 +6,40 @@ import { router } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Sparkles, Send } from 'lucide-react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-
-type Msg = { role: 'nova' | 'you'; text: string };
-
-const FAKE_REPLIES = [
-  'Goede vraag! Bij Nova zou ik beginnen met het versterken van de darmen — zie het brandnetel-artikel in de bibliotheek.',
-  'Let bij voorjaarsrui op de combinatie lijnzaad + brandnetel. Bouw langzaam op.',
-  'Vergeet niet dat huid en darmen samen werken — het is écht een holistisch verhaal.',
-];
+import { IDS } from '@/db/ids';
+import {
+  useChatMessages,
+  useNovaFallbackReplies,
+  useStoreMutations,
+  useValue,
+} from '@/db/hooks';
 
 export default function NovaChatModal() {
   const insets = useSafeAreaInsets();
-  const [msgs, setMsgs] = useState<Msg[]>([
-    { role: 'nova', text: 'Hi Marit! Wat speelt er bij Nova?' },
-  ]);
+  const messages = useChatMessages(IDS.chatSession);
+  const fallbacks = useNovaFallbackReplies();
+  const subtitle = useValue('novaSubtitle') as string;
+  const { addChatMessage } = useStoreMutations();
+
   const [input, setInput] = useState('');
   const [busy, setBusy] = useState(false);
   const scrollRef = useRef<ScrollView>(null);
 
   useEffect(() => {
     setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 100);
-  }, [msgs.length]);
+  }, [messages.length, busy]);
 
   const ask = () => {
     if (!input.trim() || busy) return;
     const q = input.trim();
     setInput('');
-    setMsgs((m) => [...m, { role: 'you', text: q }]);
+    addChatMessage(IDS.chatSession, 'user', q);
     setBusy(true);
     setTimeout(() => {
-      const reply = FAKE_REPLIES[Math.floor(Math.random() * FAKE_REPLIES.length)];
-      setMsgs((m) => [...m, { role: 'nova', text: reply }]);
+      if (fallbacks.length > 0) {
+        const reply = fallbacks[Math.floor(Math.random() * fallbacks.length)] as any;
+        addChatMessage(IDS.chatSession, 'assistant', reply.body);
+      }
       setBusy(false);
     }, 900);
   };
@@ -74,22 +77,22 @@ export default function NovaChatModal() {
             </LinearGradient>
             <View>
               <Text className="font-bold text-ink" style={{ fontSize: 17 }}>Nova</Text>
-              <Text className="text-[11px] text-ink-50">AI-assistent · getraind op Shelley&apos;s werk</Text>
+              <Text className="text-[11px] text-ink-50">{subtitle}</Text>
             </View>
           </View>
 
           <ScrollView ref={scrollRef} style={{ maxHeight: 320 }} contentContainerStyle={{ gap: 8, paddingVertical: 4 }}>
-            {msgs.map((m, i) => (
+            {messages.map((m: any) => (
               <View
-                key={i}
+                key={m.id}
                 className={`max-w-[85%] rounded-2xl px-3.5 py-2.5 ${
-                  m.role === 'nova' ? 'bg-mint-50 self-start' : 'bg-teal-700 self-end'
+                  m.role === 'assistant' ? 'bg-mint-50 self-start' : 'bg-teal-700 self-end'
                 }`}
               >
                 <Text
-                  className={`text-[14px] leading-[20px] ${m.role === 'nova' ? 'text-ink' : 'text-white'}`}
+                  className={`text-[14px] leading-[20px] ${m.role === 'assistant' ? 'text-ink' : 'text-white'}`}
                 >
-                  {m.text}
+                  {m.body}
                 </Text>
               </View>
             ))}
