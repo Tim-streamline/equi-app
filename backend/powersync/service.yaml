@@ -7,6 +7,12 @@
 
 telemetry:
     disable_telemetry_sharing: true
+    # Expose the Prometheus metrics endpoint on a dedicated port. PowerSync
+    # only starts the /metrics server when this is set. Scraped by the admin
+    # Sync-health page for the live connected-clients count
+    # (powersync_concurrent_connections). Reachable in-cluster at
+    # http://powersync:9090/metrics.
+    prometheus_port: 9090
 
 # Source database — Laravel's Postgres.
 replication:

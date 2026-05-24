@@ -107,6 +107,8 @@ services:
             PS_PORT: '8080'
         ports:
             - '${POWERSYNC_PORT:-8080}:8080'
+            # Prometheus metrics (telemetry.prometheus_port in service.yaml).
+            - '${POWERSYNC_METRICS_PORT:-9090}:9090'
         volumes:
             - './powersync:/config'
         networks:

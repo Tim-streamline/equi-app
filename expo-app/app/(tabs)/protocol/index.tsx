@@ -2,14 +2,15 @@ import { useMemo, useState } from 'react';
 import { View, Text, ScrollView, Pressable } from 'react-native';
 import { router } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { MoreHorizontal, Check, Plus, ChevronLeft, ChevronRight, Leaf, Footprints, PawPrint } from 'lucide-react-native';
-import { SubHeader } from '@/components/ui/SubHeader';
+import { MoreHorizontal, Check, X, Circle, Plus, ChevronLeft, ChevronRight, Leaf, Footprints, PawPrint } from 'lucide-react-native';
+import { AppHeader } from '@/components/ui/AppHeader';
 import { IconButton } from '@/components/ui/IconButton';
 import { Button } from '@/components/ui/Button';
 import { useTabBarPadding } from '@/hooks/useTabBarPadding';
 import {
   useActiveProtocolForHorse,
   useAllTaskCompletions,
+  useCurrentUser,
   usePhaseItems,
   useProtocolAnalysis,
   useProtocolPhases,
@@ -31,12 +32,13 @@ export default function ProtocolListScreen() {
   const [tab, setTab] = useState<Tab>('protocol');
   const padBottom = useTabBarPadding();
   const protocol = useActiveProtocolForHorse();
+  const user = useCurrentUser();
 
   if (!protocol) {
     return (
       <View className="flex-1 bg-canvas">
         <SafeAreaView edges={['top']} style={{ flex: 1 }}>
-          <SubHeader onBack={() => router.push('/(tabs)/home')} />
+          <AppHeader greet="Protocol" title="Jouw plan" avatar={(user.avatarInitial as string) ?? 'M'} />
         </SafeAreaView>
       </View>
     );
@@ -52,15 +54,17 @@ export default function ProtocolListScreen() {
   return (
     <View className="flex-1 bg-canvas">
       <SafeAreaView edges={['top']} style={{ flex: 1 }}>
-        <SubHeader
-          onBack={() => router.push('/(tabs)/home')}
-          right={
-            <IconButton>
-              <MoreHorizontal size={20} color="#1B2A2A" />
-            </IconButton>
-          }
-        />
         <ScrollView contentContainerStyle={{ paddingBottom: padBottom }}>
+          <AppHeader
+            greet="Protocol"
+            title="Jouw plan"
+            avatar={(user.avatarInitial as string) ?? 'M'}
+            right={
+              <IconButton>
+                <MoreHorizontal size={20} color="#1B2A2A" />
+              </IconButton>
+            }
+          />
           <View className="mx-4 mb-4 rounded-2xl bg-white border border-ink-8 overflow-hidden shadow-sm">
             <View className="p-4 pb-3">
               <Text className="font-bold text-ink" style={{ fontSize: 22, lineHeight: 26 }}>
@@ -190,19 +194,28 @@ const CALENDAR_WEEKS: (CalCell | null)[][] = [
   [{ d: 29, s: 'empty' }, { d: 30, s: 'empty' }, { d: 31, s: 'empty' }, null, null, null, null],
 ];
 
+// The calendar grid above is fixed to this month. "Today" only highlights when
+// the real current date falls within it (1-indexed month).
+const CALENDAR_MONTH = { year: 2026, month: 5 };
+
 function dateForDay(day: number) {
-  return `2026-05-${String(day).padStart(2, '0')}`;
+  const { year, month } = CALENDAR_MONTH;
+  return `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
 }
 
 function ProtocolCalendar({ protocolId }: { protocolId: string }) {
   const monthLabel = useValue('currentMonthLabel') as string;
-  const todayDay = useValue('currentMonthDay') as number;
+  const now = new Date();
+  const isCurrentMonth =
+    now.getFullYear() === CALENDAR_MONTH.year && now.getMonth() + 1 === CALENDAR_MONTH.month;
+  // -1 never matches a day cell, so no cell highlights as "today" off-month.
+  const todayDay = isCurrentMonth ? now.getDate() : -1;
   const horseId = useCurrentHorseId();
   const tasks = useProtocolTasks(protocolId);
   const allCompletions = useAllTaskCompletions();
   const mutations = useStoreMutations();
 
-  const [selected, setSelected] = useState<number>(todayDay);
+  const [selected, setSelected] = useState<number>(isCurrentMonth ? now.getDate() : 1);
 
   const completionsByDay = useMemo(() => {
     const map: Record<number, Record<string, boolean>> = {};
@@ -277,6 +290,23 @@ function ProtocolCalendar({ protocolId }: { protocolId: string }) {
               }
               const state = cellState(cell);
               const s = cellStyle(state);
+              const onDark = state === 'selected' || state === 'today';
+              // One mark per protocol item for this day:
+              //  • done   → green check (item was ticked)
+              //  • open   → hollow ring (still to do, on today/future dates)
+              //  • missed → red cross (left unchecked on a past date)
+              const dayC = completionsByDay[cell.d] ?? {};
+              // Off-month (todayDay < 0) has no live "today", so treat every cell
+              // as past: show only recorded completions, no open rings.
+              const ref = todayDay > 0 ? todayDay : Infinity;
+              const marks = tasks
+                .map((t: any): 'done' | 'open' | 'missed' | null => {
+                  const recorded = t.id in dayC;
+                  if (recorded && dayC[t.id]) return 'done';
+                  if (cell.d >= ref) return 'open'; // today or future → still open
+                  return recorded ? 'missed' : null; // past: missed if logged unticked
+                })
+                .filter((m): m is 'done' | 'open' | 'missed' => m !== null);
               return (
                 <View key={key} style={{ width: `${100 / 7}%`, aspectRatio: 1, padding: 3 }}>
                   <Pressable
@@ -287,6 +317,27 @@ function ProtocolCalendar({ protocolId }: { protocolId: string }) {
                     <Text className="font-semi text-[13px]" style={{ color: s.text }}>
                       {cell.d}
                     </Text>
+                    {marks.length > 0 && (
+                      <View
+                        className="flex-row flex-wrap items-center justify-center"
+                        style={{ maxWidth: 22, marginTop: 1, gap: 1 }}
+                      >
+                        {marks.map((m, mi) =>
+                          m === 'done' ? (
+                            <Check key={mi} size={9} strokeWidth={3.5} color={onDark ? '#5FD7CB' : '#2EA875'} />
+                          ) : m === 'missed' ? (
+                            <X key={mi} size={9} strokeWidth={3.5} color={onDark ? '#F2B8AC' : '#C2543E'} />
+                          ) : (
+                            <Circle
+                              key={mi}
+                              size={9}
+                              strokeWidth={2.5}
+                              color={onDark ? 'rgba(255,255,255,0.6)' : 'rgba(27,42,42,0.35)'}
+                            />
+                          ),
+                        )}
+                      </View>
+                    )}
                   </Pressable>
                 </View>
               );

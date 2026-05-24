@@ -76,4 +76,9 @@ class LibraryItem extends Model
     {
         return $this->hasMany(LibraryProgress::class, 'item_id');
     }
+
+    public function media(): HasMany
+    {
+        return $this->hasMany(MediaAsset::class)->latest();
+    }
 }

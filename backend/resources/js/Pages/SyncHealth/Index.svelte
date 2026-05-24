@@ -1,17 +1,84 @@
 <script>
     import AdminLayout from '../../Layouts/AdminLayout.svelte';
     import PageHeader from '$lib/components/PageHeader.svelte';
-    import { Card, CardHeader, CardTitle, CardContent, Badge } from '$lib/components/ui';
-    import { AlertTriangle, CheckCircle2, Database } from '@lucide/svelte';
+    import StatCard from '$lib/components/StatCard.svelte';
+    import { Card, CardHeader, CardTitle, CardContent, Badge, Button } from '$lib/components/ui';
+    import { router } from '@inertiajs/svelte';
+    import { formatNumber, formatDateTime } from '$lib/utils.js';
+    import { AlertTriangle, CheckCircle2, Database, Users, Activity, Timer, HardDriveDownload, RefreshCw, WifiOff } from '@lucide/svelte';
 
-    let { config, db } = $props();
+    let { config, db, live } = $props();
+
+    let refreshing = $state(false);
+    let autoRefresh = $state(true);
+
+    function refresh() {
+        router.reload({
+            only: ['live'],
+            preserveScroll: true,
+            onStart: () => (refreshing = true),
+            onFinish: () => (refreshing = false),
+        });
+    }
+
+    // Poll the live metrics every 10s while auto-refresh is on. The effect
+    // re-runs when `autoRefresh` flips and tears the interval down on cleanup.
+    $effect(() => {
+        if (!autoRefresh) return;
+        const id = setInterval(refresh, 10000);
+        return () => clearInterval(id);
+    });
+
+    function bytes(n) {
+        if (n == null) return '—';
+        const u = ['B', 'KB', 'MB', 'GB', 'TB'];
+        let i = 0;
+        while (n >= 1024 && i < u.length - 1) { n /= 1024; i++; }
+        return `${n.toFixed(n < 10 && i > 0 ? 1 : 0)} ${u[i]}`;
+    }
+    const lag = (s) => (s == null ? '—' : `${Number(s).toFixed(1)} s`);
 </script>
 
 <AdminLayout title="Sync health">
-    <PageHeader title="PowerSync health" description="Stream configuration and sensitive-table exposure" />
+    <PageHeader title="PowerSync health" description="Live runtime stats, stream configuration and sensitive-table exposure">
+        {#snippet actions()}
+            <label class="flex items-center gap-2 text-sm text-muted-foreground">
+                <input type="checkbox" bind:checked={autoRefresh} class="size-4 rounded border-input" /> Auto-refresh
+            </label>
+            <Button variant="outline" size="sm" onclick={refresh} disabled={refreshing}>
+                <RefreshCw class={'size-4 ' + (refreshing ? 'animate-spin' : '')} /> Refresh
+            </Button>
+        {/snippet}
+    </PageHeader>
 
+    <!-- Live runtime -->
+    {#if live?.reachable}
+        <div class="mb-2 flex items-center gap-2 text-xs text-muted-foreground">
+            <span class="relative flex size-2">
+                <span class="absolute inline-flex size-full animate-ping rounded-full bg-success opacity-75"></span>
+                <span class="relative inline-flex size-2 rounded-full bg-success"></span>
+            </span>
+            Live from PowerSync · updated {formatDateTime(live.scraped_at)}
+        </div>
+        <div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+            <StatCard label="Connected clients" value={formatNumber(live.connected_clients)} hint="active sync streams now" icon={Users} accent={live.connected_clients > 0 ? 'success' : 'muted'} />
+            <StatCard label="Replication lag" value={lag(live.replication_lag_seconds)} icon={Timer} accent={live.replication_lag_seconds > 5 ? 'warning' : 'muted'} />
+            <StatCard label="Rows replicated" value={formatNumber(live.rows_replicated ?? 0)} hint="since service start" icon={Activity} accent="muted" />
+            <StatCard label="Data replicated" value={bytes(live.data_replicated_bytes)} icon={HardDriveDownload} accent="muted" />
+        </div>
+    {:else}
+        <div class="mb-4 flex items-start gap-3 rounded-lg border border-warning/30 bg-warning/10 p-4 text-sm text-warning">
+            <WifiOff class="mt-0.5 size-5 shrink-0" />
+            <div>
+                <div class="font-medium">PowerSync metrics unreachable</div>
+                <div>Could not scrape <code class="rounded bg-warning/15 px-1">{config.service_url ?? 'the service'}</code>. The service may be down, or <code class="rounded bg-warning/15 px-1">telemetry.prometheus_port</code> isn't enabled.</div>
+            </div>
+        </div>
+    {/if}
+
+    <!-- Sensitive exposure -->
     {#if config.exposed_sensitive?.length}
-        <div class="mb-4 flex items-start gap-3 rounded-lg border border-destructive/30 bg-destructive/10 p-4 text-sm text-destructive">
+        <div class="my-4 flex items-start gap-3 rounded-lg border border-destructive/30 bg-destructive/10 p-4 text-sm text-destructive">
             <AlertTriangle class="mt-0.5 size-5 shrink-0" />
             <div>
                 <div class="font-medium">{config.exposed_sensitive.length} sensitive table(s) are in the sync stream</div>
@@ -19,7 +86,7 @@
             </div>
         </div>
     {:else}
-        <div class="mb-4 flex items-center gap-3 rounded-lg border border-success/30 bg-success/10 p-4 text-sm text-success">
+        <div class="my-4 flex items-center gap-3 rounded-lg border border-success/30 bg-success/10 p-4 text-sm text-success">
             <CheckCircle2 class="size-5" /> No known sensitive tables detected in the sync rules.
         </div>
     {/if}

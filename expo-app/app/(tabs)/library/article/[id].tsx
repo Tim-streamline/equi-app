@@ -1,7 +1,7 @@
 import { View, Text, ScrollView, Image } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Bookmark, Plus } from 'lucide-react-native';
+import { Bookmark } from 'lucide-react-native';
 import { SubHeader } from '@/components/ui/SubHeader';
 import { IconButton } from '@/components/ui/IconButton';
 import { Eyebrow } from '@/components/ui/Eyebrow';
@@ -72,18 +72,6 @@ export default function ArticleScreen() {
               </Text>
             </View>
           ))}
-
-          <View className="mt-6 rounded-2xl bg-mint-50 p-4">
-            <View className="flex-row items-center gap-3">
-              <View className="h-9 w-9 items-center justify-center rounded-xl bg-white">
-                <Plus size={18} color="#0D5C5B" />
-              </View>
-              <View className="flex-1">
-                <Text className="font-bold text-ink text-[14px]">Voeg toe aan protocol</Text>
-                <Text className="text-[12px] text-ink-70">1 el vers door ruwvoer · 5 dagen</Text>
-              </View>
-            </View>
-          </View>
         </ScrollView>
       </SafeAreaView>
     </View>

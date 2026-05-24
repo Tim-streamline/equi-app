@@ -59,7 +59,7 @@ class LibraryItemController extends Controller
     public function edit(?LibraryItem $library = null): Response
     {
         return Inertia::render('Library/Edit', [
-            'item' => $library?->load('categories:id', 'focusTopics:id'),
+            'item' => $library?->load('categories:id', 'focusTopics:id', 'media'),
             'categories' => LibraryCategory::orderBy('order')->get(['id', 'label']),
             'focusTopics' => FocusTopic::orderBy('order')->get(['id', 'title']),
             'therapists' => Therapist::orderBy('name')->get(['id', 'name']),

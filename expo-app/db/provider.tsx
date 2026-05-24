@@ -18,6 +18,7 @@ import { ActivityIndicator, View } from 'react-native';
 import {
   PowerSyncDatabase,
   type AbstractPowerSyncDatabase,
+  type SyncStatus as PsSyncStatus,
 } from '@powersync/react-native';
 import { PowerSyncContext } from '@powersync/react';
 import { OPSqliteOpenFactory } from '@powersync/op-sqlite';
@@ -33,6 +34,19 @@ import {
 } from './auth';
 
 type SyncStatus = 'idle' | 'connecting' | 'syncing' | 'connected' | 'error';
+
+// Collapse PowerSync's rich SyncStatus into the coarse state the UI cares about.
+// Order matters: an active up/download outranks a plain connection, and any
+// transfer error outranks "connected".
+function mapStatus(s: PsSyncStatus): Exclude<SyncStatus, 'idle'> {
+  const flow = s.dataFlowStatus;
+  if (flow?.downloadError || flow?.uploadError) return 'error';
+  if (s.connected) {
+    return flow?.downloading || flow?.uploading ? 'syncing' : 'connected';
+  }
+  if (s.connecting) return 'connecting';
+  return 'error'; // requested a connection but neither connected nor connecting → offline
+}
 
 type DbContextValue = {
   powersync: AbstractPowerSyncDatabase;
@@ -55,6 +69,7 @@ export function DbProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     let cancelled = false;
+    let unregister: (() => void) | undefined;
     (async () => {
       try {
         const factory = new OPSqliteOpenFactory({ dbFilename: 'equinova.db' });
@@ -65,6 +80,18 @@ export function DbProvider({ children }: { children: ReactNode }) {
         });
         await ps.init();
         if (cancelled) return;
+
+        // Drive syncStatus from the real connection lifecycle (reconnects,
+        // drops, in-flight transfers) instead of one-shot setState calls.
+        // Ignored until connectToBackend flips connectedRef, so a logged-out
+        // boot doesn't flash "offline".
+        unregister = ps.registerListener({
+          statusChanged: (status) => {
+            if (!connectedRef.current) return;
+            setSyncStatus(mapStatus(status));
+          },
+        });
+
         setPowersync(ps);
 
         const creds = await loadCredentials();
@@ -79,6 +106,7 @@ export function DbProvider({ children }: { children: ReactNode }) {
     })();
     return () => {
       cancelled = true;
+      unregister?.();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -89,7 +117,8 @@ export function DbProvider({ children }: { children: ReactNode }) {
     setSyncStatus('connecting');
     try {
       await ps.connect(new LaravelConnector());
-      setSyncStatus('connected');
+      // Seed from the current snapshot; statusChanged drives it from here on.
+      setSyncStatus(mapStatus(ps.currentStatus));
     } catch (err) {
       console.error('[provider] connect failed', err);
       setSyncStatus('error');

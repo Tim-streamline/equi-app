@@ -35,4 +35,12 @@ return [
         ],
     ],
 
+    // Self-hosted PowerSync service. `metrics_url` points at the Prometheus
+    // exporter (telemetry.prometheus_port in powersync/service.yaml), scraped
+    // by the admin Sync-health page. Defaults assume the docker `sail` network.
+    'powersync' => [
+        'url' => env('POWERSYNC_URL', 'http://powersync:8080'),
+        'metrics_url' => env('POWERSYNC_METRICS_URL', 'http://powersync:9090/metrics'),
+    ],
+
 ];

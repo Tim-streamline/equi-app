@@ -11,6 +11,7 @@ use App\Http\Controllers\Admin\IngredientController;
 use App\Http\Controllers\Admin\IntakeBookingController;
 use App\Http\Controllers\Admin\LibraryCategoryController;
 use App\Http\Controllers\Admin\LibraryItemController;
+use App\Http\Controllers\Admin\MediaAssetController;
 use App\Http\Controllers\Admin\ModerationReportController;
 use App\Http\Controllers\Admin\NotificationController;
 use App\Http\Controllers\Admin\NovaController;
@@ -71,6 +72,10 @@ Route::middleware('auth:admin')->group(function () {
 
     // ---- Content / CMS ---------------------------------------------------
     Route::middleware('admin.role:content_editor')->group(function () {
+        // Media upload/delete must be declared before the library resource so
+        // `library/media` isn't shadowed by the `library/{library}` binding.
+        Route::post('library/media', [MediaAssetController::class, 'store'])->name('library.media.store');
+        Route::delete('library/media/{medium}', [MediaAssetController::class, 'destroy'])->name('library.media.destroy');
         Route::resource('library', LibraryItemController::class)->except('show');
         Route::resource('library-categories', LibraryCategoryController::class)->only(['index', 'store', 'update', 'destroy']);
         Route::resource('focus-topics', FocusTopicController::class)->only(['index', 'store', 'update', 'destroy']);
