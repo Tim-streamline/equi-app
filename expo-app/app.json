@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "expo-app",
+    "name": "Equi App",
     "slug": "expo-app",
     "version": "1.0.0",
     "orientation": "portrait",
@@ -47,7 +47,8 @@
             "usesCleartextTraffic": true
           }
         }
-      ]
+      ],
+      "./plugins/withCustomAndroidBuild.js"
     ],
     "experiments": {
       "typedRoutes": true,

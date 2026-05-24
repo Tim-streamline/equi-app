@@ -12,7 +12,7 @@ import {
   usePayments,
   usePlan,
   usePlanBenefits,
-  useTable,
+  usePlans,
 } from '@/db/hooks';
 
 export default function SubscriptionScreen() {
@@ -22,7 +22,7 @@ export default function SubscriptionScreen() {
   const benefits = usePlanBenefits(plan.id);
   const payments = usePayments(subscription?.id ?? '');
 
-  const plans = Object.entries(useTable('plans')).map(([id, row]) => ({ id, ...(row as any) }));
+  const plans = usePlans();
   const upgradePlan = plans.find((p: any) => p.isRecommended);
   const upgradeBenefits = usePlanBenefits(upgradePlan?.id ?? '');
 

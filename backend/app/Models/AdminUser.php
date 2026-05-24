@@ -29,4 +29,23 @@ class AdminUser extends Authenticatable
             'active' => 'boolean',
         ];
     }
+
+    /**
+     * Role scopes recognised by the admin console, in descending privilege.
+     * `owner` is a super-role that implies every other scope.
+     */
+    public const ROLES = [
+        'owner' => 'Owner',
+        'admin' => 'Admin',
+        'content_editor' => 'Content editor',
+        'moderator' => 'Community moderator',
+        'therapist_admin' => 'Therapist',
+        'support' => 'Support',
+        'billing' => 'Billing support',
+    ];
+
+    public function hasRole(string ...$roles): bool
+    {
+        return $this->role === 'owner' || in_array($this->role, $roles, true);
+    }
 }

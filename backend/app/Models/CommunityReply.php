@@ -21,6 +21,8 @@ use Illuminate\Database\Eloquent\Relations\MorphMany;
     'likes_count',
     'replies_count',
     'order',
+    'moderation_status',
+    'reviewed_at',
 ])]
 class CommunityReply extends Model
 {
@@ -31,6 +33,7 @@ class CommunityReply extends Model
             'author_is_expert' => 'boolean',
             'likes_count' => 'integer',
             'replies_count' => 'integer',
+            'reviewed_at' => 'datetime',
         ];
     }
 

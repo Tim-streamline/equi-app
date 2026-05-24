@@ -9,12 +9,12 @@ import { Button } from '@/components/ui/Button';
 import { useTabBarPadding } from '@/hooks/useTabBarPadding';
 import {
   useActiveProtocolForHorse,
+  useAllTaskCompletions,
   usePhaseItems,
   useProtocolAnalysis,
   useProtocolPhases,
   useProtocolTasks,
   useStoreMutations,
-  useTable,
   useValue,
   useCurrentHorseId,
 } from '@/db/hooks';
@@ -199,14 +199,14 @@ function ProtocolCalendar({ protocolId }: { protocolId: string }) {
   const todayDay = useValue('currentMonthDay') as number;
   const horseId = useCurrentHorseId();
   const tasks = useProtocolTasks(protocolId);
-  const allCompletions = useTable('protocolTaskCompletions');
+  const allCompletions = useAllTaskCompletions();
   const mutations = useStoreMutations();
 
   const [selected, setSelected] = useState<number>(todayDay);
 
   const completionsByDay = useMemo(() => {
     const map: Record<number, Record<string, boolean>> = {};
-    Object.values(allCompletions as any).forEach((c: any) => {
+    allCompletions.forEach((c: any) => {
       const m = c.date?.match(/2026-05-(\d{2})/);
       if (!m) return;
       const day = parseInt(m[1], 10);

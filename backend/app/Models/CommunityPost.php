@@ -22,6 +22,8 @@ use Illuminate\Database\Eloquent\Relations\MorphMany;
     'has_expert_reply',
     'category_id',
     'order',
+    'moderation_status',
+    'reviewed_at',
 ])]
 class CommunityPost extends Model
 {
@@ -32,6 +34,7 @@ class CommunityPost extends Model
             'has_expert_reply' => 'boolean',
             'likes_count' => 'integer',
             'replies_count' => 'integer',
+            'reviewed_at' => 'datetime',
         ];
     }
 
@@ -59,5 +62,10 @@ class CommunityPost extends Model
     public function reactions(): MorphMany
     {
         return $this->morphMany(CommunityReaction::class, 'target');
+    }
+
+    public function reports(): HasMany
+    {
+        return $this->hasMany(ModerationReport::class, 'subject_id')->where('subject_type', 'post');
     }
 }

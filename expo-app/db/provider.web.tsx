@@ -13,7 +13,6 @@ type DbContextValue = {
   currentUserId: string | null;
   login: (email: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
-  store: never;
   powersync: never;
 };
 
@@ -26,7 +25,6 @@ const value: DbContextValue = {
   currentUserId: null,
   login: async () => {},
   logout: async () => {},
-  store: undefined as never,
   powersync: undefined as never,
 };
 

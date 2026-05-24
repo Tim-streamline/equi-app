@@ -22,6 +22,8 @@ use Illuminate\Notifications\Notifiable;
     'units_system',
     'notifications_on',
     'onboarded_at',
+    'disabled_at',
+    'admin_note',
 ])]
 #[Hidden(['password', 'remember_token'])]
 class User extends Authenticatable
@@ -36,6 +38,7 @@ class User extends Authenticatable
             'password' => 'hashed',
             'notifications_on' => 'boolean',
             'onboarded_at' => 'datetime',
+            'disabled_at' => 'datetime',
         ];
     }
 
@@ -117,5 +120,10 @@ class User extends Authenticatable
     public function intakeBookings(): HasMany
     {
         return $this->hasMany(IntakeBooking::class);
+    }
+
+    public function restrictions(): HasMany
+    {
+        return $this->hasMany(UserRestriction::class);
     }
 }

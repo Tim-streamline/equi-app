@@ -502,20 +502,3 @@ export const AppSchema = new Schema({
   intake_bookings,
 });
 
-// List of every table id, useful for the TinyBase persister's tabular config.
-export const SYNCED_TABLE_IDS = [
-  'users', 'therapists', 'focus_topics', 'horses', 'horse_focus', 'horse_shares',
-  'horse_stats', 'timeline_events', 'protocols', 'protocol_phases',
-  'protocol_phase_items', 'protocol_analyses', 'protocol_advice', 'protocol_tasks',
-  'protocol_task_completions', 'observations', 'observation_photos', 'products',
-  'ingredients', 'scan_results', 'scan_ingredients', 'library_items',
-  'library_chapters', 'library_article_sections', 'library_categories',
-  'library_item_categories', 'library_item_focus', 'library_bookmarks',
-  'library_progress', 'seasonal_tips', 'community_categories', 'community_tags',
-  'community_posts', 'community_post_tags', 'community_replies',
-  'community_reactions', 'plans', 'plan_benefits', 'subscriptions', 'payments',
-  'notification_preferences', 'account_settings', 'data_exports', 'chat_sessions',
-  'chat_messages', 'nova_fallback_replies', 'intake_bookings',
-] as const;
-
-export type SyncedTableId = (typeof SYNCED_TABLE_IDS)[number];

@@ -6,15 +6,16 @@ import { Eyebrow } from '@/components/ui/Eyebrow';
 import { ProgressBar } from '@/components/ui/ProgressBar';
 import { StickyCTA } from '@/components/ui/StickyCTA';
 import { Button } from '@/components/ui/Button';
-import { useNextIntakeBooking, useStoreMutations, useTherapist } from '@/db/hooks';
+import { useCurrentUserId, useNextIntakeBooking, useStoreMutations, useTherapist } from '@/db/hooks';
 
 export default function ConnectScreen() {
   const { setOnboarded } = useStoreMutations();
+  const userId = useCurrentUserId();
   const therapist = useTherapist();
   const intake = useNextIntakeBooking();
 
   const finish = () => {
-    setOnboarded(true);
+    setOnboarded(true, userId);
     router.replace('/(tabs)/home');
   };
 

@@ -21,6 +21,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
     'advice',
     'photo_url',
     'bookmarked',
+    'flagged',
 ])]
 class ScanResult extends Model
 {
@@ -31,6 +32,7 @@ class ScanResult extends Model
             'scanned_at' => 'datetime',
             'score' => 'integer',
             'bookmarked' => 'boolean',
+            'flagged' => 'boolean',
         ];
     }
 

@@ -133,6 +133,7 @@
       <path value="$PROJECT_DIR$/backend/vendor/laravel/octane" />
       <path value="$PROJECT_DIR$/backend/vendor/laminas/laminas-diactoros" />
       <path value="$PROJECT_DIR$/backend/vendor/symfony/psr-http-message-bridge" />
+      <path value="$PROJECT_DIR$/backend/vendor/inertiajs/inertia-laravel" />
     </include_path>
   </component>
   <component name="PhpProjectSharedConfiguration" php_language_level="8.3" />

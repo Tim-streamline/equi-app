@@ -18,7 +18,6 @@ import {
   SourceSans3_600SemiBold_Italic,
 } from '@expo-google-fonts/source-sans-3';
 import { DbProvider } from '@/db/provider';
-import { DbInspector } from '@/db/DbInspector';
 
 SplashScreen.preventAutoHideAsync().catch(() => {});
 
@@ -59,7 +58,6 @@ export default function RootLayout() {
                 options={{ presentation: 'transparentModal', animation: 'fade' }}
               />
             </Stack>
-            <DbInspector />
           </View>
         </DbProvider>
       </SafeAreaProvider>
