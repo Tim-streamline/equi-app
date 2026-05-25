@@ -11,7 +11,7 @@ class AdminUserSeeder extends Seeder
     public function run(): void
     {
         AdminUser::updateOrCreate(
-            ['email' => 'admin@equinova.test'],
+            ['email' => 'contact@depaardentherapeut.nl'],
             [
                 'name' => 'EquiNova Owner',
                 'password' => Hash::make('password'),
@@ -22,7 +22,7 @@ class AdminUserSeeder extends Seeder
         );
 
         AdminUser::updateOrCreate(
-            ['email' => 'editor@equinova.test'],
+            ['email' => 'eversdijk@optimize-it.nl'],
             [
                 'name' => 'Content Editor',
                 'password' => Hash::make('password'),

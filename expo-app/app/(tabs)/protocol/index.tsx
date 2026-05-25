@@ -1,6 +1,6 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { View, Text, ScrollView, Pressable } from 'react-native';
-import { router } from 'expo-router';
+import { router, useLocalSearchParams } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { MoreHorizontal, Check, X, Circle, Plus, ChevronLeft, ChevronRight, Leaf, Footprints, PawPrint } from 'lucide-react-native';
 import { AppHeader } from '@/components/ui/AppHeader';
@@ -16,7 +16,6 @@ import {
   useProtocolPhases,
   useProtocolTasks,
   useStoreMutations,
-  useValue,
   useCurrentHorseId,
 } from '@/db/hooks';
 
@@ -28,8 +27,18 @@ const ADVICE_ICONS: Record<string, (props: { size: number; color: string }) => a
   horse: (p) => <PawPrint {...p} />,
 };
 
+function isTab(v: unknown): v is Tab {
+  return v === 'protocol' || v === 'kalender' || v === 'analyse';
+}
+
 export default function ProtocolListScreen() {
-  const [tab, setTab] = useState<Tab>('protocol');
+  // `tab` selects the initial sub-tab (e.g. opened as Kalender from Home); `t`
+  // is a nonce so repeat navigations with the same tab still re-apply it.
+  const { tab: tabParam, t: tabNonce } = useLocalSearchParams<{ tab?: string; t?: string }>();
+  const [tab, setTab] = useState<Tab>(isTab(tabParam) ? tabParam : 'protocol');
+  useEffect(() => {
+    if (isTab(tabParam)) setTab(tabParam);
+  }, [tabParam, tabNonce]);
   const padBottom = useTabBarPadding();
   const protocol = useActiveProtocolForHorse();
   const user = useCurrentUser();
@@ -183,92 +192,95 @@ function ProtocolAnalyseView({ protocolId }: { protocolId: string }) {
 }
 
 const DOW = ['ma', 'di', 'wo', 'do', 'vr', 'za', 'zo'];
-
-type CalCell = { d: number; s: 'done' | 'today' | 'upcoming' | 'empty' };
-
-const CALENDAR_WEEKS: (CalCell | null)[][] = [
-  [{ d: 1, s: 'done' }, { d: 2, s: 'done' }, { d: 3, s: 'done' }, { d: 4, s: 'done' }, { d: 5, s: 'done' }, { d: 6, s: 'done' }, { d: 7, s: 'done' }],
-  [{ d: 8, s: 'done' }, { d: 9, s: 'done' }, { d: 10, s: 'today' }, { d: 11, s: 'upcoming' }, { d: 12, s: 'upcoming' }, { d: 13, s: 'upcoming' }, { d: 14, s: 'upcoming' }],
-  [{ d: 15, s: 'upcoming' }, { d: 16, s: 'upcoming' }, { d: 17, s: 'upcoming' }, { d: 18, s: 'upcoming' }, { d: 19, s: 'upcoming' }, { d: 20, s: 'upcoming' }, { d: 21, s: 'empty' }],
-  [{ d: 22, s: 'empty' }, { d: 23, s: 'empty' }, { d: 24, s: 'empty' }, { d: 25, s: 'empty' }, { d: 26, s: 'empty' }, { d: 27, s: 'empty' }, { d: 28, s: 'empty' }],
-  [{ d: 29, s: 'empty' }, { d: 30, s: 'empty' }, { d: 31, s: 'empty' }, null, null, null, null],
+const MONTHS_NL = [
+  'Januari', 'Februari', 'Maart', 'April', 'Mei', 'Juni',
+  'Juli', 'Augustus', 'September', 'Oktober', 'November', 'December',
 ];
+const MONTHS_SHORT = ['jan', 'feb', 'mrt', 'apr', 'mei', 'jun', 'jul', 'aug', 'sep', 'okt', 'nov', 'dec'];
 
-// The calendar grid above is fixed to this month. "Today" only highlights when
-// the real current date falls within it (1-indexed month).
-const CALENDAR_MONTH = { year: 2026, month: 5 };
-
-function dateForDay(day: number) {
-  const { year, month } = CALENDAR_MONTH;
-  return `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+function toIso(year: number, month0: number, day: number) {
+  return `${year}-${String(month0 + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
 }
 
 function ProtocolCalendar({ protocolId }: { protocolId: string }) {
-  const monthLabel = useValue('currentMonthLabel') as string;
-  const now = new Date();
-  const isCurrentMonth =
-    now.getFullYear() === CALENDAR_MONTH.year && now.getMonth() + 1 === CALENDAR_MONTH.month;
-  // -1 never matches a day cell, so no cell highlights as "today" off-month.
-  const todayDay = isCurrentMonth ? now.getDate() : -1;
   const horseId = useCurrentHorseId();
   const tasks = useProtocolTasks(protocolId);
   const allCompletions = useAllTaskCompletions();
   const mutations = useStoreMutations();
 
-  const [selected, setSelected] = useState<number>(isCurrentMonth ? now.getDate() : 1);
+  const todayIso = useMemo(() => {
+    const n = new Date();
+    return toIso(n.getFullYear(), n.getMonth(), n.getDate());
+  }, []);
 
-  const completionsByDay = useMemo(() => {
-    const map: Record<number, Record<string, boolean>> = {};
+  // First-of-month for the month currently in view; starts on the real month.
+  const [view, setView] = useState(() => {
+    const n = new Date();
+    return new Date(n.getFullYear(), n.getMonth(), 1);
+  });
+  const viewYear = view.getFullYear();
+  const viewMonth0 = view.getMonth();
+
+  const [selected, setSelected] = useState<string>(todayIso);
+
+  const changeMonth = (delta: number) => {
+    const next = new Date(viewYear, viewMonth0 + delta, 1);
+    setView(next);
+    // Land on today if it falls in the new month, otherwise its first day.
+    const n = new Date();
+    const sameMonth = n.getFullYear() === next.getFullYear() && n.getMonth() === next.getMonth();
+    setSelected(sameMonth ? todayIso : toIso(next.getFullYear(), next.getMonth(), 1));
+  };
+
+  // Completions keyed by full ISO date so the lookup works for any month.
+  const completionsByDate = useMemo(() => {
+    const map: Record<string, Record<string, boolean>> = {};
     allCompletions.forEach((c: any) => {
-      const m = c.date?.match(/2026-05-(\d{2})/);
-      if (!m) return;
-      const day = parseInt(m[1], 10);
-      if (!map[day]) map[day] = {};
-      map[day][c.taskId] = !!c.done;
+      if (!c.date) return;
+      (map[c.date] ??= {})[c.taskId] = !!c.done;
     });
     return map;
   }, [allCompletions]);
 
-  const cellState = (cell: CalCell): string => {
-    if (cell.d === selected) return 'selected';
-    if (cell.d === todayDay) return 'today';
-    const c = completionsByDay[cell.d];
-    if (c && Object.keys(c).length > 0) {
-      const values = Object.values(c);
-      if (values.every(Boolean)) return 'done';
-      if (values.some(Boolean)) return 'partial';
-    }
-    return cell.s;
-  };
+  // Month grid: leading blanks (Monday-first) + each day + trailing blanks.
+  const cells = useMemo<(number | null)[]>(() => {
+    const leading = (new Date(viewYear, viewMonth0, 1).getDay() + 6) % 7;
+    const daysInMonth = new Date(viewYear, viewMonth0 + 1, 0).getDate();
+    const out: (number | null)[] = [
+      ...Array.from({ length: leading }, () => null),
+      ...Array.from({ length: daysInMonth }, (_, i) => i + 1),
+    ];
+    while (out.length % 7 !== 0) out.push(null);
+    return out;
+  }, [viewYear, viewMonth0]);
 
   const cellStyle = (state: string) => {
     switch (state) {
       case 'selected':
         return { bg: '#0D5C5B', text: '#fff', border: '#0D5C5B' };
       case 'today':
-        return { bg: '#18BAB0', text: '#fff', border: '#18BAB0' };
-      case 'done':
-        return { bg: '#EAFBF9', text: '#108A82', border: '#C9F3EE' };
-      case 'partial':
-        return { bg: 'transparent', text: '#0D5C5B', border: '#5FD7CB' };
-      case 'upcoming':
-        return { bg: 'transparent', text: '#1B2A2A', border: 'rgba(27,42,42,0.08)' };
+        // White fill with the green "deels" outline.
+        return { bg: '#FFFFFF', text: '#0D5C5B', border: '#5FD7CB' };
       default:
-        return { bg: 'transparent', text: 'rgba(27,42,42,0.3)', border: 'rgba(27,42,42,0.04)' };
+        // Every other day shares the light-green "gedaan" background; per-item
+        // status is conveyed by the check / ring / cross marks inside the cell.
+        return { bg: '#EAFBF9', text: '#108A82', border: '#C9F3EE' };
     }
   };
 
-  const selectedDate = dateForDay(selected);
-  const dayCompletions = completionsByDay[selected] ?? {};
+  const [, selMonthStr, selDayStr] = selected.split('-');
+  const selDay = Number(selDayStr);
+  const selMonth0 = Number(selMonthStr) - 1;
+  const dayCompletions = completionsByDate[selected] ?? {};
   const doneCount = tasks.filter((t: any) => dayCompletions[t.id]).length;
 
   return (
     <>
       <View className="mx-4 mb-4 rounded-2xl border border-ink-8 bg-white p-4">
         <View className="mb-3 flex-row items-center justify-between">
-          <IconButton><ChevronLeft size={18} color="#1B2A2A" /></IconButton>
-          <Text className="font-bold text-ink text-[15px]">{monthLabel}</Text>
-          <IconButton><ChevronRight size={18} color="#1B2A2A" /></IconButton>
+          <IconButton onPress={() => changeMonth(-1)}><ChevronLeft size={18} color="#1B2A2A" /></IconButton>
+          <Text className="font-bold text-ink text-[15px]">{`${MONTHS_NL[viewMonth0]} ${viewYear}`}</Text>
+          <IconButton onPress={() => changeMonth(1)}><ChevronRight size={18} color="#1B2A2A" /></IconButton>
         </View>
         <View className="flex-row mb-2">
           {DOW.map((d) => (
@@ -282,90 +294,85 @@ function ProtocolCalendar({ protocolId }: { protocolId: string }) {
           ))}
         </View>
         <View className="flex-row flex-wrap">
-          {CALENDAR_WEEKS.flatMap((wk, wi) =>
-            wk.map((cell, ci) => {
-              const key = `${wi}-${ci}`;
-              if (!cell) {
-                return <View key={key} style={{ width: `${100 / 7}%`, aspectRatio: 1 }} />;
-              }
-              const state = cellState(cell);
-              const s = cellStyle(state);
-              const onDark = state === 'selected' || state === 'today';
-              // One mark per protocol item for this day:
-              //  • done   → green check (item was ticked)
-              //  • open   → hollow ring (still to do, on today/future dates)
-              //  • missed → red cross (left unchecked on a past date)
-              const dayC = completionsByDay[cell.d] ?? {};
-              // Off-month (todayDay < 0) has no live "today", so treat every cell
-              // as past: show only recorded completions, no open rings.
-              const ref = todayDay > 0 ? todayDay : Infinity;
-              const marks = tasks
-                .map((t: any): 'done' | 'open' | 'missed' | null => {
-                  const recorded = t.id in dayC;
-                  if (recorded && dayC[t.id]) return 'done';
-                  if (cell.d >= ref) return 'open'; // today or future → still open
-                  return recorded ? 'missed' : null; // past: missed if logged unticked
-                })
-                .filter((m): m is 'done' | 'open' | 'missed' => m !== null);
-              return (
-                <View key={key} style={{ width: `${100 / 7}%`, aspectRatio: 1, padding: 3 }}>
-                  <Pressable
-                    onPress={() => setSelected(cell.d)}
-                    className="flex-1 items-center justify-center rounded-xl"
-                    style={{ backgroundColor: s.bg, borderWidth: 1, borderColor: s.border }}
-                  >
-                    <Text className="font-semi text-[13px]" style={{ color: s.text }}>
-                      {cell.d}
-                    </Text>
-                    {marks.length > 0 && (
-                      <View
-                        className="flex-row flex-wrap items-center justify-center"
-                        style={{ maxWidth: 22, marginTop: 1, gap: 1 }}
-                      >
-                        {marks.map((m, mi) =>
-                          m === 'done' ? (
-                            <Check key={mi} size={9} strokeWidth={3.5} color={onDark ? '#5FD7CB' : '#2EA875'} />
-                          ) : m === 'missed' ? (
-                            <X key={mi} size={9} strokeWidth={3.5} color={onDark ? '#F2B8AC' : '#C2543E'} />
-                          ) : (
-                            <Circle
-                              key={mi}
-                              size={9}
-                              strokeWidth={2.5}
-                              color={onDark ? 'rgba(255,255,255,0.6)' : 'rgba(27,42,42,0.35)'}
-                            />
-                          ),
-                        )}
-                      </View>
-                    )}
-                  </Pressable>
-                </View>
-              );
-            }),
-          )}
+          {cells.map((day, ci) => {
+            if (day == null) {
+              return <View key={`b-${ci}`} style={{ width: `${100 / 7}%`, aspectRatio: 1 }} />;
+            }
+            const iso = toIso(viewYear, viewMonth0, day);
+            const state = iso === selected ? 'selected' : iso === todayIso ? 'today' : 'default';
+            const s = cellStyle(state);
+            const onDark = state === 'selected'; // only the deep-teal selected cell is dark
+            // One mark per protocol item for this day:
+            //  • done   → green check (item was ticked)
+            //  • open   → hollow ring (still to do, today/future)
+            //  • missed → red cross (left unchecked on a past date)
+            const dayC = completionsByDate[iso] ?? {};
+            const isTodayOrFuture = iso >= todayIso;
+            const marks = tasks
+              .map((t: any): 'done' | 'open' | 'missed' | null => {
+                const recorded = t.id in dayC;
+                if (recorded && dayC[t.id]) return 'done';
+                if (isTodayOrFuture) return 'open';
+                return recorded ? 'missed' : null; // past: missed if logged unticked
+              })
+              .filter((m): m is 'done' | 'open' | 'missed' => m !== null);
+            return (
+              <View key={iso} style={{ width: `${100 / 7}%`, aspectRatio: 1, padding: 3 }}>
+                <Pressable
+                  onPress={() => setSelected(iso)}
+                  className="flex-1 items-center justify-center rounded-xl"
+                  style={{ backgroundColor: s.bg, borderWidth: 1, borderColor: s.border }}
+                >
+                  <Text className="font-semi text-[13px]" style={{ color: s.text }}>
+                    {day}
+                  </Text>
+                  {marks.length > 0 && (
+                    <View
+                      className="flex-row flex-wrap items-center justify-center"
+                      style={{ maxWidth: 22, marginTop: 1, gap: 1 }}
+                    >
+                      {marks.map((m, mi) =>
+                        m === 'done' ? (
+                          <Check key={mi} size={9} strokeWidth={3.5} color={onDark ? '#5FD7CB' : '#2EA875'} />
+                        ) : m === 'missed' ? (
+                          <X key={mi} size={9} strokeWidth={3.5} color={onDark ? '#F2B8AC' : '#C2543E'} />
+                        ) : (
+                          <Circle
+                            key={mi}
+                            size={9}
+                            strokeWidth={2.5}
+                            color={onDark ? 'rgba(255,255,255,0.6)' : 'rgba(27,42,42,0.35)'}
+                          />
+                        ),
+                      )}
+                    </View>
+                  )}
+                </Pressable>
+              </View>
+            );
+          })}
         </View>
-        <View className="mt-3 flex-row gap-3">
-          {[
-            { label: 'Gedaan', bg: '#EAFBF9', border: '#C9F3EE' },
-            { label: 'Vandaag', bg: '#18BAB0', border: '#18BAB0' },
-            { label: 'Deels', bg: 'transparent', border: '#5FD7CB' },
-          ].map((l) => (
-            <View key={l.label} className="flex-row items-center gap-1.5">
-              <View
-                className="rounded"
-                style={{ width: 10, height: 10, backgroundColor: l.bg, borderWidth: 1, borderColor: l.border }}
-              />
-              <Text className="text-[11px] text-ink-50">{l.label}</Text>
-            </View>
-          ))}
+        <View className="mt-3 flex-row gap-4">
+          <View className="flex-row items-center gap-1.5">
+            <Check size={12} strokeWidth={3.5} color="#2EA875" />
+            <Text className="text-[11px] text-ink-50">Gedaan</Text>
+          </View>
+          <View className="flex-row items-center gap-1.5">
+            <Circle size={12} strokeWidth={2.5} color="rgba(27,42,42,0.35)" />
+            <Text className="text-[11px] text-ink-50">Open</Text>
+          </View>
+          <View className="flex-row items-center gap-1.5">
+            <X size={12} strokeWidth={3.5} color="#C2543E" />
+            <Text className="text-[11px] text-ink-50">Gemist</Text>
+          </View>
         </View>
       </View>
 
       <View className="mx-4 rounded-2xl border border-ink-8 bg-white p-4">
         <View className="mb-3">
           <Text className="font-bold text-ink text-[15px]">
-            {selected === todayDay ? 'Vandaag · ' : ''}
-            {selected} mei
+            {selected === todayIso ? 'Vandaag · ' : ''}
+            {selDay} {MONTHS_SHORT[selMonth0]}
           </Text>
           <Text className="mt-0.5 text-[12px] text-ink-50">
             {doneCount} van {tasks.length} afgevinkt
@@ -377,7 +384,7 @@ function ProtocolCalendar({ protocolId }: { protocolId: string }) {
             return (
               <Pressable
                 key={t.id}
-                onPress={() => mutations.toggleTaskCompletion(t.id, selectedDate, horseId)}
+                onPress={() => mutations.toggleTaskCompletion(t.id, selected, horseId)}
                 className="flex-row items-center gap-3 rounded-xl border border-ink-8 bg-canvas p-3"
               >
                 <View

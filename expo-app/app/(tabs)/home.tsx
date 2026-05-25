@@ -15,9 +15,11 @@ import { useTabBarPadding } from '@/hooks/useTabBarPadding';
 import {
   useActiveProtocolForHorse,
   useActiveSeasonalTip,
+  useCurrentHorseId,
   useCurrentUser,
   useHorse,
   useLibraryFeatured,
+  useStoreMutations,
   useTodayTasks,
   useValue,
 } from '@/db/hooks';
@@ -28,10 +30,20 @@ export default function HomeScreen() {
   const seasonal = useActiveSeasonalTip();
   const featured = useLibraryFeatured();
   const protocol = useActiveProtocolForHorse();
-  const todayIso = '2026-05-16';
+  const horseId = useCurrentHorseId();
+  const mutations = useStoreMutations();
+  const now = new Date();
+  const todayIso = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
   const tasks = useTodayTasks(protocol?.id ?? '', todayIso);
   const done = tasks.filter((t) => t.done).length;
   const padBottom = useTabBarPadding();
+  // Open the protocol tab on its calendar sub-tab; the unique token forces the
+  // sub-tab effect to re-fire on every tap, and the calendar remounts on today.
+  const openCalendar = () =>
+    router.push({
+      pathname: '/(tabs)/protocol',
+      params: { tab: 'kalender', t: String(Date.now()) },
+    } as any);
 
   return (
     <View className="flex-1 bg-canvas">
@@ -67,11 +79,11 @@ export default function HomeScreen() {
             />
           </View>
 
-          <SectionTitle action="Open protocol" onAction={() => router.push('/(tabs)/protocol/detail')}>
+          <SectionTitle action="Open kalender" onAction={openCalendar}>
             Vandaag · {horse.name}
           </SectionTitle>
           <View className="px-4 mb-4">
-            <Card onPress={() => router.push('/(tabs)/protocol/detail')}>
+            <Card onPress={openCalendar}>
               <View className="flex-row items-center justify-between">
                 <Text className="font-bold text-ink text-[15px]">Dagelijks protocol</Text>
                 <View className="flex-row items-center gap-2">
@@ -82,8 +94,13 @@ export default function HomeScreen() {
                 </View>
               </View>
               <View className="gap-2 mt-2">
-                {tasks.slice(0, 3).map((p) => (
-                  <View key={p.id} className="flex-row items-center gap-3">
+                {tasks.map((p) => (
+                  <Pressable
+                    key={p.id}
+                    onPress={() => mutations.toggleTaskCompletion(p.id, todayIso, horseId)}
+                    className="flex-row items-center gap-3 py-1"
+                    hitSlop={6}
+                  >
                     <View
                       className={`h-5 w-5 items-center justify-center rounded-full border-2 ${
                         p.done ? 'border-mint-500 bg-mint-500' : 'border-ink-15 bg-white'
@@ -99,7 +116,7 @@ export default function HomeScreen() {
                       </Text>
                       <Text className="mt-0.5 text-[11px] text-ink-50">{p.meta}</Text>
                     </View>
-                  </View>
+                  </Pressable>
                 ))}
               </View>
             </Card>

@@ -20,10 +20,10 @@ class UserSeeder extends Seeder
 
         // Anchor user matching the frontend.
         $marit = User::create([
-            'name' => 'Marit van der Berg',
-            'email' => 'marit@voorbeeld.nl',
+            'name' => 'Shelley Meeuwsen',
+            'email' => 'shelleymeeuwsen@gmail.com',
             'password' => Hash::make('password'),
-            'avatar_initial' => 'M',
+            'avatar_initial' => 'SM',
             'locale' => 'nl-NL',
             'units_system' => 'metric',
             'notifications_on' => true,
