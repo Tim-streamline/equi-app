@@ -12,6 +12,7 @@ import { ProgressRing } from '@/components/ui/ProgressRing';
 import { IconButton } from '@/components/ui/IconButton';
 import { Chip } from '@/components/ui/Chip';
 import { useTabBarPadding } from '@/hooks/useTabBarPadding';
+import { IntakeEntryCard } from '@/components/intake/IntakeEntryCard';
 import {
   useActiveProtocolForHorse,
   useActiveSeasonalTip,
@@ -63,6 +64,8 @@ export default function HomeScreen() {
           {seasonal && (
             <Coach tag={`Seizoenstip · ${seasonal.month}`}>{seasonal.body}</Coach>
           )}
+
+          <IntakeEntryCard />
 
           <View className="mb-3.5 flex-row gap-2.5 px-4">
             <Tile

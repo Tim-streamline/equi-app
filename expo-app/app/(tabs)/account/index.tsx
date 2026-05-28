@@ -1,9 +1,10 @@
-import { View, Text, ScrollView, Pressable, Image } from 'react-native';
+import { useState } from 'react';
+import { View, Text, ScrollView, Pressable, Image, Alert, ActivityIndicator } from 'react-native';
 import { router } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import {
-  ChevronRight, Plus, Bell, Download, Settings, Heart, MessageCircle,
+  ChevronRight, Plus, Bell, Download, Settings, Heart, MessageCircle, LogOut,
 } from 'lucide-react-native';
 import { AppHeader } from '@/components/ui/AppHeader';
 import { SectionTitle } from '@/components/ui/SectionTitle';
@@ -18,6 +19,7 @@ import {
   useHorsesByOwner,
   usePlan,
 } from '@/db/hooks';
+import { useDb } from '@/db/provider';
 
 const SETTINGS_ICONS: Record<string, any> = {
   bell: Bell,
@@ -41,8 +43,36 @@ export default function AccountScreen() {
   const subscription = useActiveSubscription();
   const plan = usePlan(subscription?.planId ?? 'plan-plus');
   const settings = useAccountSettings();
+  const { logout } = useDb();
+  const [loggingOut, setLoggingOut] = useState(false);
 
   const active = horses.find((h) => h.status === 'active');
+
+  const confirmLogout = () => {
+    if (loggingOut) return;
+    // Two-tap confirm — disconnectAndClear wipes the local SQLite cache,
+    // so we never want this firing from a misclick.
+    Alert.alert(
+      'Uitloggen?',
+      'Je antwoorden uit de protocol-intake en lokaal opgeslagen data worden gewist.',
+      [
+        { text: 'Annuleer', style: 'cancel' },
+        {
+          text: 'Uitloggen',
+          style: 'destructive',
+          onPress: async () => {
+            setLoggingOut(true);
+            try {
+              await logout();
+              router.replace('/onboarding/welcome');
+            } finally {
+              setLoggingOut(false);
+            }
+          },
+        },
+      ],
+    );
+  };
 
   return (
     <View className="flex-1 bg-canvas">
@@ -131,7 +161,7 @@ export default function AccountScreen() {
           )}
 
           <SectionTitle>Algemeen</SectionTitle>
-          <View className="px-4 pb-4">
+          <View className="px-4">
             {settings.map((r) => {
               const Icon = SETTINGS_ICONS[r.iconKey as string] ?? Settings;
               return (
@@ -151,6 +181,28 @@ export default function AccountScreen() {
                 </Pressable>
               );
             })}
+          </View>
+
+          <View className="px-4 pt-6 pb-4">
+            <Pressable
+              onPress={confirmLogout}
+              disabled={loggingOut}
+              className={`flex-row items-center justify-center gap-2 rounded-2xl border border-ink-8 bg-white py-3.5 ${
+                loggingOut ? 'opacity-60' : 'active:bg-ink-8'
+              }`}
+            >
+              {loggingOut ? (
+                <ActivityIndicator color="#C2543E" />
+              ) : (
+                <LogOut size={18} color="#C2543E" />
+              )}
+              <Text className="font-semi text-[14px] text-danger">
+                {loggingOut ? 'Uitloggen…' : 'Uitloggen'}
+              </Text>
+            </Pressable>
+            <Text className="mt-2 text-center text-[11px] text-ink-50">
+              Ingelogd als {(user.email as string) ?? ''}
+            </Text>
           </View>
         </ScrollView>
       </SafeAreaView>

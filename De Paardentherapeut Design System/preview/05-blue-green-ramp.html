@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="nl">
+<head>
+<meta charset="utf-8" />
+<title>Blue-green ramp</title>
+<link rel="stylesheet" href="../colors_and_type.css" />
+<style>
+  body { margin: 0; padding: 18px; background: var(--canvas); }
+  .row { display: grid; grid-template-columns: repeat(10, 1fr); gap: 6px; }
+  .step { aspect-ratio: 1 / 1.05; border-radius: 12px; padding: 8px; display: flex; flex-direction: column; justify-content: space-between; font-family: var(--font-sans); font-size: 10px; font-weight: 600; }
+  .step .n { letter-spacing: 0.06em; opacity: 0.85; }
+  .step .h { font-feature-settings: 'tnum'; opacity: 0.7; font-size: 9px; }
+  .light { color: var(--ink); }
+  .dark  { color: white; }
+</style>
+</head>
+<body>
+  <div class="row">
+    <div class="step light" style="background: var(--bg-green-50)"><span class="n">50</span><span class="h">E6F1F0</span></div>
+    <div class="step light" style="background: var(--bg-green-100)"><span class="n">100</span><span class="h">BFD9D8</span></div>
+    <div class="step light" style="background: var(--bg-green-200)"><span class="n">200</span><span class="h">8FBCBA</span></div>
+    <div class="step dark"  style="background: var(--bg-green-300)"><span class="n">300</span><span class="h">5C9F9D</span></div>
+    <div class="step dark"  style="background: var(--bg-green-400)"><span class="n">400</span><span class="h">2E8786</span></div>
+    <div class="step dark"  style="background: var(--bg-green-500)"><span class="n">500</span><span class="h">127A79</span></div>
+    <div class="step dark"  style="background: var(--bg-green-600)"><span class="n">600</span><span class="h">106E6D</span></div>
+    <div class="step dark"  style="background: var(--bg-green-700)"><span class="n">700</span><span class="h">0D5C5B</span></div>
+    <div class="step dark"  style="background: var(--bg-green-800)"><span class="n">800</span><span class="h">0B4A49</span></div>
+    <div class="step dark"  style="background: var(--bg-green-900)"><span class="n">900</span><span class="h">083635</span></div>
+  </div>
+</body>
+</html>

@@ -7,6 +7,8 @@ import { AppHeader } from '@/components/ui/AppHeader';
 import { IconButton } from '@/components/ui/IconButton';
 import { Button } from '@/components/ui/Button';
 import { useTabBarPadding } from '@/hooks/useTabBarPadding';
+import { IntakeEntryCard } from '@/components/intake/IntakeEntryCard';
+import { useIntake } from '@/lib/intake/store';
 import {
   useActiveProtocolForHorse,
   useAllTaskCompletions,
@@ -42,12 +44,32 @@ export default function ProtocolListScreen() {
   const padBottom = useTabBarPadding();
   const protocol = useActiveProtocolForHorse();
   const user = useCurrentUser();
+  const { state: intake } = useIntake();
 
   if (!protocol) {
+    // No therapist-built protocol yet. Surface the intake entry as the empty
+    // state — once submitted it disappears and we show the "waiting on
+    // Shelley" placeholder until the protocol arrives.
+    const submitted = !!intake.submittedAt;
     return (
       <View className="flex-1 bg-canvas">
         <SafeAreaView edges={['top']} style={{ flex: 1 }}>
-          <AppHeader greet="Protocol" title="Jouw plan" avatar={(user.avatarInitial as string) ?? 'M'} />
+          <ScrollView contentContainerStyle={{ paddingBottom: padBottom }}>
+            <AppHeader greet="Protocol" title="Jouw plan" avatar={(user.avatarInitial as string) ?? 'M'} />
+            <View className="px-4">
+              {!submitted ? (
+                <IntakeEntryCard variant="standalone" />
+              ) : (
+                <View className="rounded-card border border-ink-8 bg-white p-5">
+                  <Text className="font-bold text-ink text-[16px]">Intake verzonden</Text>
+                  <Text className="mt-1 text-[13px] leading-[18px] text-ink-70">
+                    Shelley bouwt nu jouw protocol — je krijgt een notificatie zodra het klaar
+                    staat (binnen 3 werkdagen).
+                  </Text>
+                </View>
+              )}
+            </View>
+          </ScrollView>
         </SafeAreaView>
       </View>
     );

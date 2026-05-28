@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="nl">
+<head>
+<meta charset="utf-8" />
+<title>Eyebrows + pills</title>
+<link rel="stylesheet" href="../colors_and_type.css" />
+<style>
+  body { margin: 0; padding: 28px; background: var(--canvas); display: flex; flex-direction: column; gap: 18px; }
+  .row { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+  .badge {
+    background: var(--bg-green-700); color: var(--canvas);
+    padding: 8px 14px; border-radius: 9999px;
+    font-size: 12px; font-weight: 600; letter-spacing: 0.14em; text-transform: uppercase;
+  }
+  .badge--mint { background: var(--mint); color: white; }
+  .badge--ghost { background: transparent; color: var(--blue-green); border: 1px solid var(--ink-15); }
+</style>
+</head>
+<body>
+  <div class="row">
+    <span class="eyebrow">Holistisch · sinds 2016</span>
+    <span class="eyebrow" style="color: var(--ink-50)">Nieuw programma</span>
+  </div>
+  <div class="row">
+    <span class="pill">Lees meer</span>
+    <span class="badge">Gezond Paard</span>
+    <span class="badge badge--mint">Cursus</span>
+    <span class="badge badge--ghost">Beschikbaar</span>
+  </div>
+</body>
+</html>

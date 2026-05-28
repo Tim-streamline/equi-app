@@ -1,0 +1,96 @@
+<!doctype html>
+<html lang="nl">
+<head>
+<meta charset="utf-8" />
+<title>Equinova · Protocol-intake — spec voor developer</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="stylesheet" href="app-styles.css" />
+<link rel="stylesheet" href="dashboard-styles.css" />
+<link rel="stylesheet" href="concept-monitor-styles.css" />
+<link rel="stylesheet" href="spec-docs.css" />
+<style>
+/* Brief card (the "read me first" artboard in the canvas) */
+.brief-card {
+  width: 680px;
+  background: linear-gradient(160deg, var(--canvas) 0%, var(--mint-50) 100%);
+  border-radius: 18px;
+  padding: 32px 36px;
+  font-family: var(--font-sans);
+  color: var(--app-ink);
+  border: 1px solid var(--app-border);
+  box-shadow: 0 12px 28px rgba(18, 122, 121, 0.10);
+  position: relative;
+  overflow: hidden;
+}
+.brief-card::after {
+  content: ''; position: absolute; right: -60px; bottom: -80px;
+  width: 240px; height: 240px;
+  background: radial-gradient(circle, var(--mint-300) 0%, transparent 65%);
+  opacity: 0.18; pointer-events: none;
+}
+.brief-tag {
+  font-size: 11px; letter-spacing: 0.16em; text-transform: uppercase;
+  font-weight: 700; color: var(--app-accent-strong); margin-bottom: 10px;
+}
+.brief-card h1 {
+  font-family: var(--font-display); font-weight: 700;
+  font-size: 30px; line-height: 1.1; letter-spacing: -0.01em;
+  color: var(--app-deep-strong); text-transform: none;
+  margin: 0 0 14px;
+}
+.brief-card .lede {
+  font-size: 14.5px; line-height: 1.6;
+  color: var(--app-ink-2); margin: 0 0 22px;
+  max-width: 60ch;
+}
+.brief-card .lede em {
+  color: var(--app-deep-strong); font-weight: 600; font-style: normal;
+  background: var(--app-accent-soft); padding: 0 5px; border-radius: 3px;
+}
+.brief-grid {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 22px 32px;
+  margin-bottom: 22px;
+  position: relative; z-index: 1;
+}
+.brief-grid h3 {
+  font-family: var(--font-display); font-weight: 700;
+  font-size: 13.5px; color: var(--app-deep-strong);
+  text-transform: none; letter-spacing: 0;
+  margin: 0 0 8px;
+}
+.brief-grid ol {
+  margin: 0; padding-left: 22px;
+  font-size: 12.5px; line-height: 1.65; color: var(--app-ink-2);
+}
+.brief-grid ol li::marker {
+  color: var(--app-accent-strong); font-weight: 700;
+}
+.brief-foot {
+  font-size: 11.5px; line-height: 1.55; color: var(--app-ink-3);
+  border-top: 1px dashed var(--app-border);
+  padding-top: 12px;
+  position: relative; z-index: 1;
+}
+</style>
+</head>
+<body>
+<div id="app"></div>
+
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+
+<script type="text/babel" src="design-canvas.jsx"></script>
+<script type="text/babel" src="Icons.jsx"></script>
+<script type="text/babel" src="Shell.jsx"></script>
+<script type="text/babel" src="IntakeFormSchema.jsx"></script>
+<script type="text/babel" src="IntakeData.jsx"></script>
+<script type="text/babel" src="ProtocolTemplate.jsx"></script>
+<script type="text/babel" src="CustomerIntake.jsx"></script>
+<script type="text/babel" src="TherapistDashboard.jsx"></script>
+<script type="text/babel" src="ConceptProtocolView.jsx"></script>
+<script type="text/babel" src="IntakeSpec.jsx"></script>
+<script type="text/babel" src="StandardProtocolView.jsx"></script>
+<script type="text/babel" src="App.jsx"></script>
+</body>
+</html>

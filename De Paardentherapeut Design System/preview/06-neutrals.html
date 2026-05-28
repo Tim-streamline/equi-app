@@ -1,0 +1,23 @@
+<!doctype html>
+<html lang="nl">
+<head>
+<meta charset="utf-8" />
+<title>Neutral palette</title>
+<link rel="stylesheet" href="../colors_and_type.css" />
+<style>
+  body { margin: 0; padding: 18px; background: var(--canvas); display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; }
+  .sw { aspect-ratio: 1 / 1; border-radius: 14px; padding: 10px; display: flex; flex-direction: column; justify-content: space-between; font-family: var(--font-sans); font-size: 11px; font-weight: 600; border: 1px solid var(--ink-08); }
+  .sw .n { letter-spacing: 0.06em; }
+  .sw .h { font-size: 10px; opacity: 0.75; font-feature-settings: 'tnum'; }
+  .light { color: var(--ink); }
+  .dark  { color: white; }
+</style>
+</head>
+<body>
+  <div class="sw light" style="background: var(--canvas)"><span class="n">canvas</span><span class="h">FBF8F3</span></div>
+  <div class="sw light" style="background: var(--canvas-2)"><span class="n">canvas-2</span><span class="h">F4EFE7</span></div>
+  <div class="sw light" style="background: white"><span class="n">white</span><span class="h">FFFFFF</span></div>
+  <div class="sw dark"  style="background: var(--ink)"><span class="n">ink</span><span class="h">1B2A2A</span></div>
+  <div class="sw dark"  style="background: var(--logo-green)"><span class="n">logo-green</span><span class="h">0D3B34</span></div>
+</body>
+</html>

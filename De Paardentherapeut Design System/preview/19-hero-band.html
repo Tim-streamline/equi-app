@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="nl">
+<head>
+<meta charset="utf-8" />
+<title>Hero band</title>
+<link rel="stylesheet" href="../colors_and_type.css" />
+<style>
+  body { margin: 0; background: var(--canvas); }
+  .hero {
+    background: var(--bg-green-700);
+    color: var(--canvas);
+    padding: 30px 28px;
+    border-radius: 0;
+    display: grid;
+    grid-template-columns: 1fr auto;
+    align-items: center;
+    gap: 20px;
+    position: relative;
+    overflow: hidden;
+  }
+  .hero::before {
+    content: '';
+    position: absolute; right: -40px; bottom: -50px;
+    width: 220px; height: 220px;
+    background: radial-gradient(circle at 30% 30%, var(--mint-500) 0%, transparent 65%);
+    opacity: 0.45;
+  }
+  .hero h2 { color: var(--canvas); font-size: 26px; letter-spacing: 0.04em; line-height: 1.2; }
+  .hero p { color: var(--mint-100); font-style: italic; font-weight: 600; margin: 6px 0 0 0; font-size: 14px; max-width: 36ch; }
+  .hero img { width: 110px; position: relative; z-index: 1; filter: brightness(0) invert(1); opacity: 0.95; }
+</style>
+</head>
+<body>
+  <div class="hero">
+    <div>
+      <h2>WERK 1-OP-1 MET MIJ</h2>
+      <p>Holistische paardentherapie op locatie — voor jeuk, staakgedrag &amp; darmproblemen.</p>
+    </div>
+    <img src="../assets/logo-horse-mark.png" alt="" />
+  </div>
+</body>
+</html>
