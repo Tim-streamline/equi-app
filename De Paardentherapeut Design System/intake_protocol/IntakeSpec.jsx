@@ -1,5 +1,5 @@
 /* global React, INTAKE_FORM_SCHEMA, THERAPIST_FLAG_RULES, PROTOCOL_DECISION_TREE */
-// IntakeSpec.jsx — full developer-spec view of the intake form.
+// IntakeSpec.jsx, full developer-spec view of the intake form.
 // Renders every section, every field, with type & validation. The
 // developer can read top→bottom and implement exactly what's here.
 
@@ -11,7 +11,7 @@ function IntakeSpecDoc() {
     <div className="spec-doc">
       <header className="spec-head">
         <div className="spec-kicker">Intake-formulier · Spec voor developer</div>
-        <h1>Het Holistisch Herstelplan — intake</h1>
+        <h1>Het Holistisch Herstelplan: intake</h1>
         <p className="spec-sub">
           Wat de klant invult na betalen van Het Holistisch Herstelplan (€97). 10 secties, alle vragen hieronder uitgewerkt met veldtype, validatie en flag-regels.
         </p>
@@ -31,7 +31,7 @@ function IntakeSpecDoc() {
             <Legend type="date"     desc="Datum-picker" />
             <Legend type="radio"    desc="Eén keuze uit opties" />
             <Legend type="multi"    desc="Meerdere keuzes uit opties (chips)" />
-            <Legend type="slider"   desc="Schaal 1–5 tussen twee uitersten" />
+            <Legend type="file"     desc="Document-upload (PDF, bv. bloeduitslag)" />
             <Legend type="photo"    desc="Foto-upload (camera of bestand)" />
             <Legend type="repeater" desc="Dynamische lijst (bv. supplementen)" />
           </div>
@@ -56,13 +56,13 @@ function IntakeSpecDoc() {
         <SectionBlock key={sec.id} sec={sec} />
       ))}
 
-      {/* DECISION TREE — wat triggert wat in het protocol */}
+      {/* DECISION TREE, wat triggert wat in het protocol */}
       <section className="spec-section decision-section">
         <header className="sec-head">
           <div className="nr">A</div>
           <div>
             <h2>Auto-protocol beslisboom</h2>
-            <div className="sub">Wat het systeem bij verzenden van de intake automatisch klaarzet — vóór Shelley reviewt.</div>
+            <div className="sub">Wat het systeem bij verzenden van de intake automatisch klaarzet: vóór Shelley reviewt.</div>
             <div className="meta">{PROTOCOL_DECISION_TREE.length} regels · 6 soorten effect</div>
           </div>
         </header>
@@ -70,7 +70,7 @@ function IntakeSpecDoc() {
           <h4>Effect-types</h4>
           <div className="legend-grid">
             <Legend type="block"   desc="Protocol mag NIET starten" />
-            <Legend type="warn"    desc="Waarschuwing tonen — mag wel starten" />
+            <Legend type="warn"    desc="Waarschuwing tonen: mag wel starten" />
             <Legend type="modify"  desc="Vast item wijzigen of weglaten" />
             <Legend type="addon"   desc="Conditioneel item toevoegen" />
             <Legend type="phase"   desc="Hele fase activeren/skippen" />
@@ -113,7 +113,7 @@ function IntakeSpecDoc() {
       </section>
 
       <footer className="spec-foot">
-        <div>Document gegenereerd uit <code>IntakeFormSchema.jsx</code> — single source of truth. Bij wijziging: pas alleen die file aan, dit document én de mobile screens updaten automatisch.</div>
+        <div>Document gegenereerd uit <code>IntakeFormSchema.jsx</code>, single source of truth. Bij wijziging: pas alleen die file aan, dit document én de mobile screens updaten automatisch.</div>
         <div className="versie">v1 · {new Date().toISOString().slice(0, 10)}</div>
       </footer>
     </div>

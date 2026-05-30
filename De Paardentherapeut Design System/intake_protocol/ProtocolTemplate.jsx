@@ -1,7 +1,7 @@
 /* global window */
-// ProtocolTemplate.jsx — het standaard Darmrevalidatie-protocol.
+// ProtocolTemplate.jsx, het standaard Darmrevalidatie-protocol.
 // Bron: Shelley's Notion-document "Protocol-Darmproblemen" (versie mei 2026).
-// Dit is wat het systeem als CONCEPT klaarzet — Shelley past aan per paard.
+// Dit is wat het systeem als CONCEPT klaarzet, Shelley past aan per paard.
 
 const PROTOCOL_DARMEN = {
   id: 'darmen-standaard',
@@ -11,7 +11,7 @@ const PROTOCOL_DARMEN = {
   basedOn: 'Shelley\'s Protocol-Darmproblemen (versie mei 2026)',
 
   /* ====================================================================
-     VEILIGHEIDSCHECKS — afgewogen bij intake; protocol pas vrij bij groen.
+     VEILIGHEIDSCHECKS, afgewogen bij intake; protocol pas vrij bij groen.
      Level: block = stop · warn = mag starten · modify = pas inhoud aan
      ==================================================================== */
   veiligheidsChecks: [
@@ -58,20 +58,20 @@ const PROTOCOL_DARMEN = {
   ],
 
   /* ====================================================================
-     BASIS-REGELS — gelden altijd, voor elk paard, gedurende het protocol.
+     BASIS-REGELS, gelden altijd, voor elk paard, gedurende het protocol.
      ==================================================================== */
   basis: [
     { regel: 'Ruwvoer',         waarde: '2–3 kg per 100 kg lichaamsgewicht · onverpakt hooi uit touwtjes' },
-    { regel: 'Vastperiodes',    waarde: 'Maximaal 2 uur — liever geen' },
+    { regel: 'Vastperiodes',    waarde: 'Maximaal 2 uur, liever geen' },
     { regel: 'Zwarte lijst',    waarde: 'Verboden tijdens protocol (zie lijst hieronder)' },
     { regel: 'Snoep / fruit / brood', waarde: 'Verboden tijdens protocol' },
     { regel: 'Dosering starten',waarde: 'Altijd halve dosering · in 10–14 dagen opbouwen naar volle dosis' },
-    { regel: 'Doseergewicht',   waarde: 'Berekening op basis van 600 kg — app herberekent op echt gewicht uit intake' },
+    { regel: 'Doseergewicht',   waarde: 'Berekening op basis van 600 kg, app herberekent op echt gewicht uit intake' },
     { regel: 'Minimum uitvoering', waarde: 'Min. 4 dagen/week als eigenaar niet elke dag aanwezig is' },
   ],
 
   /* ====================================================================
-     ZWARTE LIJST — wat sowieso uit het voer moet tijdens het protocol.
+     ZWARTE LIJST, wat sowieso uit het voer moet tijdens het protocol.
      ==================================================================== */
   zwarteLijst: {
     voeding: [
@@ -79,12 +79,12 @@ const PROTOCOL_DARMEN = {
       'Bietenpulp met melasse',
       'Soja-producten',
       'Zonnebloemolie & soja-olie',
-      'Geconserveerd ruwvoer (kuil/voordroog) — uitzondering bij medisch advies',
+      'Geconserveerd ruwvoer (kuil/voordroog), uitzondering bij medisch advies',
       'Industriële paardensnoepjes',
       'Brood, koek, suikerwerk',
     ],
     supplementen: [
-      'Probiotica & gist (yeast) — tijdens lopend protocol',
+      'Probiotica & gist (yeast), tijdens lopend protocol',
       'Synthetische multi-vitamines',
       'Selenium-houdende supplementen (tenzij bloedonderzoek bewijst tekort)',
       'IJzer-supplementen (tenzij dierenarts adviseert)',
@@ -115,17 +115,17 @@ const PROTOCOL_DARMEN = {
           waarom: 'Beschermt en herstelt maagslijmvlies',
           alternateIf: 'IR vermoedelijk → vervang door psylliumzaad (zie 1.2)' },
         { nr: '1.2', t: 'Psylliumzaad (alleen bij IR)',
-          dosis: '175–200 gr psyllium ZAAD — 5–10 min meeweken in geweekte bijvoeding',
+          dosis: '175–200 gr psyllium ZAAD, 5–10 min meeweken in geweekte bijvoeding',
           freq: '2× daags',
           waarom: 'Alternatief voor lijnzaad bij IR paarden',
-          conditional: 'Alleen bij IR — duur 8 weken (2 wk langer)' },
+          conditional: 'Alleen bij IR, duur 8 weken (2 wk langer)' },
         { nr: '3', t: 'Kaasjeskruid + Heemstwortel',
           dosis: '15 gr per kruid · ca. 200 ml heet water · 20–30 min weken · regelmatig roeren',
           freq: '2× daags',
           waarom: 'Ontstekingsremmend & verzachtend op spijsvertering' },
       ],
       regels: [
-        { als: 'Maagprobleem ernstig / langdurig', dan: 'Gastercare toevoegen — 2× daags · 8 weken' },
+        { als: 'Maagprobleem ernstig / langdurig', dan: 'Gastercare toevoegen, 2× daags · 8 weken' },
         { als: '>8 weken zaden gegeven',           dan: 'Altijd stoppen met zaden' },
       ],
     },
@@ -135,7 +135,7 @@ const PROTOCOL_DARMEN = {
       naam: 'Stap 2 · Darmflora herstellen',
       duur: '6 weken',
       activeWhen: 'Direct na intake-akkoord OF na 2 wk Stap 1',
-      goal: 'Darmflora opnieuw opbouwen — kruiden, slijmvliesondersteuning, ontstekingsremmend',
+      goal: 'Darmflora opnieuw opbouwen, kruiden, slijmvliesondersteuning, ontstekingsremmend',
       items: [
         { nr: '1', t: 'Salie',           dosis: '6–7 verse bladeren of 10 gr gedroogd', freq: '1× daags',
           waarom: 'Ontstekings- en infectiewerend, krampwerend, windverdrijvend bij darmgistingen',
@@ -170,11 +170,11 @@ const PROTOCOL_DARMEN = {
           extra: 'Losse MSM weglaten als vit. E erbij komt' },
       ],
       stops: [
-        'Salie na 4 weken — altijd stoppen',
-        'Zwavel en zink na 8 weken — altijd stoppen',
+        'Salie na 4 weken, altijd stoppen',
+        'Zwavel en zink na 8 weken, altijd stoppen',
         'Zoethout extract NIET in week 3 en 4',
       ],
-      evaluatie: 'Begin week 6 — evaluatievragen sturen',
+      evaluatie: 'Begin week 6, evaluatievragen sturen',
     },
 
     {
@@ -217,7 +217,7 @@ const PROTOCOL_DARMEN = {
           dosis: '50–100 gr door basisvoeding',
           duur: '2 weken' },
       ],
-      evaluatie: 'Week 4 — evaluatieformulier sturen',
+      evaluatie: 'Week 4, evaluatieformulier sturen',
       uitkomsten: [
         { als: 'Stabiel',      dan: 'Door naar Stap 3 · Lever en nieren' },
         { als: 'Niet stabiel', dan: 'Stap 2 herhalen' },
@@ -232,7 +232,7 @@ const PROTOCOL_DARMEN = {
       goal: 'Lever- en nierwerking ondersteunen · ontgiften & remineraliseren',
 
       oneven: {
-        label: 'Oneven weken — actief ondersteunen',
+        label: 'Oneven weken, actief ondersteunen',
         items: [
           { nr: '1', t: 'Ontslakkingskruiden', dosis: '30–50 gr', freq: '1× daags',
             waarom: 'Lever- en nierondersteuning',
@@ -248,19 +248,19 @@ const PROTOCOL_DARMEN = {
         ],
       },
       even: {
-        label: 'Even weken — stopweek',
+        label: 'Even weken, stopweek',
         items: [
           { nr: '1', t: 'Zeoliet', dosis: '~40 gr', freq: '1× daags · APART van andere voeding',
             waarom: 'Bindt afvalstoffen',
             warning: 'Nooit tegelijk met vitamines geven.' },
         ],
       },
-      evaluatie: 'Week 12 — eindevaluatie',
+      evaluatie: 'Week 12, eindevaluatie',
     },
   ],
 
   /* ====================================================================
-     SIGNAALMOMENTEN — automatic flags op Shelley's dashboard
+     SIGNAALMOMENTEN, automatic flags op Shelley's dashboard
      ==================================================================== */
   signalen: [
     { trigger: '2 weken op rij mest zacht of diarree',  level: 'rood',
@@ -276,7 +276,7 @@ const PROTOCOL_DARMEN = {
   ],
 
   /* ====================================================================
-     VERWACHTINGSMANAGEMENT — verschijnt als motivatie in de app
+     VERWACHTINGSMANAGEMENT, verschijnt als motivatie in de app
      ==================================================================== */
   verwachtingen: [
     { wanneer: 'Week 1–2', bericht: 'Nog geen grote verandering zichtbaar. Het lichaam went aan de nieuwe ondersteuning.' },

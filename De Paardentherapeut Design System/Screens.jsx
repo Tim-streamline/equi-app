@@ -6,9 +6,9 @@ const { HORSE, TODAY_PROTOCOL, FOCUS_OPTIONS, SEASONAL, LIBRARY_FEATURED, LIBRAR
 
 /* small inline icon set used only by the protocol/advice rows */
 const PI = {
-  leaf:  I.leaf,
-  run:   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="13" cy="4" r="2"/><path d="m4 22 5-9 4 3-1 6"/><path d="M10 13 8 9l4-3 3 4 4 1"/></svg>,
-  horse: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 4 19 3l-1 4 2 3-2 2v3l-2 5h-3l1-5-3-2-3 2 1 5H6l-1-6 2-4-2-3a4 4 0 0 1 4-4Z"/></svg>,
+  leaf: I.leaf,
+  run: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="13" cy="4" r="2" /><path d="m4 22 5-9 4 3-1 6" /><path d="M10 13 8 9l4-3 3 4 4 1" /></svg>,
+  horse: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 4 19 3l-1 4 2 3-2 2v3l-2 5h-3l1-5-3-2-3 2 1 5H6l-1-6 2-4-2-3a4 4 0 0 1 4-4Z" /></svg>
 };
 
 /* ============================================================
@@ -36,7 +36,7 @@ function ScreenWelcome({ go }) {
             Paardengezondheid van de toekomst.
           </div>
           <h1 style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 42, lineHeight: 1.05, margin: 0, marginBottom: 20 }}>
-            Ken je paard.<br/>Van binnenuit.
+            Ken je paard.<br />Van binnenuit.
           </h1>
           <p style={{ fontSize: 15, lineHeight: 1.6, color: 'rgba(255,255,255,0.75)', maxWidth: '28ch', margin: 0 }}>
             Holistische ondersteuning — voeding, gedrag en symptomen op één plek. Begeleid door Shelley.
@@ -48,8 +48,8 @@ function ScreenWelcome({ go }) {
           <button className="btn-ghost" style={{ color: 'white', borderColor: 'rgba(255,255,255,0.2)', background: 'transparent' }} onClick={() => go('onb-add-horse')}>Ik heb al een account</button>
         </div>
       </div>
-    </div>
-  );
+    </div>);
+
 }
 
 function ScreenAddHorse({ go, back }) {
@@ -80,15 +80,15 @@ function ScreenAddHorse({ go, back }) {
       <div className="sticky-cta">
         <button className="btn-primary" onClick={() => go('onb-focus')}>Volgende →</button>
       </div>
-    </div>
-  );
+    </div>);
+
 }
 
 function ScreenFocusPick({ go, back }) {
   const [picked, setPicked] = useSt(new Set(['jeuk', 'darm']));
   const toggle = (id) => {
     const next = new Set(picked);
-    if (next.has(id)) next.delete(id); else next.add(id);
+    if (next.has(id)) next.delete(id);else next.add(id);
     setPicked(next);
   };
   return (
@@ -103,8 +103,8 @@ function ScreenFocusPick({ go, back }) {
         <p style={{ color: 'var(--app-ink-3)', fontSize: 14, marginBottom: 20 }}>Kies één of meerdere thema's. Dit bepaalt jouw eerste protocol — je kunt het later altijd aanpassen.</p>
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-          {FOCUS_OPTIONS.map((f) => (
-            <button key={f.id} className={picked.has(f.id) ? 'bigchip active' : 'bigchip'} onClick={() => toggle(f.id)}>
+          {FOCUS_OPTIONS.map((f) =>
+          <button key={f.id} className={picked.has(f.id) ? 'bigchip active' : 'bigchip'} onClick={() => toggle(f.id)}>
               <div className="ic" style={{ fontSize: 20 }}>{f.ic}</div>
               <div>
                 <div className="ttl">{f.t}</div>
@@ -114,14 +114,14 @@ function ScreenFocusPick({ go, back }) {
                 {picked.has(f.id) && <span style={{ color: 'white', width: 14, height: 14 }}>{I.check}</span>}
               </div>
             </button>
-          ))}
+          )}
         </div>
       </div>
       <div className="sticky-cta">
         <button className="btn-primary" onClick={() => go('onb-connect')} disabled={picked.size === 0}>Volgende →</button>
       </div>
-    </div>
-  );
+    </div>);
+
 }
 
 function ScreenConnect({ go, back }) {
@@ -130,34 +130,34 @@ function ScreenConnect({ go, back }) {
      in de app, alleen voor klanten met een Protocol-pakket. */
   const [picked, setPicked] = useSt('herstelplan');
   const plans = [
-    {
-      id: 'basis',
-      naam: 'Equinova Basis',
-      prijs: '€ 9',
-      per: 'per maand',
-      hint: 'De app voor alledag',
-      bullets: [
-        'Bibliotheek · 240+ artikelen & video\'s',
-        'Voer-scanner & dagelijks dagboek',
-        'Community — vraag mee aan Shelley',
-        'Maandelijks opzegbaar',
-      ],
-    },
-    {
-      id: 'herstelplan',
-      naam: 'Het Holistisch Herstelplan',
-      prijs: '€ 147',
-      per: 'eenmalig · incl. 3 maanden app',
-      hint: '12 weken aan samen aan de slag',
-      featured: true,
-      bullets: [
-        'Volledige intake ',
-        'Herstelplan op maat in 3 fases',
-        'Dagelijks plan met taken, dosering & uitleg',
-        'Wekelijkse bijstelling op basis van jouw observaties',
-      ],
-    },
-  ];
+  {
+    id: 'basis',
+    naam: 'Equinova Basis',
+    prijs: '€ 9',
+    per: 'per maand',
+    hint: 'De app voor alledag',
+    bullets: [
+    'Bibliotheek · 240+ artikelen & video\'s',
+    'Voer-scanner & dagelijks dagboek',
+    'Community — vraag mee aan Shelley',
+    'Maandelijks opzegbaar']
+
+  },
+  {
+    id: 'herstelplan',
+    naam: 'Het Holistisch Herstelplan',
+    prijs: '€ 147',
+    per: 'eenmalig · incl. 3 maanden app',
+    hint: '12 weken aan samen aan de slag',
+    featured: true,
+    bullets: [
+    'Volledige intake ',
+    'Herstelplan op maat in 3 fases',
+    'Dagelijks plan met taken, dosering & uitleg',
+    'Wekelijkse bijstelling op basis van jouw observaties']
+
+  }];
+
   return (
     <div className="screen" data-screen-label="04 Pakket kiezen">
       <SubHeader title="Kies wat past" onBack={back} />
@@ -189,8 +189,8 @@ function ScreenConnect({ go, back }) {
                   textAlign: 'left',
                   gap: 10,
                   borderColor: sel ? 'var(--app-accent)' : 'var(--app-border)',
-                  background: sel ? (p.featured ? 'var(--app-deep)' : 'var(--app-accent-soft)') : 'white',
-                  color: sel && p.featured ? 'white' : 'var(--app-ink)',
+                  background: sel ? p.featured ? 'var(--app-deep)' : 'var(--app-accent-soft)' : 'white',
+                  color: sel && p.featured ? 'white' : 'var(--app-ink)'
                 }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: 10 }}>
                   <div>
@@ -203,22 +203,22 @@ function ScreenConnect({ go, back }) {
                   </div>
                 </div>
                 <ul style={{ margin: 0, padding: 0, listStyle: 'none', display: 'flex', flexDirection: 'column', gap: 6 }}>
-                  {p.bullets.map((b) => (
-                    <li key={b} style={{ display: 'flex', gap: 8, alignItems: 'flex-start', fontSize: 13, lineHeight: 1.4, color: sel && p.featured ? 'rgba(255,255,255,0.85)' : 'var(--app-ink-2)' }}>
+                  {p.bullets.map((b) =>
+                  <li key={b} style={{ display: 'flex', gap: 8, alignItems: 'flex-start', fontSize: 13, lineHeight: 1.4, color: sel && p.featured ? 'rgba(255,255,255,0.85)' : 'var(--app-ink-2)' }}>
                       <span style={{ width: 14, height: 14, color: sel && p.featured ? 'var(--mint-300)' : 'var(--app-accent-strong)', flexShrink: 0, marginTop: 2 }}>{I.check}</span>
                       {b}
                     </li>
-                  ))}
+                  )}
                 </ul>
-              </button>
-            );
+              </button>);
+
           })}
         </div>
 
         <div style={{ marginTop: 14, fontSize: 11.5, color: 'var(--app-ink-3)', textAlign: 'center', lineHeight: 1.5 }}>
-          {picked === 'herstelplan'
-            ? 'Eenmalig € 147,- voor het volledige 12-wekentraject. Drie maanden app gratis inbegrepen. Daarna (optioneel) verlengen voor € 9/m.'
-            : 'Je kunt later altijd upgraden naar Het Holistisch Herstelplan.'}
+          {picked === 'herstelplan' ?
+          'Eenmalig € 147,- voor het volledige 12-wekentraject. Drie maanden app gratis inbegrepen. Daarna (optioneel) verlengen voor € 9/m.' :
+          'Je kunt later altijd upgraden naar Het Holistisch Herstelplan.'}
         </div>
       </div>
       <div className="sticky-cta">
@@ -226,8 +226,8 @@ function ScreenConnect({ go, back }) {
           {picked === 'herstelplan' ? 'Start mijn intake →' : 'Ga naar de app →'}
         </button>
       </div>
-    </div>
-  );
+    </div>);
+
 }
 
 /* ============================================================
@@ -240,7 +240,7 @@ function ScreenHome({ go, openNova, scrollToProtocol }) {
     <div className="screen with-tabs" data-screen-label="05 Home">
       <div className="body">
         <AppHeader greet={`Goedemorgen,`} title="Marit" right={
-          <button className="iconbtn">{I.bell}</button>
+        <button className="iconbtn">{I.bell}</button>
         } avatar="M" />
 
         <Coach tag={`Seizoenstip · ${SEASONAL.month}`}>
@@ -267,12 +267,12 @@ function ScreenHome({ go, openNova, scrollToProtocol }) {
               <div style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 15 }}>Dagelijks protocol</div>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                 <div style={{ fontSize: 12, color: 'var(--app-ink-3)' }}>{done} van {TODAY_PROTOCOL.length} gedaan</div>
-                <ProgressRing value={(done / TODAY_PROTOCOL.length) * 100} size={28} stroke={3} />
+                <ProgressRing value={done / TODAY_PROTOCOL.length * 100} size={28} stroke={3} />
               </div>
             </div>
             <div className="checklist">
-              {TODAY_PROTOCOL.slice(0, 3).map((p) => (
-                <div key={p.id} className={p.done ? 'checklist-item done' : 'checklist-item'}>
+              {TODAY_PROTOCOL.slice(0, 3).map((p) =>
+              <div key={p.id} className={p.done ? 'checklist-item done' : 'checklist-item'}>
                   <div className={p.done ? 'checkbox done' : 'checkbox'}>
                     {p.done && <span style={{ width: 14, height: 14, color: 'white' }}>{I.check}</span>}
                   </div>
@@ -281,7 +281,7 @@ function ScreenHome({ go, openNova, scrollToProtocol }) {
                     <div style={{ fontSize: 11, color: 'var(--app-ink-3)', marginTop: 2 }}>{p.meta}</div>
                   </div>
                 </div>
-              ))}
+              )}
             </div>
           </div>
         </div>
@@ -313,8 +313,8 @@ function ScreenHome({ go, openNova, scrollToProtocol }) {
           </button>
         </div>
       </div>
-    </div>
-  );
+    </div>);
+
 }
 
 function ScreenHorseProfile({ back, go }) {
@@ -334,9 +334,9 @@ function ScreenHorseProfile({ back, go }) {
           </div>
 
           <div style={{ display: 'flex', gap: 6, marginTop: 16, flexWrap: 'wrap' }}>
-            {HORSE.focus.map((f) => (
-              <span key={f} className="chip" style={{ background: 'rgba(255,255,255,0.18)', color: 'white' }}>{f}</span>
-            ))}
+            {HORSE.focus.map((f) =>
+            <span key={f} className="chip" style={{ background: 'rgba(255,255,255,0.18)', color: 'white' }}>{f}</span>
+            )}
           </div>
         </div>
 
@@ -380,8 +380,8 @@ function ScreenHorseProfile({ back, go }) {
           </div>
         </div>
       </div>
-    </div>
-  );
+    </div>);
+
 }
 
 /* ============================================================
@@ -393,7 +393,7 @@ function ScreenProtocolList({ go, openNova }) {
   const subs = {
     protocol: PROTOCOL_META.subtitleProtocol,
     kalender: PROTOCOL_META.subtitleCalendar,
-    analyse:  PROTOCOL_META.subtitleAnalyse,
+    analyse: PROTOCOL_META.subtitleAnalyse
   };
 
   return (
@@ -410,16 +410,16 @@ function ScreenProtocolList({ go, openNova }) {
           <div className="subtabs">
             <button className={tab === 'protocol' ? 'active' : ''} onClick={() => setTab('protocol')}>Protocol</button>
             <button className={tab === 'kalender' ? 'active' : ''} onClick={() => setTab('kalender')}>Kalender</button>
-            <button className={tab === 'analyse'  ? 'active' : ''} onClick={() => setTab('analyse')}>Analyse</button>
+            <button className={tab === 'analyse' ? 'active' : ''} onClick={() => setTab('analyse')}>Analyse</button>
           </div>
         </div>
 
         {tab === 'protocol' && <ProtocolPhases />}
         {tab === 'kalender' && <ProtocolCalendar go={go} />}
-        {tab === 'analyse'  && <ProtocolAnalyse />}
+        {tab === 'analyse' && <ProtocolAnalyse />}
       </div>
-    </div>
-  );
+    </div>);
+
 }
 
 function ProtocolAnalyse() {
@@ -432,25 +432,25 @@ function ProtocolAnalyse() {
 
       <div className="advice-heading">Advies</div>
       <div className="advice-list">
-        {PROTOCOL_ANALYSE.advice.map((a) => (
-          <div key={a.id} className="advice-row">
+        {PROTOCOL_ANALYSE.advice.map((a) =>
+        <div key={a.id} className="advice-row">
             <div className="ic">{PI[a.icon]}</div>
             <div>
               <div className="t">{a.t}</div>
               <div className="d">{a.d}</div>
             </div>
           </div>
-        ))}
+        )}
       </div>
-    </>
-  );
+    </>);
+
 }
 
 function ProtocolPhases() {
   return (
     <div className="phase-list">
-      {PROTOCOL_PHASES.map((p) => (
-        <div key={p.id} className="phase" data-state={p.state}>
+      {PROTOCOL_PHASES.map((p) =>
+      <div key={p.id} className="phase" data-state={p.state}>
           <div className="row">
             <div className="t">{p.t}</div>
             <span className="chip-state">
@@ -458,17 +458,17 @@ function ProtocolPhases() {
               {p.chip}
             </span>
           </div>
-          {p.items && (
-            <ul className="phase-items">
-              {p.items.map((it, i) => (
-                <li key={i}><span className="dot" />{it}</li>
-              ))}
-            </ul>
+          {p.items &&
+        <ul className="phase-items">
+              {p.items.map((it, i) =>
+          <li key={i}><span className="dot" />{it}</li>
           )}
+            </ul>
+        }
         </div>
-      ))}
-    </div>
-  );
+      )}
+    </div>);
+
 }
 
 function ProtocolCalendar({ go }) {
@@ -480,30 +480,30 @@ function ProtocolCalendar({ go }) {
     const map = {};
     cal.weeks.flat().forEach((cell) => {
       if (!cell) return;
-      if (cell.s === 'done')        map[cell.d] = ITEMS.map(() => true);
-      else if (cell.s === 'today')  map[cell.d] = [true, true, false, false];
-      else                          map[cell.d] = ITEMS.map(() => false);
+      if (cell.s === 'done') map[cell.d] = ITEMS.map(() => true);else
+      if (cell.s === 'today') map[cell.d] = [true, true, false, false];else
+      map[cell.d] = ITEMS.map(() => false);
     });
     return map;
   };
 
   const [selected, setSelected] = useSt(todayDay);
-  const [checks, setChecks]     = useSt(initState);
+  const [checks, setChecks] = useSt(initState);
 
   const toggle = (day, idx) => {
     setChecks((prev) => ({ ...prev, [day]: prev[day].map((v, i) => i === idx ? !v : v) }));
   };
 
-  const sel        = checks[selected] || ITEMS.map(() => false);
-  const doneCount  = sel.filter(Boolean).length;
+  const sel = checks[selected] || ITEMS.map(() => false);
+  const doneCount = sel.filter(Boolean).length;
 
   const cellState = (cell) => {
     if (!cell) return null;
     if (cell.d === selected) return 'selected';
     if (cell.d === todayDay) return 'today';
     const c = checks[cell.d];
-    if (c && c.every(Boolean))   return 'done';
-    if (c && c.some(Boolean))    return 'partial';
+    if (c && c.every(Boolean)) return 'done';
+    if (c && c.some(Boolean)) return 'partial';
     return cell.s;
   };
 
@@ -518,7 +518,7 @@ function ProtocolCalendar({ go }) {
           <button className="cal-nav" style={{ transform: 'rotate(180deg)' }}>{I.back}</button>
         </div>
         <div className="cal-grid compact">
-          {['ma','di','wo','do','vr','za','zo'].map((d) => (<div key={d} className="dow">{d}</div>))}
+          {['ma', 'di', 'wo', 'do', 'vr', 'za', 'zo'].map((d) => <div key={d} className="dow">{d}</div>)}
           {cal.weeks.flatMap((wk, wi) => wk.map((cell, ci) => {
             if (!cell) return <div key={`${wi}-${ci}`} className="cal-day placeholder" />;
             return (
@@ -526,9 +526,9 @@ function ProtocolCalendar({ go }) {
                 key={`${wi}-${ci}`}
                 className="cal-day"
                 data-state={cellState(cell)}
-                onClick={() => setSelected(cell.d)}
-              >{cell.d}</button>
-            );
+                onClick={() => setSelected(cell.d)}>
+                {cell.d}</button>);
+
           }))}
         </div>
         <div className="cal-legend">
@@ -546,20 +546,20 @@ function ProtocolCalendar({ go }) {
           </div>
         </div>
         <div className="day-checks">
-          {ITEMS.map((it, i) => (
-            <button key={i} className={sel[i] ? 'day-check done' : 'day-check'} onClick={() => toggle(selected, i)}>
+          {ITEMS.map((it, i) =>
+          <button key={i} className={sel[i] ? 'day-check done' : 'day-check'} onClick={() => toggle(selected, i)}>
               <span className="cbx">{sel[i] && <span style={{ width: 12, height: 12, color: 'white' }}>{I.check}</span>}</span>
               <span className="t">{it}</span>
             </button>
-          ))}
+          )}
         </div>
         <button className="btn-ghost" onClick={() => go('log-entry')} style={{ marginTop: 12 }}>
           <span style={{ width: 18, height: 18 }}>{I.plus}</span>
           Voeg observatie toe
         </button>
       </div>
-    </>
-  );
+    </>);
+
 }
 
 function ScreenProtocolDetail({ back, go }) {
@@ -574,8 +574,8 @@ function ScreenProtocolDetail({ back, go }) {
         <div style={{ padding: '0 16px 16px' }}>
           <div className="card flat">
             <div className="checklist">
-              {items.map((p) => (
-                <div key={p.id} className={p.done ? 'checklist-item done' : 'checklist-item'}>
+              {items.map((p) =>
+              <div key={p.id} className={p.done ? 'checklist-item done' : 'checklist-item'}>
                   <div className={p.done ? 'checkbox done' : 'checkbox'} onClick={() => toggle(p.id)}>
                     {p.done && <span style={{ width: 14, height: 14, color: 'white' }}>{I.check}</span>}
                   </div>
@@ -585,7 +585,7 @@ function ScreenProtocolDetail({ back, go }) {
                   </div>
                   <button className="iconbtn" style={{ width: 30, height: 30 }}>{I.chevron}</button>
                 </div>
-              ))}
+              )}
             </div>
           </div>
         </div>
@@ -594,8 +594,8 @@ function ScreenProtocolDetail({ back, go }) {
           <button className="btn-primary" onClick={() => go('log-entry')}>{done} van {items.length} gedaan · Voeg observatie toe</button>
         </div>
       </div>
-    </div>
-  );
+    </div>);
+
 }
 
 function ScreenLogEntry({ back }) {
@@ -609,21 +609,21 @@ function ScreenLogEntry({ back }) {
 
         <SectionTitle>Hoe voelt {HORSE.name} zich?</SectionTitle>
         <div style={{ display: 'flex', gap: 8, padding: '0 0 16px' }}>
-          {[1, 2, 3, 4, 5].map((n) => (
-            <button key={n} className={mood === n ? 'bigchip active' : 'bigchip'} onClick={() => setMood(n)} style={{ flexDirection: 'column', textAlign: 'center', padding: 14, flex: 1 }}>
-              <div style={{ fontSize: 22 }}>{['😞','😕','😐','🙂','😊'][n - 1]}</div>
-              <div style={{ fontSize: 10, color: 'var(--app-ink-3)' }}>{['slecht','minder','ok','goed','top'][n - 1]}</div>
+          {[1, 2, 3, 4, 5].map((n) =>
+          <button key={n} className={mood === n ? 'bigchip active' : 'bigchip'} onClick={() => setMood(n)} style={{ flexDirection: 'column', textAlign: 'center', padding: 14, flex: 1 }}>
+              <div style={{ fontSize: 22 }}>{['😞', '😕', '😐', '🙂', '😊'][n - 1]}</div>
+              <div style={{ fontSize: 10, color: 'var(--app-ink-3)' }}>{['slecht', 'minder', 'ok', 'goed', 'top'][n - 1]}</div>
             </button>
-          ))}
+          )}
         </div>
 
         <SectionTitle>Mest-score</SectionTitle>
         <div style={{ display: 'flex', gap: 8, padding: '0 0 20px' }}>
-          {['A', 'B', 'C', 'D'].map((s) => (
-            <button key={s} className={score === s ? 'bigchip active' : 'bigchip'} onClick={() => setScore(s)} style={{ justifyContent: 'center', padding: 14 }}>
+          {['A', 'B', 'C', 'D'].map((s) =>
+          <button key={s} className={score === s ? 'bigchip active' : 'bigchip'} onClick={() => setScore(s)} style={{ justifyContent: 'center', padding: 14 }}>
               <div style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 20 }}>{s}</div>
             </button>
-          ))}
+          )}
         </div>
 
         <button className="bigchip" style={{ background: 'var(--app-accent-soft)', borderColor: 'transparent' }}>
@@ -637,8 +637,8 @@ function ScreenLogEntry({ back }) {
       <div className="sticky-cta">
         <button className="btn-primary" onClick={back}>Observatie opslaan</button>
       </div>
-    </div>
-  );
+    </div>);
+
 }
 
 /* ============================================================
@@ -671,8 +671,8 @@ function ScreenScannerCamera({ go, back }) {
           Tik om scan te maken
         </div>
       </div>
-    </div>
-  );
+    </div>);
+
 }
 
 function ScreenScannerResult({ back, go }) {
@@ -686,7 +686,7 @@ function ScreenScannerResult({ back, go }) {
           <div className="score-ring">
             <svg width="96" height="96" style={{ position: 'absolute', transform: 'rotate(-90deg)' }}>
               <circle cx="48" cy="48" r="42" fill="none" stroke="var(--ink-08)" strokeWidth="6" />
-              <circle cx="48" cy="48" r="42" fill="none" stroke={ratingClass === 'success' ? 'var(--success)' : ratingClass === 'warn' ? 'var(--warning)' : 'var(--danger)'} strokeWidth="6" strokeLinecap="round" strokeDasharray={2 * Math.PI * 42} strokeDashoffset={(2 * Math.PI * 42) * (1 - r.score / 100)} />
+              <circle cx="48" cy="48" r="42" fill="none" stroke={ratingClass === 'success' ? 'var(--success)' : ratingClass === 'warn' ? 'var(--warning)' : 'var(--danger)'} strokeWidth="6" strokeLinecap="round" strokeDasharray={2 * Math.PI * 42} strokeDashoffset={2 * Math.PI * 42 * (1 - r.score / 100)} />
             </svg>
             <div style={{ position: 'relative', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
               <div className="num">{r.score}</div>
@@ -706,15 +706,15 @@ function ScreenScannerResult({ back, go }) {
 
         <SectionTitle>Ingrediënten ({r.ingredients.length})</SectionTitle>
         <div style={{ padding: '0 20px' }}>
-          {r.ingredients.map((ing, i) => (
-            <div key={i} className={`ingred ${ing.tag}`}>
+          {r.ingredients.map((ing, i) =>
+          <div key={i} className={`ingred ${ing.tag}`}>
               <span className="dot" />
               <div style={{ flex: 1 }}>
                 <div className="nm">{ing.nm}</div>
                 <div className="ds">{ing.ds}</div>
               </div>
             </div>
-          ))}
+          )}
         </div>
 
         <div style={{ padding: 20 }}>
@@ -724,8 +724,8 @@ function ScreenScannerResult({ back, go }) {
           </button>
         </div>
       </div>
-    </div>
-  );
+    </div>);
+
 }
 
 function ScreenScannerHistory({ back, go }) {
@@ -742,7 +742,7 @@ function ScreenScannerHistory({ back, go }) {
                   <div className="score-ring" style={{ width: 52, height: 52 }}>
                     <svg width="52" height="52" style={{ position: 'absolute', transform: 'rotate(-90deg)' }}>
                       <circle cx="26" cy="26" r="22" fill="none" stroke="var(--ink-08)" strokeWidth="4" />
-                      <circle cx="26" cy="26" r="22" fill="none" stroke={cls === 'success' ? 'var(--success)' : cls === 'warn' ? 'var(--warning)' : 'var(--danger)'} strokeWidth="4" strokeLinecap="round" strokeDasharray={2 * Math.PI * 22} strokeDashoffset={(2 * Math.PI * 22) * (1 - s.score / 100)} />
+                      <circle cx="26" cy="26" r="22" fill="none" stroke={cls === 'success' ? 'var(--success)' : cls === 'warn' ? 'var(--warning)' : 'var(--danger)'} strokeWidth="4" strokeLinecap="round" strokeDasharray={2 * Math.PI * 22} strokeDashoffset={2 * Math.PI * 22 * (1 - s.score / 100)} />
                     </svg>
                     <div style={{ position: 'relative', fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 16, color: 'var(--app-ink)' }}>{s.score}</div>
                   </div>
@@ -752,13 +752,13 @@ function ScreenScannerHistory({ back, go }) {
                   </div>
                   <span style={{ color: 'var(--app-ink-3)' }}>{I.chevron}</span>
                 </div>
-              </div>
-            );
+              </div>);
+
           })}
         </div>
       </div>
-    </div>
-  );
+    </div>);
+
 }
 
 /* ============================================================
@@ -773,15 +773,15 @@ function ScreenLibrary({ go }) {
 
         <div style={{ padding: '0 20px 12px' }}>
           <div style={{ background: 'var(--app-surface)', border: '1px solid var(--app-border)', borderRadius: 14, padding: '10px 14px', display: 'flex', alignItems: 'center', gap: 10, color: 'var(--app-ink-3)' }}>
-            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8" /><path d="m21 21-4.3-4.3" /></svg>
             <span style={{ fontSize: 14 }}>Zoek in 240+ artikelen, video's, kruiden</span>
           </div>
         </div>
 
         <div style={{ padding: '0 16px 16px', display: 'flex', gap: 8, overflowX: 'auto' }}>
-          {['Aanbevolen', 'Voor jeuk', 'Voor darmen', 'Voeding', 'Kruiden', 'Cursussen'].map((c, i) => (
-            <span key={c} className={i === 0 ? 'chip' : 'chip outline'} style={{ flexShrink: 0 }}>{c}</span>
-          ))}
+          {['Aanbevolen', 'Voor jeuk', 'Voor darmen', 'Voeding', 'Kruiden', 'Cursussen'].map((c, i) =>
+          <span key={c} className={i === 0 ? 'chip' : 'chip outline'} style={{ flexShrink: 0 }}>{c}</span>
+          )}
         </div>
 
         <SectionTitle>Aanbevolen · voor Nova</SectionTitle>
@@ -802,8 +802,8 @@ function ScreenLibrary({ go }) {
 
         <SectionTitle>Voor jou · op basis van protocol</SectionTitle>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8, padding: '0 16px 24px' }}>
-          {LIBRARY_LIST.map((a) => (
-            <div key={a.id} className="lib-row" onClick={() => go('library-article')}>
+          {LIBRARY_LIST.map((a) =>
+          <div key={a.id} className="lib-row" onClick={() => go('library-article')}>
               <div className="cv"><img src="assets/logo-horse-white.png" alt="" /></div>
               <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
                 <span className="k" style={{ fontSize: 9 }}>{a.kind}</span>
@@ -811,11 +811,11 @@ function ScreenLibrary({ go }) {
                 <div className="meta">{a.dur}</div>
               </div>
             </div>
-          ))}
+          )}
         </div>
       </div>
-    </div>
-  );
+    </div>);
+
 }
 
 function ScreenLibraryArticle({ back }) {
@@ -853,8 +853,8 @@ function ScreenLibraryArticle({ back }) {
           </div>
         </div>
       </div>
-    </div>
-  );
+    </div>);
+
 }
 
 function ScreenLibraryVideo({ back, go }) {
@@ -886,23 +886,23 @@ function ScreenLibraryVideo({ back, go }) {
         </div>
         <div className="list">
           {[
-            { t: 'Wanneer brandnetel plukken', d: '0:00' },
-            { t: 'Verse vs. gedroogde — wat werkt', d: '1:14' },
-            { t: 'Doseren in vijf dagen', d: '2:32' },
-            { t: 'Wanneer niet te geven', d: '4:10' },
-          ].map((c, i) => (
-            <div key={i} className="row-split" style={{ borderRadius: 12, background: i === 0 ? 'var(--app-accent-soft)' : 'transparent', padding: '12px 14px' }}>
+          { t: 'Wanneer brandnetel plukken', d: '0:00' },
+          { t: 'Verse vs. gedroogde — wat werkt', d: '1:14' },
+          { t: 'Doseren in vijf dagen', d: '2:32' },
+          { t: 'Wanneer niet te geven', d: '4:10' }].
+          map((c, i) =>
+          <div key={i} className="row-split" style={{ borderRadius: 12, background: i === 0 ? 'var(--app-accent-soft)' : 'transparent', padding: '12px 14px' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
                 <span style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 14, color: i === 0 ? 'var(--app-accent-strong)' : 'var(--app-ink-3)', minWidth: 24 }}>{String(i + 1).padStart(2, '0')}</span>
                 <span style={{ fontWeight: 500, fontSize: 14 }}>{c.t}</span>
               </div>
               <span className="v" style={{ fontVariantNumeric: 'tabular-nums', fontSize: 12 }}>{c.d}</span>
             </div>
-          ))}
+          )}
         </div>
       </div>
-    </div>
-  );
+    </div>);
+
 }
 
 /* ============================================================
@@ -925,14 +925,14 @@ function ScreenCommunity({ go }) {
         </div>
 
         <div className="cmt-filters">
-          {['Alles', 'Mijn focus', 'Vraag Shelley', 'Reviews', 'Diensten'].map((c, i) => (
-            <span key={c} className={i === 0 ? 'chip' : 'chip outline'} style={{ flexShrink: 0 }}>{c}</span>
-          ))}
+          {['Alles', 'Mijn focus', 'Vraag Shelley', 'Reviews', 'Diensten'].map((c, i) =>
+          <span key={c} className={i === 0 ? 'chip' : 'chip outline'} style={{ flexShrink: 0 }}>{c}</span>
+          )}
         </div>
 
         <div className="cmt-feed">
-          {COMMUNITY.map((t) => (
-            <article key={t.id} className="cmt-card" onClick={() => go('community-thread')}>
+          {COMMUNITY.map((t) =>
+          <article key={t.id} className="cmt-card" onClick={() => go('community-thread')}>
               <div className="cmt-head">
                 <div className={`cmt-av tone-${t.tone || 'a'}`}>{t.av}</div>
                 <div className="cmt-meta">
@@ -943,8 +943,8 @@ function ScreenCommunity({ go }) {
 
               <p className="cmt-q">{t.q}</p>
 
-              {t.hasExpert && (
-                <div className="cmt-answer">
+              {t.hasExpert &&
+            <div className="cmt-answer">
                   <div className="cmt-answer-by">
                     <span className="cmt-shelley-av">S</span>
                     <span className="cmt-shelley-nm">Shelley</span>
@@ -952,7 +952,7 @@ function ScreenCommunity({ go }) {
                   </div>
                   <p className="cmt-answer-txt">{t.answer}</p>
                 </div>
-              )}
+            }
 
               <div className="cmt-actions">
                 <span className="cmt-act"><span className="ic">{I.thumb}</span>{t.reactions.likes}</span>
@@ -960,11 +960,11 @@ function ScreenCommunity({ go }) {
                 <span className="cmt-act save"><span className="ic">{I.bookmark}</span></span>
               </div>
             </article>
-          ))}
+          )}
         </div>
       </div>
-    </div>
-  );
+    </div>);
+
 }
 
 function ScreenCommunityThread({ back }) {
@@ -1012,8 +1012,8 @@ function ScreenCommunityThread({ back }) {
           <button className="iconbtn" style={{ background: 'var(--app-accent)', color: 'white' }}>{I.send}</button>
         </div>
       </div>
-    </div>
-  );
+    </div>);
+
 }
 
 /* ============================================================
@@ -1092,12 +1092,12 @@ function ScreenAccount({ go }) {
         <SectionTitle>Algemeen</SectionTitle>
         <div style={{ padding: '0 16px 24px' }}>
           {[
-            { ic: I.bell, t: 'Meldingen', s: '3 reminders aan' },
-            { ic: I.download, t: 'Exporteer mijn data', s: 'CSV of PDF dagboek' },
-            { ic: I.settings, t: 'Voorkeuren', s: 'Eenheden, taal' },
-            { ic: I.heart, t: 'Steun De Paardentherapeut', s: '' },
-          ].map((r, i) => (
-            <div key={i} className="row-split">
+          { ic: I.bell, t: 'Meldingen', s: '3 reminders aan' },
+          { ic: I.download, t: 'Exporteer mijn data', s: 'CSV of PDF dagboek' },
+          { ic: I.settings, t: 'Voorkeuren', s: 'Eenheden, taal' },
+          { ic: I.heart, t: 'Steun De Paardentherapeut', s: '' }].
+          map((r, i) =>
+          <div key={i} className="row-split">
               <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
                 <span style={{ color: 'var(--app-ink-2)', width: 20, height: 20 }}>{r.ic}</span>
                 <div>
@@ -1107,11 +1107,11 @@ function ScreenAccount({ go }) {
               </div>
               <span style={{ color: 'var(--app-ink-3)' }}>{I.chevron}</span>
             </div>
-          ))}
+          )}
         </div>
       </div>
-    </div>
-  );
+    </div>);
+
 }
 
 function ScreenMyHorses({ back, go }) {
@@ -1162,7 +1162,7 @@ function ScreenMyHorses({ back, go }) {
         <div style={{ padding: '0 0 16px' }}>
           <div className="row-split">
             <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-              <div style={{ width: 32, height: 32, borderRadius: '50%', background: 'var(--bg-green-700)', color: 'white', display: 'grid', placeItems: 'center', fontWeight: 700, fontSize: 12 }}>S</div>
+              <div style={{ width: 32, height: 32, borderRadius: '50%', background: 'var(--bg-green-700)', color: 'white', display: 'grid', placeItems: 'center', fontWeight: 700, fontSize: 12 }}>Toegang tot basis bibliotheekcontent</div>
               <div>
                 <div style={{ fontWeight: 600, fontSize: 14 }}>Shelley · De Paardentherapeut</div>
                 <div style={{ fontSize: 11, color: 'var(--app-ink-3)' }}>Volledige toegang · therapeut</div>
@@ -1175,15 +1175,15 @@ function ScreenMyHorses({ back, go }) {
               <div style={{ width: 32, height: 32, borderRadius: '50%', background: 'var(--mint-300)', color: 'white', display: 'grid', placeItems: 'center', fontWeight: 700, fontSize: 12 }}>L</div>
               <div>
                 <div style={{ fontWeight: 600, fontSize: 14 }}>Lisanne (medeverzorger)</div>
-                <div style={{ fontSize: 11, color: 'var(--app-ink-3)' }}>Alleen-lezen · sinds maart</div>
+                <div style={{ fontSize: 11, color: 'var(--app-ink-3)' }}></div>
               </div>
             </div>
             <button className="btn-text">Beheer</button>
           </div>
         </div>
       </div>
-    </div>
-  );
+    </div>);
+
 }
 
 function ScreenSubscription({ back }) {
@@ -1193,70 +1193,52 @@ function ScreenSubscription({ back }) {
       <div className="body" style={{ padding: '0 16px 100px' }}>
         <div className="card" style={{ background: 'var(--app-deep)', color: 'white', border: 0, marginBottom: 14 }}>
           <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-            <span className="chip" style={{ background: 'var(--mint-500)', color: 'white' }}>Basis per maand · Actief</span>
+            <span className="chip" style={{ background: 'var(--mint-500)', color: 'white' }}>Plus · Actief</span>
             <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.7)' }}>Sinds april 2026</span>
           </div>
-          <div style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 32, marginTop: 12 }}>€ 9 <span style={{ fontSize: 14, color: 'rgba(255,255,255,0.7)', fontWeight: 500 }}>/ maand</span></div>
+          <div style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 32, marginTop: 12 }}>€ 12 <span style={{ fontSize: 14, color: 'rgba(255,255,255,0.7)', fontWeight: 500 }}>/ maand</span></div>
           <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.75)', marginTop: 4 }}>Verlengt automatisch op 22 mei</div>
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 18, paddingTop: 16, borderTop: '1px solid rgba(255,255,255,0.12)', fontSize: 13 }}>
-            {['Onbeperkte scans + AI-advies', 'Toegang tot alle bibliotheek-content', 'Direct vragen stellen aan Shelley', 'Tot 3 paarden'].map((b) => (
-              <div key={b} style={{ display: 'flex', gap: 10 }}>
+            {['Onbeperkte scans + AI-advies', 'Toegang tot alle bibliotheek-content', 'Direct vragen stellen aan Shelley', 'Tot 3 paarden'].map((b) =>
+            <div key={b} style={{ display: 'flex', gap: 10 }}>
                 <span style={{ color: 'var(--mint-300)', width: 18, height: 18 }}>{I.check}</span>{b}
               </div>
-            ))}
+            )}
           </div>
         </div>
 
         <SectionTitle>Upgrade pad</SectionTitle>
         <div className="list" style={{ marginBottom: 18 }}>
-          <div className="card flat" style={{ borderColor: 'var(--app-accent)', borderWidth: 2, overflow: 'hidden' }}>
+          <div className="card flat" style={{ borderColor: 'var(--mint-300)' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
               <div>
-                <span className="chip" style={{ background: 'var(--app-accent)', color: 'white' }}>Aanbevolen voor Nova</span>
-                <div style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 20, marginTop: 8 }}>Het Holistisch Herstelplan</div>
-                <div style={{ fontSize: 12, color: 'var(--app-ink-3)', marginTop: 2 }}>Jouw 3-maanden traject op maat</div>
+                <span className="chip">Aanbevolen</span>
+                <div style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 18, marginTop: 8 }}>Opleiding bundel</div>
+                <div style={{ fontSize: 12, color: 'var(--app-ink-3)', marginTop: 2 }}>EquiNova Plus + 8-maands opleiding</div>
               </div>
-              <div style={{ textAlign: 'right', flexShrink: 0 }}>
-                <div style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 22, color: 'var(--app-deep-strong)' }}>€ 147</div>
+              <div style={{ textAlign: 'right' }}>
+                <div style={{ fontWeight: 700 }}>€ 4.997</div>
                 <div style={{ fontSize: 11, color: 'var(--app-ink-3)' }}>eenmalig</div>
               </div>
             </div>
-
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 9, marginTop: 14, paddingTop: 14, borderTop: '1px solid var(--app-border)', fontSize: 13 }}>
-              {[
-                { t: 'Persoonlijk protocol van Shelley', d: 'Volledige intake, op maat opgebouwd in 3 fasen' },
-                { t: 'Verdiepende klacht-bibliotheek', d: 'Specifieke content over jeuk, darmen, hoeven en meer' },
-                { t: '10 extra Equi-credits', d: 'Stel meer vragen aan de AI-assistent' },
-                { t: 'Wekelijkse bijsturing', d: 'Shelley volgt mee op jouw observaties' },
-              ].map((b) => (
-                <div key={b.t} style={{ display: 'flex', gap: 10, alignItems: 'flex-start' }}>
-                  <span style={{ color: 'var(--app-accent-strong)', width: 17, height: 17, flexShrink: 0, marginTop: 1 }}>{I.check}</span>
-                  <div>
-                    <div style={{ fontWeight: 600, color: 'var(--app-ink)' }}>{b.t}</div>
-                    <div style={{ fontSize: 12, color: 'var(--app-ink-3)', marginTop: 1, lineHeight: 1.4 }}>{b.d}</div>
-                  </div>
-                </div>
-              ))}
-            </div>
-
-            <button className="btn-primary" style={{ marginTop: 16 }}>Start het Herstelplan →</button>
+            <button className="btn-primary" style={{ marginTop: 12 }}>Bekijk opleiding →</button>
           </div>
         </div>
 
         <SectionTitle>Betalingen</SectionTitle>
         <div style={{ padding: '0' }}>
-          <div className="row-split"><div>22 apr 2026</div><div className="v" style={{ color: 'var(--app-ink)' }}>€ 9,00</div></div>
-          <div className="row-split"><div>22 mrt 2026</div><div className="v" style={{ color: 'var(--app-ink)' }}>€ 9,00</div></div>
-          <div className="row-split"><div>22 feb 2026</div><div className="v" style={{ color: 'var(--app-ink)' }}>€ 9,00</div></div>
+          <div className="row-split"><div>22 apr 2026</div><div className="v" style={{ color: 'var(--app-ink)' }}>€ 12,00</div></div>
+          <div className="row-split"><div>22 mrt 2026</div><div className="v" style={{ color: 'var(--app-ink)' }}>€ 12,00</div></div>
+          <div className="row-split"><div>22 feb 2026</div><div className="v" style={{ color: 'var(--app-ink)' }}>€ 12,00</div></div>
         </div>
 
         <div style={{ padding: '20px 0 0' }}>
           <button className="btn-ghost" style={{ color: 'var(--danger)' }}>Abonnement opzeggen</button>
         </div>
       </div>
-    </div>
-  );
+    </div>);
+
 }
 
 /* ============================================================
@@ -1265,8 +1247,8 @@ function ScreenSubscription({ back }) {
 
 function NovaChat({ open, onClose }) {
   const [msgs, setMsgs] = useSt([
-    { role: 'nova', text: 'Hi Marit! Wat speelt er bij Nova?' },
-  ]);
+  { role: 'nova', text: 'Hi Marit! Wat speelt er bij Nova?' }]
+  );
   const [input, setInput] = useSt('');
   const [busy, setBusy] = useSt(false);
 
@@ -1299,25 +1281,25 @@ function NovaChat({ open, onClose }) {
           </div>
         </div>
         <div className="chat-stream" style={{ padding: 0, flex: 1, overflowY: 'auto' }}>
-          {msgs.map((m, i) => (
-            <div key={i} className={`chat-bubble ${m.role}`}>{m.text}</div>
-          ))}
+          {msgs.map((m, i) =>
+          <div key={i} className={`chat-bubble ${m.role}`}>{m.text}</div>
+          )}
           {busy && <div className="chat-bubble nova"><span style={{ display: 'inline-flex', gap: 4 }}><i style={{ width: 6, height: 6, background: 'var(--app-ink-3)', borderRadius: '50%', animation: 'pulse 1s infinite alternate' }} /><i style={{ width: 6, height: 6, background: 'var(--app-ink-3)', borderRadius: '50%', animation: 'pulse 1s infinite alternate', animationDelay: '0.2s' }} /><i style={{ width: 6, height: 6, background: 'var(--app-ink-3)', borderRadius: '50%', animation: 'pulse 1s infinite alternate', animationDelay: '0.4s' }} /></span></div>}
         </div>
         <div style={{ display: 'flex', gap: 8, marginTop: 14 }}>
           <input
             value={input}
             onChange={(e) => setInput(e.target.value)}
-            onKeyDown={(e) => { if (e.key === 'Enter') ask(); }}
+            onKeyDown={(e) => {if (e.key === 'Enter') ask();}}
             placeholder="Vraag iets over Nova..."
-            style={{ flex: 1, background: 'var(--app-surface-2)', border: 0, borderRadius: 999, padding: '12px 16px', fontSize: 14, fontFamily: 'inherit' }}
-          />
+            style={{ flex: 1, background: 'var(--app-surface-2)', border: 0, borderRadius: 999, padding: '12px 16px', fontSize: 14, fontFamily: 'inherit' }} />
+          
           <button className="iconbtn" style={{ background: 'var(--app-accent)', color: 'white' }} onClick={ask} disabled={busy}>{I.send}</button>
         </div>
         <style>{`@keyframes pulse { from { opacity: 0.3; } to { opacity: 1; } }`}</style>
       </div>
-    </div>
-  );
+    </div>);
+
 }
 
 Object.assign(window, {
@@ -1328,5 +1310,5 @@ Object.assign(window, {
   ScreenLibrary, ScreenLibraryArticle, ScreenLibraryVideo,
   ScreenCommunity, ScreenCommunityThread,
   ScreenAccount, ScreenMyHorses, ScreenSubscription,
-  NovaChat,
+  NovaChat
 });

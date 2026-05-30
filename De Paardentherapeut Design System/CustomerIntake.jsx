@@ -8,12 +8,12 @@ const { useState: useCS } = React;
 /* Tiny inline icons used in section list */
 const SectionIcon = ({ name }) => {
   const map = {
-    horse: (
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 4 19 3l-1 4 2 3-2 2v3l-2 5h-3l1-5-3-2-3 2 1 5H6l-1-6 2-4-2-3a4 4 0 0 1 4-4Z"/></svg>
-    ),
+    horse:
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 4 19 3l-1 4 2 3-2 2v3l-2 5h-3l1-5-3-2-3 2 1 5H6l-1-6 2-4-2-3a4 4 0 0 1 4-4Z" /></svg>,
+
     alert: I.alert, history: I.history, heart: I.heart, leaf: I.leaf,
     droplet: I.droplet, home: I.home, sparkles: I.sparkles,
-    camera: I.camera, send: I.send,
+    camera: I.camera, send: I.send
   };
   return map[name] || I.clipboard;
 };
@@ -46,16 +46,16 @@ function MobileWelcome() {
               Vertel me over <em style={{ color: 'var(--mint-300)', fontStyle: 'normal' }}>Nova</em>.
             </h1>
             <p style={{ fontSize: 14.5, lineHeight: 1.6, color: 'rgba(255,255,255,0.78)', margin: 0, marginBottom: 22 }}>
-              Tien korte secties, samen ongeveer <em style={{ color: 'white', fontStyle: 'normal' }}>30&nbsp;minuten</em>. Tussentijds opslaan kan altijd; je hoeft het niet in één keer af te ronden.
+              Tien korte secties, samen ongeveer <em style={{ color: 'white', fontStyle: 'normal' }}>30&nbsp;minuten</em>. Tussentijds opslaan kan altijd; je hoeft het niet in één keer af.
             </p>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginTop: 8 }}>
               {[
-                { ic: I.clipboard, t: 'Beantwoord de vragen zo volledig mogelijk', d: 'Hoe meer detail, hoe beter het advies.' },
-                { ic: I.camera,   t: 'Foto’s helpen mij meekijken',                  d: 'Maak duidelijke foto’s volgens de beschrijving in daglicht.' },
-                { ic: I.heart,    t: 'Binnen 5 werkdagen jouw protocol',             d: 'We bouwen het op basis van wat jij vertelt.' },
-              ].map((it, i) => (
-                <div key={i} style={{ display: 'flex', gap: 12, alignItems: 'flex-start' }}>
+              { ic: I.clipboard, t: 'Open vragen, ik lees ze persoonlijk terug', d: 'Hoe meer detail, hoe beter het advies.' },
+              { ic: I.camera, t: 'Foto’s helpen mij meekijken', d: 'Huid, hoeven, mest, ik vraag het op zijn tijd.' },
+              { ic: I.heart, t: 'Binnen 3 werkdagen jouw protocol', d: 'Ik bouw het zelf op basis van wat jij vertelt.' }].
+              map((it, i) =>
+              <div key={i} style={{ display: 'flex', gap: 12, alignItems: 'flex-start' }}>
                   <div style={{ width: 30, height: 30, borderRadius: 9, background: 'rgba(24,186,176,0.18)', color: 'var(--mint-300)', display: 'grid', placeItems: 'center', flexShrink: 0 }}>
                     <span style={{ width: 16, height: 16, display: 'grid', placeItems: 'center' }}>{it.ic}</span>
                   </div>
@@ -64,7 +64,7 @@ function MobileWelcome() {
                     <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.6)', marginTop: 2, lineHeight: 1.4 }}>{it.d}</div>
                   </div>
                 </div>
-              ))}
+              )}
             </div>
           </div>
         </div>
@@ -72,13 +72,13 @@ function MobileWelcome() {
         <div className="sticky-cta" style={{ background: 'linear-gradient(to top, var(--app-deep-strong) 60%, rgba(11,42,41,0))', padding: '20px 24px 28px' }}>
           <button className="btn-primary">Beginnen</button>
           <button className="btn-ghost" style={{ background: 'transparent', borderColor: 'rgba(255,255,255,0.15)', color: 'white' }}>
-            Stuur me eerst voorbeeldvragen
+
           </button>
         </div>
         <HomeIndicator tone="deep" />
       </div>
-    </div>
-  );
+    </div>);
+
 }
 
 /* ============================================================
@@ -87,8 +87,8 @@ function MobileWelcome() {
 
 function MobileSectionList() {
   const total = INTAKE_SECTIONS.length;
-  const done  = INTAKE_SECTIONS.filter((s) => s.status === 'done').length;
-  const pct   = Math.round((done / total) * 100);
+  const done = INTAKE_SECTIONS.filter((s) => s.status === 'done').length;
+  const pct = Math.round(done / total * 100);
   return (
     <div className="phone" data-screen-label="02 Klant · Sectie-overzicht">
       <StatusBar />
@@ -122,9 +122,9 @@ function MobileSectionList() {
 
           {/* Section list */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-            {INTAKE_SECTIONS.map((s) => (
-              <SectionRow key={s.id} s={s} />
-            ))}
+            {INTAKE_SECTIONS.map((s) =>
+            <SectionRow key={s.id} s={s} />
+            )}
           </div>
 
           <div style={{ marginTop: 18, padding: 14, background: 'var(--app-accent-soft)', borderRadius: 14, fontSize: 12.5, color: 'var(--app-ink-2)', lineHeight: 1.5 }}>
@@ -134,15 +134,15 @@ function MobileSectionList() {
         </div>
         <HomeIndicator />
       </div>
-    </div>
-  );
+    </div>);
+
 }
 
 function SectionRow({ s }) {
   const stateMap = {
-    done:   { bg: 'var(--app-accent-soft)', ic: 'var(--app-accent)',     fg: 'var(--app-accent-strong)', chip: '✓ Klaar' },
-    active: { bg: 'white',                  ic: 'var(--app-deep)',       fg: 'var(--app-deep)',          chip: 'Verder' },
-    todo:   { bg: 'white',                  ic: 'var(--app-ink-3)',      fg: 'var(--app-ink-3)',          chip: `~${s.minutes} min` },
+    done: { bg: 'var(--app-accent-soft)', ic: 'var(--app-accent)', fg: 'var(--app-accent-strong)', chip: '✓ Klaar' },
+    active: { bg: 'white', ic: 'var(--app-deep)', fg: 'var(--app-deep)', chip: 'Verder' },
+    todo: { bg: 'white', ic: 'var(--app-ink-3)', fg: 'var(--app-ink-3)', chip: `~${s.minutes} min` }
   };
   const st = stateMap[s.status];
   const active = s.status === 'active';
@@ -155,7 +155,7 @@ function SectionRow({ s }) {
         border: active ? '2px solid var(--app-accent)' : '1px solid var(--app-border)',
         gap: 14,
         flexDirection: 'row',
-        alignItems: 'center',
+        alignItems: 'center'
       }}>
       <div style={{ width: 38, height: 38, borderRadius: 12, background: s.status === 'done' ? 'var(--app-accent)' : 'var(--app-accent-soft)', color: s.status === 'done' ? 'white' : 'var(--app-accent-strong)', display: 'grid', placeItems: 'center', flexShrink: 0 }}>
         <span style={{ width: 18, height: 18, display: 'grid', placeItems: 'center' }}>
@@ -172,8 +172,8 @@ function SectionRow({ s }) {
       <div style={{ fontSize: 11, fontWeight: 700, color: st.fg, padding: '4px 10px', borderRadius: 999, background: active ? 'var(--app-accent)' : 'transparent', color: active ? 'white' : st.fg, whiteSpace: 'nowrap' }}>
         {st.chip}
       </div>
-    </div>
-  );
+    </div>);
+
 }
 
 /* ============================================================
@@ -184,11 +184,11 @@ function SectionRow({ s }) {
 function MobileSectionVoer() {
   const [hooi, setHooi] = useCS('onverpakt');
   const [aanbod, setAanbod] = useCS(new Set(['slowfeeder', 'los']));
-  const [supl, setSupl]     = useCS(new Set(['magnesium', 'zeewier']));
+  const [supl, setSupl] = useCS(new Set(['magnesium', 'zeewier']));
 
   const toggle = (set, setSet, v) => {
     const n = new Set(set);
-    if (n.has(v)) n.delete(v); else n.add(v);
+    if (n.has(v)) n.delete(v);else n.add(v);
     setSet(n);
   };
 
@@ -214,43 +214,30 @@ function MobileSectionVoer() {
           <FieldLabel n="01" lbl="Krijgt Nova verpakt of onverpakt hooi?" />
           <div style={{ display: 'flex', gap: 8, marginBottom: 22 }}>
             {[
-              { id: 'onverpakt', t: 'Onverpakt' },
-              { id: 'verpakt', t: 'Verpakt (baal)' },
-              { id: 'mix', t: 'Mix' },
-            ].map((o) => (
-              <button key={o.id} className={hooi === o.id ? 'bigchip active' : 'bigchip'} onClick={() => setHooi(o.id)} style={{ flex: 1, justifyContent: 'center', padding: '12px 6px', textAlign: 'center' }}>
+            { id: 'onverpakt', t: 'Onverpakt' },
+            { id: 'verpakt', t: 'Verpakt (baal)' },
+            { id: 'mix', t: 'Mix' }].
+            map((o) =>
+            <button key={o.id} className={hooi === o.id ? 'bigchip active' : 'bigchip'} onClick={() => setHooi(o.id)} style={{ flex: 1, justifyContent: 'center', padding: '12px 6px', textAlign: 'center' }}>
                 <span style={{ fontWeight: 700, fontSize: 13.5 }}>{o.t}</span>
               </button>
-            ))}
+            )}
           </div>
 
-          {/* Hooi kg, numeric + geschat/gewogen */}
-          <FieldLabel n="02" lbl="Hoeveel kg ruwvoer krijgt Nova per dag?" hint="Veel mensen gokken hier flink naast. Weeg het een keer (bijv. met een bagageweger aan het hooinet) voordat je invult." />
+          {/* Hooi kg, numeric */}
+          <FieldLabel n="02" lbl="Hoeveel kg ruwvoer per dag (ongeveer)?" />
           <div className="field">
             <input defaultValue="9" type="number" inputMode="decimal" style={{ fontSize: 18, fontFamily: 'var(--font-display)', fontWeight: 600 }} />
-          </div>
-          <div style={{ display: 'flex', gap: 8, marginBottom: 22 }}>
-            {[
-              { id: 'gewogen', t: 'Gewogen' },
-              { id: 'geschat', t: 'Geschat' },
-            ].map((o) => {
-              const active = o.id === 'geschat';
-              return (
-                <button key={o.id} className="chip outline" style={{ flex: 1, padding: '12px 6px', textAlign: 'center', justifyContent: 'center', fontWeight: 600, background: active ? 'var(--app-accent-soft)' : 'white', color: active ? 'var(--app-accent-strong)' : 'var(--app-ink-2)', border: active ? '1px solid var(--app-accent)' : '1px solid var(--app-border)' }}>
-                  {o.t}
-                </button>
-              );
-            })}
           </div>
 
           {/* Omschrijving, multi-chip + freeform */}
           <FieldLabel n="03" lbl="Hoe zou je het hooi omschrijven?" hint="Vink wat past, meerdere mogelijk." />
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 10 }}>
-            {['grof', 'stengelig', 'groenig', 'gelig', 'zacht', 'arm', 'rijk', 'stoffig'].map((tag) => (
-              <button key={tag} className="chip outline" style={{ cursor: 'pointer', padding: '8px 14px', fontWeight: 600, background: (tag === 'rijk' || tag === 'groenig') ? 'var(--app-accent-soft)' : 'white', color: (tag === 'rijk' || tag === 'groenig') ? 'var(--app-accent-strong)' : 'var(--app-ink-2)', borderColor: (tag === 'rijk' || tag === 'groenig') ? 'var(--app-accent)' : 'var(--app-border)' }}>
+            {['grof', 'stengelig', 'groenig', 'gelig', 'zacht', 'arm', 'rijk', 'stoffig'].map((tag) =>
+            <button key={tag} className="chip outline" style={{ cursor: 'pointer', padding: '8px 14px', fontWeight: 600, background: tag === 'rijk' || tag === 'groenig' ? 'var(--app-accent-soft)' : 'white', color: tag === 'rijk' || tag === 'groenig' ? 'var(--app-accent-strong)' : 'var(--app-ink-2)', borderColor: tag === 'rijk' || tag === 'groenig' ? 'var(--app-accent)' : 'var(--app-border)' }}>
                 {tag}
               </button>
-            ))}
+            )}
           </div>
           <div className="field"><textarea rows={2} placeholder="Iets nog toe te voegen? (optioneel)" defaultValue="Soms wisselend per baal." /></div>
 
@@ -258,11 +245,11 @@ function MobileSectionVoer() {
           <FieldLabel n="04" lbl="Is de kwaliteit van het hooi constant of wisselend?" />
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 22 }}>
             {[
-              { id: 'constant', t: 'Constant', d: 'Elke baal ongeveer hetzelfde' },
-              { id: 'baal',     t: 'Wisselt per baal', d: 'De ene baal anders dan de andere' },
-              { id: 'levering', t: 'Wisselt per levering', d: 'Per nieuwe partij anders' },
-              { id: 'leverancier', t: 'Wisselt per leverancier', d: 'Verschillende bronnen' },
-            ].map((o) => {
+            { id: 'constant', t: 'Constant', d: 'Elke baal ongeveer hetzelfde' },
+            { id: 'baal', t: 'Wisselt per baal', d: 'De ene baal anders dan de andere' },
+            { id: 'levering', t: 'Wisselt per levering', d: 'Per nieuwe partij anders' },
+            { id: 'leverancier', t: 'Wisselt per leverancier', d: 'Verschillende bronnen' }].
+            map((o) => {
               const active = o.id === 'baal';
               return (
                 <button key={o.id} className="bigchip" style={{ padding: '12px 14px', borderColor: active ? 'var(--app-accent)' : 'var(--app-border)', background: active ? 'var(--app-accent-soft)' : 'white' }}>
@@ -273,8 +260,8 @@ function MobileSectionVoer() {
                     <div style={{ fontWeight: 600, fontSize: 14, color: 'var(--app-ink)' }}>{o.t}</div>
                     <div style={{ fontSize: 11.5, color: 'var(--app-ink-3)', marginTop: 1 }}>{o.d}</div>
                   </div>
-                </button>
-              );
+                </button>);
+
             })}
           </div>
 
@@ -282,28 +269,28 @@ function MobileSectionVoer() {
           <FieldLabel n="05" lbl="Hoe wordt het hooi aangeboden?" />
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 22 }}>
             {[
-              { id: 'los',         t: 'Los op de grond' },
-              { id: 'slowfeeder',  t: 'Slowfeeder / hooinet' },
-              { id: 'autosys',     t: 'Automatisch voersysteem' },
-              { id: 'ruif',        t: 'Ruif' },
-            ].map((o) => (
-              <button key={o.id} className={aanbod.has(o.id) ? 'bigchip active' : 'bigchip'} onClick={() => toggle(aanbod, setAanbod, o.id)} style={{ padding: '12px 14px' }}>
+            { id: 'los', t: 'Los op de grond' },
+            { id: 'slowfeeder', t: 'Slowfeeder / hooinet' },
+            { id: 'autosys', t: 'Automatisch voersysteem' },
+            { id: 'ruif', t: 'Ruif' }].
+            map((o) =>
+            <button key={o.id} className={aanbod.has(o.id) ? 'bigchip active' : 'bigchip'} onClick={() => toggle(aanbod, setAanbod, o.id)} style={{ padding: '12px 14px' }}>
                 <div style={{ width: 22, height: 22, borderRadius: 6, border: '2px solid var(--app-border)', background: aanbod.has(o.id) ? 'var(--app-accent)' : 'white', borderColor: aanbod.has(o.id) ? 'var(--app-accent)' : 'var(--app-border)', display: 'grid', placeItems: 'center', flexShrink: 0 }}>
                   {aanbod.has(o.id) && <span style={{ width: 14, height: 14, color: 'white' }}>{I.check}</span>}
                 </div>
                 <span style={{ fontWeight: 600, fontSize: 14, color: 'var(--app-ink)' }}>{o.t}</span>
               </button>
-            ))}
+            )}
           </div>
 
           {/* Max zonder ruwvoer, chip */}
           <FieldLabel n="06" lbl="Maximale pauze zonder ruwvoer?" hint="Op een gemiddelde dag." />
           <div style={{ display: 'flex', gap: 6, marginBottom: 22 }}>
-            {['<2u', '2–4u', '4–6u', '>6u'].map((o, i) => (
-              <button key={o} className={i === 1 ? 'chip outline' : 'chip outline'} style={{ flex: 1, padding: '12px 4px', textAlign: 'center', justifyContent: 'center', background: i === 1 ? 'var(--app-accent-soft)' : 'white', color: i === 1 ? 'var(--app-accent-strong)' : 'var(--app-ink-2)', border: i === 1 ? '1px solid var(--app-accent)' : '1px solid var(--app-border)' }}>
+            {['<2u', '2–4u', '4–6u', '>6u'].map((o, i) =>
+            <button key={o} className={i === 1 ? 'chip outline' : 'chip outline'} style={{ flex: 1, padding: '12px 4px', textAlign: 'center', justifyContent: 'center', background: i === 1 ? 'var(--app-accent-soft)' : 'white', color: i === 1 ? 'var(--app-accent-strong)' : 'var(--app-ink-2)', border: i === 1 ? '1px solid var(--app-accent)' : '1px solid var(--app-border)' }}>
                 {o}
               </button>
-            ))}
+            )}
           </div>
 
           {/* Supplementen */}
@@ -317,8 +304,8 @@ function MobileSectionVoer() {
                     {active && <span style={{ width: 14, height: 14, color: 'white' }}>{I.check}</span>}
                   </div>
                   <span style={{ fontWeight: 600, fontSize: 14 }}>{s}</span>
-                </button>
-              );
+                </button>);
+
             })}
             <button className="bigchip" style={{ borderStyle: 'dashed', padding: '10px 14px' }}>
               <div className="ic" style={{ width: 22, height: 22, borderRadius: 6, background: 'transparent' }}>{I.plus}</div>
@@ -341,8 +328,8 @@ function MobileSectionVoer() {
         </div>
         <HomeIndicator />
       </div>
-    </div>
-  );
+    </div>);
+
 }
 
 function FieldLabel({ n, lbl, hint }) {
@@ -353,8 +340,8 @@ function FieldLabel({ n, lbl, hint }) {
         <span style={{ fontFamily: 'var(--font-display)', fontWeight: 600, fontSize: 14.5, color: 'var(--app-ink)', lineHeight: 1.35 }}>{lbl}</span>
       </div>
       {hint && <div style={{ fontSize: 12, color: 'var(--app-ink-3)', marginTop: 2, paddingLeft: 18 }}>{hint}</div>}
-    </div>
-  );
+    </div>);
+
 }
 
 /* ============================================================
@@ -410,30 +397,30 @@ function MobileSectionKlacht() {
           <FieldLabel n="05" lbl="Welke thema's spelen mee?" hint="Optioneel, kies wat past." />
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 14 }}>
             {[
-              { t: 'Jeuk', sel: true },
-              { t: 'Darmen', sel: true },
-              { t: 'Staakgedrag', sel: false },
-              { t: 'Hoeven', sel: false },
-              { t: 'Voeding', sel: true },
-              { t: 'Spierspanning', sel: false },
-              { t: 'Ademhaling', sel: false },
-              { t: 'Houding & balans', sel: false },
-            ].map((c) => (
-              <span key={c.t} className="chip" style={{ background: c.sel ? 'var(--app-accent)' : 'white', color: c.sel ? 'white' : 'var(--app-ink-2)', border: c.sel ? 'none' : '1px solid var(--app-border)', padding: '8px 14px', fontWeight: 600 }}>
+            { t: 'Jeuk', sel: true },
+            { t: 'Darmen', sel: true },
+            { t: 'Staakgedrag', sel: false },
+            { t: 'Hoeven', sel: false },
+            { t: 'Voeding', sel: true },
+            { t: 'Spierspanning', sel: false },
+            { t: 'Ademhaling', sel: false },
+            { t: 'Houding & balans', sel: false }].
+            map((c) =>
+            <span key={c.t} className="chip" style={{ background: c.sel ? 'var(--app-accent)' : 'white', color: c.sel ? 'white' : 'var(--app-ink-2)', border: c.sel ? 'none' : '1px solid var(--app-border)', padding: '8px 14px', fontWeight: 600 }}>
                 {c.sel && <span style={{ width: 12, height: 12 }}>{I.check}</span>}
                 {c.t}
               </span>
-            ))}
+            )}
           </div>
         </div>
 
         <div className="sticky-cta">
-          <button className="btn-primary">Volgende → Geschiedenis</button>
+          <button className="btn-primary">Volgende categorie vragen </button>
         </div>
         <HomeIndicator />
       </div>
-    </div>
-  );
+    </div>);
+
 }
 
 /* ============================================================
@@ -442,12 +429,12 @@ function MobileSectionKlacht() {
 
 function MobileSectionFysiek() {
   const photos = [
-    { t: 'Hele paard · zijaanzicht', d: 'Vanaf de zijkant, recht op afstand 3m.', ok: true },
-    { t: 'Manen / staartwortel', d: 'Waar de jeukklacht zit.', ok: true },
-    { t: 'Hoeven (4×, voor & achter)', d: 'Per hoef vanaf voor + zijaanzicht.', ok: false },
-    { t: 'Slijmvlies (oogwit / tandvlees)', d: 'Til de bovenlip op, foto van tandvlees.', ok: false },
-    { t: 'Mest (laatste 24u)', d: '1 hoopje op een schone ondergrond.', ok: false },
-  ];
+  { t: 'Hele paard · zijaanzicht', d: 'Vanaf de zijkant, recht op afstand 3m.', ok: true },
+  { t: 'Manen / staartwortel', d: 'Waar de jeukklacht zit.', ok: true },
+  { t: 'Hoeven (4×, voor & achter)', d: 'Per hoef vanaf voor + zijaanzicht.', ok: false },
+  { t: 'Slijmvlies (oogwit / tandvlees)', d: 'Til de bovenlip op, foto van tandvlees.', ok: false },
+  { t: 'Mest (laatste 24u)', d: '1 hoopje op een schone ondergrond.', ok: false }];
+
 
   return (
     <div className="phone" data-screen-label="05 Klant · Foto's">
@@ -476,18 +463,18 @@ function MobileSectionFysiek() {
 
           {/* Photo grid */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 22 }}>
-            {photos.map((p, i) => (
-              <div key={i} style={{
-                background: 'white', border: '1px solid var(--app-border)', borderRadius: 14,
-                padding: 12, display: 'flex', gap: 12, alignItems: 'center',
-              }}>
+            {photos.map((p, i) =>
+            <div key={i} style={{
+              background: 'white', border: '1px solid var(--app-border)', borderRadius: 14,
+              padding: 12, display: 'flex', gap: 12, alignItems: 'center'
+            }}>
                 <div style={{
-                  width: 64, height: 64, borderRadius: 10,
-                  background: p.ok ? 'linear-gradient(135deg, var(--mint-400), var(--bg-green-700))' : 'var(--canvas-2)',
-                  border: p.ok ? 'none' : '1.5px dashed var(--app-border)',
-                  display: 'grid', placeItems: 'center',
-                  color: p.ok ? 'white' : 'var(--app-ink-3)', flexShrink: 0,
-                }}>
+                width: 64, height: 64, borderRadius: 10,
+                background: p.ok ? 'linear-gradient(135deg, var(--mint-400), var(--bg-green-700))' : 'var(--canvas-2)',
+                border: p.ok ? 'none' : '1.5px dashed var(--app-border)',
+                display: 'grid', placeItems: 'center',
+                color: p.ok ? 'white' : 'var(--app-ink-3)', flexShrink: 0
+              }}>
                   {p.ok ? <span style={{ width: 22, height: 22 }}>{I.check}</span> : <span style={{ width: 24, height: 24 }}>{I.camera}</span>}
                 </div>
                 <div style={{ flex: 1, minWidth: 0 }}>
@@ -498,32 +485,32 @@ function MobileSectionFysiek() {
                   <span style={{ width: 16, height: 16 }}>{p.ok ? I.history : I.plus}</span>
                 </button>
               </div>
-            ))}
+            )}
           </div>
 
           {/* Quick assessment by owner */}
           <FieldLabel n="·" lbl="Hoe ziet Nova’s huid eruit?" />
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 16 }}>
             {[
-              { t: 'droog', sel: false }, { t: 'vet', sel: false }, { t: 'rood', sel: false },
-              { t: 'schilfers', sel: true }, { t: 'kale plekken', sel: true }, { t: 'normaal', sel: false },
-            ].map((tag) => (
-              <span key={tag.t} className="chip" style={{ background: tag.sel ? 'var(--app-accent-soft)' : 'white', color: tag.sel ? 'var(--app-accent-strong)' : 'var(--app-ink-2)', border: tag.sel ? '1px solid var(--app-accent)' : '1px solid var(--app-border)', fontWeight: 600 }}>
+            { t: 'droog', sel: false }, { t: 'vet', sel: false }, { t: 'rood', sel: false },
+            { t: 'schilfers', sel: true }, { t: 'kale plekken', sel: true }, { t: 'normaal', sel: false }].
+            map((tag) =>
+            <span key={tag.t} className="chip" style={{ background: tag.sel ? 'var(--app-accent-soft)' : 'white', color: tag.sel ? 'var(--app-accent-strong)' : 'var(--app-ink-2)', border: tag.sel ? '1px solid var(--app-accent)' : '1px solid var(--app-border)', fontWeight: 600 }}>
                 {tag.t}
               </span>
-            ))}
+            )}
           </div>
 
           <FieldLabel n="·" lbl="Hoe ziet haar haar / vacht eruit?" />
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 16 }}>
             {[
-              { t: 'glanzend', sel: true }, { t: 'dof', sel: true }, { t: 'kruinen', sel: false },
-              { t: 'verkleurd', sel: false }, { t: 'wisselt met seizoen', sel: false },
-            ].map((tag) => (
-              <span key={tag.t} className="chip" style={{ background: tag.sel ? 'var(--app-accent-soft)' : 'white', color: tag.sel ? 'var(--app-accent-strong)' : 'var(--app-ink-2)', border: tag.sel ? '1px solid var(--app-accent)' : '1px solid var(--app-border)', fontWeight: 600 }}>
+            { t: 'glanzend', sel: true }, { t: 'dof', sel: true }, { t: 'kruinen', sel: false },
+            { t: 'verkleurd', sel: false }, { t: 'wisselt met seizoen', sel: false }].
+            map((tag) =>
+            <span key={tag.t} className="chip" style={{ background: tag.sel ? 'var(--app-accent-soft)' : 'white', color: tag.sel ? 'var(--app-accent-strong)' : 'var(--app-ink-2)', border: tag.sel ? '1px solid var(--app-accent)' : '1px solid var(--app-border)', fontWeight: 600 }}>
                 {tag.t}
               </span>
-            ))}
+            )}
           </div>
 
           <FieldLabel n="·" lbl="Nog iets fysieks dat je opvalt?" hint="Vrije tekst, voor wat niet in vakjes past." />
@@ -538,8 +525,8 @@ function MobileSectionFysiek() {
         </div>
         <HomeIndicator />
       </div>
-    </div>
-  );
+    </div>);
+
 }
 
 /* ============================================================
@@ -567,8 +554,8 @@ function MobileSubmit() {
 
           {/* Summary cards per section */}
           <div style={{ background: 'white', border: '1px solid var(--app-border)', borderRadius: 16, marginBottom: 14 }}>
-            {INTAKE_SECTIONS.slice(0, 10).map((s, i) => (
-              <div key={s.id} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 14px', borderBottom: i < 9 ? '1px solid var(--app-border)' : 'none' }}>
+            {INTAKE_SECTIONS.slice(0, 10).map((s, i) =>
+            <div key={s.id} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 14px', borderBottom: i < 9 ? '1px solid var(--app-border)' : 'none' }}>
                 <div style={{ width: 28, height: 28, borderRadius: '50%', background: 'var(--app-accent)', color: 'white', display: 'grid', placeItems: 'center', flexShrink: 0 }}>
                   <span style={{ width: 14, height: 14 }}>{I.check}</span>
                 </div>
@@ -577,17 +564,17 @@ function MobileSubmit() {
                 </div>
                 <span style={{ fontSize: 12, color: 'var(--app-accent-strong)', fontWeight: 600 }}>Bewerk</span>
               </div>
-            ))}
+            )}
           </div>
 
           {/* Photos preview */}
           <div className="section-title"><h2>5 foto's bijgevoegd</h2></div>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 6, marginBottom: 22 }}>
-            {[0, 1, 2, 3, 4].map((i) => (
-              <div key={i} style={{ aspectRatio: '1', borderRadius: 10, background: i < 5 ? 'linear-gradient(135deg, var(--mint-300), var(--bg-green-700))' : 'var(--canvas-2)', display: 'grid', placeItems: 'center', color: 'white' }}>
+            {[0, 1, 2, 3, 4].map((i) =>
+            <div key={i} style={{ aspectRatio: '1', borderRadius: 10, background: i < 5 ? 'linear-gradient(135deg, var(--mint-300), var(--bg-green-700))' : 'var(--canvas-2)', display: 'grid', placeItems: 'center', color: 'white' }}>
                 <span style={{ width: 18, height: 18, opacity: 0.6 }}>{I.camera}</span>
               </div>
-            ))}
+            )}
           </div>
 
           <div style={{ background: 'var(--app-accent-soft)', borderRadius: 14, padding: 14, fontSize: 13, lineHeight: 1.5, color: 'var(--app-ink-2)', marginBottom: 8 }}>
@@ -604,8 +591,8 @@ function MobileSubmit() {
         </div>
         <HomeIndicator />
       </div>
-    </div>
-  );
+    </div>);
+
 }
 
 /* ============================================================
@@ -663,12 +650,12 @@ function MobileWaiting() {
         </div>
         <HomeIndicator />
       </div>
-    </div>
-  );
+    </div>);
+
 }
 
 /* Expose */
 Object.assign(window, {
   MobileWelcome, MobileSectionList, MobileSectionVoer,
-  MobileSectionKlacht, MobileSectionFysiek, MobileSubmit, MobileWaiting,
+  MobileSectionKlacht, MobileSectionFysiek, MobileSubmit, MobileWaiting
 });

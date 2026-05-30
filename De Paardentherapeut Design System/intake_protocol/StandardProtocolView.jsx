@@ -1,5 +1,5 @@
 /* global React, PROTOCOL_DARMEN */
-// StandardProtocolView.jsx — full reference document for the standard
+// StandardProtocolView.jsx, full reference document for the standard
 // "Darmrevalidatie" protocol, beautifully laid out so the developer
 // can read top→bottom and see exactly what the engine needs to drive.
 
@@ -41,7 +41,7 @@ function StandardProtocolDoc() {
 
       {/* BASIS */}
       <section className="proto-section">
-        <h2><span className="emoji">📐</span>Basis-regels — altijd, voor elk paard</h2>
+        <h2><span className="emoji">📐</span>Basis-regels: altijd, voor elk paard</h2>
         <table className="ptbl two-col">
           <tbody>
             {p.basis.map((b, i) => (
@@ -53,7 +53,7 @@ function StandardProtocolDoc() {
 
       {/* ZWARTE LIJST */}
       <section className="proto-section">
-        <h2><span className="emoji">🚫</span>Zwarte lijst — verboden tijdens protocol</h2>
+        <h2><span className="emoji">🚫</span>Zwarte lijst: verboden tijdens protocol</h2>
         <p className="lede">Wat sowieso uit het voer moet zolang het protocol loopt. App toont een rode banner als ingredient uit deze lijst gescand wordt.</p>
         <div className="zwart-grid">
           <div className="zwart-col">
@@ -78,7 +78,7 @@ function StandardProtocolDoc() {
 
       {/* SIGNALEN */}
       <section className="proto-section signals">
-        <h2><span className="emoji">🚨</span>Signaalmomenten — auto-flags op dashboard</h2>
+        <h2><span className="emoji">🚨</span>Signaalmomenten: auto-flags op dashboard</h2>
         <p className="lede">
           Wat Shelley automatisch ziet zodra de klant check-ins doet in de app. Het systeem moet deze patronen detecteren op de wekelijkse check-in data.
         </p>
@@ -95,7 +95,7 @@ function StandardProtocolDoc() {
 
       {/* VERWACHTINGEN */}
       <section className="proto-section expect">
-        <h2><span className="emoji">💬</span>Wat de gebruiker mag verwachten — app-berichten</h2>
+        <h2><span className="emoji">💬</span>Wat de gebruiker mag verwachten: app-berichten</h2>
         <p className="lede">Verschijnt automatisch in de app als motivatie & verwachtingsmanagement op het juiste moment in het traject.</p>
         <div className="expect-list">
           {p.verwachtingen.map((v, i) => (
@@ -158,7 +158,7 @@ function PhaseSection({ f }) {
       {/* Items table */}
       {f.items && (
         <>
-          <h4>Dagelijkse to do's — basis</h4>
+          <h4>Dagelijkse to do's: basis</h4>
           <table className="ptbl items">
             <thead><tr><th>#</th><th>To do</th><th>Hoeveelheid</th><th>Tijdstip</th><th>Waarom</th></tr></thead>
             <tbody>
@@ -184,7 +184,7 @@ function PhaseSection({ f }) {
       {/* Oneven/even ritme for fase 2 */}
       {f.oneven && (
         <>
-          <h4>Ritme — oneven weken (actief)</h4>
+          <h4>Ritme: oneven weken (actief)</h4>
           <table className="ptbl items">
             <thead><tr><th>#</th><th>To do</th><th>Hoeveelheid</th><th>Tijdstip</th><th>Waarom</th></tr></thead>
             <tbody>
@@ -203,7 +203,7 @@ function PhaseSection({ f }) {
             </tbody>
           </table>
 
-          <h4>Ritme — even weken (stopweek)</h4>
+          <h4>Ritme: even weken (stopweek)</h4>
           <table className="ptbl items">
             <thead><tr><th>#</th><th>To do</th><th>Hoeveelheid</th><th>Tijdstip</th><th>Waarom</th></tr></thead>
             <tbody>

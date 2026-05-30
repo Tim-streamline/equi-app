@@ -15,10 +15,9 @@ const HORSE = {
 };
 
 const TODAY_PROTOCOL = [
-  { id: 1, label: '1 el brandnetel door ruwvoer',  done: true,  meta: 'Ochtendvoer' },
-  { id: 2, label: '1 el lijnzaad door ruwvoer',    done: false, meta: 'Ochtendvoer' },
-  { id: 3, label: 'Foto van mest in app loggen',   done: false, meta: 'Na ochtendmest' },
-  { id: 4, label: '5 min borstelen rond manen',    done: false, meta: 'Vóór beweging' },
+  { id: 1, label: '1 el brandnetel ',  done: true,  meta: '1x daags' },
+  { id: 2, label: '1 el lijnzaad ',    done: false, meta: '1x daags' },
+  { id: 3, label: '1 el weegbree',     done: false, meta: '1x daags' },
 ];
 
 const FOCUS_OPTIONS = [
@@ -31,39 +30,47 @@ const FOCUS_OPTIONS = [
 
 const SEASONAL = {
   month: 'mei',
-  tip:  'Brandnetel staat nu volop. Pluk de jonge blaadjes en geef ze vers door het ruwvoer — een natuurlijke ondersteuning bij de voorjaarsrui en milde jeuk.',
+  tip:  'Brandnetel staat nu volop. Pluk de jonge blaadjes en bied ze aan ter vrije selectie. Een natuurlijke ondersteuning bij de voorjaarsrui en milde jeuk.',
 };
 
 const LIBRARY_FEATURED = {
-  id: 'brandnetel', kind: 'Kruid', t: 'Brandnetel — 5 minuten over de juiste dosering',
+  id: 'brandnetel', kind: 'Kruid', t: 'De juiste dosering brandnetel',
   dur: '5 min · Video', desc: 'Hoeveel, hoe vaak en wat juist te vermijden.',
 };
 
 const LIBRARY_LIST = [
   { id: 'lijnzaad',   kind: 'Voeding',   t: 'Lijnzaad: doseren in 7 dagen',           dur: '8 min · Artikel' },
-  { id: 'mest-score', kind: 'Diagnose',  t: 'Lees de mest van je paard',              dur: '6 min · Video' },
-  { id: 'darmen',     kind: 'Cursus',    t: 'Darmen Cursus — Hoofdstuk 3 · 4 lessen', dur: '42 min · Video' },
+  { id: 'mest-score', kind: 'Diagnose',  t: 'Lees de mest van je paard lezen',              dur: '6 min · Video' },
+  { id: 'darmen',     kind: 'Cursus',    t: 'Blabla', dur: '42 min · Video' },
   { id: 'locatie',    kind: 'Locatie',   t: 'In balans bij locatiewissel',            dur: '4 weken · Programma' },
-  { id: 'hoefb',      kind: 'Symptoom',  t: 'Hoefbevangenheid — de eerste signalen',  dur: '7 min · Artikel' },
+  { id: 'hoefb',      kind: 'Symptoom',  t: 'Hoefbevangenheid, de eerste signalen',  dur: '7 min · Artikel' },
 ];
 
 const COMMUNITY = [
-  { id: 1, name: 'Esther M.', av: 'E', when: '2 u', q: 'Mijn ruin krabt zijn manen al weken open. Voeding al aangepast, geen verbetering. Iemand ervaring met brandnetel-protocol?', reactions: { likes: 18, replies: 7 }, hasExpert: true },
-  { id: 2, name: 'Jolien K.', av: 'J', when: '5 u', q: 'Iemand een goede bron voor onverpakt biologisch hooi in regio Utrecht? De huidige leverancier is verhuisd.', reactions: { likes: 4, replies: 12 } },
-  { id: 3, name: 'Marit',     av: 'M', when: 'gisteren', q: 'Wat geven jullie tijdens een locatiewissel? Volgende week verhuizing en wil voorbereid zijn.', reactions: { likes: 9, replies: 21 }, hasExpert: true },
+  { id: 1, name: 'Esther M.', av: 'E', tone: 'a', when: '2 u', topic: 'Jeukklachten',
+    q: 'Mijn ruin krabt zijn manen al weken open. Voeding al aangepast, geen verbetering. Iemand ervaring met brandnetel-protocol?',
+    reactions: { likes: 18, replies: 7 }, hasExpert: true,
+    answer: 'Begin met vers, niet gedroogd, en bouw op in 5 dagen. Stuur me eens een foto van zijn manen via de app.' },
+  { id: 2, name: 'Jolien K.', av: 'J', tone: 'b', when: '5 u', topic: 'Voeding',
+    q: 'Iemand een goede bron voor onverpakt biologisch hooi in regio Utrecht? De huidige leverancier is verhuisd.',
+    reactions: { likes: 4, replies: 12 } },
+  { id: 3, name: 'Marit', av: 'M', tone: 'c', when: 'gisteren', topic: 'Locatiewissel',
+    q: 'Wat geven jullie tijdens een locatiewissel? Volgende week verhuizing en wil voorbereid zijn.',
+    reactions: { likes: 9, replies: 21 }, hasExpert: true,
+    answer: 'Houd het ruwvoer exact hetzelfde de eerste twee weken. Rust in de darmen = rust in het hoofd.' },
 ];
 
 const SCAN_RESULT = {
-  product: 'Pavo Care 4 Life — supplement',
+  product: 'Pavo Care 4 Life',
   brand: 'Pavo',
   score: 62,
   rating: 'Matig',
   ingredients: [
-    { nm: 'Lijnzaad',         tag: 'good',   ds: 'Goede bron van omega-3 — past in een holistisch voerplan.' },
+    { nm: 'Lijnzaad',         tag: 'good',   ds: 'Goede bron van omega-3, past in een holistisch voerplan.' },
     { nm: 'Bierdrab',         tag: 'good',   ds: 'Natuurlijke B-vitaminen en aminozuren.' },
     { nm: 'Mout-extract',     tag: 'warn',   ds: 'Bevat suikers. Niet ideaal voor insuline-gevoelige paarden.' },
-    { nm: 'Vit. C (synth.)',  tag: 'warn',   ds: 'Synthetische toevoeging — overweeg natuurlijke bron.' },
-    { nm: 'Saccharose (E473)', tag: 'danger', ds: 'Toegevoegde suiker — vermijd bij metabole problemen.' },
+    { nm: 'Vit. C (synth.)',  tag: 'warn',   ds: 'Synthetische toevoeging. Overweeg natuurlijke bron.' },
+    { nm: 'Saccharose (E473)', tag: 'danger', ds: 'Toegevoegde suiker, vermijd bij metabole problemen.' },
   ],
   advice: 'Niet ideaal voor Nova vanwege haar darmgevoeligheid. Bekijk het 100% natuurlijke alternatief in de bibliotheek.',
 };
@@ -88,7 +95,7 @@ const PROTOCOL_ANALYSE = {
 
 const PROTOCOL_PHASES = [
   { id: 'prep',  t: 'Voorbereiding',       state: 'done',     chip: 'Klaar' },
-  { id: 'darm',  t: 'Fase 1 — Darmen',     state: 'active',   chip: 'Actief · wk 1–4',
+  { id: 'darm',  t: 'Fase 1: Darmen revalideren',     state: 'active',   chip: 'Actief · wk 1–6',
     items: [
       '1 el brandnetel door ruwvoer (ochtend)',
       '1 el lijnzaad door ruwvoer (ochtend)',
@@ -96,8 +103,8 @@ const PROTOCOL_PHASES = [
       'Mest observeren en noteren',
     ],
   },
-  { id: 'lever', t: 'Fase 2 — Lever en nieren', state: 'upcoming', chip: 'Vanaf wk 5' },
-  { id: 'huid',  t: 'Fase 3 — Huid',           state: 'upcoming', chip: 'Vanaf wk 7' },
+  { id: 'lever', t: 'Fase 2 ', state: 'upcoming', chip: 'Vanaf wk 7' },
+  { id: 'huid',  t: 'Fase 3 ',           state: 'upcoming', chip: 'Vanaf wk 12' },
 ];
 
 /* Calendar: weeks of May 2026 — first cell = ma 1 mei (per screenshot).

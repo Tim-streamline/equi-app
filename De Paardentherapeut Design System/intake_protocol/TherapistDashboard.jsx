@@ -1,12 +1,12 @@
 /* global React, I, INTAKE_INBOX, FILLED_INTAKE, CONCEPT_PROTOCOL */
-// TherapistDashboard.jsx — Shelley's desktop side.
+// TherapistDashboard.jsx, Shelley's desktop side.
 // Bevat: DashShell + DashInbox + DashIntakeDetail.
 // (DashConceptProtocol, DashMonitoring, DashWeek6Eval staan in ConceptProtocolView.jsx)
 
 const { useState: useTS } = React;
 
 /* ============================================================
-   SHARED — left rail, top bar
+   SHARED, left rail, top bar
    ============================================================ */
 
 function DashShell({ active = 'inbox', children, label, sublabel, right }) {
@@ -213,7 +213,7 @@ function DashIntakeDetail() {
       }
     >
       <div className="intake-grid">
-        {/* LEFT — section nav */}
+        {/* LEFT, section nav */}
         <aside className="intake-nav">
           <div className="intake-meta">
             <div className="row"><span className="k">Pakket</span><span className="v"><span className="pakket plus">Protocol Plus</span></span></div>
@@ -237,7 +237,7 @@ function DashIntakeDetail() {
           </nav>
         </aside>
 
-        {/* CENTER — answers */}
+        {/* CENTER, answers */}
         <section className="intake-content">
           {/* Hero card with horse info */}
           <div className="dash-card hero">
@@ -294,7 +294,7 @@ function DashIntakeDetail() {
           ))}
         </section>
 
-        {/* RIGHT — therapist notes */}
+        {/* RIGHT, therapist notes */}
         <aside className="intake-notes">
           <div className="dash-card sticky-notes">
             <div className="card-head"><span className="t">Mijn notities</span><span className="hint">alleen jij ziet dit</span></div>
@@ -323,14 +323,14 @@ function DashIntakeDetail() {
           <div className="dash-card flag-list">
             <div className="card-head"><span className="t">Aandachtspunten</span><span className="hint">11</span></div>
             <ul>
-              <li><span className="dot" />BCS 6/9 — iets te zwaar</li>
+              <li><span className="dot" />BCS 6/9, iets te zwaar</li>
               <li><span className="dot" />Stress sinds verhuizing jan 2024</li>
               <li><span className="dot" />Subklacht: mest soms losser na gras</li>
               <li><span className="dot" />Antihistaminicum kuur zomer 2025</li>
               <li><span className="dot" />Eerdere kolieken 2020 & 2023</li>
               <li><span className="dot" />Wisselende ruwvoerkwaliteit per baal</li>
               <li><span className="dot" />Geen balancer/mineralenvoeding</li>
-              <li><span className="dot" />Mg + zeewier huidig — pauzeren</li>
+              <li><span className="dot" />Mg + zeewier huidig, pauzeren</li>
               <li><span className="dot" />Stal 12-18u per dag</li>
               <li><span className="dot" />Weven bij voertijd</li>
               <li><span className="dot" />Soppen hooi + boos bij singel</li>
@@ -393,7 +393,7 @@ function SectionAnswers({ id, title, answers, active }) {
 }
 
 /* ============================================================
-   03 · CONCEPT PROTOCOL EDITOR — OUDE VERSIE (nu vervangen door
+   03 · CONCEPT PROTOCOL EDITOR, OUDE VERSIE (nu vervangen door
    ConceptProtocolView.jsx · DashConceptProtocolOld blijft als fallback)
    ============================================================ */
 
@@ -414,7 +414,7 @@ function DashConceptProtocolOld() {
       }
     >
       <div className="proto-grid">
-        {/* LEFT — generated summary panel */}
+        {/* LEFT, generated summary panel */}
         <aside className="proto-side">
           <div className="dash-card sparkles compact">
             <div className="card-head">
@@ -443,7 +443,7 @@ function DashConceptProtocolOld() {
           </div>
         </aside>
 
-        {/* CENTER — phases editor */}
+        {/* CENTER, phases editor */}
         <section className="proto-main">
           <div className="dash-card">
             <div className="card-head">
@@ -488,7 +488,7 @@ function DashConceptProtocolOld() {
               <div className="preview-note">
                 <h4>Wat verandert er voor Marit?</h4>
                 <ul>
-                  <li>Protocol-tab toont 4 fasen — Voorbereiding actief op publicatiedag</li>
+                  <li>Protocol-tab toont 4 fasen, Voorbereiding actief op publicatiedag</li>
                   <li>Kalender toont dagelijkse to-do's automatisch</li>
                   <li>Marit krijgt notificatie: <em>"Nova's protocol staat klaar"</em></li>
                   <li>Bericht hierboven verschijnt als eerste 'Coach card' op het home-scherm</li>

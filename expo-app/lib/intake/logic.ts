@@ -26,11 +26,56 @@ function matches(value: unknown, trigger: Trigger): boolean {
   return set.includes(String(value));
 }
 
+/**
+ * Whether a field counts as genuinely answered. Stricter than `!isEmpty` for
+ * option-based fields: a value is only valid if it still matches the field's
+ * current `options`. This keeps the "X / Y vragen beantwoord" tally (and the
+ * completion check) honest when persisted answers predate a schema change —
+ * e.g. an old slider value left under a field that is now a radio, or an
+ * option label that was reworded — which would otherwise count as answered.
+ */
+export function isFieldAnswered(field: Field, value: unknown): boolean {
+  if (isEmpty(value)) return false;
+  if (field.type === 'radio') {
+    return (field.options ?? []).includes(String(value));
+  }
+  if (field.type === 'multi') {
+    if (!Array.isArray(value)) return false;
+    const opts = field.options ?? [];
+    return value.some((v) => opts.includes(String(v)));
+  }
+  if (field.type === 'repeater') {
+    // An added-but-blank row (e.g. `[{}]`) is non-empty as an array but holds
+    // no real answer — require at least one row with a non-empty sub-value.
+    if (!Array.isArray(value)) return false;
+    return value.some(
+      (row) =>
+        row != null &&
+        typeof row === 'object' &&
+        Object.values(row as Record<string, unknown>).some(
+          (v) => typeof v === 'string' && v.trim() !== '',
+        ),
+    );
+  }
+  return true;
+}
+
 /** `showIf` evaluator. Returns true when every key matches. */
 export function showField(field: Field, sectionAnswers: SectionAnswers): boolean {
   if (!field.showIf) return true;
   for (const [k, trigger] of Object.entries(field.showIf)) {
-    if (!matches(sectionAnswers[k], trigger)) return false;
+    const value = sectionAnswers[k];
+    const set = Array.isArray(trigger) ? trigger : [trigger];
+    // Special marker: show when the referenced multi field has at least one
+    // non-"geen" option selected (used for "describe what you picked" follow-ups).
+    if (set.includes('any-checked')) {
+      const checked = Array.isArray(value)
+        ? value.some((v) => v !== 'geen')
+        : value != null && value !== '' && value !== 'geen';
+      if (!checked) return false;
+      continue;
+    }
+    if (!matches(value, trigger)) return false;
   }
   return true;
 }
@@ -50,8 +95,18 @@ export function visibleFieldsForRender(section: Section, answers: SectionAnswers
 /** Required fields whose answer is still missing. */
 export function missingRequired(section: Section, answers: SectionAnswers): Field[] {
   return visibleFields(section, answers).filter(
-    (f) => f.required && isEmpty(answers[f.id]),
+    (f) => f.required && !isFieldAnswered(f, answers[f.id]),
   );
+}
+
+/** Count of visible (non-sectionhead) fields that are genuinely answered. */
+export function answeredCount(section: Section, answers: SectionAnswers): {
+  answered: number;
+  total: number;
+} {
+  const renderable = visibleFields(section, answers);
+  const answered = renderable.filter((f) => isFieldAnswered(f, answers[f.id])).length;
+  return { answered, total: renderable.length };
 }
 
 /** Whether the section has all required fields answered. */

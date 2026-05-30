@@ -4,7 +4,7 @@
 
 import { View, Text, ScrollView, Pressable } from 'react-native';
 import { router } from 'expo-router';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ChevronLeft, Check, Send, AlertTriangle } from 'lucide-react-native';
 
 import { Button } from '@/components/ui/Button';
@@ -19,6 +19,7 @@ import {
 import { useIntake } from '@/lib/intake/store';
 
 export default function IntakeSubmit() {
+  const insets = useSafeAreaInsets();
   const { state, submit } = useIntake();
   const flags = countFlags(state.answers);
   const critical = hasCriticalAnswers(state.answers);
@@ -46,7 +47,9 @@ export default function IntakeSubmit() {
           <View style={{ width: 36 }} />
         </View>
 
-        <ScrollView contentContainerStyle={{ paddingBottom: 120, paddingHorizontal: 20 }}>
+        <ScrollView
+          contentContainerStyle={{ paddingBottom: 120 + insets.bottom, paddingHorizontal: 20 }}
+        >
           <Text className="mt-2 font-bold text-ink" style={{ fontSize: 26, lineHeight: 30 }}>
             Tien van tien.{' '}
             <Text className="text-mint-700">Mooi werk.</Text>
@@ -138,8 +141,11 @@ export default function IntakeSubmit() {
         </ScrollView>
 
         <View
-          className="absolute bottom-0 left-0 right-0 px-5 pb-6 pt-3"
-          style={{ backgroundColor: 'rgba(251,248,243,0.96)' }}
+          className="absolute bottom-0 left-0 right-0 px-5 pt-3"
+          style={{
+            backgroundColor: 'rgba(251,248,243,0.96)',
+            paddingBottom: insets.bottom + 16,
+          }}
         >
           <Button
             title="Verzenden naar Shelley"

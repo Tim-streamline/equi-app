@@ -1,6 +1,7 @@
 // Single source of truth for the Protocol Intake form ("Het Holistisch
 // Herstelplan — intake"). Ported from
-// "De Paardentherapeut Design System/intake_protocol/IntakeFormSchema.jsx".
+// "De Paardentherapeut Design System/intake_protocol/IntakeFormSchema.jsx"
+// (field copy) and IntakeData.jsx (overview title/sub/icon/minutes metadata).
 //
 // The intake is filled in by the customer in-app after they buy a protocol
 // package. Each section has a stable id used as the key inside the answers
@@ -9,6 +10,8 @@
 // `flagIf`     — answer surfaces as an attention-point on Shelley's review.
 // `criticalIf` — answer blocks protocol auto-start until reviewed manually.
 // `showIf`     — field only renders when another field has a given value.
+//                The special value 'any-checked' matches when the referenced
+//                multi field has at least one non-"geen" option selected.
 
 export type FieldType =
   | 'text'
@@ -17,7 +20,6 @@ export type FieldType =
   | 'date'
   | 'radio'
   | 'multi'
-  | 'slider'
   | 'photo'
   | 'file'
   | 'repeater'
@@ -43,8 +45,6 @@ export type Field = {
   unit?: string;
   step?: number;
   options?: string[];
-  /** Slider end-label pair, e.g. ['waterig', 'droog/hard']. */
-  labels?: [string, string];
   showIf?: ShowIf;
   /** `'non-empty'` / `'any'` / specific value(s) that should surface a flag. */
   flagIf?: Trigger | 'non-empty' | 'any';
@@ -84,7 +84,7 @@ export const INTAKE_SCHEMA: Section[] = [
   {
     id: 'contact',
     nr: 0,
-    title: 'Contact & openheid',
+    title: 'Contactgegevens',
     intro: 'Eerst even hoe ik je kan bereiken, en of je openstaat voor veranderingen.',
     minutes: 2,
     icon: 'mail',
@@ -103,7 +103,7 @@ export const INTAKE_SCHEMA: Section[] = [
         label: 'Telefoonnummer',
         type: 'text',
         required: true,
-        hint: 'Voor het geval ik je acuut wil bereiken — ik bel je niet zomaar.',
+        hint: 'Voor het geval ik je acuut wil bereiken, ik bel je niet zomaar.',
       },
       {
         id: 'hoe-gevonden',
@@ -116,16 +116,16 @@ export const INTAKE_SCHEMA: Section[] = [
         label: 'Sta je open voor aanpassingen in voer- en managementbeleid?',
         type: 'radio',
         required: true,
-        options: ['Ja, helemaal', 'Ik twijfel nog — leg uit hieronder', 'Anders'],
+        options: ['Ja, helemaal', 'Ik twijfel nog, leg uit hieronder', 'Anders'],
         hint: 'Eerlijk zijn helpt mij realistisch te zijn.',
-        flagIf: ['Ik twijfel nog — leg uit hieronder', 'Anders'],
+        flagIf: ['Ik twijfel nog, leg uit hieronder', 'Anders'],
       },
       {
         id: 'aanpassingen-toelichting',
         label: 'Toelichting',
         type: 'textarea',
         showIf: {
-          'aanpassingen-openheid': ['Ik twijfel nog — leg uit hieronder', 'Anders'],
+          'aanpassingen-openheid': ['Ik twijfel nog, leg uit hieronder', 'Anders'],
         },
       },
     ],
@@ -136,7 +136,7 @@ export const INTAKE_SCHEMA: Section[] = [
     id: 'paard',
     nr: 1,
     title: 'Over je paard',
-    intro: 'De basics — zodat ik weet over wie we het hebben.',
+    intro: 'De basics, zodat ik weet over wie we het hebben.',
     minutes: 4,
     icon: 'horse',
     sub: 'Ras, leeftijd, gewicht, conditie',
@@ -184,7 +184,7 @@ export const INTAKE_SCHEMA: Section[] = [
         type: 'number',
         unit: 'kg',
         required: true,
-        hint: 'Belangrijk — alle doseringen in het protocol worden hierop berekend.',
+        hint: 'Belangrijk, alle doseringen in het protocol worden hierop berekend.',
       },
       {
         id: 'gewicht-methode',
@@ -217,7 +217,7 @@ export const INTAKE_SCHEMA: Section[] = [
         label: 'Adres van de stal',
         type: 'textarea',
         required: true,
-        hint: 'Straat + plaats — postcode helpt me bij regio-specifieke tips (bv. bodemtype).',
+        hint: 'Straat + plaats, postcode helpt me bij regio-specifieke tips (bv. bodemtype).',
       },
       {
         id: 'sinds-bezit',
@@ -261,13 +261,13 @@ export const INTAKE_SCHEMA: Section[] = [
         label: 'Hoe omschrijf je de gezondheidsstatus op dit moment?',
         type: 'textarea',
         required: true,
-        hint: 'In je eigen woorden — geen jargon nodig.',
+        hint: 'In je eigen woorden, geen jargon nodig.',
       },
       {
         id: 'foto-paard',
         label: 'Foto van je paard (zijaanzicht)',
         type: 'photo',
-        hint: 'Voor mijn dossier — zo weet ik gelijk met wie ik werk.',
+        hint: 'Voor mijn dossier, zo weet ik gelijk met wie ik werk.',
       },
     ],
   },
@@ -278,10 +278,10 @@ export const INTAKE_SCHEMA: Section[] = [
     nr: 2,
     title: 'Klacht & hulpvraag',
     intro:
-      'Wat speelt er nu? Wees zo open en gedetailleerd mogelijk — ik lees alles persoonlijk.',
+      'Wat speelt er nu? Wees zo open en gedetailleerd mogelijk, ik lees alles persoonlijk.',
     minutes: 6,
     icon: 'alert',
-    sub: 'Wat speelt er, wat wens je',
+    sub: 'Wie is je paard, wat speelt er, wat wens je',
     fields: [
       {
         id: 'hulpvraag',
@@ -300,7 +300,7 @@ export const INTAKE_SCHEMA: Section[] = [
         id: 'subklacht',
         label: 'Is er een subklacht / hulpvraag 2?',
         type: 'textarea',
-        hint: 'Optioneel — als er meerdere dingen spelen.',
+        hint: 'Optioneel, als er meerdere dingen spelen.',
       },
       {
         id: 'wens',
@@ -313,7 +313,7 @@ export const INTAKE_SCHEMA: Section[] = [
         label: 'Heeft ze NU acute klachten?',
         type: 'multi',
         options: ['koorts', 'ernstige kreupelheid', 'koliek', 'wond / verwonding', 'geen'],
-        hint: 'Bij acute klachten eerst dierenarts — het traject pauzeert dan.',
+        hint: 'Bij acute klachten eerst dierenarts, het traject pauzeert dan.',
         criticalIf: ['koorts', 'ernstige kreupelheid', 'koliek'],
       },
       {
@@ -358,7 +358,7 @@ export const INTAKE_SCHEMA: Section[] = [
       },
       {
         id: 'eerder-wat',
-        label: 'Zo ja — welk type therapeut en wanneer?',
+        label: 'Zo ja, welk type therapeut en wanneer?',
         type: 'textarea',
         showIf: { 'eerder-behandeld': 'ja' },
       },
@@ -372,7 +372,7 @@ export const INTAKE_SCHEMA: Section[] = [
         id: 'huidige-aanpak',
         label: 'Wat doe je op dit moment aan de hulpvraag?',
         type: 'textarea',
-        hint: 'Therapie, middelen, maatregelen — wat dan ook.',
+        hint: 'Therapie, middelen, maatregelen, wat dan ook.',
       },
       {
         id: 'bloedonderzoek',
@@ -419,12 +419,11 @@ export const INTAKE_SCHEMA: Section[] = [
   {
     id: 'geschiedenis',
     nr: 3,
-    title: 'Geschiedenis — vroege jaren',
-    intro:
-      'Hoe je paard groot is geworden — vaak verstopte oorzaken zitten hier.',
+    title: 'Geschiedenis van je paard',
+    intro: 'Hoe je paard groot is geworden, vaak verstopte oorzaken zitten hier.',
     minutes: 5,
     icon: 'history',
-    sub: 'Moeder, eerste maanden, medisch verleden',
+    sub: 'De eerste levensjaren, medisch verleden',
     fields: [
       {
         id: 'moeder-voer-huis',
@@ -490,7 +489,7 @@ export const INTAKE_SCHEMA: Section[] = [
       },
       {
         id: 'medische-geschiedenis-volledig',
-        label: 'Volledige medische geschiedenis — chronologisch',
+        label: 'Volledige medische geschiedenis, chronologisch',
         type: 'textarea',
         required: true,
         hint:
@@ -508,9 +507,9 @@ export const INTAKE_SCHEMA: Section[] = [
     intro: 'Vaccinaties, ontworming, tandarts, hoefsmid, zadelmaker.',
     minutes: 6,
     icon: 'heart',
-    sub: 'Vaccinaties, gebit, hoeven, IR/EMS/KPU',
+    sub: 'Vaccinaties, gebit, hoeven enz.',
     fields: [
-      { id: 'sec-vacc', label: '— Vaccinatie & ontworming —', type: 'sectionhead' },
+      { id: 'sec-vacc', label: 'Vaccinatie en ontworming', type: 'sectionhead' },
       {
         id: 'vaccinaties',
         label: 'Welke vaccinaties krijgt het paard?',
@@ -554,7 +553,7 @@ export const INTAKE_SCHEMA: Section[] = [
         options: ['vast schema', 'mestonderzoek', 'mix'],
       },
 
-      { id: 'sec-tand', label: '— Gebit & tandarts —', type: 'sectionhead' },
+      { id: 'sec-tand', label: 'Gebit en tandarts', type: 'sectionhead' },
       {
         id: 'tandarts-freq',
         label: 'Hoe vaak wordt het gebit gecontroleerd?',
@@ -596,7 +595,7 @@ export const INTAKE_SCHEMA: Section[] = [
         flagIf: 'non-empty',
       },
 
-      { id: 'sec-hoef', label: '— Hoeven & beslag —', type: 'sectionhead' },
+      { id: 'sec-hoef', label: 'Hoeven en beslag', type: 'sectionhead' },
       {
         id: 'hoefsmid-freq',
         label: 'Hoe vaak komt de bekapper / hoefsmid?',
@@ -640,7 +639,7 @@ export const INTAKE_SCHEMA: Section[] = [
         options: ['ja, rondom', 'ja, voor', 'ja, achter', 'nee', 'anders'],
       },
 
-      { id: 'sec-zadel', label: '— Zadel —', type: 'sectionhead' },
+      { id: 'sec-zadel', label: 'Zadel', type: 'sectionhead' },
       {
         id: 'zadelmaker-freq',
         label: 'Hoe vaak komt de zadelmaker?',
@@ -661,7 +660,7 @@ export const INTAKE_SCHEMA: Section[] = [
 
       {
         id: 'sec-aandoening',
-        label: '— Aangetoonde of vermoedelijke aandoeningen —',
+        label: 'Aangetoonde of vermoedelijke aandoeningen',
         type: 'sectionhead',
       },
       {
@@ -704,7 +703,7 @@ export const INTAKE_SCHEMA: Section[] = [
         criticalIf: ['nu acuut'],
       },
 
-      { id: 'sec-maag', label: '— Maag —', type: 'sectionhead' },
+      { id: 'sec-maag', label: 'Maag', type: 'sectionhead' },
       {
         id: 'maag-ondersteuning',
         label: 'Heeft de maag ondersteuning nodig?',
@@ -736,7 +735,7 @@ export const INTAKE_SCHEMA: Section[] = [
         flagIf: ['ja, herhaaldelijk', 'ja, één kuur'],
       },
 
-      { id: 'sec-darm', label: '— Darmen —', type: 'sectionhead' },
+      { id: 'sec-darm', label: 'Darmen', type: 'sectionhead' },
       {
         id: 'gasserig',
         label: 'Is je paard gasserig / opgeblazen?',
@@ -774,12 +773,12 @@ export const INTAKE_SCHEMA: Section[] = [
     id: 'voer',
     nr: 5,
     title: 'Voer & ruwvoer',
-    intro: 'Dit is vaak de kern. Wees specifiek — merknamen, hoeveelheden, exacte tijden.',
+    intro: 'Dit is vaak de kern. Wees specifiek, merknamen, hoeveelheden, exacte tijden.',
     minutes: 12,
     icon: 'leaf',
     sub: 'Hooi, krachtvoer, mineralen, supplementen',
     fields: [
-      { id: 'sec-ruw', label: '— Ruwvoer —', type: 'sectionhead' },
+      { id: 'sec-ruw', label: 'Ruwvoer', type: 'sectionhead' },
       {
         id: 'hooi-verpakking',
         label: 'Eet je paard hooi uit plastic of uit touwtjes?',
@@ -870,10 +869,21 @@ export const INTAKE_SCHEMA: Section[] = [
       },
       {
         id: 'hooi-kg-per-dag',
-        label: 'Hoeveel kg ruwvoer per dag?',
+        label: 'Hoeveel kg ruwvoer krijgt je paard per dag?',
         type: 'number',
         unit: 'kg',
         required: true,
+        hint:
+          'Heel veel mensen weten dit niet en gokken er flink naast. Weeg het een keer (bijv. met een weegschaal of bagageweger aan het hooinet) voordat je invult.',
+      },
+      {
+        id: 'hooi-kg-methode',
+        label: 'Is deze hoeveelheid geschat of gewogen?',
+        type: 'radio',
+        required: true,
+        options: ['gewogen', 'geschat'],
+        hint: 'Eerlijk zijn helpt mij. Bij geschat reken ik met een ruimere marge.',
+        flagIf: ['geschat'],
       },
       {
         id: 'foto-hooi',
@@ -882,7 +892,7 @@ export const INTAKE_SCHEMA: Section[] = [
         hint: 'Eén hapje uit een baal, op een neutrale ondergrond.',
       },
 
-      { id: 'sec-voordroog', label: '— Voordroog / kuil —', type: 'sectionhead' },
+      { id: 'sec-voordroog', label: 'Voordroog en kuil', type: 'sectionhead' },
       {
         id: 'voordroog-verleden',
         label: 'Ooit voordroog of kuil gegeten?',
@@ -893,7 +903,7 @@ export const INTAKE_SCHEMA: Section[] = [
       },
       {
         id: 'voordroog-duur-vroeger',
-        label: 'Hoe lang en hoeveel — in het verleden?',
+        label: 'Hoe lang en hoeveel, in het verleden?',
         type: 'textarea',
         showIf: { 'voordroog-verleden': ['ja, vroeger'] },
       },
@@ -919,7 +929,7 @@ export const INTAKE_SCHEMA: Section[] = [
         showIf: { 'voordroog-verleden': 'ja, nu nog' },
       },
 
-      { id: 'sec-stro', label: '— Stro —', type: 'sectionhead' },
+      { id: 'sec-stro', label: 'Stro', type: 'sectionhead' },
       {
         id: 'stro-aanwezig',
         label: 'Geef je wel eens stro?',
@@ -956,7 +966,7 @@ export const INTAKE_SCHEMA: Section[] = [
         flagIf: ['grijzig', 'ruikt schimmelig', 'ruikt chemisch'],
       },
 
-      { id: 'sec-kracht', label: '— Krachtvoer & bijvoer —', type: 'sectionhead' },
+      { id: 'sec-kracht', label: 'Krachtvoer en bijvoer', type: 'sectionhead' },
       {
         id: 'voer-gewisseld',
         label: 'Recent gewisseld van (ruw)voer?',
@@ -1011,7 +1021,7 @@ export const INTAKE_SCHEMA: Section[] = [
         ],
       },
 
-      { id: 'sec-supp', label: '— Snacks & supplementen —', type: 'sectionhead' },
+      { id: 'sec-supp', label: 'Snacks en supplementen', type: 'sectionhead' },
       {
         id: 'snacks-aanwezig',
         label: 'Krijgt je paard snacks?',
@@ -1065,7 +1075,7 @@ export const INTAKE_SCHEMA: Section[] = [
     intro: 'Hoe drinkt ze, en wat komt eruit.',
     minutes: 5,
     icon: 'droplet',
-    sub: 'Drinkbak, urine, mest',
+    sub: 'Vochtinname, urine, mest',
     fields: [
       {
         id: 'water-type',
@@ -1086,7 +1096,7 @@ export const INTAKE_SCHEMA: Section[] = [
         id: 'water-analyse',
         label: 'Water-analyse aanwezig?',
         type: 'file',
-        hint: 'Vooral relevant als geen leidingwater — upload PDF.',
+        hint: 'Vooral relevant als geen leidingwater, upload PDF.',
         showIf: {
           'water-type': ['regenwater', 'grondwater', 'slootwater / oppervlaktewater', 'anders'],
         },
@@ -1148,7 +1158,7 @@ export const INTAKE_SCHEMA: Section[] = [
         flagIf: ['lijkt minder', 'lijkt meer'],
       },
 
-      { id: 'sec-uit', label: '— Urine & mest —', type: 'sectionhead' },
+      { id: 'sec-uit', label: 'Urine en mest', type: 'sectionhead' },
       {
         id: 'urine',
         label: 'Urine',
@@ -1178,9 +1188,22 @@ export const INTAKE_SCHEMA: Section[] = [
       },
       {
         id: 'mest-vorm',
-        label: 'Vorm / vastheid',
-        type: 'slider',
-        labels: ['waterig', 'droog/hard'],
+        label: 'Hoe ziet de vorm en vastheid van de mest eruit?',
+        type: 'radio',
+        required: true,
+        options: [
+          'waterig / diarree',
+          'zacht of smeuïg (geen vaste appels)',
+          'normale, vaste appels',
+          'droog en hard',
+          'wisselt per dag',
+        ],
+        flagIf: [
+          'waterig / diarree',
+          'zacht of smeuïg (geen vaste appels)',
+          'droog en hard',
+          'wisselt per dag',
+        ],
       },
       {
         id: 'foto-mest',
@@ -1196,13 +1219,13 @@ export const INTAKE_SCHEMA: Section[] = [
   {
     id: 'huisvesting',
     nr: 7,
-    title: 'Huisvesting & weidegang',
-    intro: 'Waar woont ze — zomer én winter — en met wie.',
+    title: 'Huisvesting & weide',
+    intro: 'Waar woont ze, zomer én winter, en met wie.',
     minutes: 8,
     icon: 'home',
     sub: 'Zomer + winter, sociale groep, grasland',
     fields: [
-      { id: 'sec-huis', label: '— Huisvesting (zomer & winter) —', type: 'sectionhead' },
+      { id: 'sec-huis', label: 'Huisvesting (zomer en winter)', type: 'sectionhead' },
       {
         id: 'huisvesting-zomer',
         label: 'Hoe wordt je paard in de zomer gehuisvest?',
@@ -1241,7 +1264,7 @@ export const INTAKE_SCHEMA: Section[] = [
       },
       { id: 'foto-stal', label: 'Foto van haar stal of paddock', type: 'photo' },
 
-      { id: 'sec-weide', label: '— Weidegang —', type: 'sectionhead' },
+      { id: 'sec-weide', label: 'Weidegang', type: 'sectionhead' },
       {
         id: 'gras-maanden',
         label: 'Hoeveel maanden per jaar op gras?',
@@ -1251,7 +1274,7 @@ export const INTAKE_SCHEMA: Section[] = [
       },
       {
         id: 'gras-uren',
-        label: 'In die maanden — hoeveel uur per dag op gras?',
+        label: 'In die maanden, hoeveel uur per dag op gras?',
         type: 'radio',
         required: true,
         options: ['0', '1–2 u', '3–4 u', '5–8 u', '9–12 u', '>12 u', '24 u'],
@@ -1262,7 +1285,7 @@ export const INTAKE_SCHEMA: Section[] = [
         type: 'radio',
         required: true,
         options: ['ja, regelmatig', 'ja, sporadisch', 'nee, nooit'],
-        hint: 'Cruciaal voor de vitamine E vraag — alleen "nee" = nooit een seconde.',
+        hint: 'Cruciaal voor de vitamine E vraag, alleen "nee" = nooit een seconde.',
         flagIf: ['nee, nooit'],
       },
       {
@@ -1296,7 +1319,7 @@ export const INTAKE_SCHEMA: Section[] = [
         flagIf: 'non-empty',
       },
 
-      { id: 'sec-sociaal', label: '— Sociale huisvesting —', type: 'sectionhead' },
+      { id: 'sec-sociaal', label: 'Sociale huisvesting', type: 'sectionhead' },
       {
         id: 'groep-grootte',
         label: 'Hoeveel paarden in de groep?',
@@ -1359,13 +1382,13 @@ export const INTAKE_SCHEMA: Section[] = [
   {
     id: 'gedrag',
     nr: 8,
-    title: 'Gedrag, training & karakter',
+    title: 'Gedrag & training',
     intro: 'Wie is ze? Hoe gaat ze met de wereld om, en hoe wordt ze ingezet?',
     minutes: 6,
     icon: 'sparkles',
     sub: 'Discipline, stalondeugden, karakter',
     fields: [
-      { id: 'sec-bew', label: '— Beweging & training —', type: 'sectionhead' },
+      { id: 'sec-bew', label: 'Beweging en training', type: 'sectionhead' },
       {
         id: 'beweging-arbeid',
         label: 'Hoeveel dagelijkse beweging mbt arbeid?',
@@ -1402,7 +1425,7 @@ export const INTAKE_SCHEMA: Section[] = [
         required: true,
       },
 
-      { id: 'sec-stal', label: '— Stalondeugden & opvallend gedrag —', type: 'sectionhead' },
+      { id: 'sec-stal', label: 'Stalondeugden en opvallend gedrag', type: 'sectionhead' },
       {
         id: 'stress-symptomen',
         label: 'Stress-symptomen?',
@@ -1452,6 +1475,12 @@ export const INTAKE_SCHEMA: Section[] = [
         flagIf: 'any',
       },
       {
+        id: 'typisch-gedrag-detail',
+        label: 'Beschrijving',
+        type: 'textarea',
+        showIf: { 'typisch-gedrag': 'any-checked' },
+      },
+      {
         id: 'soortgenoten',
         label: 'Omgang met soortgenoten',
         type: 'multi',
@@ -1464,7 +1493,7 @@ export const INTAKE_SCHEMA: Section[] = [
       },
       {
         id: 'karakter',
-        label: 'Karakter — in eigen woorden, beknopt',
+        label: 'Karakter, in eigen woorden, beknopt',
         type: 'textarea',
         required: true,
         hint: 'Wat maakt haar uniek.',
@@ -1477,7 +1506,7 @@ export const INTAKE_SCHEMA: Section[] = [
     id: 'fysiek',
     nr: 9,
     title: "Fysiek & foto's",
-    intro: "Een korte check + foto's. Geen perfecte fotograaf nodig — daglicht is genoeg.",
+    intro: "Een korte check + foto's. Geen perfecte fotograaf nodig, daglicht is genoeg.",
     minutes: 10,
     icon: 'camera',
     sub: 'Huid, vacht, hoeven, ademhaling',
@@ -1516,7 +1545,7 @@ export const INTAKE_SCHEMA: Section[] = [
       },
       {
         id: 'hoeven-kwaliteit',
-        label: 'Hoeven — visueel',
+        label: 'Hoeven, visueel',
         type: 'multi',
         options: [
           'sterk',
@@ -1615,7 +1644,7 @@ export const INTAKE_SCHEMA: Section[] = [
   {
     id: 'samenvatting',
     nr: 10,
-    title: 'Controleren & versturen',
+    title: 'Versturen',
     intro: 'Loop nog een keer door je antwoorden. Aanpassen kan, ook later.',
     minutes: 2,
     icon: 'send',

@@ -33,8 +33,8 @@ export function IntakeEntryCard({ variant = 'banner' }: Props) {
 
   const headline = hasStarted ? 'Ga verder met je intake' : 'Start jouw protocol-intake';
   const sub = hasStarted
-    ? `${done} van ${total} secties klaar — verder waar je gebleven was.`
-    : `${total} korte secties — samen ongeveer 30 minuten. Shelley bouwt jouw protocol op basis hiervan.`;
+    ? `${done} van ${total} secties klaar, verder waar je gebleven was.`
+    : `${total - 1} korte secties, samen ongeveer 30 minuten. Shelley bouwt jouw protocol op basis hiervan.`;
   const ctaLabel = hasStarted ? 'Verder' : 'Beginnen';
 
   const onPress = () => {

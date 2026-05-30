@@ -4,7 +4,7 @@
 
 import { View, Text, ScrollView } from 'react-native';
 import { router } from 'expo-router';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Check } from 'lucide-react-native';
 
 import { Button } from '@/components/ui/Button';
@@ -25,6 +25,7 @@ function formatSubmittedLabel(iso: string | null): string {
 }
 
 export default function IntakeSent() {
+  const insets = useSafeAreaInsets();
   const user = useCurrentUser();
   const { state } = useIntake();
   const firstName = ((user.name as string) ?? 'jou').split(' ')[0];
@@ -36,7 +37,7 @@ export default function IntakeSent() {
         <ScrollView
           contentContainerStyle={{
             paddingTop: 60,
-            paddingBottom: 120,
+            paddingBottom: 120 + insets.bottom,
             paddingHorizontal: 24,
             alignItems: 'center',
           }}
@@ -88,7 +89,10 @@ export default function IntakeSent() {
           </View>
         </ScrollView>
 
-        <View className="absolute bottom-0 left-0 right-0 px-5 pb-6 pt-3">
+        <View
+          className="absolute bottom-0 left-0 right-0 px-5 pt-3"
+          style={{ paddingBottom: insets.bottom + 16 }}
+        >
           <Button
             title="Terug naar de app"
             variant="primary"

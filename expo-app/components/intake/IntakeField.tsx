@@ -2,15 +2,7 @@
 // reads/writes the value through the IntakeProvider. Sticking to one parent
 // component keeps auto-save behavior uniform across every input type.
 
-import { useMemo, useState } from 'react';
-import {
-  View,
-  Text,
-  TextInput,
-  Pressable,
-  PanResponder,
-  LayoutChangeEvent,
-} from 'react-native';
+import { View, Text, TextInput, Pressable } from 'react-native';
 import { Check, Camera, Plus, FileText, Trash2 } from 'lucide-react-native';
 
 import { Field, FieldValue, RepeaterSub } from '@/lib/intake/schema';
@@ -85,14 +77,6 @@ function renderInput(field: Field, value: FieldValue, set: (v: FieldValue) => vo
           options={field.options ?? []}
           value={(value as string[] | undefined) ?? []}
           onChange={set}
-        />
-      );
-    case 'slider':
-      return (
-        <SliderField
-          labels={field.labels ?? ['min', 'max']}
-          value={typeof value === 'number' ? value : 3}
-          onChange={(v) => set(v)}
         />
       );
     case 'photo':
@@ -333,70 +317,6 @@ function MultiField({
           </Pressable>
         );
       })}
-    </View>
-  );
-}
-
-/* ---------------------------------------------------------------- SLIDER */
-
-function SliderField({
-  labels,
-  value,
-  onChange,
-}: {
-  labels: [string, string];
-  value: number; // 1..5
-  onChange: (v: number) => void;
-}) {
-  const [width, setWidth] = useState(0);
-  const onLayout = (e: LayoutChangeEvent) => setWidth(e.nativeEvent.layout.width);
-
-  // 5-step scale; reuse the same PanResponder while the user drags so we
-  // don't recreate it (and lose the active gesture) on every value change.
-  const responder = useMemo(
-    () =>
-      PanResponder.create({
-        onStartShouldSetPanResponder: () => true,
-        onMoveShouldSetPanResponder: () => true,
-        onPanResponderGrant: (_e, g) => updateFromX(g.x0),
-        onPanResponderMove: (_e, g) => updateFromX(g.moveX),
-      }),
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [width, onChange],
-  );
-
-  const updateFromX = (clientX: number) => {
-    if (!width) return;
-    // Approximation: treat clientX as offset since onPanResponderGrant uses
-    // page-x. Good enough for this single-row component.
-    const pct = Math.min(1, Math.max(0, clientX / width));
-    const step = Math.round(pct * 4) + 1;
-    if (step !== value) onChange(step);
-  };
-
-  const pct = ((value - 1) / 4) * 100;
-  return (
-    <View
-      className="flex-row items-center gap-3 rounded-xl border border-ink-8 bg-white px-4 py-4"
-      onLayout={onLayout}
-    >
-      <Text className="text-[12px] text-ink-50">{labels[0]}</Text>
-      <View
-        className="relative flex-1"
-        style={{ height: 24, justifyContent: 'center' }}
-        {...responder.panHandlers}
-      >
-        <View className="h-1 rounded-pill bg-ink-8" />
-        <View
-          className="absolute left-0 h-1 rounded-pill bg-mint-500"
-          style={{ width: `${pct}%`, top: 11.5 }}
-        />
-        <View
-          className="absolute h-5 w-5 rounded-full border-2 border-mint-500 bg-white"
-          style={{ left: `${pct}%`, marginLeft: -10, top: 2 }}
-        />
-      </View>
-      <Text className="font-semi text-[12px] text-ink">{labels[1]}</Text>
     </View>
   );
 }

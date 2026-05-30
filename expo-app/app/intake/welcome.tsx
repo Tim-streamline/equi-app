@@ -11,7 +11,7 @@ import { X, ClipboardList, Camera, Heart, ArrowRight } from 'lucide-react-native
 import { Button } from '@/components/ui/Button';
 import { IconButton } from '@/components/ui/IconButton';
 import { useCurrentUser, useHorse } from '@/db/hooks';
-import { INTAKE_SCHEMA, TOTAL_MINUTES } from '@/lib/intake/schema';
+import { INTAKE_SCHEMA } from '@/lib/intake/schema';
 
 export default function IntakeWelcome() {
   const user = useCurrentUser();
@@ -45,13 +45,13 @@ export default function IntakeWelcome() {
           >
             Hi {firstName} — leuk dat je er bent.
           </Text>
-          <Text className="mb-4 font-bold text-white" style={{ fontSize: 32, lineHeight: 36 }}>
+          <Text className="mb-3.5 font-bold text-white" style={{ fontSize: 30, lineHeight: 34 }}>
             Vertel me over <Text className="text-mint-300">{horseName}</Text>.
           </Text>
-          <Text className="mb-7 text-[14.5px] leading-[22px] text-white/80">
-            {INTAKE_SCHEMA.length} korte secties — samen ongeveer{' '}
-            <Text className="text-white">{TOTAL_MINUTES} minuten</Text>. Tussentijds opslaan kan
-            altijd; je hoeft het niet in één keer af.
+          <Text className="mb-6 text-[14px] leading-[22px] text-white/80">
+            {INTAKE_SCHEMA.length - 1} korte secties, samen ongeveer{' '}
+            <Text className="text-white">30 minuten</Text>. Tussentijds opslaan kan altijd; je hoeft
+            het niet in één keer af te ronden.
           </Text>
 
           <View className="gap-3.5 mb-8">

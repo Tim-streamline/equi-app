@@ -14,7 +14,7 @@ function App() {
            ============================================================ */}
         <DCSection
           id="brief"
-          title="Het Holistisch Herstelplan — intake & protocol"
+          title="Het Holistisch Herstelplan: intake en protocol"
           subtitle="Volledige spec voor developer · klant vult intake zelf in, Shelley reviewt en publiceert">
           <DCArtboard id="brief-card" label="Lees mij eerst" width={680} height={700}>
             <div className="brief-card">
@@ -22,7 +22,7 @@ function App() {
               <h1>Het Holistisch Herstelplan</h1>
               <p className="lede">
                 Eenmalig <em>€ 97</em> bovenop het Equinova-basisabonnement van <em>€ 19/m</em>. Een <em>3-maanden traject</em> waarin Shelley
-                via de app op basis van de intake een op maat protocol bouwt en wekelijks bijstuurt. <em>Geen gesprek of videocall</em> — alle informatie waarmee Shelley werkt komt uit de in-app vragen + foto's.
+                via de app op basis van de intake een op maat protocol bouwt en wekelijks bijstuurt. <em>Geen gesprek of videocall</em>, alle informatie waarmee Shelley werkt komt uit de in-app vragen + foto's.
               </p>
 
               <div className="brief-grid">
@@ -32,7 +32,7 @@ function App() {
                     <li>Welkom → paard toevoegen → focus kiezen</li>
                     <li>Pakketkeuze: Basis (€19/m) vs. Het Herstelplan (€97)</li>
                     <li>Bij Herstelplan: betaal → intake opent direct</li>
-                    <li>Bij Basis: home — kan later upgraden</li>
+                    <li>Bij Basis: home, kan later upgraden</li>
                   </ol>
                 </div>
                 <div>
@@ -61,7 +61,7 @@ function App() {
                     <li>Fase 0 (optioneel · maag) · Fase 1 (darm 6 wk) · Eval · Fase 1b · Fase 2 (lever/nier 12 wk)</li>
                     <li>Dagplan, wekelijkse check-ins door klant</li>
                     <li>Signaalmomenten triggeren melding aan Shelley</li>
-                    <li>Evaluatie wk 6 en wk 12 — Shelley beslist vervolg</li>
+                    <li>Evaluatie wk 6 en wk 12: Shelley beslist vervolg</li>
                   </ol>
                 </div>
               </div>
@@ -74,7 +74,7 @@ function App() {
         </DCSection>
 
         {/* ============================================================
-            KLANT-ZIJDE — MOBIEL (in Equinova-app)
+            KLANT-ZIJDE, MOBIEL (in Equinova-app)
            ============================================================ */}
         <DCSection
           id="customer"
@@ -116,7 +116,7 @@ function App() {
         </DCSection>
 
         {/* ============================================================
-            THERAPEUT-ZIJDE — WEB DASHBOARD
+            THERAPEUT-ZIJDE, WEB DASHBOARD
            ============================================================ */}
         <DCSection
           id="therapist"

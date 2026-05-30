@@ -6,18 +6,19 @@
 import { useMemo } from 'react';
 import { View, Text, ScrollView, KeyboardAvoidingView, Platform } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ChevronLeft, X } from 'lucide-react-native';
 
 import { Button } from '@/components/ui/Button';
 import { IconButton } from '@/components/ui/IconButton';
 import { IntakeField } from '@/components/intake/IntakeField';
 import { INTAKE_SCHEMA, getSection } from '@/lib/intake/schema';
-import { showField, isSectionComplete } from '@/lib/intake/logic';
+import { showField, answeredCount } from '@/lib/intake/logic';
 import { useIntake } from '@/lib/intake/store';
 
 export default function IntakeSectionScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
+  const insets = useSafeAreaInsets();
   const section = id ? getSection(id) : undefined;
   const { state } = useIntake();
   const sectionId = section?.id ?? '';
@@ -39,22 +40,15 @@ export default function IntakeSectionScreen() {
   }
 
   // Progress within the current section — how far through the visible fields
-  // they are. Sectionheads don't count toward the denominator.
-  const renderable = visible.filter((f) => f.type !== 'sectionhead');
-  const filled = renderable.filter((f) => answers[f.id] != null && answers[f.id] !== '').length;
-  const pct = renderable.length ? Math.round((filled / renderable.length) * 100) : 0;
+  // they are. `answeredCount` only counts values that are genuinely valid for
+  // the field (e.g. a radio value still present in its options), so stale
+  // answers from an earlier schema version don't inflate the tally.
+  const { answered: filled, total } = answeredCount(section, answers);
+  const pct = total ? Math.round((filled / total) * 100) : 0;
 
-  const idx = INTAKE_SCHEMA.findIndex((s) => s.id === section.id);
-  const next = INTAKE_SCHEMA[idx + 1];
-  const complete = isSectionComplete(section, answers);
-
-  const goNext = () => {
-    if (next) {
-      router.replace({ pathname: '/intake/section/[id]', params: { id: next.id } } as any);
-    } else {
-      router.replace('/intake/submit' as any);
-    }
-  };
+  // Every visible question answered (not just the required ones) flips the
+  // counter from red to green.
+  const allAnswered = total > 0 && filled === total;
 
   // Walking field number across the visible (non-sectionhead) fields so the
   // eyebrow numbers reset cleanly per section and stay continuous through
@@ -102,7 +96,11 @@ export default function IntakeSectionScreen() {
           keyboardVerticalOffset={Platform.OS === 'ios' ? 8 : 0}
         >
           <ScrollView
-            contentContainerStyle={{ paddingHorizontal: 20, paddingTop: 16, paddingBottom: 140 }}
+            contentContainerStyle={{
+              paddingHorizontal: 20,
+              paddingTop: 16,
+              paddingBottom: 140 + insets.bottom,
+            }}
             keyboardShouldPersistTaps="handled"
           >
             {section.intro && (
@@ -126,22 +124,26 @@ export default function IntakeSectionScreen() {
         </KeyboardAvoidingView>
 
         <View
-          className="absolute bottom-0 left-0 right-0 gap-2 px-5 pb-6 pt-3"
-          style={{ backgroundColor: 'rgba(251,248,243,0.96)' }}
+          className="absolute bottom-0 left-0 right-0 gap-2 px-5 pt-3"
+          style={{
+            backgroundColor: 'rgba(251,248,243,0.96)',
+            paddingBottom: insets.bottom + 16,
+          }}
         >
           <Button
-            title={
-              next
-                ? `Volgende · ${next.title} →`
-                : 'Naar controleren & versturen →'
-            }
+            title="Terug naar overzicht"
             variant="primary"
-            disabled={!complete}
-            onPress={goNext}
+            onPress={() => router.replace('/intake/overview' as any)}
           />
           <View className="flex-row items-center justify-center gap-1.5">
             <View className="h-1.5 w-1.5 rounded-full bg-mint-500" />
-            <Text className="text-[11px] text-ink-50">Automatisch opgeslagen</Text>
+            <Text className="text-[11px] text-ink-50">
+              Automatisch opgeslagen ·{' '}
+              <Text className={allAnswered ? 'text-success' : 'text-danger'}>
+                {filled} / {total}
+              </Text>{' '}
+              vragen beantwoord
+            </Text>
           </View>
         </View>
       </SafeAreaView>

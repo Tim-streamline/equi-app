@@ -1,13 +1,13 @@
 /* global React, I, CONCEPT_PROTOCOL, CLIENT_MONITORING, WEEK6_EVAL, DashShell, Quickstat */
-// ConceptProtocolView.jsx — drie schermen voor het therapeut-portaal:
-//   01 · DashConceptProtocol  — auto-gegenereerd protocol klaarzetten & publiceren
-//   02 · DashMonitoring       — lopende protocollen live volgen
-//   03 · DashWeek6Eval        — wekelijkse / 6-wk evaluatie reviewen
+// ConceptProtocolView.jsx, drie schermen voor het therapeut-portaal:
+//   01 · DashConceptProtocol , auto-gegenereerd protocol klaarzetten & publiceren
+//   02 · DashMonitoring      , lopende protocollen live volgen
+//   03 · DashWeek6Eval       , wekelijkse / 6-wk evaluatie reviewen
 
 const { useState: useCS } = React;
 
 /* ============================================================
-   DashConceptProtocol — pronkstuk
+   DashConceptProtocol, pronkstuk
    ============================================================ */
 
 function DashConceptProtocol() {
@@ -51,13 +51,13 @@ function DashConceptProtocol() {
       {/* GRID: LEFT = bericht/notities · RIGHT = builder */}
       <div className="cp-grid">
 
-        {/* ============ LEFT — bericht + bron + verwachtingen ============ */}
+        {/* ============ LEFT, bericht + bron + verwachtingen ============ */}
         <aside className="cp-left">
 
           <div className="dash-card">
             <div className="card-head"><span className="t">Bericht aan Marit</span><span className="hint">verschijnt bovenaan protocol in app</span></div>
             <textarea className="notes-area" rows={6} defaultValue={p.shelleysNote} />
-            <div className="card-foot">Persoonlijke noot — verandert per paard.</div>
+            <div className="card-foot">Persoonlijke noot, verandert per paard.</div>
           </div>
 
           <div className="dash-card">
@@ -98,7 +98,7 @@ function DashConceptProtocol() {
           </div>
         </aside>
 
-        {/* ============ RIGHT — builder ============ */}
+        {/* ============ RIGHT, builder ============ */}
         <section className="cp-right">
 
           {/* Veiligheidschecks */}
@@ -265,15 +265,15 @@ function CPItem({ it }) {
   );
 }
 
-/* Phone preview — toont hoe protocol eruitziet per week */
+/* Phone preview, toont hoe protocol eruitziet per week */
 function CPPhonePreview({ week, protocol }) {
   /* eenvoudige map: welke fase / wat verschijnt per week */
   const phaseLabel =
     week <= 1 ? 'Voorbereiding'
-    : week <= 7 ? 'Fase 0 — Maagondersteuning'
+    : week <= 7 ? 'Fase 0: Maagondersteuning'
     : week <= 9 ? 'Overgang fase 0 → fase 1'
-    : week <= 15 ? 'Fase 1 — Darmrevalidatie'
-    : 'Fase 2 — Lever & nieren';
+    : week <= 15 ? 'Fase 1: Darmrevalidatie'
+    : 'Fase 2: Lever & nieren';
 
   const verwachting =
     week <= 2 ? protocol.verwachtingen[0]
@@ -330,7 +330,7 @@ function CPPhonePreview({ week, protocol }) {
           <li>Notificatie: <em>"Nova's protocol staat klaar"</em></li>
           <li>Home toont jouw <em>persoonlijke bericht</em> als eerste Coach-card</li>
           <li>Kalender vult zich automatisch met alle to-do's, 12+ weken vooruit</li>
-          <li>Wekelijkse check-in elke maandag — antwoorden landen bij jou</li>
+          <li>Wekelijkse check-in elke maandag, antwoorden landen bij jou</li>
           <li>Signaal-momenten staan actief: 5 regels die bij jou notificeren</li>
         </ul>
       </div>
@@ -339,7 +339,7 @@ function CPPhonePreview({ week, protocol }) {
 }
 
 /* ============================================================
-   DashMonitoring — lopende protocollen
+   DashMonitoring, lopende protocollen
    ============================================================ */
 
 function DashMonitoring() {
@@ -460,7 +460,7 @@ function DashMonitoring() {
 }
 
 /* ============================================================
-   DashWeek6Eval — wekelijkse evaluatie reviewen
+   DashWeek6Eval, wekelijkse evaluatie reviewen
    ============================================================ */
 
 function DashWeek6Eval() {

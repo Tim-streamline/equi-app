@@ -1,24 +1,24 @@
 /* global window */
-// IntakeData.jsx — mock data voor het therapeut-dashboard.
+// IntakeData.jsx, mock data voor het therapeut-dashboard.
 // FILLED_INTAKE bevat een ingevulde intake voor één paard (Nova).
 // CONCEPT_PROTOCOL is wat het systeem op basis daarvan klaarzet.
 // CLIENT_MONITORING zijn lopende protocollen voor de monitoring-view.
 
 const INTAKE_SECTIONS = [
-  { id: 'contact',       nr: 0,  title: 'Contact & openheid',    sub: 'E-mail, telefoon, openheid voor aanpassingen', ic: 'mail',       minutes: 2, status: 'done' },
+  { id: 'contact',       nr: 0,  title: 'Contactgegevens',    sub: 'E-mail, telefoon, openheid voor aanpassingen', ic: 'mail',       minutes: 2, status: 'done' },
   { id: 'paard',         nr: 1,  title: 'Over je paard',         sub: 'Ras, leeftijd, gewicht, conditie', ic: 'horse',     minutes: 4, status: 'done' },
-  { id: 'klacht',        nr: 2,  title: 'Klacht & hulpvraag',    sub: 'Wat speelt er, wat wens je', ic: 'alert',     minutes: 6, status: 'done' },
-  { id: 'geschiedenis',  nr: 3,  title: 'Vroege jaren',          sub: 'Moeder, eerste maanden, medisch verleden', ic: 'history',   minutes: 5, status: 'done' },
-  { id: 'medisch',       nr: 4,  title: 'Medisch & specialisten',sub: 'Vaccinaties, gebit, hoeven, IR/EMS/KPU', ic: 'heart',     minutes: 6, status: 'done' },
+  { id: 'klacht',        nr: 2,  title: 'Klacht & hulpvraag',    sub: 'Wie is je paard, wat speelt er, wat wens je', ic: 'alert',     minutes: 6, status: 'done' },
+  { id: 'geschiedenis',  nr: 3,  title: 'Geschiedenis van je paard', sub: 'De eerste levensjaren, medisch verleden', ic: 'history',   minutes: 5, status: 'done' },
+  { id: 'medisch',       nr: 4,  title: 'Medisch & specialisten',sub: 'Vaccinaties, gebit, hoeven enz.', ic: 'heart',     minutes: 6, status: 'done' },
   { id: 'voer',          nr: 5,  title: 'Voer & ruwvoer',        sub: 'Hooi, krachtvoer, mineralen, supplementen', ic: 'leaf',      minutes: 12, status: 'active' },
-  { id: 'water',         nr: 6,  title: 'Water & uitscheiding',  sub: 'Drinkbak, urine, mest', ic: 'droplet',   minutes: 5, status: 'todo' },
+  { id: 'water',         nr: 6,  title: 'Water & uitscheiding',  sub: 'Vochtinname, urine, mest', ic: 'droplet',   minutes: 5, status: 'todo' },
   { id: 'huisvesting',   nr: 7,  title: 'Huisvesting & weide',   sub: 'Zomer + winter, sociale groep, grasland', ic: 'home',      minutes: 8, status: 'todo' },
   { id: 'gedrag',        nr: 8,  title: 'Gedrag & training',     sub: 'Discipline, stalondeugden, karakter', ic: 'sparkles',  minutes: 6, status: 'todo' },
   { id: 'fysiek',        nr: 9,  title: 'Fysiek & foto\'s',      sub: 'Huid, vacht, hoeven, ademhaling', ic: 'camera',    minutes: 10, status: 'todo' },
   { id: 'samenvatting',  nr: 10, title: 'Versturen',             sub: 'Controleer & stuur naar Shelley', ic: 'send',      minutes: 2, status: 'todo' },
 ];
 
-/* ---- Volledig ingevulde intake — Nova ---- */
+/* ---- Volledig ingevulde intake, Nova ---- */
 
 const FILLED_INTAKE = {
   meta: {
@@ -27,7 +27,7 @@ const FILLED_INTAKE = {
     klant: {
       naam: 'Marit van der Berg',
       email: 'marit@voorbeeld.nl',
-      tel: '06 — 24 18 03 09',
+      tel: '06 24 18 03 09',
       since: 'Sinds april 2026 · Het Holistisch Herstelplan',
       av: 'M',
     },
@@ -47,9 +47,9 @@ const FILLED_INTAKE = {
   answers: {
     contact: [
       { q: 'E-mailadres', a: 'marit@voorbeeld.nl' },
-      { q: 'Telefoon', a: '06 — 24 18 03 09' },
+      { q: 'Telefoon', a: '06 24 18 03 09' },
       { q: 'Hoe gevonden?', a: 'Via Instagram, en een vriendin van de stal raadde Shelley\'s podcast aan.' },
-      { q: 'Open voor aanpassingen in voer/management?', a: 'Ja, helemaal — ik wil dit echt aanpakken.' },
+      { q: 'Open voor aanpassingen in voer/management?', a: 'Ja, helemaal, ik wil dit echt aanpakken.' },
     ],
     paard: [
       { q: 'Naam · ras · geslacht', a: 'Nova · Friese kruising · merrie' },
@@ -62,7 +62,7 @@ const FILLED_INTAKE = {
       { q: 'Eerste eigenaar?', a: 'Nee, tweede eigenaar' },
       { q: 'Drachtig / lacterend?', a: 'Nee' },
       { q: 'Conditie', a: 'iets te zwaar (BCS 6/9)', kind: 'flag' },
-      { q: 'Conditie veranderd sinds in bezit?', a: 'Begon slank, is geleidelijk wat te zwaar geworden — vooral sinds winter 2024.' },
+      { q: 'Conditie veranderd sinds in bezit?', a: 'Begon slank, is geleidelijk wat te zwaar geworden, vooral sinds winter 2024.' },
       { q: 'Gezondheidsstatus in eigen woorden',
         a: 'Op zich gezond paard, maar de jeuk verziekt onze samenwerking. Energie wisselend. Soms wat lusteloos in voorjaar.' },
       { q: 'Foto paard (zijaanzicht)', a: '', kind: 'photo' },
@@ -76,31 +76,31 @@ const FILLED_INTAKE = {
         a: 'Mest af en toe wat losser dan normaal, vooral als ze net gras kreeg.', kind: 'protocol',
         meta: 'Wijst op darm-instabiliteit' },
       { q: 'Wens van dit traject',
-        a: 'Begrijpen waar het vandaan komt en het van binnenuit aanpakken — geen prik of pillen meer.' },
+        a: 'Begrijpen waar het vandaan komt en het van binnenuit aanpakken, geen prik of pillen meer.' },
       { q: 'Acute klachten nu?', a: 'Geen' },
       { q: 'Thema\'s', a: 'Jeuk · Darmen · Voeding · Gedrag' },
       { q: 'Onder behandeling DA / diagnose?', a: 'Niet meer actief. Vorig jaar antihistaminicum. Geen vaste diagnose.' },
       { q: 'Eerder behandeld?', a: 'Antihistaminicum (zomer 2025), 6 weken. Klacht kwam na 6 weken terug.' },
       { q: 'Huidige aanpak',
         a: 'Probeer hooi vroeger uit te halen voor het droogt. Geen medicatie nu.' },
-      { q: 'Bloedonderzoek', a: '2× rapport (2024, 2025) — geüpload', kind: 'photo' },
+      { q: 'Bloedonderzoek', a: '2× rapport (2024, 2025), geüpload', kind: 'photo' },
       { q: 'Foto\'s historie (2-5 jr)', a: '6 foto\'s geüpload', kind: 'photo' },
       { q: 'Stressfactoren',
         a: 'Verhuisd in januari 2024, nieuwe stal en nieuwe paddock-genoten.', kind: 'flag' },
       { q: 'Gedragsveranderingen recent', a: 'Iets prikkelbaarder bij singelen sinds april.', kind: 'flag' },
       { q: 'Allergieën', a: 'Geen bekend' },
-      { q: 'Ervaring holistisch', a: 'Osteopaat 2× in 2024 — voor stijfheid lendenen' },
+      { q: 'Ervaring holistisch', a: 'Osteopaat 2× in 2024, voor stijfheid lendenen' },
       { q: 'Wat vindt ze leuk?', a: 'Bos-uitstapjes, krabben op de schoft, samen met haar paddock-vriendin Lotte' },
     ],
     geschiedenis: [
-      { q: 'Moeder gevoerd / gehuisvest', a: 'Fokstal in Friesland. Traditioneel — box met paddock, droog hooi.' },
+      { q: 'Moeder gevoerd / gehuisvest', a: 'Fokstal in Friesland. Traditioneel, box met paddock, droog hooi.' },
       { q: 'Eerste maanden', a: 'Geboren in mei, eerste 4 maanden bij moeder op paddock. Daarna kuddehuisvesting.' },
       { q: 'Moeder metabolisch?',
         a: 'Volgens fokker had moeder lichte mestwater-klachten in voorjaar', kind: 'flag' },
-      { q: 'Spenen tot inrijden — huisvesting', a: 'Kuddehuisvesting buiten, 4 jaar lang' },
-      { q: 'Spenen tot inrijden — voeding', a: 'Onverpakt hooi, paardenbrok van de fokker (merk onbekend)' },
-      { q: 'Spenen tot inrijden — symptomen', a: 'Lichte koliek op 3-jarige leeftijd (najaar). Verder niets.', kind: 'flag' },
-      { q: 'Medische geschiedenis — chronologisch',
+      { q: 'Spenen tot inrijden, huisvesting', a: 'Kuddehuisvesting buiten, 4 jaar lang' },
+      { q: 'Spenen tot inrijden, voeding', a: 'Onverpakt hooi, paardenbrok van de fokker (merk onbekend)' },
+      { q: 'Spenen tot inrijden, symptomen', a: 'Lichte koliek op 3-jarige leeftijd (najaar). Verder niets.', kind: 'flag' },
+      { q: 'Medische geschiedenis, chronologisch',
         a: '2020: lichte koliek (3 jr) na voerwissel; conservatief behandeld.\n' +
            '2023: opnieuw lichte kolieken (2x in najaar) na overgang nieuwe voerleverancier.\n' +
            '2025: 6-weekse kuur antihistaminicum voor jeuk; geen langdurig effect.\n' +
@@ -114,7 +114,7 @@ const FILLED_INTAKE = {
       { q: 'Tandarts frequentie · laatst · volgende', a: 'Jaarlijks · feb 2026 · feb 2027' },
       { q: 'Tandarts methode', a: 'Elektrisch met verdoving' },
       { q: 'Tandarts bijzonderheden', a: 'Wisseling melktanden ok verlopen.' },
-      { q: 'Hoefsmid frequentie', a: 'Elke 6 weken — barefoot trimmer' },
+      { q: 'Hoefsmid frequentie', a: 'Elke 6 weken, barefoot trimmer' },
       { q: 'Voeten bijzonderheden', a: 'Geen' },
       { q: 'IJzers?', a: 'Nee' },
       { q: 'Zadelmaker', a: 'Jaarlijks; laatst sept 2025' },
@@ -131,7 +131,7 @@ const FILLED_INTAKE = {
       { q: 'Eerder gastro-medicatie?', a: 'Nee' },
 
       { q: 'Gasserig / opgeblazen?', a: 'Soms', kind: 'protocol',
-        meta: 'Waarschuwing: gasserigheid kan erger door gras — let op gaskoliek' },
+        meta: 'Waarschuwing: gasserigheid kan erger door gras, let op gaskoliek' },
       { q: 'Probiotica-geschiedenis?', a: 'Nee' },
       { q: 'Medicatie nu?', a: 'Geen' },
       { q: 'Medicatie laatste jaar?', a: '6-weekse kuur antihistaminicum (zomer 2025)', kind: 'flag' },
@@ -139,7 +139,7 @@ const FILLED_INTAKE = {
     voer: [
       { q: 'Hooi verpakking', a: 'Onverpakt (touwtjes)' },
       { q: 'Hooi omschrijving',
-        a: 'Wisselend per baal — soms grof + stengelig, soms rijker · groenig · tweede snede meestal', kind: 'flag' },
+        a: 'Wisselend per baal, soms grof + stengelig, soms rijker · groenig · tweede snede meestal', kind: 'flag' },
       { q: 'Kwaliteit & geur', a: 'Ruikt lekker · soms iets stoffig' },
       { q: 'Hooi-analyse', a: 'Niet beschikbaar' },
       { q: 'Constant of wisselend?', a: 'Wisselt per baal', kind: 'flag' },
@@ -151,16 +151,16 @@ const FILLED_INTAKE = {
       { q: 'Voerbeurten', a: '3 (ochtend, middag, avond) + nacht-slowfeeder' },
       { q: 'Eerst ruwvoer of krachtvoer?', a: 'Eerst ruwvoer' },
       { q: 'Kg ruwvoer per dag', a: '~9 kg verdeeld over de dag' },
-      { q: 'Voordroog ooit?', a: 'Ja, vorige stal — gestopt sinds januari 2024' },
-      { q: 'Stro?', a: 'Vlas — eet ze niet' },
-      { q: 'Recent gewisseld?', a: 'Nee — sinds 2 jaar zelfde brok' },
+      { q: 'Voordroog ooit?', a: 'Ja, vorige stal, gestopt sinds januari 2024' },
+      { q: 'Stro?', a: 'Vlas, eet ze niet' },
+      { q: 'Recent gewisseld?', a: 'Nee, sinds 2 jaar zelfde brok' },
       { q: 'Krachtvoer',
         a: 'Pavo Slobber · ½ schep \'s avonds (~250 gr).\n' +
            'Geen muesli of granen.' },
       { q: 'Bijvoer 5 jaar terug', a: 'Bij vorige eigenaar: Pavo Care4Life muesli. Sinds 2022 alleen Slobber.' },
       { q: 'Balancer / mineralen', a: 'Geen specifieke balancer.', kind: 'flag' },
       { q: 'Mineralen toegang', a: 'Himalaya zoutsteen' },
-      { q: 'Snacks?', a: 'Ja — wortel + appel, 1× per dag handvol', kind: 'flag' },
+      { q: 'Snacks?', a: 'Ja, wortel + appel, 1× per dag handvol', kind: 'flag' },
       { q: 'Huidige extra\'s',
         a: '· Magnesium 25 gr/dag (sinds feb 2026, voor "rust")\n· Zeewier 5 gr/dag (sinds feb 2026)',
         kind: 'flag' },
@@ -174,26 +174,26 @@ const FILLED_INTAKE = {
       { q: 'Water-type', a: 'Leidingwater' },
       { q: 'Aanbod', a: 'Automatische drinkbak (laag, in box)' },
       { q: 'Hele dag toegang?', a: 'Ja' },
-      { q: 'Kwaliteit', a: 'Soms aanslag — niet wekelijks schoongemaakt door stal', kind: 'flag' },
+      { q: 'Kwaliteit', a: 'Soms aanslag, niet wekelijks schoongemaakt door stal', kind: 'flag' },
       { q: 'Vochtinname', a: 'Lijkt minder sinds verhuizing', kind: 'flag' },
       { q: 'Urine', a: 'Helder, lichtgeel, normaal volume' },
       { q: 'Mest frequentie', a: '6–10× per dag' },
       { q: 'Mest geur', a: 'Iets penetrant', kind: 'flag' },
       { q: 'Mest kleur', a: 'Bruingroen' },
-      { q: 'Mest vorm', a: 'Wisselend — soms wat losser', kind: 'protocol',
+      { q: 'Mest vorm', a: 'Wisselend, soms wat losser', kind: 'protocol',
         meta: 'Fase 1b kandidaat als nog steeds bij eval week 6' },
       { q: 'Foto mest (24u)', a: '', kind: 'photo' },
     ],
     huisvesting: [
       { q: 'Huisvesting zomer',
-        a: 'Individuele box \'s nachts (12u). Overdag paddock paradise met 4 paarden — 6-8 uur, 2-3 uur gras.' },
+        a: 'Individuele box \'s nachts (12u). Overdag paddock paradise met 4 paarden, 6-8 uur, 2-3 uur gras.' },
       { q: 'Huisvesting winter',
         a: '\'s Nachts box, overdag paddock zonder gras (zandbodem, hooi-stations).' },
       { q: 'Stal-uren per dag', a: '12–18 uur', kind: 'flag' },
-      { q: 'Niet op stal — hoe?', a: 'Zandpaddock + weiland (zomer)' },
+      { q: 'Niet op stal, hoe?', a: 'Zandpaddock + weiland (zomer)' },
       { q: 'Bodembedekking stal', a: 'Vlas + rubberen matten' },
-      { q: 'Gras — maanden', a: 'april t/m oktober (7 maanden)' },
-      { q: 'Gras — uren per dag', a: '3–4 uur' },
+      { q: 'Gras, maanden', a: 'april t/m oktober (7 maanden)' },
+      { q: 'Gras, uren per dag', a: '3–4 uur' },
       { q: 'Ooit op gras? (vit. E)', a: 'Ja, regelmatig' },
       { q: 'Mestwater bij transitie',
         a: 'Ja, begin · was 2 weken licht mestwater', kind: 'flag' },
@@ -210,14 +210,14 @@ const FILLED_INTAKE = {
       { q: 'Foto stal', a: '', kind: 'photo' },
     ],
     gedrag: [
-      { q: 'Beweging arbeid', a: '4–5× per week ~45 min — longeren of dressuur' },
+      { q: 'Beweging arbeid', a: '4–5× per week ~45 min, longeren of dressuur' },
       { q: 'Discipline', a: 'Dressuur (recreatief), af en toe buitenrit' },
       { q: 'Training frequentie', a: '4–5× per week' },
       { q: 'Intensiteit', a: 'Licht tot matig' },
       { q: 'Knelpunten tijdens training',
         a: 'Rechts iets stijver dan links. Boos met aansingelen, vooral rechts.', kind: 'flag' },
       { q: 'Conditie volgens eigenaar', a: 'Goed, alleen iets te zwaar. Energie wisselend.' },
-      { q: 'Stress-symptomen', a: 'Weven bij voertijd — sinds verhuizing', kind: 'flag' },
+      { q: 'Stress-symptomen', a: 'Weven bij voertijd, sinds verhuizing', kind: 'flag' },
       { q: 'Headshaking?', a: 'Nee' },
       { q: 'Agressief / beschermend?', a: 'Nee' },
       { q: 'Typisch gedrag',
@@ -237,7 +237,7 @@ const FILLED_INTAKE = {
       { q: 'Bouw', a: 'Stevig · kort · gespierd' },
       { q: 'Bespiering L–R', a: 'Links iets meer dan rechts', kind: 'flag' },
       { q: 'Iets fysieks anders',
-        a: 'Soms aanvoelen van warm onderbeen rechts achter na training — verdwijnt snel.' },
+        a: 'Soms aanvoelen van warm onderbeen rechts achter na training, verdwijnt snel.' },
       { q: 'Foto zijaanzicht', a: '', kind: 'photo' },
       { q: 'Foto vooraanzicht', a: '', kind: 'photo' },
       { q: 'Foto achteraanzicht', a: '', kind: 'photo' },
@@ -249,7 +249,7 @@ const FILLED_INTAKE = {
 };
 
 /* ====================================================================
-   CONCEPT_PROTOCOL — wat het systeem AUTOMATISCH klaarzet voor Nova
+   CONCEPT_PROTOCOL, wat het systeem AUTOMATISCH klaarzet voor Nova
    Toont expliciet welke intake-antwoorden welke aanpassing triggerden.
    ==================================================================== */
 const CONCEPT_PROTOCOL = {
@@ -259,7 +259,7 @@ const CONCEPT_PROTOCOL = {
   doseergewicht: { template: 600, intake: 540, factor: 0.9 },
 
   summary:
-    'Aanhoudende jeuk + voorjaar-piek, in combinatie met wisselende ruwvoerkwaliteit, eerdere lichte kolieken, soms losse mest en stress sinds verhuizing wijzen op een verstoorde darmflora. De huid is het signaal — niet de oorzaak.',
+    'Aanhoudende jeuk + voorjaar-piek, in combinatie met wisselende ruwvoerkwaliteit, eerdere lichte kolieken, soms losse mest en stress sinds verhuizing wijzen op een verstoorde darmflora. De huid is het signaal, niet de oorzaak.',
   cause:
     'Verstoorde darmflora door wisselend rijk ruwvoer + stress sinds verhuizing. Histamineproductie verhoogd; manifesteert als jeuk in voorjaar (gras-piek).',
   confidence: 'hoog',
@@ -279,16 +279,16 @@ const CONCEPT_PROTOCOL = {
     { id: 'sv6', check: 'Hoefbevangenheid: nooit',         status: 'ok',
       bewijs: 'medisch.hoefbevangenheid = nooit' },
     { id: 'sv7', check: 'Komt regelmatig op gras',         status: 'ok',
-      bewijs: 'huisvesting.nooit-gras = ja, regelmatig — vit. E niet nodig' },
+      bewijs: 'huisvesting.nooit-gras = ja, regelmatig, vit. E niet nodig' },
     { id: 'sv8', check: 'Geen probiotica-geschiedenis',    status: 'ok',
-      bewijs: 'medisch.probiotica-geschiedenis = nee — Silsterk niet nodig' },
+      bewijs: 'medisch.probiotica-geschiedenis = nee, Silsterk niet nodig' },
     { id: 'sv9', check: 'Maag heeft ondersteuning nodig',  status: 'modify',
       bewijs: 'medisch.maag-ondersteuning = ja, mild → Fase 0 geactiveerd (6 wk)' },
     { id: 'sv10', check: 'Soms gasserig',                  status: 'warn',
       bewijs: 'medisch.gasserig = soms → waarschuwing + extra ruwvoer-tip' },
   ],
 
-  /* Auto-applied modifications — welke intake-antwoord wat triggerde */
+  /* Auto-applied modifications, welke intake-antwoord wat triggerde */
   modifications: [
     { id: 'mod1', trigger: 'medisch.maag-ondersteuning = ja, mild',
       effect: 'Stap 1 (Maag tot rust) geactiveerd · 6 weken vóór Stap 2' },
@@ -309,11 +309,11 @@ const CONCEPT_PROTOCOL = {
       duration: '1 week · vóór Stap 1',
       state: 'todo',
       items: [
-        { id: 1, t: 'Extra slowfeeder ophangen — geen ruwvoer-pauze >2 uur', tag: 'management' },
-        { id: 2, t: 'Magnesium + zeewier pauzeren — eerst protocol-basis stabilisren', tag: 'supplementen' },
+        { id: 1, t: 'Extra slowfeeder ophangen, geen ruwvoer-pauze >2 uur', tag: 'management' },
+        { id: 2, t: 'Magnesium + zeewier pauzeren, eerst protocol-basis stabilisren', tag: 'supplementen' },
         { id: 3, t: 'Snoep, fruit, brood STOP gedurende heel protocol (incl. wortel, appel)', tag: 'voer' },
         { id: 4, t: 'Foto van manen + mest elke 3 dagen', tag: 'observatie' },
-        { id: 5, t: 'Stal vragen: consistentie ruwvoerkwaliteit per baal — log per dag', tag: 'management' },
+        { id: 5, t: 'Stal vragen: consistentie ruwvoerkwaliteit per baal, log per dag', tag: 'management' },
       ],
     },
     {
@@ -342,13 +342,13 @@ const CONCEPT_PROTOCOL = {
         { id: 22, t: 'Smalle weegbree · 27–45 gr · 1× daags', tag: 'kruid' },
         { id: 23, t: 'Paardenbloemblad · 27–45 gr · 1× daags', tag: 'kruid' },
         { id: 24, t: 'Zoethout extract · 7 gr · 1× daags · WK 1, 2, 5, 6', tag: 'kruid',
-          note: 'Geen risico hoefbevangenheid — staat aan' },
+          note: 'Geen risico hoefbevangenheid, staat aan' },
         { id: 25, t: 'Krachtvoer Pavo Slobber: tijdelijk weglaten OF kleiner', tag: 'voer' },
         { id: 26, t: 'Wekelijkse foto van mest + observatie via app', tag: 'observatie' },
       ],
       noten: [
         'Zoethout STAAT AAN: hoefbevangenheid = nooit → geen risico',
-        'Colobalance NIET nodig nu — gasserig = "soms"; alleen toevoegen als wk 1-2 erger wordt',
+        'Colobalance NIET nodig nu, gasserig = "soms"; alleen toevoegen als wk 1-2 erger wordt',
       ],
     },
     {
@@ -381,7 +381,7 @@ const CONCEPT_PROTOCOL = {
         ],
       },
       ritmeEven: {
-        label: 'Even weken (2, 4, 6, 8, 10, 12) — stopweken',
+        label: 'Even weken (2, 4, 6, 8, 10, 12), stopweken',
         items: [
           { id: 50, t: 'Zeoliet · ~36 gr · 1× daags · APART van andere voeding', tag: 'supplementen',
             warning: 'Nooit tegelijk met vitamines geven' },
@@ -406,11 +406,11 @@ const CONCEPT_PROTOCOL = {
   ],
 
   shelleysNote:
-    'Marit — fijn dat je hier bent. Ik denk dat we hier echt iets gaan zien. Belangrijk: niet schrikken als de jeuk in week 2 even erger lijkt — dat is detox. Stuur me elke 3 dagen een foto van de manen, dan houden we het samen in de gaten.',
+    'Marit, fijn dat je hier bent. Ik denk dat we hier echt iets gaan zien. Belangrijk: niet schrikken als de jeuk in week 2 even erger lijkt, dat is detox. Stuur me elke 3 dagen een foto van de manen, dan houden we het samen in de gaten.',
 };
 
 /* ====================================================================
-   CLIENT_MONITORING — lopende protocollen voor de monitoring-view
+   CLIENT_MONITORING, lopende protocollen voor de monitoring-view
    ==================================================================== */
 const CLIENT_MONITORING = [
   { id: 'C-019', horse: 'Storm',  owner: 'Bas H.',   av: 'B', phase: 'Stap 2 · Darmen',  week: 'wk 3 / 6',  pct: 50,
@@ -418,13 +418,13 @@ const CLIENT_MONITORING = [
     note: 'Mest is iets vaster geworden, jeuk neemt af.' },
   { id: 'C-018', horse: 'Aster',  owner: 'Elise L.', av: 'E', phase: 'Stap 2 · Darmen',  week: 'wk 4 / 6',  pct: 66,
     checkin: 'eergisteren', mood: 'ok', signal: 'oranje',
-    note: '2 wk gasserig — Colobalance toevoegen?' },
+    note: '2 wk gasserig, Colobalance toevoegen?' },
   { id: 'C-016', horse: 'Bjorn',  owner: 'Sanne K.', av: 'S', phase: 'Stap 3 · Lever/nier', week: 'wk 7 / 12', pct: 58,
     checkin: 'vandaag',   mood: 'top', signal: null,
     note: 'Manen volledig dichtgegroeid. Mest stabiel.' },
   { id: 'C-014', horse: 'Faro',   owner: 'Tessa W.', av: 'T', phase: 'Stap 2+ · Extra rust', week: 'wk 2 / 4', pct: 50,
     checkin: '3 dgn',     mood: 'minder', signal: 'oranje',
-    note: 'Mestwater hardnekkig — overweeg Aardpeerpellets.' },
+    note: 'Mestwater hardnekkig, overweeg Aardpeerpellets.' },
   { id: 'C-013', horse: 'Luna',   owner: 'Iris D.',  av: 'I', phase: 'Stap 1 · Maag',     week: 'wk 5 / 6',  pct: 83,
     checkin: 'vandaag',   mood: 'goed', signal: null,
     note: 'Klaar voor Stap 2 over 1 week.' },
@@ -436,11 +436,11 @@ const CLIENT_MONITORING = [
     note: 'Eindevaluatie staat klaar.' },
   { id: 'C-006', horse: 'Iris',   owner: 'Femke S.', av: 'F', phase: 'Stap 2 · Darmen',  week: 'wk 1 / 6',  pct: 16,
     checkin: '5 dgn',     mood: '?',    signal: 'geel',
-    note: 'Geen check-in 5 dagen — auto-reminder gestuurd.' },
+    note: 'Geen check-in 5 dagen, auto-reminder gestuurd.' },
 ];
 
 /* ====================================================================
-   WEEK 6 EVAL — een lopende evaluatie voor de eval-view
+   WEEK 6 EVAL, een lopende evaluatie voor de eval-view
    ==================================================================== */
 const WEEK6_EVAL = {
   horse: 'Storm',
@@ -461,7 +461,7 @@ const WEEK6_EVAL = {
     { q: 'Is er (wel eens) diarree?',
       a: 'Nee.', state: 'ok' },
     { q: 'Triggert je paard op (voer)veranderingen?',
-      a: 'Mest werd 1 dag iets losser na overgang naar nieuwe baal — kwam volgende dag terug.', state: 'mild' },
+      a: 'Mest werd 1 dag iets losser na overgang naar nieuwe baal, kwam volgende dag terug.', state: 'mild' },
   ],
   observaties: [
     { wk: 1, mest: 'B-', jeuk: '8/10', energie: '6/10', notes: 'Eerste dagen gespannen, slowfeeder hing nog te hoog' },
@@ -473,7 +473,7 @@ const WEEK6_EVAL = {
   ],
   /* Auto-decision */
   decision: 'Door naar Stap 3 · Lever & nieren',
-  reasoning: '5/6 antwoorden stabiel, 1 mild. Eindstaat: stabiel — Stap 2+ niet nodig.',
+  reasoning: '5/6 antwoorden stabiel, 1 mild. Eindstaat: stabiel, Stap 2+ niet nodig.',
 };
 
 /* ---- Inbox: list of intakes pending therapist review ---- */
