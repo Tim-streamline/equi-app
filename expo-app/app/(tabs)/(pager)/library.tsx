@@ -2,13 +2,11 @@ import { View, Text, ScrollView, Pressable, TextInput, Image } from 'react-nativ
 import { router } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Search, Play } from 'lucide-react-native';
-import { AppHeader } from '@/components/ui/AppHeader';
 import { SectionTitle } from '@/components/ui/SectionTitle';
 import { Card } from '@/components/ui/Card';
 import { Chip } from '@/components/ui/Chip';
 import { useTabBarPadding } from '@/hooks/useTabBarPadding';
 import {
-  useCurrentUser,
   useLibraryCategories,
   useLibraryFeatured,
   useLibraryItems,
@@ -17,7 +15,6 @@ import {
 
 export default function LibraryScreen() {
   const padBottom = useTabBarPadding();
-  const user = useCurrentUser();
   const categories = useLibraryCategories();
   const featured = useLibraryFeatured();
   const allItems = useLibraryItems();
@@ -25,12 +22,10 @@ export default function LibraryScreen() {
   const placeholder = useValue('librarySearchPlaceholder') as string;
 
   return (
-    <View className="flex-1 bg-canvas">
+    <View className="flex-1">
       <SafeAreaView edges={['top']} style={{ flex: 1 }}>
         <ScrollView contentContainerStyle={{ paddingBottom: padBottom }}>
-          <AppHeader greet="Bibliotheek" title="Wijzer worden" avatar={(user.avatarInitial as string) ?? 'M'} />
-
-          <View className="px-5 pb-3">
+          <View className="px-5 pb-3 pt-1.5">
             <View className="flex-row items-center gap-2.5 rounded-xl border border-ink-8 bg-white px-3.5 py-2.5">
               <Search size={18} color="rgba(27,42,42,0.5)" />
               <TextInput

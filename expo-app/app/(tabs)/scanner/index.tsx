@@ -54,7 +54,7 @@ export default function ScannerCameraScreen() {
 
         <View className="flex-row items-center justify-between px-5 py-2">
           <Pressable
-            onPress={() => router.push('/(tabs)/home')}
+            onPress={() => router.push('/(tabs)/(pager)/home')}
             className="h-9 w-9 items-center justify-center rounded-full bg-white/10"
           >
             <X size={20} color="#fff" />

@@ -73,7 +73,7 @@ export default function HorseProfileScreen() {
             ))}
           </View>
 
-          <SectionTitle action="Volledig dagboek" onAction={() => router.push('/(tabs)/protocol')}>
+          <SectionTitle action="Volledig dagboek" onAction={() => router.push('/(tabs)/(pager)/protocol')}>
             Tijdlijn
           </SectionTitle>
           <View className="px-7 pb-4">

@@ -3,5 +3,5 @@ import { useDb } from '@/db/provider';
 
 export default function Index() {
   const { isLoggedIn } = useDb();
-  return <Redirect href={isLoggedIn ? '/(tabs)/home' : '/onboarding/welcome'} />;
+  return <Redirect href={isLoggedIn ? '/(tabs)/(pager)/home' : '/onboarding/welcome'} />;
 }

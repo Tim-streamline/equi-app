@@ -42,18 +42,16 @@ export default function HomeScreen() {
   // sub-tab effect to re-fire on every tap, and the calendar remounts on today.
   const openCalendar = () =>
     router.push({
-      pathname: '/(tabs)/protocol',
+      pathname: '/(tabs)/(pager)/protocol',
       params: { tab: 'kalender', t: String(Date.now()) },
     } as any);
 
   return (
-    <View className="flex-1 bg-canvas">
+    <View className="flex-1">
       <SafeAreaView edges={['top']} style={{ flex: 1 }}>
         <ScrollView contentContainerStyle={{ paddingBottom: padBottom }}>
           <AppHeader
-            greet="Goedemorgen,"
             title={(user.name as string)?.split(' ')[0] ?? ''}
-            avatar={(user.avatarInitial as string) ?? 'M'}
             right={
               <IconButton>
                 <Bell size={20} color="#1B2A2A" />
@@ -78,7 +76,7 @@ export default function HomeScreen() {
               label="Bibliotheek"
               sub="3 nieuwe items"
               icon={<BookOpen size={22} color="#127A79" />}
-              onPress={() => router.push('/(tabs)/library')}
+              onPress={() => router.push('/(tabs)/(pager)/library')}
             />
           </View>
 
@@ -127,7 +125,7 @@ export default function HomeScreen() {
 
           {featured && (
             <>
-              <SectionTitle action="Alles" onAction={() => router.push('/(tabs)/library')}>
+              <SectionTitle action="Alles" onAction={() => router.push('/(tabs)/(pager)/library')}>
                 Voor jou geselecteerd
               </SectionTitle>
               <View className="px-4 mb-4">

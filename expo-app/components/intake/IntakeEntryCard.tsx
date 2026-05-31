@@ -48,18 +48,6 @@ export function IntakeEntryCard({ variant = 'banner' }: Props) {
 
   return (
     <Pressable onPress={onPress} className={wrap}>
-      <View
-        className="absolute"
-        style={{
-          right: -40,
-          bottom: -50,
-          width: 140,
-          height: 140,
-          borderRadius: 70,
-          backgroundColor: '#18BAB0',
-          opacity: 0.18,
-        }}
-      />
       <View className="flex-row items-start gap-3">
         <View className="h-10 w-10 items-center justify-center rounded-xl bg-mint-500">
           <ClipboardList size={20} color="#fff" />

@@ -6,19 +6,6 @@ type Props = { tag?: string; name?: string; children: ReactNode };
 export function Coach({ tag, name = 'Shelley', children }: Props) {
   return (
     <View className="mx-4 mb-4 overflow-hidden rounded-card bg-teal-700 px-4 pl-[60px] py-[18px]">
-      {/* radial halo */}
-      <View
-        className="absolute"
-        style={{
-          right: -40,
-          bottom: -50,
-          width: 140,
-          height: 140,
-          borderRadius: 70,
-          backgroundColor: '#18BAB0',
-          opacity: 0.18,
-        }}
-      />
       <View className="absolute top-[18px] left-4 h-8 w-8 items-center justify-center rounded-full bg-mint-500">
         <Text className="font-bold text-[13px] text-white">S</Text>
       </View>

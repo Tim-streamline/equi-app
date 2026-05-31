@@ -6,7 +6,6 @@ import { LinearGradient } from 'expo-linear-gradient';
 import {
   ChevronRight, Plus, Bell, Download, Settings, Heart, MessageCircle, LogOut,
 } from 'lucide-react-native';
-import { AppHeader } from '@/components/ui/AppHeader';
 import { SectionTitle } from '@/components/ui/SectionTitle';
 import { Card } from '@/components/ui/Card';
 import { Bigchip } from '@/components/ui/Bigchip';
@@ -75,12 +74,10 @@ export default function AccountScreen() {
   };
 
   return (
-    <View className="flex-1 bg-canvas">
+    <View className="flex-1">
       <SafeAreaView edges={['top']} style={{ flex: 1 }}>
         <ScrollView contentContainerStyle={{ paddingBottom: padBottom }}>
-          <AppHeader title="Mijn account" avatar={(user.avatarInitial as string) ?? 'M'} />
-
-          <View className="px-4 mb-4">
+          <View className="px-4 mb-4 mt-2">
             <Card onPress={() => router.push('/(tabs)/account/my-horses')}>
               <View className="flex-row items-center gap-3">
                 <LinearGradient

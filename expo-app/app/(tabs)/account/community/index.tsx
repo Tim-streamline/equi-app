@@ -7,11 +7,10 @@ import { IconButton } from '@/components/ui/IconButton';
 import { Chip } from '@/components/ui/Chip';
 import { Avatar } from '@/components/ui/Avatar';
 import { useTabBarPadding } from '@/hooks/useTabBarPadding';
-import { useCommunityCategories, useCommunityPosts, useCurrentUser } from '@/db/hooks';
+import { useCommunityCategories, useCommunityPosts } from '@/db/hooks';
 
 export default function CommunityScreen() {
   const padBottom = useTabBarPadding();
-  const user = useCurrentUser();
   const categories = useCommunityCategories();
   const posts = useCommunityPosts();
 
@@ -20,9 +19,7 @@ export default function CommunityScreen() {
       <SafeAreaView edges={['top']} style={{ flex: 1 }}>
         <ScrollView contentContainerStyle={{ paddingBottom: padBottom }}>
           <AppHeader
-            greet="Community"
             title="Vraag & deel"
-            avatar={(user.avatarInitial as string) ?? 'M'}
             right={
               <IconButton>
                 <Plus size={20} color="#1B2A2A" />

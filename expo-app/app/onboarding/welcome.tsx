@@ -27,7 +27,7 @@ export default function WelcomeScreen() {
     setBusy(true);
     try {
       await login(email.trim(), password);
-      router.replace('/(tabs)/home');
+      router.replace('/(tabs)/(pager)/home');
     } catch (err: any) {
       setError(err?.message ?? 'Login failed');
     } finally {

@@ -2,8 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { View, Text, ScrollView, Pressable } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { MoreHorizontal, Check, X, Circle, Plus, ChevronLeft, ChevronRight, Leaf, Footprints, PawPrint } from 'lucide-react-native';
-import { AppHeader } from '@/components/ui/AppHeader';
+import { Check, X, Circle, Plus, ChevronLeft, ChevronRight, Leaf, Footprints, PawPrint } from 'lucide-react-native';
 import { IconButton } from '@/components/ui/IconButton';
 import { Button } from '@/components/ui/Button';
 import { useTabBarPadding } from '@/hooks/useTabBarPadding';
@@ -12,7 +11,6 @@ import { useIntake } from '@/lib/intake/store';
 import {
   useActiveProtocolForHorse,
   useAllTaskCompletions,
-  useCurrentUser,
   usePhaseItems,
   useProtocolAnalysis,
   useProtocolPhases,
@@ -43,7 +41,6 @@ export default function ProtocolListScreen() {
   }, [tabParam, tabNonce]);
   const padBottom = useTabBarPadding();
   const protocol = useActiveProtocolForHorse();
-  const user = useCurrentUser();
   const { state: intake } = useIntake();
 
   if (!protocol) {
@@ -52,11 +49,10 @@ export default function ProtocolListScreen() {
     // Shelley" placeholder until the protocol arrives.
     const submitted = !!intake.submittedAt;
     return (
-      <View className="flex-1 bg-canvas">
+      <View className="flex-1">
         <SafeAreaView edges={['top']} style={{ flex: 1 }}>
           <ScrollView contentContainerStyle={{ paddingBottom: padBottom }}>
-            <AppHeader greet="Protocol" title="Jouw plan" avatar={(user.avatarInitial as string) ?? 'M'} />
-            <View className="px-4">
+            <View className="px-4 pt-2">
               {!submitted ? (
                 <IntakeEntryCard variant="standalone" />
               ) : (
@@ -83,20 +79,10 @@ export default function ProtocolListScreen() {
         : (protocol.subtitleAnalyse as string);
 
   return (
-    <View className="flex-1 bg-canvas">
+    <View className="flex-1">
       <SafeAreaView edges={['top']} style={{ flex: 1 }}>
         <ScrollView contentContainerStyle={{ paddingBottom: padBottom }}>
-          <AppHeader
-            greet="Protocol"
-            title="Jouw plan"
-            avatar={(user.avatarInitial as string) ?? 'M'}
-            right={
-              <IconButton>
-                <MoreHorizontal size={20} color="#1B2A2A" />
-              </IconButton>
-            }
-          />
-          <View className="mx-4 mb-4 rounded-2xl bg-white border border-ink-8 overflow-hidden shadow-sm">
+          <View className="mx-4 mb-4 mt-2 rounded-2xl bg-white border border-ink-8 overflow-hidden shadow-sm">
             <View className="p-4 pb-3">
               <Text className="font-bold text-ink" style={{ fontSize: 22, lineHeight: 26 }}>
                 {protocol.title as string}

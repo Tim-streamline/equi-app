@@ -16,7 +16,7 @@ export default function ConnectScreen() {
 
   const finish = () => {
     setOnboarded(true, userId);
-    router.replace('/(tabs)/home');
+    router.replace('/(tabs)/(pager)/home');
   };
 
   return (

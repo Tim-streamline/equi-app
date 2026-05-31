@@ -96,7 +96,7 @@ export default function IntakeSent() {
           <Button
             title="Terug naar de app"
             variant="primary"
-            onPress={() => router.replace('/(tabs)/home')}
+            onPress={() => router.replace('/(tabs)/(pager)/home')}
           />
         </View>
       </SafeAreaView>
