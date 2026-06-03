@@ -11,7 +11,7 @@ import { X, ClipboardList, Camera, Heart, ArrowRight } from 'lucide-react-native
 import { Button } from '@/components/ui/Button';
 import { IconButton } from '@/components/ui/IconButton';
 import { useCurrentUser, useHorse } from '@/db/hooks';
-import { INTAKE_SCHEMA } from '@/lib/intake/schema';
+import { INTAKE_SCHEMA, INTAKE_DISCLAIMER_LONG } from '@/lib/intake/schema';
 
 export default function IntakeWelcome() {
   const user = useCurrentUser();
@@ -82,6 +82,12 @@ export default function IntakeWelcome() {
                 </View>
               </View>
             ))}
+          </View>
+
+          <View className="rounded-2xl bg-white/10 p-4">
+            <Text className="text-[12.5px] leading-[19px] text-white/80">
+              {INTAKE_DISCLAIMER_LONG}
+            </Text>
           </View>
         </ScrollView>
 

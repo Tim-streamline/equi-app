@@ -45,7 +45,7 @@ function renderInput(field: Field, value: FieldValue, set: (v: FieldValue) => vo
     case 'text':
       return <TextInputField value={value as string | undefined} onChange={set} unit={field.unit} />;
     case 'textarea':
-      return <TextAreaField value={value as string | undefined} onChange={set} />;
+      return <TextAreaField value={value as string | undefined} onChange={set} tall={field.tall} />;
     case 'number':
       return (
         <TextInputField
@@ -142,19 +142,21 @@ function TextInputField({
 function TextAreaField({
   value,
   onChange,
+  tall,
 }: {
   value?: string;
   onChange: (v: string) => void;
+  tall?: boolean;
 }) {
   return (
     <TextInput
       multiline
-      numberOfLines={4}
+      numberOfLines={tall ? 12 : 4}
       value={value ?? ''}
       onChangeText={onChange}
       placeholderTextColor="rgba(27,42,42,0.4)"
       className="rounded-xl border border-ink-8 bg-white px-4 py-3.5 font-sans text-[15px] text-ink"
-      style={{ minHeight: 96, textAlignVertical: 'top' }}
+      style={{ minHeight: tall ? 288 : 96, textAlignVertical: 'top' }}
     />
   );
 }

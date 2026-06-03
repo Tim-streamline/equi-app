@@ -9,9 +9,15 @@
 //
 // `flagIf`     — answer surfaces as an attention-point on Shelley's review.
 // `criticalIf` — answer blocks protocol auto-start until reviewed manually.
-// `showIf`     — field only renders when another field has a given value.
-//                The special value 'any-checked' matches when the referenced
-//                multi field has at least one non-"geen" option selected.
+// `showIf`     — field only renders when another field (in the SAME section)
+//                has a given value. The special value 'any-checked' matches
+//                when the referenced multi field has at least one non-"geen"
+//                option selected.
+//
+// NB: copy for several sections was revised per "Intakeformulier
+// aanpassen.pdf" — see CHANGES-from-intakeformulier-aanpassen.md for the
+// mapping and the handful of items flagged as best-effort / not (yet)
+// supported by the renderer.
 
 export type FieldType =
   | 'text'
@@ -44,6 +50,8 @@ export type Field = {
   required?: boolean;
   unit?: string;
   step?: number;
+  /** Render a textarea ~3x taller (for long free-text answers). */
+  tall?: boolean;
   options?: string[];
   showIf?: ShowIf;
   /** `'non-empty'` / `'any'` / specific value(s) that should surface a flag. */
@@ -79,13 +87,34 @@ export type Section = {
   fields: Field[];
 };
 
+/** Short disclaimer shown at the top of the intake overview screen. */
+export const INTAKE_DISCLAIMER_SHORT =
+  'Vul dit formulier zo volledig mogelijk in. We kunnen alleen meedenken op ' +
+  'basis van wat jij deelt. De adviezen zijn ondersteunend en vervangen geen ' +
+  'dierenarts. Bij acute of ernstige klachten neem je altijd contact op met je ' +
+  'dierenarts.';
+
+/** Long "belangrijk vooraf" disclaimer shown before the form starts. */
+export const INTAKE_DISCLAIMER_LONG =
+  'Belangrijk vooraf:\n\n' +
+  'Deze app geeft ondersteuning op basis van de informatie die jij invult. ' +
+  'Hoe vollediger en eerlijker je antwoorden zijn, hoe gerichter het advies ' +
+  'kan zijn.\n\n' +
+  'De adviezen in deze app vervangen geen dierenarts of medische behandeling. ' +
+  'Bij acute klachten, wonden, extreme benauwdheid, koliekverschijnselen, ' +
+  'kreupelheid, koorts of duidelijke achteruitgang neem je altijd contact op ' +
+  'met je dierenarts.\n\n' +
+  'Door dit formulier in te vullen begrijp je dat het advies gebaseerd is op ' +
+  'de aangeleverde informatie en dat je zelf verantwoordelijk blijft voor de ' +
+  'keuzes rondom jouw paard.';
+
 export const INTAKE_SCHEMA: Section[] = [
   /* ============= 00 · CONTACT & OPENHEID ============= */
   {
     id: 'contact',
     nr: 0,
     title: 'Contactgegevens',
-    intro: 'Eerst even hoe ik je kan bereiken, en of je openstaat voor veranderingen.',
+    intro: 'Laat hieronder weten hoe ik je kan bereiken.',
     minutes: 2,
     icon: 'mail',
     sub: 'E-mail, telefoon, openheid voor aanpassingen',
@@ -95,7 +124,7 @@ export const INTAKE_SCHEMA: Section[] = [
         label: 'E-mailadres',
         type: 'text',
         required: true,
-        hint: 'Op dit adres stuur ik je protocol en kopie van je antwoorden.',
+        hint: 'Op dit adres stuur ik je een kopie van je antwoorden en een kopie van je protocol.',
       },
       { id: 'naam-eigenaar', label: 'Jouw naam', type: 'text', required: true },
       {
@@ -103,7 +132,6 @@ export const INTAKE_SCHEMA: Section[] = [
         label: 'Telefoonnummer',
         type: 'text',
         required: true,
-        hint: 'Voor het geval ik je acuut wil bereiken, ik bel je niet zomaar.',
       },
       {
         id: 'hoe-gevonden',
@@ -116,16 +144,15 @@ export const INTAKE_SCHEMA: Section[] = [
         label: 'Sta je open voor aanpassingen in voer- en managementbeleid?',
         type: 'radio',
         required: true,
-        options: ['Ja, helemaal', 'Ik twijfel nog, leg uit hieronder', 'Anders'],
-        hint: 'Eerlijk zijn helpt mij realistisch te zijn.',
-        flagIf: ['Ik twijfel nog, leg uit hieronder', 'Anders'],
+        options: ['Ja, helemaal', 'Ik twijfel nog, leg hieronder uit'],
+        flagIf: ['Ik twijfel nog, leg hieronder uit'],
       },
       {
         id: 'aanpassingen-toelichting',
         label: 'Toelichting',
         type: 'textarea',
         showIf: {
-          'aanpassingen-openheid': ['Ik twijfel nog, leg uit hieronder', 'Anders'],
+          'aanpassingen-openheid': ['Ik twijfel nog, leg hieronder uit'],
         },
       },
     ],
@@ -171,7 +198,7 @@ export const INTAKE_SCHEMA: Section[] = [
       },
       {
         id: 'drachtig',
-        label: 'Is ze drachtig of lacterend?',
+        label: 'Is je paard drachtig of lacterend?',
         type: 'radio',
         options: ['nee', 'drachtig', 'lacterend'],
         showIf: { geslacht: 'merrie' },
@@ -180,7 +207,7 @@ export const INTAKE_SCHEMA: Section[] = [
       },
       {
         id: 'gewicht',
-        label: 'Geschat gewicht',
+        label: 'Gewicht',
         type: 'number',
         unit: 'kg',
         required: true,
@@ -211,13 +238,6 @@ export const INTAKE_SCHEMA: Section[] = [
         label: 'Geschat of gemeten?',
         type: 'radio',
         options: ['geschat', 'gemeten'],
-      },
-      {
-        id: 'adres-stal',
-        label: 'Adres van de stal',
-        type: 'textarea',
-        required: true,
-        hint: 'Straat + plaats, postcode helpt me bij regio-specifieke tips (bv. bodemtype).',
       },
       {
         id: 'sinds-bezit',
@@ -261,13 +281,17 @@ export const INTAKE_SCHEMA: Section[] = [
         label: 'Hoe omschrijf je de gezondheidsstatus op dit moment?',
         type: 'textarea',
         required: true,
-        hint: 'In je eigen woorden, geen jargon nodig.',
       },
       {
         id: 'foto-paard',
-        label: 'Foto van je paard (zijaanzicht)',
+        label: 'Foto van je paard (zijaanzicht vanaf links)',
         type: 'photo',
         hint: 'Voor mijn dossier, zo weet ik gelijk met wie ik werk.',
+      },
+      {
+        id: 'foto-paard-rechts',
+        label: 'Foto van je paard (zijaanzicht vanaf rechts)',
+        type: 'photo',
       },
     ],
   },
@@ -277,8 +301,7 @@ export const INTAKE_SCHEMA: Section[] = [
     id: 'klacht',
     nr: 2,
     title: 'Klacht & hulpvraag',
-    intro:
-      'Wat speelt er nu? Wees zo open en gedetailleerd mogelijk, ik lees alles persoonlijk.',
+    intro: 'Wat speelt er nu? Wees zo open en gedetailleerd mogelijk.',
     minutes: 6,
     icon: 'alert',
     sub: 'Wie is je paard, wat speelt er, wat wens je',
@@ -310,11 +333,25 @@ export const INTAKE_SCHEMA: Section[] = [
       },
       {
         id: 'acuut',
-        label: 'Heeft ze NU acute klachten?',
+        label: 'Heeft je paard NU klachten?',
         type: 'multi',
-        options: ['koorts', 'ernstige kreupelheid', 'koliek', 'wond / verwonding', 'geen'],
-        hint: 'Bij acute klachten eerst dierenarts, het traject pauzeert dan.',
-        criticalIf: ['koorts', 'ernstige kreupelheid', 'koliek'],
+        options: [
+          'Koorts',
+          'Koliek',
+          'Staat op reguliere medicatie',
+          'Staat op pijnstillers',
+          'Anders',
+        ],
+        criticalIf: ['Koorts', 'Koliek'],
+      },
+      {
+        id: 'acuut-toelichting',
+        label: 'Toelichting',
+        type: 'textarea',
+        hint: 'Welke medicatie / pijnstillers, of licht "anders" toe.',
+        showIf: {
+          acuut: ['Staat op reguliere medicatie', 'Staat op pijnstillers', 'Anders'],
+        },
       },
       {
         id: 'thema',
@@ -324,15 +361,12 @@ export const INTAKE_SCHEMA: Section[] = [
           'Jeuk',
           'Darmen',
           'Staakgedrag',
-          'Hoeven',
-          'Voeding',
-          'Spierspanning',
-          'Ademhaling',
-          'Houding & balans',
-          'Gedrag',
-          'Energie',
-          'Luchtwegen',
-          'Pees / gewricht',
+          'Hoefproblemen',
+          'Luchtwegklachten',
+          'Afwijkend gedrag',
+          'Insuline resistentie',
+          'Hoefbevangenheid',
+          'Pees- of gewrichtsklachten',
         ],
       },
       {
@@ -382,9 +416,9 @@ export const INTAKE_SCHEMA: Section[] = [
       },
       {
         id: 'foto-historie',
-        label: "Foto's van de afgelopen 2–5 jaar",
+        label: "Upload een paar foto's van je paard van de afgelopen 2-5 jaar.",
         type: 'photo',
-        hint: "Helpt mij om ontwikkeling te zien. Max 10 foto's.",
+        hint: "Dit helpt mij om een goed beeld te krijgen van je paard. Max 10 foto's.",
       },
       {
         id: 'gedragsveranderingen',
@@ -395,13 +429,13 @@ export const INTAKE_SCHEMA: Section[] = [
       { id: 'allergie', label: 'Bekende allergieën?', type: 'text' },
       {
         id: 'ervaring-holistisch',
-        label: 'Ervaring met holistische therapieën?',
+        label: 'Heb je ervaring met holistische therapieën?',
         type: 'textarea',
         hint: 'Osteopaat, kruidengeneeskunde, etc. Mag ook "geen".',
       },
       {
         id: 'stressfactoren',
-        label: 'Stressfactoren of veranderingen recent',
+        label: 'Zijn er recente veranderingen?',
         type: 'textarea',
         hint: 'Verhuizing, nieuwe stalgenoten, voerwissel, ander werk, …',
         flagIf: 'non-empty',
@@ -410,7 +444,7 @@ export const INTAKE_SCHEMA: Section[] = [
         id: 'leuk',
         label: 'Wat vindt je paard heel leuk?',
         type: 'textarea',
-        hint: 'Helpt me beeld te krijgen van wat haar gelukkig maakt.',
+        hint: 'Dit helpt me een beeld te krijgen van wat je paard gelukkig maakt.',
       },
     ],
   },
@@ -420,26 +454,26 @@ export const INTAKE_SCHEMA: Section[] = [
     id: 'geschiedenis',
     nr: 3,
     title: 'Geschiedenis van je paard',
-    intro: 'Hoe je paard groot is geworden, vaak verstopte oorzaken zitten hier.',
+    intro: '',
     minutes: 5,
     icon: 'history',
     sub: 'De eerste levensjaren, medisch verleden',
     fields: [
       {
+        id: 'eerste-maanden',
+        label: 'Hoe heeft je paard de eerste maanden van zijn/haar leven doorgebracht?',
+        type: 'textarea',
+        hint: 'Weet je het niet? Vul dan "onbekend" in.',
+      },
+      {
         id: 'moeder-voer-huis',
         label: 'Hoe werd de moeder gevoerd en gehuisvest?',
         type: 'textarea',
-        hint: 'Weet je niet? "Onbekend" mag.',
-      },
-      {
-        id: 'eerste-maanden',
-        label: 'Hoe heeft je paard de eerste maanden doorgebracht?',
-        type: 'textarea',
-        hint: 'Traditionele stalling, opfok, weiland, wildgebied, …',
+        hint: 'Weet je het niet? Vul dan "onbekend" in.',
       },
       {
         id: 'moeder-metabolisch',
-        label: 'Had de moeder tekenen van metabolische problemen?',
+        label: 'Had de moeder gezondheidsklachten?',
         type: 'multi',
         options: [
           'mestwater',
@@ -476,21 +510,23 @@ export const INTAKE_SCHEMA: Section[] = [
       },
       {
         id: 'spenen-inrijden-voer',
-        label: 'Hoe werd ze gevoerd in die periode?',
+        label: 'Hoe werd je paard gevoerd in die periode?',
         type: 'textarea',
         hint: 'Ruwvoer verpakt/onverpakt, bijvoeding, …',
       },
       {
         id: 'spenen-inrijden-symptomen',
-        label: 'Heeft ze in die periode symptomen / ziektes ontwikkeld?',
+        label: 'Heeft je paard in die periode symptomen / ziektes ontwikkeld?',
         type: 'textarea',
         hint: 'Welke, wanneer, hoe behandeld?',
         flagIf: 'non-empty',
       },
       {
         id: 'medische-geschiedenis-volledig',
-        label: 'Volledige medische geschiedenis, chronologisch',
+        label:
+          'Wil je de volledige medische geschiedenis uitwerken in chronologische volgorde, zover bij jou bekend?',
         type: 'textarea',
+        tall: true,
         required: true,
         hint:
           'Ziekte, symptomen, bijzonderheden waarvoor de DA kwam, in chronologische volgorde met (geschatte) data + welke behandelmethodes + wat wel/niet aansloeg.',
@@ -514,7 +550,47 @@ export const INTAKE_SCHEMA: Section[] = [
         id: 'vaccinaties',
         label: 'Welke vaccinaties krijgt het paard?',
         type: 'multi',
-        options: ['Tetanus', 'Influenza', 'Rhinopneumonie', 'West Nijl', 'Geen', 'Anders'],
+        options: [
+          'Tetanus',
+          'Influenza',
+          'Rhinopneumonie',
+          'West Nijl',
+          'Geen',
+          'Anders, geef toelichting',
+        ],
+      },
+      {
+        id: 'vaccinaties-anders',
+        label: 'Anders, namelijk',
+        type: 'text',
+        showIf: { vaccinaties: 'Anders, geef toelichting' },
+      },
+      {
+        id: 'vacc-reactie',
+        label: 'Reageert je paard op vaccinaties?',
+        type: 'multi',
+        options: [
+          'Nee',
+          'Ja, een bult/zwelling op de injectieplek',
+          'Ja, enkele dagen wat sloom of minder fit',
+          'Ja, pijnlijke/gevoelige injectieplek',
+          'Ja, koorts/verhoging',
+          'Ja, anders, namelijk',
+          'Weet ik niet',
+        ],
+        flagIf: [
+          'Ja, een bult/zwelling op de injectieplek',
+          'Ja, enkele dagen wat sloom of minder fit',
+          'Ja, pijnlijke/gevoelige injectieplek',
+          'Ja, koorts/verhoging',
+          'Ja, anders, namelijk',
+        ],
+      },
+      {
+        id: 'vacc-reactie-toelichting',
+        label: 'Toelichting',
+        type: 'text',
+        showIf: { 'vacc-reactie': 'Ja, anders, namelijk' },
       },
       {
         id: 'vacc-laatst',
@@ -550,17 +626,57 @@ export const INTAKE_SCHEMA: Section[] = [
         id: 'ontworming-strategie',
         label: 'Op basis van mestonderzoek of vast schema?',
         type: 'radio',
-        options: ['vast schema', 'mestonderzoek', 'mix'],
+        options: ['vast schema', 'mestonderzoek', 'mix, geef toelichting'],
+      },
+      {
+        id: 'ontworming-strategie-toelichting',
+        label: 'Toelichting',
+        type: 'textarea',
+        showIf: { 'ontworming-strategie': 'mix, geef toelichting' },
+      },
+      {
+        id: 'ontworming-reactie',
+        label: 'Reageert je paard op ontwormingen?',
+        type: 'multi',
+        options: [
+          'Nee',
+          'Ja, enkele dagen wat sloom of minder fit',
+          'Ja, verandering in mest of spijsvertering',
+          'Ja, buikgevoeligheid / darmklachten',
+          'Ja, verandering in gedrag of gevoeligheid',
+          'Ja, anders, namelijk',
+          'Weet ik niet',
+        ],
+        flagIf: [
+          'Ja, enkele dagen wat sloom of minder fit',
+          'Ja, verandering in mest of spijsvertering',
+          'Ja, buikgevoeligheid / darmklachten',
+          'Ja, verandering in gedrag of gevoeligheid',
+          'Ja, anders, namelijk',
+        ],
+      },
+      {
+        id: 'ontworming-reactie-toelichting',
+        label: 'Toelichting',
+        type: 'text',
+        showIf: { 'ontworming-reactie': 'Ja, anders, namelijk' },
       },
 
       { id: 'sec-tand', label: 'Gebit en tandarts', type: 'sectionhead' },
       {
         id: 'tandarts-freq',
-        label: 'Hoe vaak wordt het gebit gecontroleerd?',
+        label: 'Hoe vaak wordt het gebit van jouw paard gecontroleerd?',
         type: 'radio',
         required: true,
-        options: ['jaarlijks', 'om de 6 maanden', 'op afroep', 'nog nooit'],
-        flagIf: ['nog nooit'],
+        options: [
+          'Elke 6 maanden of vaker',
+          'Ongeveer 1x per jaar',
+          'Ongeveer 1x per 1,5–2 jaar',
+          'Minder vaak dan 1x per 2 jaar',
+          'Alleen bij klachten / wanneer nodig',
+          'Nog nooit / onbekend',
+        ],
+        flagIf: ['Minder vaak dan 1x per 2 jaar', 'Alleen bij klachten / wanneer nodig', 'Nog nooit / onbekend'],
       },
       {
         id: 'tandarts-laatst',
@@ -576,16 +692,20 @@ export const INTAKE_SCHEMA: Section[] = [
       },
       {
         id: 'tandarts-methode',
-        label: 'Hoe wordt het gebit behandeld?',
+        label: 'Door wie wordt het gebit behandeld?',
         type: 'radio',
         required: true,
         options: [
-          'handmatig zonder verdoving',
-          'handmatig met verdoving',
-          'elektrisch zonder verdoving',
-          'elektrisch met verdoving',
-          'mix / weet ik niet',
+          'Dierenarts',
+          'Gediplomeerd paardentandarts / gebitsverzorger',
+          'Anders, namelijk',
         ],
+      },
+      {
+        id: 'tandarts-behandelaar-anders',
+        label: 'Anders, namelijk',
+        type: 'text',
+        showIf: { 'tandarts-methode': 'Anders, namelijk' },
       },
       {
         id: 'tandarts-bijz',
@@ -598,10 +718,9 @@ export const INTAKE_SCHEMA: Section[] = [
       { id: 'sec-hoef', label: 'Hoeven en beslag', type: 'sectionhead' },
       {
         id: 'hoefsmid-freq',
-        label: 'Hoe vaak komt de bekapper / hoefsmid?',
-        type: 'radio',
+        label: 'Door wie en hoe vaak wordt je paard bekapt / beslagen?',
+        type: 'text',
         required: true,
-        options: ['elke 4 weken', 'elke 5 weken', 'elke 6 weken', 'elke 7–8 weken', 'op afroep'],
       },
       {
         id: 'hoeven-bijz',
@@ -614,6 +733,8 @@ export const INTAKE_SCHEMA: Section[] = [
           'rotstraal',
           'hoefkanker',
           'regelmatig hoefzweren',
+          'hoefbevangenheid',
+          'NPA',
           'geen',
           'anders',
         ],
@@ -623,6 +744,8 @@ export const INTAKE_SCHEMA: Section[] = [
           'rotstraal',
           'hoefkanker',
           'regelmatig hoefzweren',
+          'hoefbevangenheid',
+          'NPA',
         ],
       },
       {
@@ -668,30 +791,45 @@ export const INTAKE_SCHEMA: Section[] = [
         label: 'Insulineresistentie (IR)',
         type: 'radio',
         required: true,
-        options: ['aangetoond door dierenarts', 'vermoeden van mij', 'nee'],
+        options: ['aangetoond door dierenarts', 'vermoeden van mij', 'nee', 'weet ik niet'],
         flagIf: ['aangetoond door dierenarts', 'vermoeden van mij'],
+      },
+      {
+        id: 'ir-attest',
+        label: 'Onderzoeksresultaten urine-/bloedonderzoek',
+        type: 'file',
+        hint: 'Optioneel — upload het bestand indien beschikbaar.',
+        showIf: { 'ir-status': 'aangetoond door dierenarts' },
       },
       {
         id: 'ems-status',
         label: 'EMS (Equine Metabolisch Syndroom)',
         type: 'radio',
         required: true,
-        options: ['aangetoond door dierenarts', 'nee', 'weet ik niet'],
-        flagIf: ['aangetoond door dierenarts'],
+        options: ['aangetoond door dierenarts', 'vermoeden van mij', 'nee', 'weet ik niet'],
+        flagIf: ['aangetoond door dierenarts', 'vermoeden van mij'],
+      },
+      {
+        id: 'ems-attest',
+        label: 'Onderzoeksresultaten urine-/bloedonderzoek',
+        type: 'file',
+        hint: 'Optioneel — upload het bestand indien beschikbaar.',
+        showIf: { 'ems-status': 'aangetoond door dierenarts' },
       },
       {
         id: 'kpu-status',
         label: 'KPU (Kryptopyrrolurie)',
         type: 'radio',
         required: true,
-        options: ['aangetoond door dierenarts', 'vermoeden van mij', 'nee', 'weet ik niet'],
-        flagIf: ['aangetoond door dierenarts', 'vermoeden van mij'],
+        options: ['aangetoond uit urine onderzoek', 'vermoeden van mij', 'nee', 'weet ik niet'],
+        flagIf: ['aangetoond uit urine onderzoek', 'vermoeden van mij'],
       },
       {
         id: 'kpu-attest',
-        label: 'KPU-rapport beschikbaar?',
+        label: 'Onderzoeksresultaten urine-/bloedonderzoek',
         type: 'file',
-        showIf: { 'kpu-status': 'aangetoond door dierenarts' },
+        hint: 'Optioneel — upload het bestand indien beschikbaar.',
+        showIf: { 'kpu-status': 'aangetoond uit urine onderzoek' },
       },
       {
         id: 'hoefbevangenheid',
@@ -705,34 +843,65 @@ export const INTAKE_SCHEMA: Section[] = [
 
       { id: 'sec-maag', label: 'Maag', type: 'sectionhead' },
       {
-        id: 'maag-ondersteuning',
-        label: 'Heeft de maag ondersteuning nodig?',
-        type: 'radio',
-        required: true,
-        options: ['ja, ernstig / langdurig', 'ja, mild', 'nee'],
-        flagIf: ['ja, ernstig / langdurig', 'ja, mild'],
-      },
-      {
         id: 'maag-symptomen',
-        label: 'Tekenen van maagproblemen',
+        label: 'Herken je één of meerdere van onderstaande signalen bij jouw paard?',
         type: 'multi',
+        hint: 'Alles aanvinken wat je herkent.',
         options: [
-          'gevoelige buikriem',
-          'oren plat bij voeren',
-          'maagzweer aangetoond',
-          'soppen van hooi in water',
-          'gespannen bij eten',
-          'tandenknarsen',
-          'geen',
+          'Geen van onderstaande',
+          'veel gapen / flehmen / slikken',
+          'Tandenknarsen',
+          'Gevoelig bij aansingelen of aanraken van de buik/flanken',
+          'Geïrriteerd, prikkelbaar of sneller boos/agressief',
+          'Onrust, spanning of moeilijk ontspannen',
+          'Minder eetlust / kieskeurig eten',
+          'Langzaam eten of stoppen tijdens het eten',
+          'Slechter presteren / weerstand bij training of rijden',
+          'Mestveranderingen (bijv. mestwater, wisselende mest, dunne mest)',
+          'Vermageren of moeite met op gewicht blijven',
+          'Terugkerende koliekachtige klachten',
+          'Veel liggen / ongemak tonen',
+          'Houdings- of gedragsverandering rondom voer, training of stalrust',
+          'Geen duidelijke klachten, maar ik vermoed toch maagongemak',
         ],
         flagIf: 'any',
       },
       {
         id: 'maag-medicatie',
-        label: 'Eerder gastro-medicatie gehad?',
+        label: 'Heeft je paard ooit maagmedicatie gehad?',
         type: 'radio',
-        options: ['ja, herhaaldelijk', 'ja, één kuur', 'nee'],
-        flagIf: ['ja, herhaaldelijk', 'ja, één kuur'],
+        options: ['ja', 'nee'],
+        flagIf: ['ja'],
+      },
+      {
+        id: 'maag-med-welke',
+        label: 'Welke maagmedicatie?',
+        type: 'text',
+        showIf: { 'maag-medicatie': 'ja' },
+      },
+      {
+        id: 'maag-med-wanneer',
+        label: 'Wanneer was dit precies?',
+        type: 'text',
+        showIf: { 'maag-medicatie': 'ja' },
+      },
+      {
+        id: 'maag-med-hoelang',
+        label: 'Hoe lang heb je dit gegeven?',
+        type: 'text',
+        showIf: { 'maag-medicatie': 'ja' },
+      },
+      {
+        id: 'maag-med-opbouw',
+        label: 'Heb je op- of afgebouwd?',
+        type: 'text',
+        showIf: { 'maag-medicatie': 'ja' },
+      },
+      {
+        id: 'maag-med-effect',
+        label: 'Zag je effect van de medicatie? Omschrijf wat je zag indien ja.',
+        type: 'textarea',
+        showIf: { 'maag-medicatie': 'ja' },
       },
 
       { id: 'sec-darm', label: 'Darmen', type: 'sectionhead' },
@@ -746,24 +915,144 @@ export const INTAKE_SCHEMA: Section[] = [
       },
       {
         id: 'probiotica-geschiedenis',
-        label: 'Jarenlang probiotica / gist / yeast gehad?',
+        label:
+          'Heeft jouw paard probiotica gekregen of producten met gist / yeast / Yeasacc / Saccharomyces cerevisiae?',
         type: 'radio',
         required: true,
-        options: ['ja, >2 jaar', 'ja, <2 jaar', 'nee', 'weet ik niet'],
-        flagIf: ['ja, >2 jaar', 'ja, <2 jaar'],
+        hint:
+          'Controleer ook de ingrediëntenlijst van huidige voeding, balancers en supplementen.',
+        options: ['Nee', 'Ja', 'Weet ik niet'],
+        flagIf: ['Ja'],
       },
       {
-        id: 'medicatie-nu',
-        label: 'Medicatie nu?',
+        id: 'probiotica-welke',
+        label: 'Welk product / welke producten?',
+        type: 'text',
+        hint: 'Omschrijf de exacte productnaam.',
+        showIf: { 'probiotica-geschiedenis': 'Ja' },
+      },
+      {
+        id: 'probiotica-wanneer',
+        label: 'Wanneer kreeg jouw paard dit?',
+        type: 'radio',
+        options: [
+          'Krijgt dit momenteel',
+          'In de afgelopen maand',
+          '1–6 maanden geleden',
+          '6–12 maanden geleden',
+          'Meer dan 1 jaar geleden',
+        ],
+        showIf: { 'probiotica-geschiedenis': 'Ja' },
+      },
+      {
+        id: 'probiotica-hoelang',
+        label: 'Hoe lang kreeg jouw paard dit ongeveer?',
+        type: 'radio',
+        options: [
+          'Korter dan 2 weken',
+          '2–6 weken',
+          '1–3 maanden',
+          '3–6 maanden',
+          '6–12 maanden',
+          'Langer dan 1 jaar',
+          'Weet ik niet',
+        ],
+        showIf: { 'probiotica-geschiedenis': 'Ja' },
+      },
+      {
+        id: 'probiotica-toelichting',
+        label: 'Eventuele toelichting (dosering, reden van gebruik)',
         type: 'textarea',
-        hint: 'Type, dosering, vanaf wanneer.',
-        flagIf: 'non-empty',
+        showIf: { 'probiotica-geschiedenis': 'Ja' },
+      },
+
+      { id: 'sec-medicatie', label: 'Medicatie', type: 'sectionhead' },
+      {
+        id: 'medicatie-nu',
+        label: 'Gebruikt jouw paard momenteel medicatie?',
+        type: 'radio',
+        required: true,
+        options: ['Nee', 'Ja'],
+        flagIf: ['Ja'],
+      },
+      {
+        id: 'medicatie-nu-welke',
+        label: 'Welke medicatie gebruikt jouw paard momenteel?',
+        type: 'textarea',
+        hint:
+          "Denk bijvoorbeeld aan NSAID's, maagmedicatie, corticosteroïden, PPID-medicatie, luchtwegmedicatie, antibiotica etc.",
+        showIf: { 'medicatie-nu': 'Ja' },
+      },
+      {
+        id: 'medicatie-nu-naam',
+        label: 'Medicatie / productnaam',
+        type: 'text',
+        showIf: { 'medicatie-nu': 'Ja' },
+      },
+      {
+        id: 'medicatie-nu-reden',
+        label: 'Reden van gebruik',
+        type: 'text',
+        showIf: { 'medicatie-nu': 'Ja' },
+      },
+      {
+        id: 'medicatie-nu-dosering',
+        label: 'Dosering (indien bekend)',
+        type: 'text',
+        showIf: { 'medicatie-nu': 'Ja' },
+      },
+      {
+        id: 'medicatie-nu-sinds',
+        label: 'Sinds wanneer',
+        type: 'text',
+        showIf: { 'medicatie-nu': 'Ja' },
       },
       {
         id: 'medicatie-recent',
-        label: 'Medicatie laatste jaar?',
-        type: 'textarea',
-        flagIf: 'non-empty',
+        label: 'Heeft jouw paard in de afgelopen 2-5 jaar medicatie gekregen?',
+        type: 'radio',
+        required: true,
+        options: ['Nee', 'Ja, incidenteel', 'Ja, meerdere keren of langdurig', 'Weet ik niet'],
+        flagIf: ['Ja, incidenteel', 'Ja, meerdere keren of langdurig'],
+      },
+      {
+        id: 'medicatie-ooit-welke',
+        label: 'Welke medicatie heeft jouw paard ooit gekregen?',
+        type: 'multi',
+        hint: 'Meerdere antwoorden mogelijk.',
+        options: [
+          'Antibiotica',
+          'Ontstekingsremmers / pijnstilling (bijv. Bute, Meloxicam, Equioxx)',
+          'Corticosteroïden / prednison / dexamethason',
+          'Maagmedicatie (bijv. omeprazol)',
+          'Ventipulmin',
+          'PPID / Cushing medicatie (bijv. Prascend)',
+          'Sedatie / kalmeringsmiddelen',
+          'Hormoon- of vruchtbaarheidsmedicatie',
+          'Antischimmel / antiparasitaire medicatie',
+          'Anders, namelijk',
+        ],
+        showIf: { 'medicatie-recent': ['Ja, incidenteel', 'Ja, meerdere keren of langdurig'] },
+      },
+      {
+        id: 'medicatie-ooit-anders',
+        label: 'Anders, namelijk',
+        type: 'text',
+        showIf: { 'medicatie-ooit-welke': 'Anders, namelijk' },
+      },
+      {
+        id: 'medicatie-ooit-details',
+        label: 'Geef dit graag per medicatie aan',
+        type: 'repeater',
+        showIf: { 'medicatie-recent': ['Ja, incidenteel', 'Ja, meerdere keren of langdurig'] },
+        sub: [
+          { id: 'naam', label: 'Naam medicatie', type: 'text' },
+          { id: 'klacht', label: 'Vanwege welke klacht/symptoom ingezet?', type: 'text' },
+          { id: 'wanneer', label: 'Wanneer ongeveer gegeven (jaartal/maand)', type: 'text' },
+          { id: 'hoelang', label: 'Hoe lang gegeven', type: 'text' },
+          { id: 'reactie', label: 'Reageerde jouw paard erop? (ja / nee / weet ik niet)', type: 'text' },
+          { id: 'reactie-hoe', label: 'Zo ja, hoe?', type: 'textarea' },
+        ],
       },
     ],
   },
@@ -773,7 +1062,7 @@ export const INTAKE_SCHEMA: Section[] = [
     id: 'voer',
     nr: 5,
     title: 'Voer & ruwvoer',
-    intro: 'Dit is vaak de kern. Wees specifiek, merknamen, hoeveelheden, exacte tijden.',
+    intro: 'Wees specifiek in merknamen en hoeveelheden.',
     minutes: 12,
     icon: 'leaf',
     sub: 'Hooi, krachtvoer, mineralen, supplementen',
@@ -788,10 +1077,17 @@ export const INTAKE_SCHEMA: Section[] = [
         flagIf: ['verpakt (plastic / baal)'],
       },
       {
+        id: 'hooi-verpakking-toelichting',
+        label: 'Geef toelichting over de verhoudingen en wanneer wat precies gegeven wordt',
+        type: 'textarea',
+        showIf: { 'hooi-verpakking': 'mix' },
+      },
+      {
         id: 'hooi-omschrijving',
         label: 'Hoe omschrijf je het ruwvoer?',
         type: 'multi',
         required: true,
+        hint: 'Vink alles aan wat relevant is.',
         options: [
           'zacht',
           'grof',
@@ -829,30 +1125,112 @@ export const INTAKE_SCHEMA: Section[] = [
         label: 'Is de kwaliteit constant of wisselend?',
         type: 'radio',
         required: true,
-        options: ['constant', 'wisselt per baal', 'wisselt per levering', 'wisselt per leverancier'],
-        flagIf: ['wisselt per baal', 'wisselt per levering', 'wisselt per leverancier'],
+        options: ['constant', 'wisselt per baal', 'wisselt per levering'],
+        flagIf: ['wisselt per baal', 'wisselt per levering'],
       },
       {
         id: 'hooi-herkomst',
-        label: 'Eigen land of ingekocht?',
+        label: 'Waar komt het ruwvoer van jouw paard vandaan?',
         type: 'radio',
         required: true,
-        options: ['eigen land', 'ingekocht', 'mix', 'weet ik niet'],
+        options: [
+          'Eigen land / eigen productie',
+          'Lokaal geproduceerd',
+          'Ingekocht binnen eigen land',
+          'Geïmporteerd / afkomstig uit het buitenland',
+          'Wisselende herkomst / onbekend',
+        ],
+      },
+      {
+        id: 'hooi-zelfde-perceel',
+        label: 'Is het ruwvoer meestal afkomstig van hetzelfde perceel / dezelfde leverancier?',
+        type: 'radio',
+        options: ['Ja, meestal wel', 'Nee, wisselt regelmatig', 'Weet ik niet'],
+      },
+      {
+        id: 'hooi-teelt',
+        label: 'Weet je iets over het land van herkomst / de teeltomstandigheden?',
+        type: 'textarea',
+        hint: 'Bijv. kruidenrijk, bemest, intensief beheerd, natuurgrond, irrigatie, onbekend.',
+      },
+      {
+        id: 'hooi-productie',
+        label: 'Hoe wordt het hooi van jouw paard geproduceerd / gewonnen?',
+        type: 'multi',
+        hint: 'Vink alles aan wat relevant is.',
+        options: [
+          '1e snede',
+          '2e snede',
+          '3e snede of later',
+          'Kruidenrijk / natuurhooi',
+          'Productiegras / landbouwgrasland',
+          'Bemest land',
+          'Onbemest / extensief beheerd land',
+          'Biologisch',
+          'Weet ik niet',
+        ],
       },
       {
         id: 'hooi-aanbod',
         label: 'Hoe wordt het hooi gevoerd?',
-        type: 'textarea',
+        type: 'multi',
         required: true,
-        hint:
-          'Los of in slowfeeders? Maasbreedte? Aantal voerplekken? Automatisch systeem? Continu of in porties?',
+        options: [
+          'Los op de grond',
+          'Los in bakken',
+          'Slowfeeders (mazen <3 cm)',
+          'Hooinetten (mazen >3 cm)',
+          'Hooruif (metaal)',
+          'Anders / combinatie, namelijk',
+        ],
+      },
+      {
+        id: 'hooi-aanbod-anders',
+        label: 'Anders / combinatie, namelijk',
+        type: 'text',
+        showIf: { 'hooi-aanbod': 'Anders / combinatie, namelijk' },
+      },
+      {
+        id: 'hooi-porties',
+        label: 'Hoe vaak krijgt jouw paard hooi?',
+        type: 'radio',
+        hint: 'Hoeveel porties.',
+        options: [
+          'Continu / ad libitum',
+          'Meerdere keren per dag',
+          '3x per dag',
+          '2x per dag',
+          '1x per dag',
+          'Wisselend',
+        ],
       },
       {
         id: 'hooi-pauze-incl-nacht',
-        label: 'Bij porties: hoe lang zonder ruwvoer, INCL. nachten?',
+        label: 'Heeft jouw paard periodes zonder ruwvoer (inclusief de nachten!)?',
         type: 'radio',
-        options: ['<2 u', '2–4 u', '4–6 u', '6–8 u', '>8 u'],
-        flagIf: ['4–6 u', '6–8 u', '>8 u'],
+        options: ['Nee, nooit', 'Ja, soms', 'Ja, regelmatig', 'Weet ik niet'],
+        flagIf: ['Ja, soms', 'Ja, regelmatig'],
+      },
+      {
+        id: 'hooi-pauze-uren',
+        label: 'Hoeveel uur achter elkaar heeft jouw paard meestal geen toegang tot ruwvoer?',
+        type: 'radio',
+        options: [
+          'Minder dan 1 uur',
+          '1–2 uur',
+          '2–4 uur',
+          '4–6 uur',
+          '6–8 uur',
+          'Meer dan 8 uur',
+          'Wisselend / moeilijk in te schatten',
+        ],
+        showIf: { 'hooi-pauze-incl-nacht': ['Ja, soms', 'Ja, regelmatig'] },
+      },
+      {
+        id: 'hooi-pauze-langste',
+        label: "Wat is de langste periode zonder ruwvoer die jouw paard doorgaans heeft (inclusief 's nachts)?",
+        type: 'number',
+        unit: 'uur',
       },
       {
         id: 'hooi-voerbeurten',
@@ -864,7 +1242,7 @@ export const INTAKE_SCHEMA: Section[] = [
         id: 'hooi-eerst-ruwvoer',
         label: "Krijgt het paard 's ochtends eerst ruwvoer of krachtvoer?",
         type: 'radio',
-        options: ['eerst ruwvoer', 'eerst krachtvoer', 'tegelijk'],
+        options: ['eerst ruwvoer', 'eerst krachtvoer', 'tegelijkertijd'],
         flagIf: ['eerst krachtvoer'],
       },
       {
@@ -889,13 +1267,14 @@ export const INTAKE_SCHEMA: Section[] = [
         id: 'foto-hooi',
         label: 'Foto van het hooi',
         type: 'photo',
-        hint: 'Eén hapje uit een baal, op een neutrale ondergrond.',
+        hint:
+          'Pak een paar plukjes hooi uit de baal (liefst uit verschillende plekken), spreid deze los uit op een neutrale, egale ondergrond en maak een duidelijke foto van dichtbij.',
       },
 
       { id: 'sec-voordroog', label: 'Voordroog en kuil', type: 'sectionhead' },
       {
         id: 'voordroog-verleden',
-        label: 'Ooit voordroog of kuil gegeten?',
+        label: 'Heeft je paard ooit ruwvoer verpakt in plastic gegeten? (voordroog of kuil)',
         type: 'radio',
         required: true,
         options: ['ja, nu nog', 'ja, vroeger', 'nee'],
@@ -929,47 +1308,97 @@ export const INTAKE_SCHEMA: Section[] = [
         showIf: { 'voordroog-verleden': 'ja, nu nog' },
       },
 
+      { id: 'sec-graszaadhooi', label: 'Graszaadhooi', type: 'sectionhead' },
+      {
+        id: 'graszaadhooi',
+        label: 'Krijgt jouw paard graszaadhooi?',
+        type: 'radio',
+        options: ['Nee', 'Ja', 'Weet ik niet'],
+      },
+      {
+        id: 'graszaadhooi-aandeel',
+        label: 'Ongeveer hoeveel van het totale ruwvoer bestaat uit graszaadhooi?',
+        type: 'radio',
+        options: ['<25%', '25–50%', '50–75%', '>75%', '100%', 'Weet ik niet'],
+        showIf: { graszaadhooi: 'Ja' },
+      },
+      {
+        id: 'graszaadhooi-cert',
+        label: 'Is het graszaadhooi gecertificeerd geschikt als paardenvoer?',
+        type: 'radio',
+        options: ['Ja', 'Nee', 'Weet ik niet'],
+        showIf: { graszaadhooi: 'Ja' },
+      },
+
       { id: 'sec-stro', label: 'Stro', type: 'sectionhead' },
       {
         id: 'stro-aanwezig',
-        label: 'Geef je wel eens stro?',
+        label: 'Eet jouw paard stro?',
         type: 'radio',
         required: true,
-        options: ['ja', 'nee'],
-      },
-      {
-        id: 'stro-manier',
-        label: 'Op wat voor manier?',
-        type: 'multi',
-        options: ['als bodembedekking', 'in slowfeeders', 'gemixt met hooi', 'anders'],
-        showIf: { 'stro-aanwezig': 'ja' },
+        hint: 'Denk hierbij zowel aan stro als bodembedekking als aan bewust gevoerd stro.',
+        options: [
+          'Nee, mijn paard eet geen / nauwelijks stro',
+          'Ja, mijn paard knabbelt af en toe aan stro als bodembedekking',
+          'Ja, mijn paard eet duidelijk mee van de stro-bodembedekking',
+          'Ja, mijn paard krijgt stro bewust bijgevoerd als onderdeel van het rantsoen',
+          'Ja, zowel stro-bodembedekking als bewust bijgevoerd stro',
+          'Weet ik niet',
+        ],
       },
       {
         id: 'stro-type',
-        label: 'Wat voor stro?',
+        label: 'Om welk type stro gaat het?',
+        type: 'radio',
+        options: ['Tarwestro', 'Gerstestro', 'Haverstro', 'Anders, namelijk', 'Weet ik niet'],
+        showIf: {
+          'stro-aanwezig': [
+            'Ja, mijn paard knabbelt af en toe aan stro als bodembedekking',
+            'Ja, mijn paard eet duidelijk mee van de stro-bodembedekking',
+            'Ja, mijn paard krijgt stro bewust bijgevoerd als onderdeel van het rantsoen',
+            'Ja, zowel stro-bodembedekking als bewust bijgevoerd stro',
+          ],
+        },
+      },
+      {
+        id: 'stro-type-anders',
+        label: 'Anders, namelijk',
         type: 'text',
-        showIf: { 'stro-aanwezig': 'ja' },
+        showIf: { 'stro-type': 'Anders, namelijk' },
+      },
+      {
+        id: 'stro-biologisch',
+        label: 'Is het stro biologisch?',
+        type: 'radio',
+        options: ['Ja', 'Nee'],
+        showIf: {
+          'stro-aanwezig': [
+            'Ja, mijn paard knabbelt af en toe aan stro als bodembedekking',
+            'Ja, mijn paard eet duidelijk mee van de stro-bodembedekking',
+            'Ja, mijn paard krijgt stro bewust bijgevoerd als onderdeel van het rantsoen',
+            'Ja, zowel stro-bodembedekking als bewust bijgevoerd stro',
+          ],
+        },
       },
       {
         id: 'stro-hoeveelheid',
-        label: 'Hoeveel stro eet je paard per dag?',
-        type: 'text',
-        hint: 'Zou je hem/haar een "stro-eter" noemen?',
-        showIf: { 'stro-aanwezig': 'ja' },
-      },
-      {
-        id: 'stro-kwaliteit',
-        label: 'Kwaliteit stro',
-        type: 'multi',
-        options: ['gelig', 'grijzig', 'ruikt fris', 'ruikt schimmelig', 'ruikt chemisch', 'anders'],
-        showIf: { 'stro-aanwezig': 'ja' },
-        flagIf: ['grijzig', 'ruikt schimmelig', 'ruikt chemisch'],
+        label: 'Hoeveel stro eet jouw paard ongeveer?',
+        type: 'number',
+        unit: 'kg',
+        showIf: {
+          'stro-aanwezig': [
+            'Ja, mijn paard knabbelt af en toe aan stro als bodembedekking',
+            'Ja, mijn paard eet duidelijk mee van de stro-bodembedekking',
+            'Ja, mijn paard krijgt stro bewust bijgevoerd als onderdeel van het rantsoen',
+            'Ja, zowel stro-bodembedekking als bewust bijgevoerd stro',
+          ],
+        },
       },
 
       { id: 'sec-kracht', label: 'Krachtvoer en bijvoer', type: 'sectionhead' },
       {
         id: 'voer-gewisseld',
-        label: 'Recent gewisseld van (ruw)voer?',
+        label: 'Ben je recent gewisseld van (ruw)voer?',
         type: 'radio',
         required: true,
         options: ['ja, <3 maanden', 'ja, <6 maanden', 'nee'],
@@ -977,37 +1406,48 @@ export const INTAKE_SCHEMA: Section[] = [
       },
       {
         id: 'voer-gewisseld-toelichting',
-        label: 'Toelichting voerwissel',
+        label: 'Toelichting voerwissel — van wat precies?',
         type: 'textarea',
         hint: 'Wat kreeg ze hiervoor en wanneer overgegaan?',
         showIf: { 'voer-gewisseld': ['ja, <3 maanden', 'ja, <6 maanden'] },
       },
       {
-        id: 'krachtvoer-detail',
-        label: 'Welk krachtvoer en in welke hoeveelheid?',
-        type: 'textarea',
+        id: 'huidige-bijvoeding',
+        label: 'Welke bijvoeding geef je allemaal OP DIT MOMENT en in welke hoeveelheden?',
+        type: 'repeater',
         required: true,
-        hint: 'Merknamen + type EXACT benoemen. Bv. "Pavo Slobber, 1 schep per ochtend".',
+        hint: 'Merknamen + type EXACT benoemen.',
+        sub: [
+          { id: 'product', label: 'Merk + exacte productnaam', type: 'text' },
+          { id: 'hoeveelheid', label: 'Hoeveelheid per dag', type: 'text' },
+        ],
       },
       {
-        id: 'bijvoer-5jaar',
-        label: 'Bijvoer afgelopen 5 jaar',
-        type: 'textarea',
+        id: 'bijvoeding-historie',
+        label: 'Welke bijvoeding heeft jouw paard in de afgelopen 2–5 jaar gekregen?',
+        type: 'repeater',
         required: true,
-        hint: "Muesli's, granen, bietenpulp, gehakseld ruwvoer, enz.",
+        hint:
+          "Exclusief supplementen, die komen later. Denk aan muesli's, brokken, balancers, bietenpulp, luzerne, mash, gehakseld ruwvoer, etc. Graag ook kortdurende periodes meenemen.",
+        sub: [
+          { id: 'product', label: 'Merk + exacte productnaam', type: 'text' },
+          { id: 'wanneer', label: 'Ongeveer wanneer (jaartal/periode)', type: 'text' },
+          { id: 'hoelang', label: 'Hoe lang gevoerd (weken/maanden/jaren)', type: 'text' },
+        ],
       },
       {
         id: 'balancer',
-        label: 'Balancer / mineralenvoeding?',
+        label: 'Welke mineralenvoeding / balancer krijgt je paard op dit moment?',
         type: 'textarea',
         required: true,
         hint: 'Merk, type, hoeveelheid.',
       },
       {
         id: 'mineralen-toegang',
-        label: 'Toegang tot welke mineralen?',
+        label: 'Heeft je paard verder nog toegang tot andere mineralen?',
         type: 'multi',
         required: true,
+        hint: 'Denk aan mineralenbuffet, likstenen etc.',
         options: [
           'gewone liksteen',
           'Himalaya zoutsteen',
@@ -1024,21 +1464,49 @@ export const INTAKE_SCHEMA: Section[] = [
       { id: 'sec-supp', label: 'Snacks en supplementen', type: 'sectionhead' },
       {
         id: 'snacks-aanwezig',
-        label: 'Krijgt je paard snacks?',
+        label: "Krijgt jouw paard snacks, tussendoortjes of extra's buiten het normale voer om?",
         type: 'radio',
         required: true,
-        options: ['ja', 'nee'],
+        hint: 'Denk óók aan kleine dingen.',
+        options: ['Nee', 'Ja'],
+      },
+      {
+        id: 'snacks-welke',
+        label: 'Wat krijgt jouw paard allemaal?',
+        type: 'multi',
+        hint: 'Vink alles aan wat van toepassing is.',
+        options: [
+          'Paardensnoepjes / treats',
+          'Wortels',
+          'Appels',
+          'Brood / crackers / menselijke etensresten',
+          'Likemmers / stal-likproducten / "Licki" / boredom breakers',
+          'Extra handjes voer / losse brokjes tussendoor',
+          'Kruiden / planten / takken als snack',
+          'Anders, namelijk',
+        ],
+        showIf: { 'snacks-aanwezig': 'Ja' },
+      },
+      {
+        id: 'snacks-anders',
+        label: 'Anders, namelijk',
+        type: 'text',
+        showIf: { 'snacks-welke': 'Anders, namelijk' },
       },
       {
         id: 'snacks-detail',
-        label: 'Wat geef je precies en hoeveel?',
-        type: 'textarea',
-        hint: 'Wortel, appel, fruit, brood, paardensnoepjes (met merk/type), …',
-        showIf: { 'snacks-aanwezig': 'ja' },
+        label: 'Graag per product vermelden',
+        type: 'repeater',
+        showIf: { 'snacks-aanwezig': 'Ja' },
+        sub: [
+          { id: 'product', label: 'Wat precies (merk + productnaam indien relevant)', type: 'text' },
+          { id: 'frequentie', label: 'Hoe vaak (dagelijks / wekelijks / af en toe)', type: 'text' },
+          { id: 'hoeveel', label: 'Ongeveer hoeveel', type: 'text' },
+        ],
       },
       {
         id: 'huidig-extra',
-        label: 'Alle huidige medicijnen, supplementen, bijvoeding',
+        label: 'Benoem hier alle HUIDIGE supplementen',
         type: 'repeater',
         required: true,
         hint: 'Hoeveelheid, merk, sinds wanneer.',
@@ -1053,15 +1521,15 @@ export const INTAKE_SCHEMA: Section[] = [
       },
       {
         id: 'historie-extra',
-        label: 'Alle medicijnen / supplementen / bijvoeding LAATSTE 5 JAAR',
+        label: 'Welke supplementen heeft jouw paard in de afgelopen 2–5 jaar gekregen?',
         type: 'repeater',
         required: true,
-        hint: 'Hoeveelheid, merk, periode (van–tot).',
+        hint:
+          'Denk aan: vitaminen/mineralen, magnesium, probiotica, kruiden, darmproducten, lever-/nierondersteuning, olie, elektrolyten, aminozuren, hoef-, huid-, gewrichts-, luchtweg- of maagproducten, etc. Zet zo volledig mogelijk op een rijtje.',
         sub: [
-          { id: 'naam', label: 'Naam', type: 'text' },
-          { id: 'merk', label: 'Merk / type', type: 'text' },
-          { id: 'dosering', label: 'Dosering', type: 'text' },
-          { id: 'periode', label: 'Periode (van – tot)', type: 'text' },
+          { id: 'product', label: 'Merk + exacte productnaam', type: 'text' },
+          { id: 'wanneer', label: 'Ongeveer wanneer (jaartal/periode)', type: 'text' },
+          { id: 'hoelang', label: 'Hoe lang gegeven (weken/maanden/jaren)', type: 'text' },
         ],
       },
     ],
@@ -1072,15 +1540,15 @@ export const INTAKE_SCHEMA: Section[] = [
     id: 'water',
     nr: 6,
     title: 'Water & uitscheiding',
-    intro: 'Hoe drinkt ze, en wat komt eruit.',
+    intro: '',
     minutes: 5,
     icon: 'droplet',
     sub: 'Vochtinname, urine, mest',
     fields: [
       {
         id: 'water-type',
-        label: 'Wat voor water drinkt het paard?',
-        type: 'radio',
+        label: 'Wat voor water drinkt je paard?',
+        type: 'multi',
         required: true,
         options: [
           'leidingwater',
@@ -1094,37 +1562,53 @@ export const INTAKE_SCHEMA: Section[] = [
       },
       {
         id: 'water-analyse',
-        label: 'Water-analyse aanwezig?',
+        label: 'Is er een wateranalyse aanwezig?',
         type: 'file',
-        hint: 'Vooral relevant als geen leidingwater, upload PDF.',
-        showIf: {
-          'water-type': ['regenwater', 'grondwater', 'slootwater / oppervlaktewater', 'anders'],
-        },
+        hint: 'Upload PDF.',
       },
       {
         id: 'water-aanbod',
-        label: 'Hoe wordt het water aangeboden?',
-        type: 'radio',
+        label: 'Hoe wordt water aangeboden?',
+        type: 'multi',
         required: true,
+        hint: 'Vink alles aan wat van toepassing is.',
         options: [
-          'speciekuipen / plastic emmers / troggen',
-          'automatische drinkbakken',
-          'anders',
+          'Automatische drinkbak',
+          'Emmer(s)',
+          'Grote bak / ton / kuip',
+          'Drinkbak in stal',
+          'Drinkbak buiten / paddock / weide',
+          'Natuurlijke waterbron (sloot, beek, vijver, etc.)',
+          'Anders, namelijk',
         ],
       },
       {
+        id: 'water-aanbod-anders',
+        label: 'Anders, namelijk',
+        type: 'text',
+        showIf: { 'water-aanbod': 'Anders, namelijk' },
+      },
+      {
         id: 'water-toegang',
-        label: 'Hele dag toegang tot drinkwater?',
+        label: 'Heeft jouw paard altijd toegang tot water?',
         type: 'radio',
         required: true,
-        options: ['ja', 'nee'],
-        flagIf: ['nee'],
+        options: ['Ja, continu', 'Meestal wel', 'Nee, niet altijd', 'Weet ik niet'],
+        flagIf: ['Nee, niet altijd'],
+      },
+      {
+        id: 'water-verversen',
+        label: 'Wordt het water regelmatig ververst / de bakken schoongemaakt?',
+        type: 'radio',
+        options: ['Dagelijks', 'Meerdere keren per week', 'Minder vaak', 'Weet ik niet'],
+        flagIf: ['Minder vaak'],
       },
       {
         id: 'water-kwaliteit',
         label: 'Hoe omschrijf je de kwaliteit van het water?',
         type: 'multi',
         required: true,
+        hint: 'Vink alles aan wat relevant is.',
         options: [
           'neutraal / schoon',
           'zwavelachtig',
@@ -1135,8 +1619,6 @@ export const INTAKE_SCHEMA: Section[] = [
           'gelig',
           'bruinig',
           'groenig',
-          'koud',
-          'lauw',
         ],
         flagIf: [
           'zwavelachtig',
@@ -1151,38 +1633,63 @@ export const INTAKE_SCHEMA: Section[] = [
       },
       {
         id: 'vochtinname',
-        label: 'Hoe is de vochtinname?',
+        label: 'Drinkt jouw paard naar jouw idee voldoende?',
         type: 'radio',
         required: true,
-        options: ['lijkt normaal', 'lijkt minder', 'lijkt meer', 'weet ik niet'],
-        flagIf: ['lijkt minder', 'lijkt meer'],
+        options: [
+          'Ja',
+          'Twijfelachtig / wisselend',
+          'Nee / drinkt opvallend weinig',
+          'Drinkt opvallend veel',
+          'Weet ik niet',
+        ],
+        flagIf: ['Twijfelachtig / wisselend', 'Nee / drinkt opvallend weinig', 'Drinkt opvallend veel'],
       },
 
       { id: 'sec-uit', label: 'Urine en mest', type: 'sectionhead' },
       {
         id: 'urine',
-        label: 'Urine',
+        label: 'Hoe is de urine van je paard?',
         type: 'multi',
         options: ['helder', 'gelig', 'oranje', 'troebel', 'normaal volume', 'minder', 'meer'],
         flagIf: ['oranje', 'troebel', 'minder', 'meer'],
       },
       {
         id: 'mest-freq',
-        label: 'Mest-frequentie per dag',
+        label: 'Wat is de mest frequentie per dag?',
         type: 'radio',
-        options: ['<6×', '6–10×', '10–14×', '>14×'],
+        options: ['<6×', '6–10×', '10–14×', '>14×', 'weet ik niet'],
       },
       {
         id: 'mest-geur',
-        label: 'Geur van mest',
-        type: 'radio',
-        options: ['normaal', 'iets penetrant', 'sterk / rottend'],
-        flagIf: ['iets penetrant', 'sterk / rottend'],
+        label: 'Valt de geur van de mest van jouw paard op?',
+        type: 'multi',
+        options: [
+          'Nee, ruikt normaal / niet opvallend',
+          'Ja, zuur / fermentatieachtig',
+          'Ja, sterk / scherper ruikend dan van andere paarden',
+          'Ja, rottingsachtig / onaangenaam',
+          'Ja, wisselend',
+          'Anders, namelijk',
+          'Weet ik niet',
+        ],
+        flagIf: [
+          'Ja, zuur / fermentatieachtig',
+          'Ja, sterk / scherper ruikend dan van andere paarden',
+          'Ja, rottingsachtig / onaangenaam',
+          'Ja, wisselend',
+        ],
+      },
+      {
+        id: 'mest-geur-anders',
+        label: 'Anders, namelijk',
+        type: 'text',
+        showIf: { 'mest-geur': 'Anders, namelijk' },
       },
       {
         id: 'mest-kleur',
         label: 'Kleur van mest',
-        type: 'radio',
+        type: 'multi',
         options: ['groen', 'bruingroen', 'bruin', 'donkerbruin', 'zwart'],
         flagIf: ['zwart'],
       },
@@ -1207,10 +1714,11 @@ export const INTAKE_SCHEMA: Section[] = [
       },
       {
         id: 'foto-mest',
-        label: 'Foto van mest (laatste 24u)',
+        label: "Upload foto's van de mest van je paard",
         type: 'photo',
         required: true,
-        hint: 'Eén hoopje, op een schone ondergrond. Cruciale info voor mij.',
+        hint:
+          "Maak 3 foto's: (1) van bovenaf van de mesthoop; (2) één mestbal voorzichtig een beetje open zodat de binnenkant zichtbaar is, close-up; (3) één verse mestbal geplet met je voet op een harde, schone ondergrond (geen zand/stro), close-up. Gebruik verse mest, daglicht, en stuur enkel scherpe foto's.",
       },
     ],
   },
@@ -1636,6 +2144,39 @@ export const INTAKE_SCHEMA: Section[] = [
         label: 'Foto · slijmvlies (tandvlees of oogwit)',
         type: 'photo',
         hint: 'Optioneel maar enorm waardevol.',
+      },
+
+      {
+        id: 'sec-hoef-upload',
+        label: 'Indien je hulpvraag hoefgerelateerd is',
+        type: 'sectionhead',
+      },
+      {
+        id: 'foto-hoef-instructie',
+        label: "Upload van iedere hoef 3 foto's (12 in totaal)",
+        type: 'photo',
+        hint:
+          "Per hoef: (1) onderzijde / zool, (2) achterzijde, (3) zijaanzicht. De hoeven moeten zeer goed schoongemaakt zijn — verwijder alle modder, zand, mest en losse vervuiling (gebruik indien nodig een staalborstel). Zorg voor goed licht en scherpe foto's, recht van voren / van opzij.",
+      },
+      {
+        id: 'foto-hoef-lv',
+        label: 'Foto · linkervoorhoef (zool, achterzijde, zijaanzicht)',
+        type: 'photo',
+      },
+      {
+        id: 'foto-hoef-rv',
+        label: 'Foto · rechtervoorhoef (zool, achterzijde, zijaanzicht)',
+        type: 'photo',
+      },
+      {
+        id: 'foto-hoef-la',
+        label: 'Foto · linkerachterhoef (zool, achterzijde, zijaanzicht)',
+        type: 'photo',
+      },
+      {
+        id: 'foto-hoef-ra',
+        label: 'Foto · rechterachterhoef (zool, achterzijde, zijaanzicht)',
+        type: 'photo',
       },
     ],
   },

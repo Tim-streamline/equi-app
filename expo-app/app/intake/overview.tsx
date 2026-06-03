@@ -26,6 +26,7 @@ import {
 import { IconButton } from '@/components/ui/IconButton';
 import {
   INTAKE_SCHEMA,
+  INTAKE_DISCLAIMER_SHORT,
   Section,
 } from '@/lib/intake/schema';
 import {
@@ -80,6 +81,11 @@ export default function IntakeOverview() {
         </View>
 
         <ScrollView contentContainerStyle={{ paddingBottom: 100 }}>
+          <View className="mx-4 mb-4 rounded-2xl bg-mint-50 p-3.5">
+            <Text className="text-[12.5px] leading-[18px] text-ink-70">
+              {INTAKE_DISCLAIMER_SHORT}
+            </Text>
+          </View>
           <View className="mx-4 mb-4 overflow-hidden rounded-card bg-teal-700 px-[18px] py-[18px]">
             <View className="flex-row items-start justify-between">
               <View className="flex-1">
