@@ -2,12 +2,33 @@
 // reads/writes the value through the IntakeProvider. Sticking to one parent
 // component keeps auto-save behavior uniform across every input type.
 
-import { View, Text, TextInput, Pressable } from 'react-native';
+import { View, Text, TextInput, Pressable, Image } from 'react-native';
 import { Check, Camera, Plus, FileText, Trash2 } from 'lucide-react-native';
 
 import { Field, FieldValue, RepeaterSub } from '@/lib/intake/schema';
+import { isFieldRequired, isNoneOption } from '@/lib/intake/logic';
 import { useIntake } from '@/lib/intake/store';
 import { FieldLabel } from './FieldLabel';
+
+/** Bundled example strip shown under the "hoefgerelateerd" upload header. */
+const HOOF_EXAMPLE = require('@/assets/images/intake-hoef-voorbeeld.png');
+
+/** Normalize a persisted value to an array — guards against stale answers
+ * saved under a different field type (e.g. a radio value left behind when the
+ * field became a multi), which previously crashed the renderer on toggle. */
+function asArray<T = string>(value: FieldValue): T[] {
+  if (Array.isArray(value)) return value as T[];
+  if (value == null || value === '') return [];
+  return [value as unknown as T];
+}
+
+/** Normalize a persisted value to a string for text-like inputs. */
+function asText(value: FieldValue): string | undefined {
+  if (value == null) return undefined;
+  if (typeof value === 'string') return value;
+  if (typeof value === 'number') return String(value);
+  return undefined;
+}
 
 type Props = {
   field: Field;
@@ -28,13 +49,30 @@ export function IntakeField({ field, sectionId, n }: Props) {
         <Text className="font-semi uppercase text-mint-700 text-[11px] tracking-eyebrow">
           {field.label}
         </Text>
+        {field.id === 'sec-hoef-upload' && (
+          <View className="mt-3">
+            <Image
+              source={HOOF_EXAMPLE}
+              style={{ width: '100%', height: 96, borderRadius: 12, resizeMode: 'cover' }}
+            />
+            <Text className="mt-1 text-[11px] text-ink-50">
+              Voorbeeld: onderzijde, achterzijde, zijaanzicht · bron: David Landreville
+            </Text>
+          </View>
+        )}
       </View>
     );
   }
 
   return (
     <View className="mb-5">
-      <FieldLabel n={n} label={field.label} hint={field.hint} required={field.required} />
+      <FieldLabel
+        n={n}
+        label={field.label}
+        hint={field.hint}
+        required={isFieldRequired(field)}
+        link={field.link}
+      />
       {renderInput(field, value, set)}
     </View>
   );
@@ -43,22 +81,37 @@ export function IntakeField({ field, sectionId, n }: Props) {
 function renderInput(field: Field, value: FieldValue, set: (v: FieldValue) => void) {
   switch (field.type) {
     case 'text':
-      return <TextInputField value={value as string | undefined} onChange={set} unit={field.unit} />;
+      return (
+        <TextInputField
+          value={asText(value)}
+          onChange={set}
+          unit={field.unit}
+          placeholder={field.placeholder}
+        />
+      );
     case 'textarea':
-      return <TextAreaField value={value as string | undefined} onChange={set} tall={field.tall} />;
+      return (
+        <TextAreaField
+          value={asText(value)}
+          onChange={set}
+          tall={field.tall}
+          placeholder={field.placeholder}
+        />
+      );
     case 'number':
       return (
         <TextInputField
-          value={value != null ? String(value) : undefined}
+          value={asText(value)}
           onChange={(v) => set(v === '' ? undefined : Number(v))}
           unit={field.unit}
+          placeholder={field.placeholder}
           keyboard="decimal-pad"
         />
       );
     case 'date':
       return (
         <TextInputField
-          value={value as string | undefined}
+          value={asText(value)}
           onChange={set}
           placeholder="dd-mm-jjjj"
         />
@@ -67,7 +120,7 @@ function renderInput(field: Field, value: FieldValue, set: (v: FieldValue) => vo
       return (
         <RadioField
           options={field.options ?? []}
-          value={value as string | undefined}
+          value={asText(value)}
           onChange={set}
         />
       );
@@ -75,21 +128,21 @@ function renderInput(field: Field, value: FieldValue, set: (v: FieldValue) => vo
       return (
         <MultiField
           options={field.options ?? []}
-          value={(value as string[] | undefined) ?? []}
+          value={asArray(value)}
           onChange={set}
         />
       );
     case 'photo':
       return (
         <PhotoField
-          value={(value as string[] | undefined) ?? []}
+          value={asArray(value)}
           onChange={set}
         />
       );
     case 'file':
       return (
         <FileField
-          value={(value as string[] | undefined) ?? []}
+          value={asArray(value)}
           onChange={set}
         />
       );
@@ -97,7 +150,7 @@ function renderInput(field: Field, value: FieldValue, set: (v: FieldValue) => vo
       return (
         <RepeaterField
           sub={field.sub ?? []}
-          value={(value as Record<string, string>[] | undefined) ?? []}
+          value={asArray<Record<string, string>>(value)}
           onChange={(rows) => set(rows)}
         />
       );
@@ -143,10 +196,12 @@ function TextAreaField({
   value,
   onChange,
   tall,
+  placeholder,
 }: {
   value?: string;
   onChange: (v: string) => void;
   tall?: boolean;
+  placeholder?: string;
 }) {
   return (
     <TextInput
@@ -154,6 +209,7 @@ function TextAreaField({
       numberOfLines={tall ? 12 : 4}
       value={value ?? ''}
       onChangeText={onChange}
+      placeholder={placeholder}
       placeholderTextColor="rgba(27,42,42,0.4)"
       className="rounded-xl border border-ink-8 bg-white px-4 py-3.5 font-sans text-[15px] text-ink"
       style={{ minHeight: tall ? 288 : 96, textAlignVertical: 'top' }}
@@ -247,14 +303,15 @@ function MultiField({
   onChange: (v: string[]) => void;
 }) {
   const toggle = (o: string) => {
-    // Mutually exclusive "geen" — picking it clears everything else; picking
-    // any other option clears a previously selected "geen". Mirrors how the
-    // therapist reads the answers.
-    if (o === 'geen') {
-      onChange(value.includes('geen') ? [] : ['geen']);
+    // Mutually exclusive "none" sentinel ("geen", "Geen van onderstaande",
+    // "Nee, nooit", …) — picking it clears everything else; picking any other
+    // option clears a previously selected sentinel. Mirrors how the therapist
+    // reads the answers.
+    if (isNoneOption(o)) {
+      onChange(value.includes(o) ? [] : [o]);
       return;
     }
-    const filtered = value.filter((v) => v !== 'geen');
+    const filtered = value.filter((v) => !isNoneOption(v));
     onChange(
       filtered.includes(o) ? filtered.filter((v) => v !== o) : [...filtered, o],
     );

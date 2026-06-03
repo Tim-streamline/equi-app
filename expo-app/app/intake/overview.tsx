@@ -7,21 +7,7 @@ import { useEffect, useState } from 'react';
 import { View, Text, ScrollView, Pressable } from 'react-native';
 import { router } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import {
-  ChevronLeft,
-  MoreHorizontal,
-  Check,
-  Mail,
-  AlertTriangle,
-  History as HistoryIcon,
-  Heart,
-  Leaf,
-  Droplet,
-  Home as HomeIcon,
-  Sparkles,
-  Camera,
-  Send,
-} from 'lucide-react-native';
+import { ChevronLeft, MoreHorizontal, Check, X } from 'lucide-react-native';
 
 import { IconButton } from '@/components/ui/IconButton';
 import {
@@ -35,20 +21,6 @@ import {
   nextSectionId,
 } from '@/lib/intake/logic';
 import { formatSavedAgo, useIntake } from '@/lib/intake/store';
-
-const SECTION_ICONS = {
-  mail: Mail,
-  horse: Sparkles, // Sparkles substitute — no horse glyph in lucide
-  alert: AlertTriangle,
-  history: HistoryIcon,
-  heart: Heart,
-  leaf: Leaf,
-  droplet: Droplet,
-  home: HomeIcon,
-  sparkles: Sparkles,
-  camera: Camera,
-  send: Send,
-} as const;
 
 type Status = 'done' | 'active' | 'todo';
 
@@ -136,7 +108,7 @@ export default function IntakeOverview() {
             <Text className="text-[12.5px] leading-[18px] text-ink-70">
               <Text className="font-bold text-mint-700">Tip · </Text>
               Doe één sectie per dag als je het rustig wilt aanpakken. Alles wordt automatisch
-              opgeslagen — je kunt later verder.
+              opgeslagen, je kunt later verder.
             </Text>
           </View>
 
@@ -159,7 +131,6 @@ export default function IntakeOverview() {
 }
 
 function SectionRow({ sec, status }: { sec: Section; status: Status }) {
-  const Icon = SECTION_ICONS[sec.icon];
   const active = status === 'active';
   const done = status === 'done';
 
@@ -176,15 +147,17 @@ function SectionRow({ sec, status }: { sec: Section; status: Status }) {
             : 'bg-white border border-ink-8'
       }`}
     >
+      {/* Status glyph: a check when the whole section is filled in, otherwise a
+          cross signalling it is not yet complete (per deel-2 spec). */}
       <View
         className={`h-10 w-10 items-center justify-center rounded-xl ${
-          done ? 'bg-mint-500' : 'bg-mint-50'
+          done ? 'bg-mint-500' : 'bg-ink-8'
         }`}
       >
         {done ? (
           <Check size={18} color="#fff" strokeWidth={3} />
         ) : (
-          <Icon size={18} color="#108A82" />
+          <X size={18} color="rgba(27,42,42,0.45)" strokeWidth={3} />
         )}
       </View>
       <View className="flex-1">

@@ -1,4 +1,4 @@
-import { View, Text } from 'react-native';
+import { View, Text, Linking } from 'react-native';
 
 type Props = {
   /** Two-digit field number shown as a small eyebrow ("01"). */
@@ -6,9 +6,14 @@ type Props = {
   label: string;
   hint?: string;
   required?: boolean;
+  /** Optional inline tappable hyperlink rendered within the label text. */
+  link?: { text: string; url: string };
 };
 
-export function FieldLabel({ n, label, hint, required }: Props) {
+export function FieldLabel({ n, label, hint, required, link }: Props) {
+  // When a link is present, split the label around its text so the matched
+  // phrase renders as a tappable hyperlink (e.g. "privacyverklaring").
+  const parts = link && label.includes(link.text) ? label.split(link.text) : null;
   return (
     <View className="mb-2">
       <View className="flex-row items-baseline gap-2">
@@ -16,7 +21,20 @@ export function FieldLabel({ n, label, hint, required }: Props) {
           {String(n).padStart(2, '0')}
         </Text>
         <Text className="flex-1 font-semi text-[14.5px] leading-[20px] text-ink">
-          {label}
+          {parts ? (
+            <>
+              {parts[0]}
+              <Text
+                className="text-mint-700 underline"
+                onPress={() => Linking.openURL(link!.url)}
+              >
+                {link!.text}
+              </Text>
+              {parts[1]}
+            </>
+          ) : (
+            label
+          )}
           {required && <Text className="text-danger"> *</Text>}
         </Text>
       </View>

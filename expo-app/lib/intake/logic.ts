@@ -27,6 +27,40 @@ function matches(value: unknown, trigger: Trigger): boolean {
 }
 
 /**
+ * Whether a multi-option label is a "none / not-applicable" sentinel — these
+ * are mutually exclusive with every other option and never count as a real
+ * flag/"any-checked" answer. Generalized from the original literal `'geen'`
+ * to also cover "Geen van onderstaande", "Geen andere diersoorten",
+ * "Nee, nooit", etc. that the deel-2 spec introduced.
+ */
+const NONE_OPTIONS = new Set([
+  'geen',
+  'nee',
+  'nee, nooit',
+  'niet van toepassing',
+  'geen van onderstaande',
+  'geen andere diersoorten',
+  'geen belangrijke veranderingen',
+  'geen echte schuilmogelijkheid',
+  'geen opvallende bijzonderheden',
+  'geen bijzonderheden',
+]);
+
+export function isNoneOption(option: string): boolean {
+  // Explicit allowlist rather than a `startsWith('geen')` rule: several
+  // legitimate, combinable traits also start with "Geen" (e.g. "Geen actief
+  // beheer", "Geen duidelijke klachten, maar…") and must NOT clear the rest.
+  return NONE_OPTIONS.has(option.trim().toLowerCase());
+}
+
+/** Whether the field/value indicates "every question is mandatory" gating. */
+export function isFieldRequired(field: Field): boolean {
+  if (field.optional) return false;
+  if (field.type === 'sectionhead') return false;
+  return true;
+}
+
+/**
  * Whether a field counts as genuinely answered. Stricter than `!isEmpty` for
  * option-based fields: a value is only valid if it still matches the field's
  * current `options`. This keeps the "X / Y vragen beantwoord" tally (and the
@@ -70,8 +104,8 @@ export function showField(field: Field, sectionAnswers: SectionAnswers): boolean
     // non-"geen" option selected (used for "describe what you picked" follow-ups).
     if (set.includes('any-checked')) {
       const checked = Array.isArray(value)
-        ? value.some((v) => v !== 'geen')
-        : value != null && value !== '' && value !== 'geen';
+        ? value.some((v) => !isNoneOption(String(v)))
+        : value != null && value !== '' && !isNoneOption(String(value));
       if (!checked) return false;
       continue;
     }
@@ -92,10 +126,14 @@ export function visibleFieldsForRender(section: Section, answers: SectionAnswers
   return section.fields.filter((f) => showField(f, answers));
 }
 
-/** Required fields whose answer is still missing. */
+/**
+ * Visible fields that still need an answer. Per the deel-2 spec every visible
+ * question is mandatory, so this is "all visible non-optional fields that are
+ * not yet answered" — not just the ones tagged `required`.
+ */
 export function missingRequired(section: Section, answers: SectionAnswers): Field[] {
   return visibleFields(section, answers).filter(
-    (f) => f.required && !isFieldAnswered(f, answers[f.id]),
+    (f) => isFieldRequired(f) && !isFieldAnswered(f, answers[f.id]),
   );
 }
 
@@ -157,8 +195,8 @@ export function fieldFlagged(field: Field, value: unknown): boolean {
   if (!field.flagIf) return false;
   if (field.flagIf === 'non-empty') return !isEmpty(value);
   if (field.flagIf === 'any') {
-    if (Array.isArray(value)) return value.filter((v) => v !== 'geen').length > 0;
-    return !isEmpty(value) && value !== 'geen';
+    if (Array.isArray(value)) return value.filter((v) => !isNoneOption(String(v))).length > 0;
+    return !isEmpty(value) && !isNoneOption(String(value));
   }
   return matches(value, field.flagIf);
 }

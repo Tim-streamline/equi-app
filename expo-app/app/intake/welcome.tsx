@@ -48,11 +48,17 @@ export default function IntakeWelcome() {
           <Text className="mb-3.5 font-bold text-white" style={{ fontSize: 30, lineHeight: 34 }}>
             Vertel me over <Text className="text-mint-300">{horseName}</Text>.
           </Text>
-          <Text className="mb-6 text-[14px] leading-[22px] text-white/80">
-            {INTAKE_SCHEMA.length - 1} korte secties, samen ongeveer{' '}
-            <Text className="text-white">30 minuten</Text>. Tussentijds opslaan kan altijd; je hoeft
+          <Text className="mb-4 text-[14px] leading-[22px] text-white/80">
+            {INTAKE_SCHEMA.length - 1} korte secties. Tussentijds opslaan kan altijd; je hoeft
             het niet in één keer af te ronden.
           </Text>
+          <View className="mb-6 rounded-2xl bg-mint-500/20 p-4">
+            <Text className="text-[13px] leading-[19px] text-white">
+              <Text className="font-bold">Let op · </Text>
+              Vul de intake binnen <Text className="font-bold">2 maanden na aanschaf</Text> in.
+              Daarna vervalt de intake.
+            </Text>
+          </View>
 
           <View className="gap-3.5 mb-8">
             {[

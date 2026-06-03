@@ -134,8 +134,8 @@ export default function IntakeSubmit() {
           <View className="rounded-2xl bg-mint-50 p-3.5">
             <Text className="text-[12.5px] leading-[18px] text-ink-70">
               <Text className="font-bold text-mint-700">Even checken · </Text>
-              Klopt alles? Na verzenden kun je nog wel aanvullen, maar antwoorden aanpassen kost
-              mij wel een &lsquo;rerun&rsquo;.
+              Klopt alles? Loop nog een keer door je antwoorden voordat je het instuurt. Na het
+              insturen kan het niet meer worden aangepast.
             </Text>
           </View>
         </ScrollView>
@@ -148,7 +148,7 @@ export default function IntakeSubmit() {
           }}
         >
           <Button
-            title="Verzenden naar Shelley"
+            title="VERSTUREN"
             variant="primary"
             disabled={incompleteSections.length > 0}
             onPress={onSubmit}
