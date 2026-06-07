@@ -67,6 +67,8 @@ class SyncAccessPolicy
             'chat_sessions' => $this->ownsChatSession($userId, $existing, $data),
             'chat_messages' => $this->ownsChatMessage($userId, $existing, $data),
             'intake_bookings' => $this->ownsIntakeBooking($userId, $existing, $data),
+            'intake_responses' => $this->ownsIntakeResponse($userId, $existing, $data),
+            'intake_answers' => $this->ownsIntakeAnswer($userId, $existing, $data),
             default => false,
         };
 
@@ -227,6 +229,30 @@ class SyncAccessPolicy
         $horseId = $this->value('horse_id', $existing, $data);
 
         return ! is_string($horseId) || $horseId === '' || $this->ownsHorse($userId, $horseId);
+    }
+
+    private function ownsIntakeResponse(string $userId, ?object $existing, array $data): bool
+    {
+        if ($this->value('user_id', $existing, $data) !== $userId) {
+            return false;
+        }
+
+        $horseId = $this->value('horse_id', $existing, $data);
+
+        return ! is_string($horseId) || $horseId === '' || $this->ownsHorse($userId, $horseId);
+    }
+
+    private function ownsIntakeAnswer(string $userId, ?object $existing, array $data): bool
+    {
+        $responseId = $this->value('response_id', $existing, $data);
+        if (! is_string($responseId)) {
+            return false;
+        }
+
+        return DB::table('intake_responses')
+            ->where('id', $responseId)
+            ->where('user_id', $userId)
+            ->exists();
     }
 
     private function ownsHorse(string $userId, string $horseId): bool

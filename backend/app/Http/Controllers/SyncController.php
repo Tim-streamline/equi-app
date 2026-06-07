@@ -88,6 +88,8 @@ class SyncController extends Controller
         'chat_messages' => Models\ChatMessage::class,
         'nova_fallback_replies' => Models\NovaFallbackReply::class,
         'intake_bookings' => Models\IntakeBooking::class,
+        'intake_responses' => Models\IntakeResponse::class,
+        'intake_answers' => Models\IntakeAnswer::class,
     ];
 
     public function upload(Request $request): JsonResponse

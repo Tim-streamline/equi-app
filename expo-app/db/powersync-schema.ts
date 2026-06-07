@@ -452,6 +452,28 @@ const intake_bookings = new Table({
   notes: column.text,
 }, { indexes: { byUser: ['user_id'] } });
 
+// Protocol-intake form: one response row per user, with one answer row per
+// answered question. `value` holds the JSON-encoded answer (scalar, multi
+// array, or repeater rows) — see lib/intake/store.tsx.
+const intake_responses = new Table({
+  user_id: column.text,
+  horse_id: column.text,
+  status: column.text,
+  started_at: column.text,
+  submitted_at: column.text,
+  created_at: column.text,
+  updated_at: column.text,
+}, { indexes: { byUser: ['user_id'] } });
+
+const intake_answers = new Table({
+  response_id: column.text,
+  section_id: column.text,
+  field_id: column.text,
+  value: column.text,
+  created_at: column.text,
+  updated_at: column.text,
+}, { indexes: { byResponse: ['response_id'] } });
+
 export const AppSchema = new Schema({
   users,
   therapists,
@@ -500,5 +522,7 @@ export const AppSchema = new Schema({
   chat_messages,
   nova_fallback_replies,
   intake_bookings,
+  intake_responses,
+  intake_answers,
 });
 

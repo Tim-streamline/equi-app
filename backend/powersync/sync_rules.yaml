@@ -85,6 +85,12 @@ streams:
                     SELECT id FROM chat_sessions WHERE user_id = auth.user_id()
                 )
             - SELECT * FROM intake_bookings WHERE user_id = auth.user_id()
+            - SELECT * FROM intake_responses WHERE user_id = auth.user_id()
+            - |
+                SELECT * FROM intake_answers
+                WHERE response_id IN (
+                    SELECT id FROM intake_responses WHERE user_id = auth.user_id()
+                )
 
     horse_private:
         auto_subscribe: true
