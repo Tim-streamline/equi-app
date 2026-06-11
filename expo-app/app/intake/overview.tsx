@@ -7,7 +7,7 @@ import { useEffect, useState } from 'react';
 import { View, Text, ScrollView, Pressable } from 'react-native';
 import { router } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { ChevronLeft, MoreHorizontal, Check, X } from 'lucide-react-native';
+import { ChevronLeft, MoreHorizontal, Check, X, AlertTriangle } from 'lucide-react-native';
 
 import { IconButton } from '@/components/ui/IconButton';
 import {
@@ -53,11 +53,6 @@ export default function IntakeOverview() {
         </View>
 
         <ScrollView contentContainerStyle={{ paddingBottom: 100 }}>
-          <View className="mx-4 mb-4 rounded-2xl bg-mint-50 p-3.5">
-            <Text className="text-[12.5px] leading-[18px] text-ink-70">
-              {INTAKE_DISCLAIMER_SHORT}
-            </Text>
-          </View>
           <View className="mx-4 mb-4 overflow-hidden rounded-card bg-teal-700 px-[18px] py-[18px]">
             <View className="flex-row items-start justify-between">
               <View className="flex-1">
@@ -91,11 +86,26 @@ export default function IntakeOverview() {
             )}
           </View>
 
+          <View className="mx-4 mb-4 flex-row gap-3 rounded-2xl border border-[#E8C98A] bg-[#FBE9C6] p-3.5">
+            <AlertTriangle size={18} color="#8C6420" style={{ marginTop: 1 }} />
+            <View className="flex-1">
+              <Text
+                className="mb-1 font-bold uppercase text-[#8C6420]"
+                style={{ fontSize: 11, letterSpacing: 1 }}
+              >
+                Disclaimer
+              </Text>
+              <Text className="text-[12.5px] italic leading-[18px] text-[#5A4214]">
+                {INTAKE_DISCLAIMER_SHORT}
+              </Text>
+            </View>
+          </View>
+
           <View className="mx-4 gap-2">
             {INTAKE_SCHEMA.map((s) => {
               const a = state.answers[s.id] ?? {};
               const status: Status =
-                isSectionComplete(s, a) && Object.keys(a).length > 0
+                isSectionComplete(s, a, state.answers) && Object.keys(a).length > 0
                   ? 'done'
                   : s.id === upcomingId
                     ? 'active'

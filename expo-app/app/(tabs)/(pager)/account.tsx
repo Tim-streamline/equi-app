@@ -3,6 +3,7 @@ import { View, Text, ScrollView, Pressable, Image, Alert, ActivityIndicator } fr
 import { router } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
+import Constants from 'expo-constants';
 import {
   ChevronRight, Plus, Bell, Download, Settings, Heart, MessageCircle, LogOut,
 } from 'lucide-react-native';
@@ -199,6 +200,9 @@ export default function AccountScreen() {
             </Pressable>
             <Text className="mt-2 text-center text-[11px] text-ink-50">
               Ingelogd als {(user.email as string) ?? ''}
+            </Text>
+            <Text className="mt-1 text-center text-[11px] text-ink-50">
+              v{Constants.expoConfig?.version ?? '0.0.0'}
             </Text>
           </View>
         </ScrollView>

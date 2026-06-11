@@ -2,7 +2,7 @@
 // the number of flagged answers (so the customer knows Shelley will pay extra
 // attention to those), and submits the intake.
 
-import { View, Text, ScrollView, Pressable } from 'react-native';
+import { View, Text, ScrollView, Pressable, Alert } from 'react-native';
 import { router } from 'expo-router';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ChevronLeft, Check, Send, AlertTriangle } from 'lucide-react-native';
@@ -24,12 +24,33 @@ export default function IntakeSubmit() {
   const flags = countFlags(state.answers);
   const critical = hasCriticalAnswers(state.answers);
 
-  const incompleteSections = INTAKE_SCHEMA.filter((s) => {
+  // Per section, the still-missing required questions (by their visible label),
+  // so we can both list them inline and surface them in the "you can't send
+  // yet" notification when someone taps VERSTUREN too early.
+  const missingBySection = INTAKE_SCHEMA.map((s) => {
     const a = state.answers[s.id] ?? {};
-    return !isSectionComplete(s, a) || Object.keys(a).length === 0;
-  });
+    const fields = missingRequired(s, a, state.answers);
+    const empty = Object.keys(a).length === 0;
+    return { section: s, fields, incomplete: empty || fields.length > 0 };
+  }).filter((m) => m.incomplete);
 
   const onSubmit = () => {
+    if (missingBySection.length > 0) {
+      // "Pushmelding": tell the customer exactly which question in which
+      // subscreen still needs an answer before the form can be sent.
+      const lines = missingBySection
+        .map((m) => {
+          const labels = m.fields.map((f) => `• ${f.label}`).join('\n');
+          return `${m.section.nr}. ${m.section.title}\n${labels || '• Nog niet ingevuld'}`;
+        })
+        .join('\n\n');
+      Alert.alert(
+        'Nog niet compleet',
+        `Vul eerst de volgende vragen in voordat je verstuurt:\n\n${lines}`,
+        [{ text: 'Oké' }],
+      );
+      return;
+    }
     submit();
     router.replace('/intake/sent' as any);
   };
@@ -78,22 +99,40 @@ export default function IntakeSubmit() {
             </View>
           )}
 
-          {incompleteSections.length > 0 && (
+          {missingBySection.length > 0 && (
             <View className="mb-4 rounded-2xl bg-[#F4D6CF] p-3.5">
-              <Text className="text-[13px] leading-[18px] text-[#5A2418]">
+              <Text className="mb-1.5 text-[13px] leading-[18px] text-[#5A2418]">
                 <Text className="font-bold">
-                  Nog {incompleteSections.length} sectie(s) onvolledig ·{' '}
+                  Nog {missingBySection.length} sectie(s) onvolledig ·{' '}
                 </Text>
-                Vul de overgebleven verplichte velden in voor je verstuurt.
+                Vul onderstaande vragen in voordat je verstuurt:
               </Text>
+              {missingBySection.map((m) => (
+                <View key={m.section.id} className="mt-1.5">
+                  <Text className="font-bold text-[12px] text-[#5A2418]">
+                    {m.section.nr}. {m.section.title}
+                  </Text>
+                  {m.fields.length > 0 ? (
+                    m.fields.map((f) => (
+                      <Text key={f.id} className="text-[12px] leading-[17px] text-[#5A2418]">
+                        • {f.label}
+                      </Text>
+                    ))
+                  ) : (
+                    <Text className="text-[12px] leading-[17px] text-[#5A2418]">
+                      • Nog niet ingevuld
+                    </Text>
+                  )}
+                </View>
+              ))}
             </View>
           )}
 
           <View className="mb-4 overflow-hidden rounded-2xl border border-ink-8 bg-white">
             {INTAKE_SCHEMA.map((s, i) => {
               const a = state.answers[s.id] ?? {};
-              const done = isSectionComplete(s, a) && Object.keys(a).length > 0;
-              const missing = missingRequired(s, a).length;
+              const done = isSectionComplete(s, a, state.answers) && Object.keys(a).length > 0;
+              const missing = missingRequired(s, a, state.answers).length;
               return (
                 <Pressable
                   key={s.id}
@@ -150,7 +189,6 @@ export default function IntakeSubmit() {
           <Button
             title="VERSTUREN"
             variant="primary"
-            disabled={incompleteSections.length > 0}
             onPress={onSubmit}
             leading={<Send size={18} color="#fff" />}
           />

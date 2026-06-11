@@ -27,8 +27,8 @@ export default function IntakeSectionScreen() {
   // children — the renderer just skips numbering them. Hook lives above the
   // missing-section guard so the order stays stable across renders.
   const visible = useMemo(
-    () => (section ? section.fields.filter((f) => showField(f, answers)) : []),
-    [section, answers],
+    () => (section ? section.fields.filter((f) => showField(f, answers, state.answers)) : []),
+    [section, answers, state.answers],
   );
 
   if (!section) {
@@ -43,7 +43,7 @@ export default function IntakeSectionScreen() {
   // they are. `answeredCount` only counts values that are genuinely valid for
   // the field (e.g. a radio value still present in its options), so stale
   // answers from an earlier schema version don't inflate the tally.
-  const { answered: filled, total } = answeredCount(section, answers);
+  const { answered: filled, total } = answeredCount(section, answers, state.answers);
   const pct = total ? Math.round((filled / total) * 100) : 0;
 
   // Every visible question answered (not just the required ones) flips the

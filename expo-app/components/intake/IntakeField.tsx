@@ -81,6 +81,16 @@ export function IntakeField({ field, sectionId, n }: Props) {
 function renderInput(field: Field, value: FieldValue, set: (v: FieldValue) => void) {
   switch (field.type) {
     case 'text':
+      if (field.lines && field.lines > 1) {
+        return (
+          <MultiLineTextField
+            value={asArray(value)}
+            onChange={set}
+            lines={field.lines}
+            placeholder={field.placeholder}
+          />
+        );
+      }
       return (
         <TextInputField
           value={asText(value)}
@@ -188,6 +198,40 @@ function TextInputField({
       {unit && (
         <Text className="pr-4 font-semi text-[13px] text-ink-50">{unit}</Text>
       )}
+    </View>
+  );
+}
+
+/** N stacked single-line inputs whose values are stored as a string array. */
+function MultiLineTextField({
+  value,
+  onChange,
+  lines,
+  placeholder,
+}: {
+  value: string[];
+  onChange: (v: string[]) => void;
+  lines: number;
+  placeholder?: string;
+}) {
+  const update = (i: number, v: string) => {
+    const next = Array.from({ length: lines }, (_, idx) => value[idx] ?? '');
+    next[i] = v;
+    onChange(next);
+  };
+  return (
+    <View className="gap-2">
+      {Array.from({ length: lines }).map((_, i) => (
+        <View key={i} className="flex-row items-center rounded-xl border border-ink-8 bg-white">
+          <TextInput
+            value={value[i] ?? ''}
+            onChangeText={(v) => update(i, v)}
+            placeholder={placeholder}
+            placeholderTextColor="rgba(27,42,42,0.4)"
+            className="flex-1 px-4 py-3.5 font-sans text-[15px] text-ink"
+          />
+        </View>
+      ))}
     </View>
   );
 }
@@ -510,14 +554,42 @@ function RepeaterField({
                 <Text className="mb-1 text-[11px] font-semi tracking-display text-ink-70">
                   {s.label}
                 </Text>
-                <TextInput
-                  value={row[s.id] ?? ''}
-                  onChangeText={(v) => update(i, s.id, v)}
-                  multiline={s.type === 'textarea'}
-                  keyboardType={s.type === 'number' ? 'decimal-pad' : 'default'}
-                  placeholderTextColor="rgba(27,42,42,0.4)"
-                  className="rounded-lg border border-ink-8 bg-canvas px-3 py-2 font-sans text-[13.5px] text-ink"
-                />
+                {s.hint && (
+                  <Text className="mb-1.5 text-[11px] leading-[15px] text-ink-50">{s.hint}</Text>
+                )}
+                {s.type === 'radio' && s.options ? (
+                  <View className="flex-row flex-wrap gap-1.5">
+                    {s.options.map((o) => {
+                      const active = row[s.id] === o;
+                      return (
+                        <Pressable
+                          key={o}
+                          onPress={() => update(i, s.id, o)}
+                          className={`rounded-pill border px-3 py-1.5 ${
+                            active ? 'border-mint-500 bg-mint-500' : 'border-ink-8 bg-canvas'
+                          }`}
+                        >
+                          <Text
+                            className={`font-semi text-[12.5px] ${
+                              active ? 'text-white' : 'text-ink-70'
+                            }`}
+                          >
+                            {o}
+                          </Text>
+                        </Pressable>
+                      );
+                    })}
+                  </View>
+                ) : (
+                  <TextInput
+                    value={row[s.id] ?? ''}
+                    onChangeText={(v) => update(i, s.id, v)}
+                    multiline={s.type === 'textarea'}
+                    keyboardType={s.type === 'number' ? 'decimal-pad' : 'default'}
+                    placeholderTextColor="rgba(27,42,42,0.4)"
+                    className="rounded-lg border border-ink-8 bg-canvas px-3 py-2 font-sans text-[13.5px] text-ink"
+                  />
+                )}
               </View>
             ))}
           </View>

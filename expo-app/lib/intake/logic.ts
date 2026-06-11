@@ -44,6 +44,7 @@ const NONE_OPTIONS = new Set([
   'geen echte schuilmogelijkheid',
   'geen opvallende bijzonderheden',
   'geen bijzonderheden',
+  'geen merkbare gevolgen meer',
 ]);
 
 export function isNoneOption(option: string): boolean {
@@ -70,6 +71,12 @@ export function isFieldRequired(field: Field): boolean {
  */
 export function isFieldAnswered(field: Field, value: unknown): boolean {
   if (isEmpty(value)) return false;
+  // A multi-box text field (`lines`) stores a string array; it counts as
+  // answered only when at least one of the boxes holds real text.
+  if (field.type === 'text' && field.lines) {
+    if (!Array.isArray(value)) return typeof value === 'string' && value.trim() !== '';
+    return value.some((v) => typeof v === 'string' && v.trim() !== '');
+  }
   if (field.type === 'radio') {
     return (field.options ?? []).includes(String(value));
   }
@@ -94,19 +101,48 @@ export function isFieldAnswered(field: Field, value: unknown): boolean {
   return true;
 }
 
-/** `showIf` evaluator. Returns true when every key matches. */
-export function showField(field: Field, sectionAnswers: SectionAnswers): boolean {
+/** Count of selected options that are not a "none / not-applicable" sentinel. */
+function checkedCount(value: unknown): number {
+  if (Array.isArray(value)) return value.filter((v) => !isNoneOption(String(v))).length;
+  if (value == null || value === '' || isNoneOption(String(value))) return 0;
+  return 1;
+}
+
+/**
+ * `showIf` evaluator. Returns true when every key matches.
+ *
+ * A `showIf` key normally references another field in the SAME section. A key
+ * containing a dot (`"section.field"`) instead references a field in another
+ * section — used for blocks that depend on `paard.geslacht` (the gender-only
+ * fertility / penis-koker questions in the geschiedenis section). Cross-section
+ * lookups require `allAnswers`; without it they evaluate as "not matching" so
+ * the dependent field stays hidden rather than rendering for the wrong horse.
+ */
+export function showField(
+  field: Field,
+  sectionAnswers: SectionAnswers,
+  allAnswers?: IntakeAnswers,
+): boolean {
   if (!field.showIf) return true;
   for (const [k, trigger] of Object.entries(field.showIf)) {
-    const value = sectionAnswers[k];
+    const value = k.includes('.')
+      ? (() => {
+          const [sid, fid] = k.split('.');
+          return allAnswers?.[sid]?.[fid];
+        })()
+      : sectionAnswers[k];
     const set = Array.isArray(trigger) ? trigger : [trigger];
     // Special marker: show when the referenced multi field has at least one
     // non-"geen" option selected (used for "describe what you picked" follow-ups).
     if (set.includes('any-checked')) {
-      const checked = Array.isArray(value)
-        ? value.some((v) => !isNoneOption(String(v)))
-        : value != null && value !== '' && !isNoneOption(String(value));
-      if (!checked) return false;
+      if (checkedCount(value) < 1) return false;
+      continue;
+    }
+    // Special marker: show when the referenced multi field has two or more
+    // non-"geen" options selected (used for the water "licht toe hoe dit
+    // verdeeld is" follow-ups, which only make sense with multiple picks).
+    if (set.includes('multi-checked')) {
+      if (checkedCount(value) < 2) return false;
       continue;
     }
     if (!matches(value, trigger)) return false;
@@ -115,15 +151,23 @@ export function showField(field: Field, sectionAnswers: SectionAnswers): boolean
 }
 
 /** Visible (non-sectionhead) fields for a section, after applying showIf. */
-export function visibleFields(section: Section, answers: SectionAnswers): Field[] {
+export function visibleFields(
+  section: Section,
+  answers: SectionAnswers,
+  allAnswers?: IntakeAnswers,
+): Field[] {
   return section.fields
     .filter((f) => f.type !== 'sectionhead')
-    .filter((f) => showField(f, answers));
+    .filter((f) => showField(f, answers, allAnswers));
 }
 
 /** All schema-visible fields (including sectionheads) after showIf. */
-export function visibleFieldsForRender(section: Section, answers: SectionAnswers): Field[] {
-  return section.fields.filter((f) => showField(f, answers));
+export function visibleFieldsForRender(
+  section: Section,
+  answers: SectionAnswers,
+  allAnswers?: IntakeAnswers,
+): Field[] {
+  return section.fields.filter((f) => showField(f, answers, allAnswers));
 }
 
 /**
@@ -131,25 +175,37 @@ export function visibleFieldsForRender(section: Section, answers: SectionAnswers
  * question is mandatory, so this is "all visible non-optional fields that are
  * not yet answered" — not just the ones tagged `required`.
  */
-export function missingRequired(section: Section, answers: SectionAnswers): Field[] {
-  return visibleFields(section, answers).filter(
+export function missingRequired(
+  section: Section,
+  answers: SectionAnswers,
+  allAnswers?: IntakeAnswers,
+): Field[] {
+  return visibleFields(section, answers, allAnswers).filter(
     (f) => isFieldRequired(f) && !isFieldAnswered(f, answers[f.id]),
   );
 }
 
 /** Count of visible (non-sectionhead) fields that are genuinely answered. */
-export function answeredCount(section: Section, answers: SectionAnswers): {
+export function answeredCount(
+  section: Section,
+  answers: SectionAnswers,
+  allAnswers?: IntakeAnswers,
+): {
   answered: number;
   total: number;
 } {
-  const renderable = visibleFields(section, answers);
+  const renderable = visibleFields(section, answers, allAnswers);
   const answered = renderable.filter((f) => isFieldAnswered(f, answers[f.id])).length;
   return { answered, total: renderable.length };
 }
 
 /** Whether the section has all required fields answered. */
-export function isSectionComplete(section: Section, answers: SectionAnswers): boolean {
-  return missingRequired(section, answers).length === 0;
+export function isSectionComplete(
+  section: Section,
+  answers: SectionAnswers,
+  allAnswers?: IntakeAnswers,
+): boolean {
+  return missingRequired(section, answers, allAnswers).length === 0;
 }
 
 /** Lifecycle status used to render the section list. */
@@ -159,8 +215,9 @@ export function sectionStatus(
   section: Section,
   answers: SectionAnswers,
   isFirstUnfinished: boolean,
+  allAnswers?: IntakeAnswers,
 ): SectionStatus {
-  if (isSectionComplete(section, answers) && Object.keys(answers).length > 0) {
+  if (isSectionComplete(section, answers, allAnswers) && Object.keys(answers).length > 0) {
     return 'done';
   }
   return isFirstUnfinished ? 'active' : 'todo';
@@ -176,7 +233,7 @@ export function intakeProgress(answers: IntakeAnswers): {
   let done = 0;
   for (const sec of INTAKE_SCHEMA) {
     const a = answers[sec.id] ?? {};
-    if (isSectionComplete(sec, a) && Object.keys(a).length > 0) done++;
+    if (isSectionComplete(sec, a, answers) && Object.keys(a).length > 0) done++;
   }
   return { done, total, pct: total ? Math.round((done / total) * 100) : 0 };
 }
@@ -185,7 +242,7 @@ export function intakeProgress(answers: IntakeAnswers): {
 export function nextSectionId(answers: IntakeAnswers): string {
   for (const sec of INTAKE_SCHEMA) {
     const a = answers[sec.id] ?? {};
-    if (!isSectionComplete(sec, a) || Object.keys(a).length === 0) return sec.id;
+    if (!isSectionComplete(sec, a, answers) || Object.keys(a).length === 0) return sec.id;
   }
   return INTAKE_SCHEMA[INTAKE_SCHEMA.length - 1].id;
 }
