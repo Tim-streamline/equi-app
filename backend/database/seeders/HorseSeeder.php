@@ -217,6 +217,16 @@ class HorseSeeder extends Seeder
     private function seedProtocol(Horse $horse, string $therapistId): void
     {
         $protocolType = ProtocolType::query()->firstOrCreate(['name' => 'Darm protocol']);
+        $phaseDefinitions = $protocolType->phases()->orderBy('order')->get();
+        while ($phaseDefinitions->count() < 3) {
+            $phaseNumber = $phaseDefinitions->count() + 1;
+            $phaseDefinitions->push($protocolType->phases()->create([
+                'order' => ((int) $phaseDefinitions->max('order')) + 1,
+                'name' => "Fase {$phaseNumber}",
+                'description' => null,
+                'required' => $phaseNumber === 1,
+            ]));
+        }
         $totalWeeks = fake()->numberBetween(4, 12);
         $currentWeek = fake()->numberBetween(1, $totalWeeks);
         $phaseLengths = array_fill(0, 3, intdiv($totalWeeks, 3));
@@ -252,7 +262,7 @@ class HorseSeeder extends Seeder
             $weekEnd = $weekCursor + $phaseLength - 1;
             $state = $currentWeek > $weekEnd ? 'done' : ($currentWeek >= $weekCursor ? 'active' : 'upcoming');
             $phase = ProtocolPhase::create([
-                'protocol_id' => $protocol->id, 'order' => $i,
+                'protocol_id' => $protocol->id, 'protocol_type_phase_id' => $phaseDefinitions[$i]->id, 'order' => $i,
                 'title' => 'Fase '.($i + 1).' — '.fake()->randomElement(['Darmen', 'Lever', 'Huid', 'Hoeven']),
                 'state' => $state,
                 'week_start' => $weekCursor, 'week_end' => $weekEnd,

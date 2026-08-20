@@ -3,13 +3,14 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Attributes\Fillable;
-use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 #[Fillable([
     'protocol_id',
+    'protocol_type_phase_id',
     'order',
     'title',
     'state',
@@ -20,9 +21,15 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 class ProtocolPhase extends Model
 {
     use HasUuids;
+
     public function protocol(): BelongsTo
     {
         return $this->belongsTo(Protocol::class);
+    }
+
+    public function phase(): BelongsTo
+    {
+        return $this->belongsTo(ProtocolTypePhase::class, 'protocol_type_phase_id');
     }
 
     public function items(): HasMany
@@ -33,5 +40,10 @@ class ProtocolPhase extends Model
     public function tasks(): HasMany
     {
         return $this->hasMany(ProtocolTask::class, 'phase_id');
+    }
+
+    public function supplements(): HasMany
+    {
+        return $this->hasMany(ProtocolPhaseSupplement::class);
     }
 }

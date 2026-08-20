@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 #[Fillable([
     'protocol_type_phase_id',
@@ -47,5 +48,10 @@ class Supplement extends Model
             'supplement_id',
             'protocol_type_phase_week_id',
         )->using(SupplementWeek::class)->withTimestamps()->orderBy('number');
+    }
+
+    public function protocolPhaseSupplements(): HasMany
+    {
+        return $this->hasMany(ProtocolPhaseSupplement::class);
     }
 }

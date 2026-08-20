@@ -86,6 +86,10 @@ class ProtocolSettingsController extends Controller
         $data = $this->validatePhase($request);
         $oldTypeId = $protocolTypePhase->protocol_type_id;
 
+        if ($data['protocol_type_id'] !== $oldTypeId && $protocolTypePhase->protocolPhases()->exists()) {
+            return back()->with('error', 'Een gebruikte fase kan niet naar een ander protocoltype worden verplaatst.');
+        }
+
         DB::transaction(function () use ($data, $oldTypeId, $protocolTypePhase) {
             $before = $protocolTypePhase->only(['protocol_type_id', 'name', 'description', 'required', 'order']);
 
@@ -109,6 +113,10 @@ class ProtocolSettingsController extends Controller
 
     public function destroyPhase(ProtocolTypePhase $protocolTypePhase): RedirectResponse
     {
+        if ($protocolTypePhase->protocolPhases()->exists()) {
+            return back()->with('error', 'Deze fase is gekoppeld aan een of meer protocollen en kan niet worden verwijderd.');
+        }
+
         DB::transaction(function () use ($protocolTypePhase) {
             $protocolTypeId = $protocolTypePhase->protocol_type_id;
             AuditLogger::deleted($protocolTypePhase);
@@ -163,6 +171,12 @@ class ProtocolSettingsController extends Controller
     public function updateSupplement(Request $request, Supplement $supplement): RedirectResponse
     {
         $data = $this->validateSupplement($request);
+
+        if (($data['protocol_type_phase_id'] ?? $supplement->protocol_type_phase_id) !== $supplement->protocol_type_phase_id
+            && $supplement->protocolPhaseSupplements()->exists()) {
+            return back()->with('error', 'Een gebruikt supplement kan niet naar een andere fase worden verplaatst.');
+        }
+
         $before = $supplement->only(array_keys($data));
         $supplement->update($data);
 

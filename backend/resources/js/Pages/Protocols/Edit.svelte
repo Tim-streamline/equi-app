@@ -9,6 +9,7 @@
         Check,
         ChevronRight,
         Eye,
+        Lock,
         Plus,
         Save,
         Trash2,
@@ -23,45 +24,37 @@
 
     let nextClientKey = 0;
     const makeClientKey = () => `phase-${Date.now()}-${nextClientKey++}`;
-    const initialPhases = (initialProtocol?.phases?.length ? initialProtocol.phases : [
-        {
-            title: 'Fase 1',
-            state: 'active',
-            week_start: 1,
-            week_end: 4,
-            chip_label: 'Actief',
+    const initialProtocolTypeId = initialProtocol?.protocol_type_id ?? initialProtocolTypes[0]?.id ?? '';
+    const initialPhaseDefinitions = initialProtocolTypes.find((type) => type.id === initialProtocolTypeId)?.phases ?? [];
+    const initialPhaseRows = initialProtocol?.phases?.length
+        ? initialProtocol.phases
+        : initialPhaseDefinitions.filter((phase) => phase.required).map((phase, index) => ({
+            protocol_type_phase_id: phase.id,
+            title: phase.name,
+            state: index === 0 ? 'active' : 'upcoming',
+            week_start: '',
+            week_end: '',
+            chip_label: 'Verplicht',
             items: [],
-        },
-        {
-            title: 'Fase 2',
-            state: 'upcoming',
-            week_start: 5,
-            week_end: 6,
-            chip_label: 'Binnenkort',
-            items: [],
-        },
-        {
-            title: 'Fase 3',
-            state: 'upcoming',
-            week_start: 7,
-            week_end: 8,
-            chip_label: 'Binnenkort',
-            items: [],
-        },
-    ]).map((phase) => ({
+            supplement_ids: (phase.supplements ?? []).filter((supplement) => supplement.add_by_default).map((supplement) => supplement.id),
+        }));
+    const initialPhases = initialPhaseRows.map((phase) => ({
         id: phase.id ?? null,
         client_key: phase.id ?? makeClientKey(),
+        protocol_type_phase_id: phase.protocol_type_phase_id,
         title: phase.title ?? '',
         state: phase.state ?? 'upcoming',
         week_start: phase.week_start ?? '',
         week_end: phase.week_end ?? '',
         chip_label: phase.chip_label ?? '',
         items: (phase.items ?? []).map((item) => ({ id: item.id ?? null, label: item.label ?? '' })),
+        supplement_ids: phase.supplement_ids
+            ?? (phase.supplements ?? []).map((selection) => selection.supplement_id),
     }));
 
     const form = useForm({
         horse_id: initialProtocol?.horse_id ?? initialSelectedHorseId ?? '',
-        protocol_type_id: initialProtocol?.protocol_type_id ?? initialProtocolTypes[0]?.id ?? '',
+        protocol_type_id: initialProtocolTypeId,
         therapist_id: initialProtocol?.therapist_id ?? '',
         title: initialProtocol?.title ?? '',
         subtitle_analyse: initialProtocol?.subtitle_analyse ?? '',
@@ -91,55 +84,13 @@
         })),
     });
 
-    let activePhaseKey = $state(initialPhases[0].client_key);
-    let unmatchedMeasuresOpen = $state(false);
+    let activePhaseKey = $state(initialPhases[0]?.client_key ?? null);
+    let phaseToAddId = $state('');
     let overviewOpen = $state(false);
 
-    const measureLibrary = [
-        { id: 'psyllium', name: 'Psylliumzaad', dose: '175 g · 2× daags · 6 weken', tags: ['darmgezondheid', 'overgewicht'], phases: [1] },
-        { id: 'heemst', name: 'Heemstwortel', dose: '20 g · 6 weken', tags: ['darmgezondheid'], phases: [1] },
-        { id: 'kamille', name: 'Kamille', dose: '25 g · 6 weken', tags: ['darmgezondheid', 'stress'], phases: [1] },
-        { id: 'msm', name: 'MSM (zwavel)', dose: 'Dosering leverancier · 8 weken', tags: ['pezen'], phases: [1, 2] },
-        { id: 'zink', name: 'Zink', dose: '40 g · 8 weken', tags: ['jeuk', 'pezen'], phases: [1, 2] },
-        { id: 'lapacho', name: 'Lapachoschors', dose: '20 g · 6 weken', tags: ['darmgezondheid'], phases: [2] },
-        { id: 'weegbree', name: 'Smalle weegbree', dose: '25 g · 6 weken', tags: ['darmgezondheid'], phases: [2] },
-        { id: 'brandnetel', name: 'Brandnetel', dose: '25 g · 6 weken', tags: ['jeuk', 'overgewicht'], phases: [2] },
-        { id: 'boswellia', name: 'Boswellia Serrata', dose: '6 g per dag', tags: ['maagklachten'], phases: [1] },
-        { id: 'gastercare', name: 'GasterCare forte', dose: '2–3× daags · 3 maanden', tags: ['maagklachten'], phases: [1, 2, 3] },
-        { id: 'lapachovervolg', name: 'Lapachoschors, onderhoud', dose: '10 g · 4 weken', tags: ['darmgezondheid'], phases: [3] },
-    ];
-    const tagAliases = {
-        darmgezondheid: ['darm', 'gut'],
-        overgewicht: ['overgewicht', 'gewicht', 'weight'],
-        jeuk: ['jeuk', 'itch'],
-        pezen: ['pees', 'pezen', 'tendon'],
-        stress: ['stress'],
-        maagklachten: ['maag', 'stomach'],
-    };
-    const tagStyles = {
-        darmgezondheid: 'bg-[#EAFBF9] text-[#0E6F69]',
-        overgewicht: 'bg-[#FDF4E4] text-[#7A5A16]',
-        jeuk: 'bg-[#FBEAF0] text-[#A03D63]',
-        pezen: 'bg-[#EAF0FB] text-[#33538F]',
-        stress: 'bg-[#F1EAFB] text-[#5B3FA0]',
-        maagklachten: 'bg-[#FDEDE7] text-[#A8442F]',
-    };
-
     const selectedHorse = $derived(horses.find((horse) => horse.id === $form.horse_id));
-    const activePhaseIndex = $derived(Math.max(0, $form.phases.findIndex((phase) => phase.client_key === activePhaseKey)));
-    const activePhase = $derived($form.phases[activePhaseIndex]);
-    const activePhaseTasks = $derived($form.tasks.filter((task) => task.phase_key === activePhaseKey));
-    const horseTopicTokens = $derived((selectedHorse?.focus_topics ?? [])
-        .flatMap((topic) => [topic.slug, topic.title])
-        .filter(Boolean)
-        .map((topic) => topic.toLowerCase()));
-    const availableMeasures = $derived(measureLibrary.filter((measure) => measure.phases.includes(activePhaseIndex + 1)));
-    const matchedMeasures = $derived(availableMeasures.filter((measure) => measureMatchesHorse(measure)));
-    const unmatchedMeasures = $derived(availableMeasures.filter((measure) => !measureMatchesHorse(measure)));
-    const customMeasureRows = $derived($form.tasks
-        .map((task, index) => ({ task, index }))
-        .filter(({ task }) => task.phase_key === activePhaseKey)
-        .filter(({ task }) => !availableMeasures.some((measure) => measure.name === task.label)));
+    const activePhaseIndex = $derived($form.phases.findIndex((phase) => phase.client_key === activePhaseKey));
+    const activePhase = $derived(activePhaseIndex >= 0 ? $form.phases[activePhaseIndex] : null);
 
     const horseOptions = $derived(horses.map((horse) => ({
         value: horse.id,
@@ -153,6 +104,20 @@
         value: protocolType.id,
         label: protocolType.name,
     })));
+    const selectedProtocolType = $derived(protocolTypes.find((protocolType) => protocolType.id === $form.protocol_type_id));
+    const activePhaseDefinition = $derived(selectedProtocolType?.phases?.find(
+        (definition) => definition.id === activePhase?.protocol_type_phase_id,
+    ));
+    const availableSupplements = $derived(activePhaseDefinition?.supplements ?? []);
+    const selectedSupplements = $derived(availableSupplements.filter(
+        (supplement) => activePhase?.supplement_ids?.includes(supplement.id),
+    ));
+    const availablePhaseDefinitions = $derived((selectedProtocolType?.phases ?? [])
+        .filter((definition) => !$form.phases.some((phase) => phase.protocol_type_phase_id === definition.id)));
+    const availablePhaseOptions = $derived(availablePhaseDefinitions.map((definition) => ({
+        value: definition.id,
+        label: `${definition.name}${definition.required ? ' · verplicht' : ''}`,
+    })));
     const stateOptions = [
         { value: 'done', label: 'Completed' },
         { value: 'active', label: 'Active' },
@@ -163,6 +128,62 @@
         { value: 'active', label: 'Active' },
         { value: 'completed', label: 'Completed' },
     ];
+    function phaseDefinition(phase) {
+        return selectedProtocolType?.phases?.find((definition) => definition.id === phase?.protocol_type_phase_id);
+    }
+
+    function isRequiredPhase(phase) {
+        return phaseDefinition(phase)?.required ?? false;
+    }
+
+    function makePhaseFromDefinition(definition, active = false) {
+        return {
+            id: null,
+            client_key: makeClientKey(),
+            protocol_type_phase_id: definition.id,
+            title: definition.name,
+            state: active ? 'active' : 'upcoming',
+            week_start: '',
+            week_end: '',
+            chip_label: definition.required ? 'Verplicht' : '',
+            items: [],
+            supplement_ids: (definition.supplements ?? [])
+                .filter((supplement) => supplement.add_by_default)
+                .map((supplement) => supplement.id),
+        };
+    }
+
+    function changeProtocolType() {
+        const definitions = protocolTypes.find((type) => type.id === $form.protocol_type_id)?.phases ?? [];
+        $form.phases = definitions
+            .filter((definition) => definition.required)
+            .map((definition, index) => makePhaseFromDefinition(definition, index === 0));
+        $form.tasks = [];
+        activePhaseKey = $form.phases[0]?.client_key ?? null;
+        phaseToAddId = '';
+    }
+
+    function addPhase() {
+        const definition = availablePhaseDefinitions.find((phase) => phase.id === phaseToAddId);
+        if (!definition) return;
+
+        const phase = makePhaseFromDefinition(definition, $form.phases.length === 0);
+        $form.phases = [...$form.phases, phase];
+        activePhaseKey = phase.client_key;
+        phaseToAddId = '';
+    }
+
+    function removeActivePhase() {
+        if (!activePhase || isRequiredPhase(activePhase)) return;
+
+        const removedKey = activePhase.client_key;
+        const removedIndex = activePhaseIndex;
+        const remainingPhases = $form.phases.filter((phase) => phase.client_key !== removedKey);
+        $form.phases = remainingPhases;
+        $form.tasks = $form.tasks.filter((task) => task.phase_key !== removedKey);
+        activePhaseKey = remainingPhases[Math.min(removedIndex, remainingPhases.length - 1)]?.client_key ?? null;
+    }
+
     function addPhaseItem() {
         $form.phases[activePhaseIndex].items = [
             ...$form.phases[activePhaseIndex].items,
@@ -174,49 +195,26 @@
         $form.phases[activePhaseIndex].items = $form.phases[activePhaseIndex].items.filter((_, index) => index !== itemIndex);
     }
 
-    function addMeasure() {
-        $form.tasks = [...$form.tasks, {
-            id: null,
-            phase_key: activePhaseKey,
-            label: '',
-            meta: '',
-            kind: 'feeding',
-            active_from: '',
-            active_until: '',
-            reference_item_id: '',
-        }];
+    function toggleSupplement(supplementId) {
+        if (!activePhase) return;
+
+        const selectedIds = activePhase.supplement_ids ?? [];
+        const supplementIds = selectedIds.includes(supplementId)
+            ? selectedIds.filter((id) => id !== supplementId)
+            : [...selectedIds, supplementId];
+        $form.phases = $form.phases.map((phase, index) => index === activePhaseIndex
+            ? { ...phase, supplement_ids: supplementIds }
+            : phase);
     }
 
-    function measureMatchesHorse(measure) {
-        return measure.tags.some((tag) => (tagAliases[tag] ?? [tag])
-            .some((alias) => horseTopicTokens.some((topic) => topic.includes(alias))));
+    function supplementTypeLabel(type) {
+        return ({ kruid: 'Kruid', mineraal: 'Mineraal', supplement: 'Supplement' })[type] ?? type;
     }
 
-    function measureTaskIndex(measure) {
-        return $form.tasks.findIndex((task) => task.phase_key === activePhaseKey && task.label === measure.name);
-    }
+    function supplementSchedule(supplement) {
+        const weekNumbers = (supplement.weeks ?? []).map((week) => week.number);
 
-    function toggleMeasure(measure) {
-        const taskIndex = measureTaskIndex(measure);
-        if (taskIndex >= 0) {
-            removeTask(taskIndex);
-            return;
-        }
-
-        $form.tasks = [...$form.tasks, {
-            id: null,
-            phase_key: activePhaseKey,
-            label: measure.name,
-            meta: measure.dose,
-            kind: 'feeding',
-            active_from: '',
-            active_until: '',
-            reference_item_id: '',
-        }];
-    }
-
-    function removeTask(index) {
-        $form.tasks = $form.tasks.filter((_, taskIndex) => taskIndex !== index);
+        return weekNumbers.length ? `Week ${weekNumbers.join(', ')}` : 'Geen weekschema ingesteld';
     }
 
     function addAdvice() {
@@ -255,7 +253,7 @@
                     <div class="truncate text-xs text-[#1B2A2A]/50">{selectedHorse?.name ?? 'Select a horse to start'}</div>
                 </div>
                 <Button type="button" variant="outline" class="rounded-full" onclick={() => (overviewOpen = true)} disabled={!activePhase}>
-                    <Eye class="size-4" /> Overview ({activePhaseTasks.length})
+                    <Eye class="size-4" /> Overview ({selectedSupplements.length})
                 </Button>
                 <Button type="submit" class="rounded-full bg-[#18BAB0] px-5 hover:bg-[#108A82]" disabled={$form.processing}>
                     <Save class="size-4" /> {$form.processing ? 'Saving…' : isNew ? 'Create protocol' : 'Save changes'}
@@ -329,7 +327,7 @@
                         </div>
                         <div class="grid gap-4 md:grid-cols-2">
                             <Field label="Protocol type" error={$form.errors.protocol_type_id}>
-                                <Select bind:value={$form.protocol_type_id} placeholder="Select a protocol type" options={protocolTypeOptions} />
+                                <Select bind:value={$form.protocol_type_id} placeholder="Select a protocol type" options={protocolTypeOptions} onchange={changeProtocolType} />
                             </Field>
                             <Field label="Title" error={$form.errors.title}><Input bind:value={$form.title} placeholder="e.g. Nova's recovery plan" /></Field>
                             <Field label="Therapist" error={$form.errors.therapist_id}>
@@ -348,7 +346,17 @@
                     </section>
 
                     <section>
-                        <div class="mb-2 text-[11px] font-bold uppercase tracking-[0.12em] text-[#1B2A2A]/45">Protocol phase</div>
+                        <div class="mb-2 flex flex-wrap items-end justify-between gap-3">
+                            <div class="text-[11px] font-bold uppercase tracking-[0.12em] text-[#1B2A2A]/45">Protocol phase</div>
+                            {#if availablePhaseOptions.length}
+                                <div class="flex items-center gap-2">
+                                    <Select class="w-52" bind:value={phaseToAddId} placeholder="Choose a phase" options={availablePhaseOptions} />
+                                    <Button type="button" variant="outline" size="sm" class="rounded-full" onclick={addPhase} disabled={!phaseToAddId}>
+                                        <Plus class="size-4" /> Add phase
+                                    </Button>
+                                </div>
+                            {/if}
+                        </div>
                         <div class="flex gap-2 overflow-x-auto pb-2">
                             {#each $form.phases as phase, index (phase.client_key)}
                                 <button
@@ -363,7 +371,16 @@
                                     <div class="mt-1 text-xs text-[#1B2A2A]/50">
                                         {phase.week_start !== '' ? `Week ${phase.week_start}${phase.week_end && phase.week_end !== phase.week_start ? `–${phase.week_end}` : ''}` : 'Timing not set'}
                                     </div>
+                                    {#if isRequiredPhase(phase)}
+                                        <div class="mt-2 inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-[0.08em] text-[#108A82]">
+                                            <Lock class="size-3" /> Required
+                                        </div>
+                                    {/if}
                                 </button>
+                            {:else}
+                                <div class="w-full rounded-2xl border border-dashed border-[#1B2A2A]/15 bg-white px-4 py-5 text-center text-sm text-[#1B2A2A]/45">
+                                    Add an optional phase to start configuring this protocol.
+                                </div>
                             {/each}
                         </div>
                         {#if $form.errors.phases}<p class="mt-1 text-xs text-destructive">{$form.errors.phases}</p>{/if}
@@ -371,8 +388,17 @@
 
                     {#if activePhase}
                         <section class="rounded-[20px] border border-[#1B2A2A]/10 bg-white p-5 md:p-6">
-                            <div class="mb-5">
+                            <div class="mb-5 flex items-center justify-between gap-3">
                                 <h2 class="text-lg font-bold">Phase details</h2>
+                                {#if isRequiredPhase(activePhase)}
+                                    <span class="inline-flex items-center gap-1.5 rounded-full bg-[#EAFBF9] px-3 py-1 text-xs font-bold text-[#0E6F69]">
+                                        <Lock class="size-3.5" /> Required phase
+                                    </span>
+                                {:else}
+                                    <Button type="button" variant="ghost" size="sm" class="text-destructive hover:text-destructive" onclick={removeActivePhase}>
+                                        <Trash2 class="size-4" /> Remove phase
+                                    </Button>
+                                {/if}
                             </div>
                             <div class="grid gap-4 md:grid-cols-2">
                                 <Field label="Phase title" error={errorFor(`phases.${activePhaseIndex}.title`)}><Input bind:value={$form.phases[activePhaseIndex].title} /></Field>
@@ -415,94 +441,50 @@
                             <div class="flex items-center justify-between gap-4 border-b border-[#1B2A2A]/10 px-5 py-4 md:px-6">
                                 <div>
                                     <h2 class="text-base font-bold">Kruiden & supplementen</h2>
-                                    <p class="mt-0.5 text-xs text-[#1B2A2A]/50">Maatregelen voor {activePhase.title || 'deze fase'}.</p>
+                                    <p class="mt-0.5 text-xs text-[#1B2A2A]/50">Selecteer de supplementen voor {activePhase.title || 'deze fase'}.</p>
                                 </div>
-                                <span class="shrink-0 text-xs font-semibold text-[#1B2A2A]/50">{activePhaseTasks.length} van {availableMeasures.length + customMeasureRows.length} actief</span>
+                                <span class="shrink-0 text-xs font-semibold text-[#1B2A2A]/50">{selectedSupplements.length} van {availableSupplements.length} actief</span>
                             </div>
 
                             <div class="divide-y divide-[#1B2A2A]/8">
-                                {#each matchedMeasures as measure (measure.id)}
-                                    {@const isSelected = measureTaskIndex(measure) >= 0}
+                                {#each availableSupplements as supplement (supplement.id)}
+                                    {@const isSelected = activePhase.supplement_ids?.includes(supplement.id) ?? false}
                                     <div class={`flex items-start gap-3.5 px-5 py-4 transition-colors md:px-6 ${isSelected ? 'bg-white' : 'bg-[#FBF8F3]/55'}`}>
                                         <button
                                             type="button"
                                             role="switch"
                                             aria-checked={isSelected}
-                                            aria-label={`${isSelected ? 'Remove' : 'Add'} ${measure.name}`}
-                                            onclick={() => toggleMeasure(measure)}
+                                            aria-label={`${isSelected ? 'Verwijder' : 'Voeg toe'} ${supplement.name}`}
+                                            onclick={() => toggleSupplement(supplement.id)}
                                             class={`relative mt-0.5 h-[23px] w-10 shrink-0 rounded-full transition-colors ${isSelected ? 'bg-[#18BAB0]' : 'bg-[#1B2A2A]/20'}`}
                                         >
                                             <span class={`absolute top-[2.5px] size-[18px] rounded-full bg-white shadow-sm transition-transform ${isSelected ? 'translate-x-[19px]' : 'translate-x-[2px]'}`}></span>
                                         </button>
                                         <div class={`min-w-0 flex-1 transition-opacity ${isSelected ? '' : 'opacity-60'}`}>
                                             <div class="flex flex-wrap items-center gap-x-2 gap-y-1">
-                                                <span class="text-sm font-bold">{measure.name}</span>
-                                                <span class="rounded-full bg-[#EAFBF9] px-2 py-0.5 text-[9px] font-bold uppercase tracking-[0.08em] text-[#0E6F69]">Voorgesteld</span>
+                                                <span class="text-sm font-bold">{supplement.name}</span>
+                                                <span class="rounded-full bg-[#EAFBF9] px-2 py-0.5 text-[9px] font-bold uppercase tracking-[0.08em] text-[#0E6F69]">{supplementTypeLabel(supplement.supplement_type)}</span>
+                                                {#if supplement.add_by_default}
+                                                    <span class="rounded-full bg-[#FDF4E4] px-2 py-0.5 text-[9px] font-bold uppercase tracking-[0.08em] text-[#7A5A16]">Standaard</span>
+                                                {/if}
                                             </div>
-                                            <p class="mt-1 text-xs text-[#1B2A2A]/55">{measure.dose}</p>
-                                            <div class="mt-2 flex flex-wrap gap-1.5">
-                                                {#each measure.tags as tag (tag)}
-                                                    <span class={`rounded-full px-2 py-0.5 text-[10px] ${tagStyles[tag] ?? 'bg-[#F4EFE7] text-[#5A5A5A]'}`}>{tag}</span>
-                                                {/each}
+                                            {#if supplement.description}
+                                                <p class="mt-1 text-xs leading-5 text-[#1B2A2A]/55">{supplement.description}</p>
+                                            {/if}
+                                            <div class="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-[10px] font-semibold text-[#1B2A2A]/45">
+                                                <span>{supplementSchedule(supplement)}</span>
+                                                <span>Min. {supplement.min_aantal_per_week}× per week</span>
+                                                <span>Rust {supplement.rust_periode_in_weken} weken</span>
+                                                {#if supplement.max_aantal_in_fase !== null}<span>Max. {supplement.max_aantal_in_fase} in fase</span>{/if}
                                             </div>
                                         </div>
                                     </div>
-                                {/each}
-
-                                {#if unmatchedMeasures.length}
-                                    <button
-                                        type="button"
-                                        onclick={() => (unmatchedMeasuresOpen = !unmatchedMeasuresOpen)}
-                                        class="flex w-full items-center gap-1.5 px-5 py-3 text-left text-xs font-bold text-[#108A82] transition hover:bg-[#EAFBF9]/55 md:px-6"
-                                        aria-expanded={unmatchedMeasuresOpen}
-                                    >
-                                        <ChevronRight class={`size-3.5 transition-transform ${unmatchedMeasuresOpen ? 'rotate-90' : ''}`} />
-                                        {unmatchedMeasuresOpen ? 'Verberg niet-gematchte opties' : `+${unmatchedMeasures.length} niet-gematchte opties tonen`}
-                                    </button>
-
-                                    {#if unmatchedMeasuresOpen}
-                                        {#each unmatchedMeasures as measure (measure.id)}
-                                            {@const isSelected = measureTaskIndex(measure) >= 0}
-                                            <div class="flex items-start gap-3.5 bg-[#FBF8F3]/55 px-5 py-4 md:px-6">
-                                                <button
-                                                    type="button"
-                                                    role="switch"
-                                                    aria-checked={isSelected}
-                                                    aria-label={`${isSelected ? 'Remove' : 'Add'} ${measure.name}`}
-                                                    onclick={() => toggleMeasure(measure)}
-                                                    class={`relative mt-0.5 h-[23px] w-10 shrink-0 rounded-full transition-colors ${isSelected ? 'bg-[#18BAB0]' : 'bg-[#1B2A2A]/20'}`}
-                                                >
-                                                    <span class={`absolute top-[2.5px] size-[18px] rounded-full bg-white shadow-sm transition-transform ${isSelected ? 'translate-x-[19px]' : 'translate-x-[2px]'}`}></span>
-                                                </button>
-                                                <div class={`min-w-0 flex-1 ${isSelected ? '' : 'opacity-60'}`}>
-                                                    <div class="text-sm font-bold">{measure.name}</div>
-                                                    <p class="mt-1 text-xs text-[#1B2A2A]/55">{measure.dose}</p>
-                                                    <div class="mt-2 flex flex-wrap gap-1.5">
-                                                        {#each measure.tags as tag (tag)}
-                                                            <span class={`rounded-full px-2 py-0.5 text-[10px] ${tagStyles[tag] ?? 'bg-[#F4EFE7] text-[#5A5A5A]'}`}>{tag}</span>
-                                                        {/each}
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        {/each}
-                                    {/if}
-                                {/if}
-
-                                {#each customMeasureRows as row (row.task.id ?? row.index)}
-                                    <div class="bg-[#FBF8F3] px-5 py-4 md:px-6">
-                                        <div class="flex items-start gap-3">
-                                            <div class="grid min-w-0 flex-1 gap-3 sm:grid-cols-2">
-                                                <Field label="Naam" error={errorFor(`tasks.${row.index}.label`)}><Input bind:value={$form.tasks[row.index].label} placeholder="Naam van de maatregel" /></Field>
-                                                <Field label="Dosering of omschrijving" error={errorFor(`tasks.${row.index}.meta`)}><Input bind:value={$form.tasks[row.index].meta} placeholder="Bijv. 20 g · 6 weken" /></Field>
-                                            </div>
-                                            <div class="pt-[26px]"><Button type="button" variant="ghost" size="icon" onclick={() => removeTask(row.index)} aria-label="Verwijder maatregel"><Trash2 class="size-4 text-destructive" /></Button></div>
-                                        </div>
+                                {:else}
+                                    <div class="px-5 py-9 text-center md:px-6">
+                                        <p class="text-sm font-semibold text-[#1B2A2A]/60">Geen supplementen beschikbaar voor deze fase.</p>
+                                        <p class="mt-1 text-xs text-[#1B2A2A]/40">Voeg supplementen toe via Protocol Settings.</p>
                                     </div>
                                 {/each}
-
-                                <button type="button" onclick={addMeasure} class="flex w-full items-center gap-1.5 px-5 py-3.5 text-left text-sm font-bold text-[#108A82] transition hover:bg-[#EAFBF9]/55 md:px-6">
-                                    <Plus class="size-4" /> Voeg maatregel toe
-                                </button>
                             </div>
                         </section>
                     {/if}
@@ -567,14 +549,14 @@
                             </div>
                         </section>
 
-                        {#if activePhaseTasks.length}
+                        {#if selectedSupplements.length}
                             <section>
-                                <div class="mb-2 text-[11px] font-bold uppercase tracking-[0.1em] text-[#108A82]">Maatregelen</div>
+                                <div class="mb-2 text-[11px] font-bold uppercase tracking-[0.1em] text-[#108A82]">Kruiden & supplementen</div>
                                 <div class="space-y-2">
-                                    {#each activePhaseTasks as task (task.id ?? task.label)}
+                                    {#each selectedSupplements as supplement (supplement.id)}
                                         <div class="flex items-start justify-between gap-3 rounded-xl border border-[#1B2A2A]/10 bg-white px-3 py-2.5">
-                                            <span class="text-sm font-semibold">{task.label || 'Naamloze maatregel'}</span>
-                                            {#if task.meta}<span class="shrink-0 text-xs font-semibold text-[#127A79]">{task.meta}</span>{/if}
+                                            <span class="text-sm font-semibold">{supplement.name}</span>
+                                            <span class="shrink-0 text-xs font-semibold text-[#127A79]">{supplementTypeLabel(supplement.supplement_type)}</span>
                                         </div>
                                     {/each}
                                 </div>

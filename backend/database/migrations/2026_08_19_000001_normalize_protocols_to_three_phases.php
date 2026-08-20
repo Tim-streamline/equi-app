@@ -2,13 +2,17 @@
 
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
 
 return new class extends Migration
 {
     public function up(): void
     {
-        DB::transaction(function () {
+        $hasProtocolTypePhaseReference = Schema::hasColumn('protocols', 'protocol_type_id')
+            && Schema::hasColumn('protocol_phases', 'protocol_type_phase_id');
+
+        DB::transaction(function () use ($hasProtocolTypePhaseReference) {
             $protocols = DB::table('protocols')
                 ->get(['id', 'total_weeks', 'current_week']);
 
@@ -106,6 +110,9 @@ return new class extends Migration
                     $remainingWeeks = max($missingCount, (int) ($protocol->total_weeks ?? 0) - $lastWeek);
                     $baseLength = intdiv($remainingWeeks, $missingCount);
                     $remainder = $remainingWeeks % $missingCount;
+                    $usedDefinitionIds = $hasProtocolTypePhaseReference
+                        ? $phases->pluck('protocol_type_phase_id')->filter()->all()
+                        : [];
 
                     for ($offset = 0; $offset < $missingCount; $offset++) {
                         $phaseNumber = $phases->count() + $offset + 1;
@@ -116,7 +123,7 @@ return new class extends Migration
                             ? 'done'
                             : ($currentWeek >= $weekStart ? 'active' : 'upcoming');
 
-                        DB::table('protocol_phases')->insert([
+                        $attributes = [
                             'id' => (string) Str::uuid(),
                             'protocol_id' => $protocol->id,
                             'order' => $phaseNumber - 1,
@@ -127,7 +134,22 @@ return new class extends Migration
                             'chip_label' => null,
                             'created_at' => now(),
                             'updated_at' => now(),
-                        ]);
+                        ];
+
+                        if ($hasProtocolTypePhaseReference) {
+                            $protocolTypeId = DB::table('protocols')
+                                ->where('id', $protocol->id)
+                                ->value('protocol_type_id');
+                            $definitionId = DB::table('protocol_type_phases')
+                                ->where('protocol_type_id', $protocolTypeId)
+                                ->whereNotIn('id', $usedDefinitionIds)
+                                ->orderBy('order')
+                                ->value('id');
+                            $attributes['protocol_type_phase_id'] = $definitionId;
+                            $usedDefinitionIds[] = $definitionId;
+                        }
+
+                        DB::table('protocol_phases')->insert($attributes);
 
                         $lastWeek = $weekEnd;
                     }

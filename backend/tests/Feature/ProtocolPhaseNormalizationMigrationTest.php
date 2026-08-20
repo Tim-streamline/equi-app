@@ -25,6 +25,12 @@ class ProtocolPhaseNormalizationMigrationTest extends TestCase
             'status' => 'active',
         ]);
         $protocolType = ProtocolType::query()->create(['name' => 'Migration test type']);
+        $phaseDefinitions = collect(range(1, 4))
+            ->map(fn (int $phaseNumber) => $protocolType->phases()->create([
+                'order' => $phaseNumber,
+                'name' => "Definition {$phaseNumber}",
+                'required' => $phaseNumber === 1,
+            ]));
 
         $longProtocol = Protocol::query()->create([
             'horse_id' => $horse->id,
@@ -38,6 +44,7 @@ class ProtocolPhaseNormalizationMigrationTest extends TestCase
         foreach (range(1, 4) as $phaseNumber) {
             $longPhases->push(ProtocolPhase::query()->create([
                 'protocol_id' => $longProtocol->id,
+                'protocol_type_phase_id' => $phaseDefinitions[$phaseNumber - 1]->id,
                 'order' => $phaseNumber - 1,
                 'title' => "Phase {$phaseNumber}",
                 'state' => $phaseNumber < 3 ? 'done' : ($phaseNumber === 3 ? 'active' : 'upcoming'),
@@ -69,6 +76,7 @@ class ProtocolPhaseNormalizationMigrationTest extends TestCase
         foreach (range(1, 2) as $phaseNumber) {
             ProtocolPhase::query()->create([
                 'protocol_id' => $shortProtocol->id,
+                'protocol_type_phase_id' => $phaseDefinitions[$phaseNumber - 1]->id,
                 'order' => $phaseNumber - 1,
                 'title' => "Phase {$phaseNumber}",
                 'state' => $phaseNumber === 1 ? 'active' : 'upcoming',
@@ -89,6 +97,7 @@ class ProtocolPhaseNormalizationMigrationTest extends TestCase
         foreach (['Voorbereiding', 'Phase 1', 'Phase 2', 'Phase 3'] as $order => $title) {
             $preparedPhases->push(ProtocolPhase::query()->create([
                 'protocol_id' => $preparedProtocol->id,
+                'protocol_type_phase_id' => $phaseDefinitions[$order]->id,
                 'order' => $order,
                 'title' => $title,
                 'state' => $order === 1 ? 'active' : ($order === 0 ? 'done' : 'upcoming'),

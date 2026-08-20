@@ -6,6 +6,8 @@ use App\Models\AdminUser;
 use App\Models\Horse;
 use App\Models\Protocol;
 use App\Models\ProtocolType;
+use App\Models\ProtocolTypePhase;
+use App\Models\Supplement;
 use App\Models\Therapist;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -23,6 +25,15 @@ class AdminProtocolManagementTest extends TestCase
     private Therapist $therapist;
 
     private ProtocolType $protocolType;
+
+    /** @var array<int, ProtocolTypePhase> */
+    private array $phaseDefinitions;
+
+    private Supplement $defaultSupplement;
+
+    private Supplement $optionalSupplement;
+
+    private Supplement $secondPhaseSupplement;
 
     protected function setUp(): void
     {
@@ -52,6 +63,32 @@ class AdminProtocolManagementTest extends TestCase
         $this->protocolType = ProtocolType::query()->create([
             'name' => 'Darm protocol',
         ]);
+        $this->phaseDefinitions = collect(range(1, 3))
+            ->map(fn (int $phaseNumber) => $this->protocolType->phases()->create([
+                'order' => $phaseNumber,
+                'name' => "Configured phase {$phaseNumber}",
+                'description' => "Description {$phaseNumber}",
+                'required' => $phaseNumber === 1,
+            ]))
+            ->all();
+
+        $this->defaultSupplement = $this->phaseDefinitions[0]->supplements()->create([
+            'name' => 'Psylliumzaad',
+            'description' => 'Ondersteunt de darmgezondheid.',
+            'supplement_type' => 'kruid',
+            'add_by_default' => true,
+        ]);
+        $this->optionalSupplement = $this->phaseDefinitions[0]->supplements()->create([
+            'name' => 'Zink',
+            'description' => 'Ondersteunt huid en vacht.',
+            'supplement_type' => 'mineraal',
+            'add_by_default' => false,
+        ]);
+        $this->secondPhaseSupplement = $this->phaseDefinitions[1]->supplements()->create([
+            'name' => 'Kamille',
+            'supplement_type' => 'kruid',
+            'add_by_default' => false,
+        ]);
     }
 
     public function test_admin_can_open_the_horse_specific_protocol_creator(): void
@@ -64,6 +101,8 @@ class AdminProtocolManagementTest extends TestCase
                 ->where('protocol', null)
                 ->where('selectedHorseId', $this->horse->id)
                 ->where('protocolTypes.0.name', 'Darm protocol')
+                ->where('protocolTypes.0.phases.0.required', true)
+                ->where('protocolTypes.0.phases.0.supplements.0.name', 'Psylliumzaad')
                 ->has('horses', 1)
                 ->where('horses.0.name', 'Boaz'));
     }
@@ -81,6 +120,7 @@ class AdminProtocolManagementTest extends TestCase
         $this->assertSame($this->therapist->id, $protocol->therapist_id);
         $this->assertSame(3, $protocol->phases()->count());
         $this->assertSame(2, $protocol->phases()->first()->items()->count());
+        $this->assertSame(2, $protocol->phases()->withCount('supplements')->get()->sum('supplements_count'));
         $this->assertSame(2, $protocol->tasks()->count());
         $this->assertSame('Restore the gut first.', $protocol->analysis()->firstOrFail()->cause);
         $this->assertSame(2, $protocol->analysis()->firstOrFail()->advice()->count());
@@ -128,6 +168,7 @@ class AdminProtocolManagementTest extends TestCase
         $payload['phases'][0] = [
             'id' => $firstPhase->id,
             'client_key' => $firstPhase->id,
+            'protocol_type_phase_id' => $this->phaseDefinitions[0]->id,
             'title' => 'Updated phase 1',
             'state' => 'active',
             'week_start' => 1,
@@ -137,6 +178,7 @@ class AdminProtocolManagementTest extends TestCase
                 'id' => $keptItem->id,
                 'label' => 'Updated roughage plan',
             ]],
+            'supplement_ids' => [$this->optionalSupplement->id],
         ];
         $payload['tasks'] = [[
             'id' => $keptTask->id,
@@ -165,6 +207,14 @@ class AdminProtocolManagementTest extends TestCase
         $this->assertDatabaseHas('protocol_phases', ['id' => $thirdPhase->id]);
         $this->assertSame(3, $protocol->phases()->count());
         $this->assertDatabaseHas('protocol_phase_items', ['id' => $keptItem->id, 'label' => 'Updated roughage plan']);
+        $this->assertDatabaseHas('protocol_phase_supplements', [
+            'protocol_phase_id' => $firstPhase->id,
+            'supplement_id' => $this->optionalSupplement->id,
+        ]);
+        $this->assertDatabaseMissing('protocol_phase_supplements', [
+            'protocol_phase_id' => $firstPhase->id,
+            'supplement_id' => $this->defaultSupplement->id,
+        ]);
         $this->assertSame(1, $protocol->tasks()->count());
         $this->assertDatabaseHas('protocol_tasks', ['id' => $keptTask->id, 'label' => 'Updated linseed task']);
         $this->assertSame(1, $protocol->analysis()->firstOrFail()->advice()->count());
@@ -176,30 +226,59 @@ class AdminProtocolManagementTest extends TestCase
         ]);
     }
 
-    public function test_protocol_requires_exactly_three_phases(): void
+    public function test_required_phases_are_added_automatically_and_cannot_be_removed(): void
     {
-        $tooFew = $this->payload();
-        array_pop($tooFew['phases']);
+        $createPayload = $this->payload();
+        $createPayload['phases'] = [$createPayload['phases'][1]];
 
         $this->actingAs($this->admin, 'admin')
-            ->post('/admin/protocols', $tooFew)
-            ->assertSessionHasErrors('phases');
+            ->post('/admin/protocols', $createPayload)
+            ->assertSessionHasNoErrors();
 
-        $tooMany = $this->payload();
-        $tooMany['phases'][] = [
-            'id' => null,
-            'client_key' => 'phase-four',
-            'title' => 'Phase 4',
-            'state' => 'upcoming',
-            'week_start' => 9,
-            'week_end' => 10,
-            'chip_label' => 'From week 9',
-            'items' => [],
-        ];
+        $protocol = Protocol::query()->where('title', 'Boaz recovery protocol')->firstOrFail();
+        $requiredProtocolPhase = $protocol->phases()
+            ->where('protocol_type_phase_id', $this->phaseDefinitions[0]->id)
+            ->firstOrFail();
+        $optionalProtocolPhase = $protocol->phases()
+            ->where('protocol_type_phase_id', $this->phaseDefinitions[1]->id)
+            ->firstOrFail();
+        $this->assertSame(2, $protocol->phases()->count());
+
+        $withoutRequired = $this->payload();
+        $withoutRequired['phases'] = [$withoutRequired['phases'][1]];
+        $withoutRequired['phases'][0]['id'] = $optionalProtocolPhase->id;
 
         $this->actingAs($this->admin, 'admin')
-            ->post('/admin/protocols', $tooMany)
+            ->put('/admin/protocols/'.$protocol->id, $withoutRequired)
             ->assertSessionHasErrors('phases');
+
+        $withoutOptional = $this->payload();
+        $withoutOptional['phases'] = [$withoutOptional['phases'][0]];
+        $withoutOptional['phases'][0]['id'] = $requiredProtocolPhase->id;
+
+        $this->actingAs($this->admin, 'admin')
+            ->put('/admin/protocols/'.$protocol->id, $withoutOptional)
+            ->assertSessionHasNoErrors();
+
+        $this->assertSame(1, $protocol->phases()->count());
+        $this->assertDatabaseHas('protocol_phases', [
+            'id' => $requiredProtocolPhase->id,
+            'protocol_type_phase_id' => $this->phaseDefinitions[0]->id,
+        ]);
+        $this->assertDatabaseHas('protocol_phase_supplements', [
+            'protocol_phase_id' => $requiredProtocolPhase->id,
+            'supplement_id' => $this->defaultSupplement->id,
+        ]);
+    }
+
+    public function test_supplements_must_belong_to_the_selected_phase(): void
+    {
+        $payload = $this->payload();
+        $payload['phases'][0]['supplement_ids'] = [$this->secondPhaseSupplement->id];
+
+        $this->actingAs($this->admin, 'admin')
+            ->post('/admin/protocols', $payload)
+            ->assertSessionHasErrors('phases.0.supplement_ids.0');
 
         $this->assertDatabaseMissing('protocols', ['title' => 'Boaz recovery protocol']);
     }
@@ -230,6 +309,7 @@ class AdminProtocolManagementTest extends TestCase
                 [
                     'id' => null,
                     'client_key' => 'phase-one',
+                    'protocol_type_phase_id' => $this->phaseDefinitions[0]->id,
                     'title' => 'Phase 1 — Gut recovery',
                     'state' => 'active',
                     'week_start' => 1,
@@ -239,26 +319,31 @@ class AdminProtocolManagementTest extends TestCase
                         ['id' => null, 'label' => 'Roughage plan'],
                         ['id' => null, 'label' => 'Observe manure'],
                     ],
+                    'supplement_ids' => [$this->defaultSupplement->id],
                 ],
                 [
                     'id' => null,
                     'client_key' => 'phase-two',
+                    'protocol_type_phase_id' => $this->phaseDefinitions[1]->id,
                     'title' => 'Phase 2 — Rebuild',
                     'state' => 'upcoming',
                     'week_start' => 5,
                     'week_end' => 6,
                     'chip_label' => 'From week 5',
                     'items' => [],
+                    'supplement_ids' => [$this->secondPhaseSupplement->id],
                 ],
                 [
                     'id' => null,
                     'client_key' => 'phase-three',
+                    'protocol_type_phase_id' => $this->phaseDefinitions[2]->id,
                     'title' => 'Phase 3 — Stabilize',
                     'state' => 'upcoming',
                     'week_start' => 7,
                     'week_end' => 8,
                     'chip_label' => 'From week 7',
                     'items' => [],
+                    'supplement_ids' => [],
                 ],
             ],
             'tasks' => [

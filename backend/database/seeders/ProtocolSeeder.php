@@ -40,6 +40,16 @@ class ProtocolSeeder extends Seeder
     private function seedAnchorProtocol(Horse $horse, Therapist $therapist): void
     {
         $protocolType = ProtocolType::query()->firstOrCreate(['name' => 'Darm protocol']);
+        $phaseDefinitions = $protocolType->phases()->orderBy('order')->get();
+        while ($phaseDefinitions->count() < 3) {
+            $phaseNumber = $phaseDefinitions->count() + 1;
+            $phaseDefinitions->push($protocolType->phases()->create([
+                'order' => ((int) $phaseDefinitions->max('order')) + 1,
+                'name' => "Fase {$phaseNumber}",
+                'description' => null,
+                'required' => $phaseNumber === 1,
+            ]));
+        }
         $startedAt = now()->subWeeks(3);
         $protocol = Protocol::query()->updateOrCreate(
             [
@@ -76,6 +86,7 @@ class ProtocolSeeder extends Seeder
             $phase = ProtocolPhase::query()->updateOrCreate(
                 ['protocol_id' => $protocol->id, 'order' => $order],
                 [
+                    'protocol_type_phase_id' => $phaseDefinitions[$order]->id,
                     'title' => $title,
                     'state' => $state,
                     'week_start' => $weekStart,

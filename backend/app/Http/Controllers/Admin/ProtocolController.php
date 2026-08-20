@@ -12,6 +12,7 @@ use App\Models\ProtocolPhase;
 use App\Models\ProtocolPhaseItem;
 use App\Models\ProtocolTask;
 use App\Models\ProtocolType;
+use App\Models\ProtocolTypePhase;
 use App\Models\Therapist;
 use App\Support\AuditLogger;
 use Illuminate\Http\RedirectResponse;
@@ -57,7 +58,7 @@ class ProtocolController extends Controller
 
     public function store(SaveProtocolRequest $request): RedirectResponse
     {
-        $data = $request->validated();
+        $data = $this->withRequiredPhases($request->validated());
 
         $protocol = DB::transaction(function () use ($data) {
             $protocol = Protocol::query()->create($this->protocolAttributes($data));
@@ -79,6 +80,8 @@ class ProtocolController extends Controller
             'horse.focusTopics:id,title,slug',
             'therapist:id,name,title',
             'phases.items',
+            'phases.phase:id,protocol_type_id,name,description,required,order',
+            'phases.supplements.supplement:id,protocol_type_phase_id,name,description,supplement_type,add_by_default,max_aantal_in_fase,min_aantal_per_week,rust_periode_in_weken',
             'analysis.advice',
             'tasks',
         ]);
@@ -144,6 +147,12 @@ class ProtocolController extends Controller
                 ->orderBy('name')
                 ->get(['id', 'name', 'title']),
             'protocolTypes' => ProtocolType::query()
+                ->with([
+                    'phases:id,protocol_type_id,order,name,description,required',
+                    'phases.weeks:id,protocol_type_phase_id,number',
+                    'phases.supplements:id,protocol_type_phase_id,name,description,supplement_type,add_by_default,max_aantal_in_fase,min_aantal_per_week,rust_periode_in_weken',
+                    'phases.supplements.weeks:id,number',
+                ])
                 ->orderBy('name')
                 ->get(['id', 'name']),
         ];
@@ -193,6 +202,7 @@ class ProtocolController extends Controller
 
             $phase->fill([
                 'protocol_id' => $protocol->id,
+                'protocol_type_phase_id' => $phaseData['protocol_type_phase_id'],
                 'order' => $order,
                 'title' => $phaseData['title'],
                 'state' => $phaseData['state'],
@@ -204,11 +214,58 @@ class ProtocolController extends Controller
             $phaseIds[] = $phase->id;
             $phaseIdByClientKey[$phaseData['client_key']] = $phase->id;
             $this->syncPhaseItems($phase, $phaseData['items']);
+            $this->syncPhaseSupplements($phase, $phaseData['supplement_ids']);
         }
 
         $protocol->phases()->whereNotIn('id', $phaseIds)->delete();
         $this->syncTasks($protocol, $data['tasks'], $phaseIdByClientKey);
         $this->syncAnalysis($protocol, $data['analysis']['cause'] ?? null, $data['advice']);
+    }
+
+    /**
+     * @param  array<string, mixed>  $data
+     * @return array<string, mixed>
+     */
+    private function withRequiredPhases(array $data): array
+    {
+        $definitions = ProtocolTypePhase::query()
+            ->where('protocol_type_id', $data['protocol_type_id'])
+            ->orderBy('order')
+            ->get();
+        $phases = collect($data['phases']);
+        $selectedDefinitionIds = $phases->pluck('protocol_type_phase_id');
+        $hasActivePhase = $phases->contains(fn (array $phase): bool => $phase['state'] === 'active');
+
+        foreach ($definitions->where('required', true) as $definition) {
+            if ($selectedDefinitionIds->contains($definition->id)) {
+                continue;
+            }
+
+            $phases->push([
+                'id' => null,
+                'client_key' => 'required-'.$definition->id,
+                'protocol_type_phase_id' => $definition->id,
+                'title' => $definition->name,
+                'state' => $hasActivePhase ? 'upcoming' : 'active',
+                'week_start' => null,
+                'week_end' => null,
+                'chip_label' => 'Verplicht',
+                'items' => [],
+                'supplement_ids' => $definition->supplements()
+                    ->where('add_by_default', true)
+                    ->pluck('id')
+                    ->all(),
+            ]);
+            $hasActivePhase = true;
+        }
+
+        $definitionOrder = $definitions->pluck('order', 'id');
+        $data['phases'] = $phases
+            ->sortBy(fn (array $phase) => $definitionOrder[$phase['protocol_type_phase_id']] ?? PHP_INT_MAX)
+            ->values()
+            ->all();
+
+        return $data;
     }
 
     /**
@@ -234,6 +291,26 @@ class ProtocolController extends Controller
         $phase->items()->when($itemIds, fn ($query) => $query->whereNotIn('id', $itemIds))->delete();
         if ($itemIds === []) {
             $phase->items()->delete();
+        }
+    }
+
+    /**
+     * @param  array<int, string>  $supplementIds
+     */
+    private function syncPhaseSupplements(ProtocolPhase $phase, array $supplementIds): void
+    {
+        foreach ($supplementIds as $supplementId) {
+            $phase->supplements()->firstOrCreate([
+                'supplement_id' => $supplementId,
+            ]);
+        }
+
+        $phase->supplements()
+            ->when($supplementIds, fn ($query) => $query->whereNotIn('supplement_id', $supplementIds))
+            ->delete();
+
+        if ($supplementIds === []) {
+            $phase->supplements()->delete();
         }
     }
 

@@ -40,4 +40,9 @@ class ProtocolTypePhase extends Model
     {
         return $this->hasMany(Supplement::class)->orderBy('name');
     }
+
+    public function protocolPhases(): HasMany
+    {
+        return $this->hasMany(ProtocolPhase::class);
+    }
 }
