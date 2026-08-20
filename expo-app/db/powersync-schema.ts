@@ -217,12 +217,10 @@ const scan_ingredients = new Table({
 
 const library_items = new Table({
   slug: column.text,
-  kind: column.text,
   format: column.text,
   title: column.text,
   description: column.text,
   body: column.text,
-  video_url: column.text,
   hero_image_url: column.text,
   duration_label: column.text,
   duration_sec: column.integer,
@@ -525,4 +523,3 @@ export const AppSchema = new Schema({
   intake_responses,
   intake_answers,
 });
-

@@ -17,11 +17,11 @@ class IntakeBookingSeeder extends Seeder
         $months = ['januari', 'februari', 'maart', 'april', 'mei', 'juni', 'juli', 'augustus', 'september', 'oktober', 'november', 'december'];
         $days = ['Maandag', 'Dinsdag', 'Woensdag', 'Donderdag', 'Vrijdag', 'Zaterdag', 'Zondag'];
 
-        // Marit's pending intake (matches the frontend mock).
-        $marit = User::where('email', 'marit@voorbeeld.nl')->first();
-        $nova = Horse::where('owner_id', $marit->id)->where('name', 'Nova')->first();
+        // The anchor user's pending intake (matches the frontend mock).
+        $anchorUser = User::where('email', UserSeeder::ANCHOR_EMAIL)->firstOrFail();
+        $nova = Horse::where('owner_id', $anchorUser->id)->where('name', 'Nova')->first();
         IntakeBooking::create([
-            'user_id' => $marit->id,
+            'user_id' => $anchorUser->id,
             'horse_id' => $nova?->id,
             'therapist_id' => $shelley->id,
             'scheduled_at' => now()->addDays(7)->setTime(14, 30),
@@ -30,7 +30,7 @@ class IntakeBookingSeeder extends Seeder
             'status' => 'pending',
         ]);
 
-        foreach (User::where('id', '!=', $marit->id)->inRandomOrder()->limit(15)->get() as $user) {
+        foreach (User::where('id', '!=', $anchorUser->id)->inRandomOrder()->limit(15)->get() as $user) {
             $horse = Horse::where('owner_id', $user->id)->where('status', 'active')->first();
             $when = fake()->dateTimeBetween('-2 months', '+3 weeks');
             $weekday = (int) $when->format('N') - 1;

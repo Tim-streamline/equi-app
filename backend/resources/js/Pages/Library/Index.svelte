@@ -63,8 +63,7 @@
                 <TableBody>
                     {#each items.data as i (i.id)}
                         <TableRow>
-                            <TableCell><Link href={`/admin/library/${i.id}/edit`} class="font-medium hover:text-primary">{i.title}</Link>
-                                <div class="text-xs text-muted-foreground">{i.kind}</div></TableCell>
+                            <TableCell><Link href={`/admin/library/${i.id}/edit`} class="font-medium hover:text-primary">{i.title}</Link></TableCell>
                             <TableCell><Badge variant="secondary">{i.format}</Badge></TableCell>
                             <TableCell class="text-muted-foreground">{i.author ?? '—'}</TableCell>
                             <TableCell>

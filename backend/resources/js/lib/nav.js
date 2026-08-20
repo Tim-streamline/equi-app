@@ -22,6 +22,7 @@ import {
     RadioTower,
     ScrollText,
     Settings,
+    SlidersHorizontal,
 } from '@lucide/svelte';
 
 /**
@@ -87,6 +88,7 @@ export const navSections = [
             { label: 'Notifications', href: '/admin/notifications', icon: Bell },
             { label: 'Sync health', href: '/admin/sync-health', icon: RadioTower },
             { label: 'Audit log', href: '/admin/audit-log', icon: ScrollText, roles: ['admin'] },
+            { label: 'Protocol Settings', href: '/admin/protocol-settings', icon: SlidersHorizontal, roles: ['admin'] },
             { label: 'Settings', href: '/admin/settings', icon: Settings, roles: ['admin'] },
         ],
     },

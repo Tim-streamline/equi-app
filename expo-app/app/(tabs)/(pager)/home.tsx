@@ -10,7 +10,6 @@ import { Card } from '@/components/ui/Card';
 import { Bigchip } from '@/components/ui/Bigchip';
 import { ProgressRing } from '@/components/ui/ProgressRing';
 import { IconButton } from '@/components/ui/IconButton';
-import { Chip } from '@/components/ui/Chip';
 import { useTabBarPadding } from '@/hooks/useTabBarPadding';
 import { IntakeEntryCard } from '@/components/intake/IntakeEntryCard';
 import {
@@ -138,9 +137,6 @@ export default function HomeScreen() {
                       source={require('@/assets/images/logo-horse-white.png')}
                       style={{ position: 'absolute', top: '50%', left: '50%', width: 90, height: 90, marginLeft: -45, marginTop: -45, opacity: 0.35, resizeMode: 'contain' }}
                     />
-                    <View style={{ position: 'absolute', top: 10, left: 10 }}>
-                      <Chip variant="tag" label={featured.kind as string} />
-                    </View>
                     <View
                       style={{
                         position: 'absolute',

@@ -279,12 +279,10 @@ Articles, videos, courses, programs (`LIBRARY_FEATURED`, `LIBRARY_LIST`, article
 | Field        | Type     | Notes                                            |
 |--------------|----------|--------------------------------------------------|
 | id           | uuid     | slug like "brandnetel"                           |
-| kind         | enum     | `Kruid` / `Voeding` / `Diagnose` / `Cursus` / `Locatie` / `Symptoom` |
 | format       | enum     | `article` / `video` / `course` / `program`       |
 | title        | string   |                                                  |
 | description  | text     |                                                  |
 | body         | richtext | for articles                                     |
-| videoUrl     | string?  |                                                  |
 | heroImageUrl | string?  |                                                  |
 | durationLabel| string   | "5 min · Video", "4 weken · Programma"           |
 | durationSec  | int?     | parsed where possible                            |

@@ -25,7 +25,7 @@ class CommunitySeeder extends Seeder
 
         // Hand-craft a couple of anchor posts that match the frontend mock.
         $anchor = $this->createPost(
-            $users->where('email', '!=', 'marit@voorbeeld.nl')->random(),
+            $users->where('email', '!=', UserSeeder::ANCHOR_EMAIL)->random(),
             $categories->firstWhere('slug', 'vraag-shelley') ?? $categories->first(),
             'Mijn ruin krabt zijn manen al weken open. Voeding al aangepast, geen verbetering. Iemand ervaring met brandnetel-protocol?',
             ['jeukklachten', 'voeding'],

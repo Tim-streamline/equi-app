@@ -18,7 +18,8 @@ class DatabaseSeeder extends Seeder
             ProductSeeder::class,           // ~20 products
             LibrarySeeder::class,           // ~50 items + chapters/sections, seasonal tips
             UserSeeder::class,              // 25 users + subs/payments/settings
-            HorseSeeder::class,             // horses + protocols + observations + timeline + shares
+            HorseSeeder::class,             // horses + observations + timeline + shares
+            ProtocolSeeder::class,          // anchor user's protocol + phases/tasks/completions
             ScanSeeder::class,              // scans per user + ingredient breakdown
             CommunitySeeder::class,         // posts + replies + reactions
             LibraryEngagementSeeder::class, // bookmarks + progress

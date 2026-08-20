@@ -251,7 +251,6 @@ erDiagram
   LIBRARY_ITEM {
     string id PK
     string slug
-    string kind
     string format
     string title
     string durationLabel

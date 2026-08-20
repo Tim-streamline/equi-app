@@ -14,14 +14,16 @@ use Illuminate\Support\Facades\Hash;
 
 class UserSeeder extends Seeder
 {
+    public const ANCHOR_EMAIL = 'shelleymeeuwsen@gmail.com';
+
     public function run(): void
     {
         $plans = Plan::all()->keyBy('slug');
 
-        // Anchor user matching the frontend.
-        $marit = User::create([
+        // Development anchor user used by the dependent seeders.
+        $anchorUser = User::create([
             'name' => 'Shelley Meeuwsen',
-            'email' => 'shelleymeeuwsen@gmail.com',
+            'email' => self::ANCHOR_EMAIL,
             'password' => Hash::make('password'),
             'avatar_initial' => 'SM',
             'locale' => 'nl-NL',
@@ -30,7 +32,7 @@ class UserSeeder extends Seeder
             'onboarded_at' => now()->subWeeks(3),
             'created_at' => now()->subWeeks(7),
         ]);
-        $this->bootstrapUser($marit, $plans['plus']);
+        $this->bootstrapUser($anchorUser, $plans['plus']);
 
         // 24 random users.
         for ($i = 0; $i < 24; $i++) {

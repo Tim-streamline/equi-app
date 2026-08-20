@@ -4,7 +4,7 @@
     import { Link, router } from '@inertiajs/svelte';
     import { Card, CardHeader, CardTitle, CardContent, Button, Badge } from '$lib/components/ui';
     import { statusVariant } from '$lib/badges.js';
-    import { ArrowLeft } from '@lucide/svelte';
+    import { ArrowLeft, Pencil } from '@lucide/svelte';
 
     let { protocol } = $props();
     function setStatus(status) { router.post(`/admin/protocols/${protocol.id}/status`, { status }); }
@@ -16,6 +16,7 @@
     </Link>
     <PageHeader title={protocol.title} description={`${protocol.horse?.name} · ${protocol.therapist?.name ?? 'no therapist'}`}>
         {#snippet actions()}
+            <Button href={`/admin/protocols/${protocol.id}/edit`}><Pencil class="size-4" /> Edit protocol</Button>
             <Button variant="outline" onclick={() => setStatus('active')}>Resume</Button>
             <Button variant="outline" onclick={() => setStatus('paused')}>Pause</Button>
             <Button variant="outline" onclick={() => setStatus('completed')}>Complete</Button>

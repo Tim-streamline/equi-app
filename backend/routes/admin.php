@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Admin\AuditLogController;
 use App\Http\Controllers\Admin\AuthController;
+use App\Http\Controllers\Admin\ChunkedMediaUploadController;
 use App\Http\Controllers\Admin\CommunityController;
 use App\Http\Controllers\Admin\DashboardController;
 use App\Http\Controllers\Admin\DataExportController;
@@ -19,6 +20,7 @@ use App\Http\Controllers\Admin\PaymentController;
 use App\Http\Controllers\Admin\PlanController;
 use App\Http\Controllers\Admin\ProductController;
 use App\Http\Controllers\Admin\ProtocolController;
+use App\Http\Controllers\Admin\ProtocolSettingsController;
 use App\Http\Controllers\Admin\ScanResultController;
 use App\Http\Controllers\Admin\SeasonalTipController;
 use App\Http\Controllers\Admin\SettingsController;
@@ -74,6 +76,11 @@ Route::middleware('auth:admin')->group(function () {
     Route::middleware('admin.role:content_editor')->group(function () {
         // Media upload/delete must be declared before the library resource so
         // `library/media` isn't shadowed by the `library/{library}` binding.
+        Route::post('library/media/chunks', [ChunkedMediaUploadController::class, 'store'])->name('library.media.chunks.store');
+        Route::patch('library/media/chunks/{upload}', [ChunkedMediaUploadController::class, 'update'])->name('library.media.chunks.update');
+        Route::match(['HEAD'], 'library/media/chunks/{upload}', [ChunkedMediaUploadController::class, 'offset'])->name('library.media.chunks.offset');
+        Route::get('library/media/chunks/{upload}/asset', [ChunkedMediaUploadController::class, 'asset'])->name('library.media.chunks.asset');
+        Route::delete('library/media/chunks', [ChunkedMediaUploadController::class, 'destroy'])->name('library.media.chunks.destroy');
         Route::post('library/media', [MediaAssetController::class, 'store'])->name('library.media.store');
         Route::delete('library/media/{medium}', [MediaAssetController::class, 'destroy'])->name('library.media.destroy');
         Route::resource('library', LibraryItemController::class)->except('show');
@@ -133,6 +140,10 @@ Route::middleware('auth:admin')->group(function () {
     // ---- Protocols -------------------------------------------------------
     Route::controller(ProtocolController::class)->prefix('protocols')->as('protocols.')->group(function () {
         Route::get('/', 'index')->name('index');
+        Route::get('create', 'create')->name('create');
+        Route::post('/', 'store')->name('store');
+        Route::get('{protocol}/edit', 'edit')->name('edit');
+        Route::put('{protocol}', 'update')->name('update');
         Route::get('{protocol}', 'show')->name('show');
         Route::post('{protocol}/status', 'updateStatus')->name('status');
     });
@@ -146,6 +157,23 @@ Route::middleware('auth:admin')->group(function () {
 
     // ---- Settings: admin users ------------------------------------------
     Route::middleware('admin.role:admin')->group(function () {
+        Route::controller(ProtocolSettingsController::class)->prefix('protocol-settings')->as('protocol-settings.')->group(function () {
+            Route::get('/', 'index')->name('index');
+            Route::post('types', 'storeType')->name('types.store');
+            Route::put('types/{protocolType}', 'updateType')->name('types.update');
+            Route::delete('types/{protocolType}', 'destroyType')->name('types.destroy');
+            Route::post('phases', 'storePhase')->name('phases.store');
+            Route::put('phases/{protocolTypePhase}', 'updatePhase')->name('phases.update');
+            Route::delete('phases/{protocolTypePhase}', 'destroyPhase')->name('phases.destroy');
+            Route::post('phases/{protocolTypePhase}/weeks', 'storeWeek')->name('weeks.store');
+            Route::delete('weeks/{protocolTypePhaseWeek}', 'destroyWeek')->name('weeks.destroy');
+            Route::post('supplements', 'storeSupplement')->name('supplements.store');
+            Route::put('supplements/{supplement}', 'updateSupplement')->name('supplements.update');
+            Route::delete('supplements/{supplement}', 'destroySupplement')->name('supplements.destroy');
+            Route::put('supplements/{supplement}/weeks/{protocolTypePhaseWeek}', 'storeSupplementWeek')->name('supplement-weeks.store');
+            Route::delete('supplements/{supplement}/weeks/{protocolTypePhaseWeek}', 'destroySupplementWeek')->name('supplement-weeks.destroy');
+        });
+
         Route::controller(SettingsController::class)->prefix('settings')->as('settings.')->group(function () {
             Route::get('/', 'index')->name('index');
             Route::post('admins', 'storeAdmin')->name('admins.store');

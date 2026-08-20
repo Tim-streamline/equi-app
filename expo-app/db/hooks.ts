@@ -188,12 +188,47 @@ export function usePhaseItems(phaseId: string) {
 }
 
 export function useProtocolAnalysis(protocolId: string): (Indexed & { advice: Indexed[] }) | null {
-  const analyses = useCamelQuery(`SELECT * FROM protocol_analyses WHERE protocol_id = ? LIMIT 1`, [protocolId]);
-  const analysis = analyses[0];
-  const advice = sorted(
-    useCamelQuery(`SELECT * FROM protocol_advice WHERE analysis_id = ?`, [analysis?.id ?? '']),
+  // Fetch the analysis and its advice in one subscription. Previously the
+  // advice query could only start after the analysis query returned its id,
+  // causing the section to grow a render later and shift the whole tab.
+  const rows = useCamelQuery(
+    `SELECT
+       a.id AS analysis_id,
+       a.protocol_id,
+       a.cause,
+       pa.id AS advice_id,
+       pa.icon_key AS advice_icon_key,
+       pa.title AS advice_title,
+       pa.body AS advice_body,
+       pa."order" AS advice_order
+     FROM protocol_analyses a
+     LEFT JOIN protocol_advice pa ON pa.analysis_id = a.id
+     WHERE a.protocol_id = ?
+     ORDER BY pa."order"`,
+    [protocolId],
   );
-  return analysis ? { ...analysis, advice } : null;
+  return useMemo(() => {
+    const analysis = rows[0];
+    if (!analysis) return null;
+
+    const advice = rows
+      .filter((row) => row.adviceId)
+      .map((row) => ({
+        id: row.adviceId,
+        analysisId: row.analysisId,
+        iconKey: row.adviceIconKey,
+        title: row.adviceTitle,
+        body: row.adviceBody,
+        order: row.adviceOrder,
+      }));
+
+    return {
+      id: analysis.analysisId,
+      protocolId: analysis.protocolId,
+      cause: analysis.cause,
+      advice,
+    };
+  }, [rows]);
 }
 
 export function useProtocolTasks(protocolId: string) {

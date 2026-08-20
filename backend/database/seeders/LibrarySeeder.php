@@ -23,7 +23,6 @@ class LibrarySeeder extends Seeder
         // Hand-crafted featured + a few well-known items.
         $brandnetel = LibraryItem::create([
             'slug' => 'brandnetel',
-            'kind' => 'Kruid',
             'format' => 'video',
             'title' => 'Brandnetel — 5 minuten over de juiste dosering',
             'description' => 'Hoeveel, hoe vaak en wat juist te vermijden.',
@@ -51,19 +50,18 @@ class LibrarySeeder extends Seeder
         $brandnetel->focusTopics()->attach([$focusBySlug['jeuk'], $focusBySlug['darm']]);
 
         $knownTitles = [
-            ['lijnzaad', 'Voeding', 'article', 'Lijnzaad: doseren in 7 dagen', '8 min · Artikel', ['voeding', 'aanbevolen'], ['darm']],
-            ['mest-score', 'Diagnose', 'video', 'Lees de mest van je paard', '6 min · Video', ['aanbevolen'], ['darm']],
-            ['darmen-cursus', 'Cursus', 'course', 'Darmen Cursus — Hoofdstuk 3 · 4 lessen', '42 min · Video', ['cursussen', 'darmen'], ['darm']],
-            ['locatie', 'Locatie', 'program', 'In balans bij locatiewissel', '4 weken · Programma', ['aanbevolen'], []],
-            ['hoefb', 'Symptoom', 'article', 'Hoefbevangenheid — de eerste signalen', '7 min · Artikel', ['hoeven'], ['hoef']],
-            ['zomereczeem', 'Symptoom', 'article', 'Zomereczeem — preventief beleid', '9 min · Artikel', ['jeuk'], ['jeuk']],
-            ['krachtvoer', 'Voeding', 'article', 'Krachtvoer zonder granen — waarom?', '6 min · Artikel', ['voeding'], ['darm']],
-            ['mariadistel', 'Kruid', 'article', 'Mariadistel voor de lever', '5 min · Artikel', ['kruiden'], []],
+            ['lijnzaad', 'article', 'Lijnzaad: doseren in 7 dagen', '8 min · Artikel', ['voeding', 'aanbevolen'], ['darm']],
+            ['mest-score', 'video', 'Lees de mest van je paard', '6 min · Video', ['aanbevolen'], ['darm']],
+            ['darmen-cursus', 'course', 'Darmen Cursus — Hoofdstuk 3 · 4 lessen', '42 min · Video', ['cursussen', 'darmen'], ['darm']],
+            ['locatie', 'program', 'In balans bij locatiewissel', '4 weken · Programma', ['aanbevolen'], []],
+            ['hoefb', 'article', 'Hoefbevangenheid — de eerste signalen', '7 min · Artikel', ['hoeven'], ['hoef']],
+            ['zomereczeem', 'article', 'Zomereczeem — preventief beleid', '9 min · Artikel', ['jeuk'], ['jeuk']],
+            ['krachtvoer', 'article', 'Krachtvoer zonder granen — waarom?', '6 min · Artikel', ['voeding'], ['darm']],
+            ['mariadistel', 'article', 'Mariadistel voor de lever', '5 min · Artikel', ['kruiden'], []],
         ];
-        foreach ($knownTitles as $i => [$slug, $kind, $format, $title, $duration, $catSlugs, $focusSlugs]) {
+        foreach ($knownTitles as $i => [$slug, $format, $title, $duration, $catSlugs, $focusSlugs]) {
             $item = LibraryItem::create([
                 'slug' => $slug,
-                'kind' => $kind,
                 'format' => $format,
                 'title' => $title,
                 'description' => fake()->sentence(12),
@@ -100,17 +98,14 @@ class LibrarySeeder extends Seeder
         }
 
         // Fill out to ~50 items with generated content.
-        $kinds = ['Kruid', 'Voeding', 'Diagnose', 'Cursus', 'Locatie', 'Symptoom'];
         $formats = ['article', 'video', 'course', 'program'];
         $allCatIds = $categoriesBySlug->values()->all();
         $allFocusIds = $focusBySlug->values()->all();
         for ($i = 0; $i < 40; $i++) {
-            $kind = fake()->randomElement($kinds);
             $format = fake()->randomElement($formats);
             $minutes = fake()->numberBetween(3, 30);
             $item = LibraryItem::create([
                 'slug' => fake()->unique()->slug(3),
-                'kind' => $kind,
                 'format' => $format,
                 'title' => ucfirst(fake()->words(fake()->numberBetween(4, 8), true)),
                 'description' => fake()->sentence(10),

@@ -14,6 +14,7 @@ use App\Models\ProtocolPhase;
 use App\Models\ProtocolPhaseItem;
 use App\Models\ProtocolTask;
 use App\Models\ProtocolTaskCompletion;
+use App\Models\ProtocolType;
 use App\Models\Therapist;
 use App\Models\TimelineEvent;
 use App\Models\User;
@@ -36,15 +37,15 @@ class HorseSeeder extends Seeder
 
     public function run(): void
     {
-        $marit = User::where('email', 'marit@voorbeeld.nl')->first();
+        $anchorUser = User::where('email', UserSeeder::ANCHOR_EMAIL)->firstOrFail();
         $shelley = Therapist::where('name', 'Shelley')->first();
         $therapistIds = Therapist::pluck('id')->all();
         $focusIds = FocusTopic::pluck('id')->all();
         $focusBySlug = FocusTopic::pluck('id', 'slug');
 
-        // Seed Marit's hand-crafted horses first.
+        // Seed the anchor user's hand-crafted horses first.
         $nova = Horse::create([
-            'owner_id' => $marit->id,
+            'owner_id' => $anchorUser->id,
             'name' => 'Nova',
             'breed' => 'Friese kruising',
             'age' => 9,
@@ -57,10 +58,10 @@ class HorseSeeder extends Seeder
         $nova->focusTopics()->attach([$focusBySlug['jeuk'], $focusBySlug['darm']], [
             'extra_label' => 'Jeukklachten', 'added_at' => now()->subWeeks(3),
         ]);
-        $this->seedNovaSpecifics($nova, $marit, $shelley);
+        $this->seedNovaSpecifics($nova, $anchorUser, $shelley);
 
         Horse::create([
-            'owner_id' => $marit->id,
+            'owner_id' => $anchorUser->id,
             'name' => 'Pip',
             'breed' => 'Welsh pony',
             'age' => 16,
@@ -71,7 +72,7 @@ class HorseSeeder extends Seeder
         ]);
 
         // Random horses for everyone else.
-        $otherUsers = User::where('id', '!=', $marit->id)->get();
+        $otherUsers = User::where('id', '!=', $anchorUser->id)->get();
         foreach ($otherUsers as $user) {
             $count = fake()->numberBetween(1, 3);
             for ($i = 0; $i < $count; $i++) {
@@ -82,7 +83,7 @@ class HorseSeeder extends Seeder
                     'age' => fake()->numberBetween(3, 24),
                     'sex' => fake()->randomElement(['merrie', 'ruin', 'hengst']),
                     'weight_kg' => fake()->numberBetween(280, 680),
-                    'stable' => fake()->company() . ' · Box ' . fake()->numberBetween(1, 30),
+                    'stable' => fake()->company().' · Box '.fake()->numberBetween(1, 30),
                     'status' => 'active',
                     'created_at' => fake()->dateTimeBetween('-9 months', '-1 week'),
                 ]);
@@ -92,14 +93,18 @@ class HorseSeeder extends Seeder
                 }
                 $this->seedStats($horse);
                 $this->seedTimeline($horse);
-                if (fake()->boolean(40)) $this->seedShares($horse, $shelley, $therapistIds);
-                if (fake()->boolean(70)) $this->seedProtocol($horse, fake()->randomElement($therapistIds));
+                if (fake()->boolean(40)) {
+                    $this->seedShares($horse, $shelley, $therapistIds);
+                }
+                if (fake()->boolean(70)) {
+                    $this->seedProtocol($horse, fake()->randomElement($therapistIds));
+                }
                 $this->seedObservations($horse, $user);
             }
         }
     }
 
-    private function seedNovaSpecifics(Horse $nova, User $marit, Therapist $shelley): void
+    private function seedNovaSpecifics(Horse $nova, User $owner, Therapist $shelley): void
     {
         HorseShare::create([
             'horse_id' => $nova->id, 'therapist_id' => $shelley->id, 'role' => 'full', 'since' => now()->subWeeks(3),
@@ -134,87 +139,10 @@ class HorseSeeder extends Seeder
             ]);
         }
 
-        $protocol = Protocol::create([
-            'horse_id' => $nova->id,
-            'therapist_id' => $shelley->id,
-            'title' => "Nova's plan",
-            'subtitle_analyse' => 'KWPN merrie · Jeuk / Zomereczeem',
-            'subtitle_protocol' => 'Week 3 van 8 · Fase 1 actief',
-            'subtitle_calendar' => 'Mei ' . now()->year,
-            'total_weeks' => 8, 'current_week' => 3,
-            'started_at' => now()->subWeeks(3), 'status' => 'active',
-        ]);
-
-        $phases = [
-            ['Voorbereiding', 'done', 0, 0, 'Klaar', []],
-            ['Fase 1 — Darmen', 'active', 1, 4, 'Actief · wk 1–4', [
-                '1 el brandnetel door ruwvoer (ochtend)',
-                '1 el lijnzaad door ruwvoer (ochtend)',
-                'Krachtvoer met granen weglaten',
-                'Mest observeren en noteren',
-            ]],
-            ['Fase 2 — Lever en nieren', 'upcoming', 5, 6, 'Vanaf wk 5', []],
-            ['Fase 3 — Huid', 'upcoming', 7, 8, 'Vanaf wk 7', []],
-        ];
-        $activePhase = null;
-        foreach ($phases as $i => [$title, $state, $ws, $we, $chip, $items]) {
-            $phase = ProtocolPhase::create([
-                'protocol_id' => $protocol->id, 'order' => $i, 'title' => $title,
-                'state' => $state, 'week_start' => $ws, 'week_end' => $we, 'chip_label' => $chip,
-            ]);
-            foreach ($items as $j => $label) {
-                ProtocolPhaseItem::create(['phase_id' => $phase->id, 'order' => $j, 'label' => $label]);
-            }
-            if ($state === 'active') $activePhase = $phase;
-        }
-
-        $analysis = ProtocolAnalysis::create([
-            'protocol_id' => $protocol->id,
-            'cause' => 'Nova heeft tekenen van een overbelast immuunsysteem door een verstoorde darmflora. De jeuk is niet het echte probleem. Het is een signaal van binnenuit.',
-        ]);
-        foreach ([
-            ['leaf', 'Voeding', 'Krachtvoer met granen vervangen. Ruwvoer onbeperkt. Lijnzaad toevoegen.'],
-            ['run', 'Management', 'Minimaal 6 uur bewegingsvrijheid per dag. Nachtbeweging indien mogelijk.'],
-            ['horse', 'Training', 'Eerste 4 weken lichte belasting. Geen wedstrijdvoorbereiding tijdens fase 1.'],
-        ] as $i => [$icon, $title, $body]) {
-            ProtocolAdvice::create([
-                'analysis_id' => $analysis->id, 'icon_key' => $icon,
-                'title' => $title, 'body' => $body, 'order' => $i,
-            ]);
-        }
-
-        $tasks = [
-            ['1 el brandnetel door ruwvoer', 'Ochtendvoer', 'feeding'],
-            ['1 el lijnzaad door ruwvoer', 'Ochtendvoer', 'feeding'],
-            ['Foto van mest in app loggen', 'Na ochtendmest', 'observation'],
-            ['5 min borstelen rond manen', 'Vóór beweging', 'care'],
-        ];
-        $taskIds = [];
-        foreach ($tasks as $i => [$label, $meta, $kind]) {
-            $task = ProtocolTask::create([
-                'protocol_id' => $protocol->id,
-                'phase_id' => $activePhase->id,
-                'label' => $label, 'meta' => $meta, 'kind' => $kind, 'order' => $i,
-                'active_from' => now()->subWeeks(3),
-            ]);
-            $taskIds[] = $task->id;
-        }
-        // Generate completions for the last 14 days.
-        for ($d = 0; $d < 14; $d++) {
-            $date = now()->subDays($d)->toDateString();
-            foreach ($taskIds as $idx => $tid) {
-                $done = $d > 1 ? true : fake()->boolean(60);
-                ProtocolTaskCompletion::create([
-                    'task_id' => $tid, 'horse_id' => $nova->id, 'date' => $date,
-                    'done' => $done, 'done_at' => $done ? now()->subDays($d) : null,
-                ]);
-            }
-        }
-
         for ($i = 0; $i < 12; $i++) {
             Observation::create([
                 'horse_id' => $nova->id,
-                'author_id' => $marit->id,
+                'author_id' => $owner->id,
                 'date' => now()->subDays($i * 2 + 1)->toDateString(),
                 'note' => fake()->randomElement([
                     'Mest iets losser, lijnzaad teruggebracht.',
@@ -234,8 +162,8 @@ class HorseSeeder extends Seeder
         $energy = fake()->numberBetween(4, 9);
         $stool = fake()->randomElement(['A', 'B+', 'B', 'C', 'B+']);
         $stats = [
-            ['Gewicht', $horse->weight_kg . ' kg', fake()->randomElement(['stabiel', '↑ +5 kg', '↓ -3 kg']), $horse->weight_kg, null, null],
-            ['Energie', $energy . ' / 10', fake()->randomElement(['stabiel', '↑ +1', '↓ -1']), null, $energy, null],
+            ['Gewicht', $horse->weight_kg.' kg', fake()->randomElement(['stabiel', '↑ +5 kg', '↓ -3 kg']), $horse->weight_kg, null, null],
+            ['Energie', $energy.' / 10', fake()->randomElement(['stabiel', '↑ +1', '↓ -1']), null, $energy, null],
             ['Mest-score', $stool, 'stabiel', null, null, $stool],
         ];
         foreach ($stats as $i => [$label, $value, $trend, $w, $e, $s]) {
@@ -256,7 +184,7 @@ class HorseSeeder extends Seeder
             TimelineEvent::create([
                 'horse_id' => $horse->id,
                 'occurred_at' => $dt,
-                'when_label' => $i === 0 ? 'vandaag' : ($i === 1 ? 'gisteren' : $i . ' dagen geleden'),
+                'when_label' => $i === 0 ? 'vandaag' : ($i === 1 ? 'gisteren' : $i.' dagen geleden'),
                 'kind' => fake()->randomElement($kinds),
                 'message' => fake()->sentence(8),
                 'is_now' => $i === 0,
@@ -288,36 +216,60 @@ class HorseSeeder extends Seeder
 
     private function seedProtocol(Horse $horse, string $therapistId): void
     {
+        $protocolType = ProtocolType::query()->firstOrCreate(['name' => 'Darm protocol']);
         $totalWeeks = fake()->numberBetween(4, 12);
         $currentWeek = fake()->numberBetween(1, $totalWeeks);
+        $phaseLengths = array_fill(0, 3, intdiv($totalWeeks, 3));
+        for ($i = 0; $i < $totalWeeks % 3; $i++) {
+            $phaseLengths[$i]++;
+        }
+
+        $activePhaseNumber = 1;
+        $weekCursor = 1;
+        foreach ($phaseLengths as $index => $phaseLength) {
+            $weekEnd = $weekCursor + $phaseLength - 1;
+            if ($currentWeek >= $weekCursor && $currentWeek <= $weekEnd) {
+                $activePhaseNumber = $index + 1;
+                break;
+            }
+            $weekCursor = $weekEnd + 1;
+        }
+
         $protocol = Protocol::create([
             'horse_id' => $horse->id, 'therapist_id' => $therapistId,
-            'title' => $horse->name . "'s plan",
-            'subtitle_protocol' => "Week {$currentWeek} van {$totalWeeks} · Fase {$currentWeek} actief",
-            'subtitle_analyse' => $horse->breed . ' · ' . fake()->randomElement(['Jeuk', 'Darmen', 'Hoeven', 'Allergie']),
-            'subtitle_calendar' => 'Mei ' . now()->year,
+            'protocol_type_id' => $protocolType->id,
+            'title' => $horse->name."'s plan",
+            'subtitle_protocol' => "Week {$currentWeek} van {$totalWeeks} · Fase {$activePhaseNumber} actief",
+            'subtitle_analyse' => $horse->breed.' · '.fake()->randomElement(['Jeuk', 'Darmen', 'Hoeven', 'Allergie']),
+            'subtitle_calendar' => 'Mei '.now()->year,
             'total_weeks' => $totalWeeks, 'current_week' => $currentWeek,
             'started_at' => now()->subWeeks($currentWeek), 'status' => 'active',
         ]);
 
-        $phaseCount = fake()->numberBetween(2, 4);
         $activePhase = null;
-        for ($i = 0; $i < $phaseCount; $i++) {
-            $state = $i < $currentWeek - 1 ? 'done' : ($i === $currentWeek - 1 ? 'active' : 'upcoming');
+        $weekCursor = 1;
+        foreach ($phaseLengths as $i => $phaseLength) {
+            $weekEnd = $weekCursor + $phaseLength - 1;
+            $state = $currentWeek > $weekEnd ? 'done' : ($currentWeek >= $weekCursor ? 'active' : 'upcoming');
             $phase = ProtocolPhase::create([
                 'protocol_id' => $protocol->id, 'order' => $i,
-                'title' => 'Fase ' . ($i + 1) . ' — ' . fake()->randomElement(['Darmen', 'Lever', 'Huid', 'Hoeven']),
+                'title' => 'Fase '.($i + 1).' — '.fake()->randomElement(['Darmen', 'Lever', 'Huid', 'Hoeven']),
                 'state' => $state,
-                'week_start' => $i * 2 + 1, 'week_end' => $i * 2 + 2,
+                'week_start' => $weekCursor, 'week_end' => $weekEnd,
                 'chip_label' => $state === 'done' ? 'Klaar' : ($state === 'active' ? 'Actief' : 'Komende'),
             ]);
-            if ($state === 'active') $activePhase = $phase;
+            if ($state === 'active') {
+                $activePhase = $phase;
+            }
             for ($j = 0; $j < fake()->numberBetween(2, 5); $j++) {
                 ProtocolPhaseItem::create(['phase_id' => $phase->id, 'order' => $j, 'label' => fake()->sentence(6)]);
             }
+            $weekCursor = $weekEnd + 1;
         }
 
-        if (!$activePhase) return;
+        if (! $activePhase) {
+            return;
+        }
 
         $analysis = ProtocolAnalysis::create(['protocol_id' => $protocol->id, 'cause' => fake()->paragraph(3)]);
         foreach (['leaf', 'run', 'horse'] as $i => $icon) {

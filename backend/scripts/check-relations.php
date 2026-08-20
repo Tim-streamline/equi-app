@@ -39,7 +39,7 @@ $phase = ProtocolPhase::create(['protocol_id' => $protocol->id, 'order' => 0, 't
 ProtocolPhaseItem::create(['phase_id' => $phase->id, 'order' => 0, 'label' => 'Item A']);
 
 $cat = LibraryCategory::create(['slug' => 'rel-c-'.time(), 'label' => 'Cat']);
-$item = LibraryItem::create(['slug' => 'rel-i-'.time(), 'kind' => 'Kruid', 'format' => 'article', 'title' => 'Item']);
+$item = LibraryItem::create(['slug' => 'rel-i-'.time(), 'format' => 'article', 'title' => 'Item']);
 $item->categories()->attach($cat);
 $item->focusTopics()->attach($focus);
 

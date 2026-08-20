@@ -8,13 +8,13 @@ const MaterialTopTabs = withLayoutContext(Navigator);
 
 export default function PagerLayout() {
   return (
-    // Static canvas painted once behind the pager — scenes are transparent so
-    // only the content slides during a swipe, not the background.
+    // Static canvas painted once behind the pager. Scenes stay transparent and
+    // navigation is handled exclusively through the bottom menu.
     <View style={{ flex: 1, backgroundColor: '#FBF8F3' }}>
       <MaterialTopTabs
         tabBarPosition="bottom"
         tabBar={(props) => <PagerTabBar {...props} />}
-        screenOptions={{ swipeEnabled: true, lazy: false, sceneStyle: { backgroundColor: 'transparent' } }}
+        screenOptions={{ swipeEnabled: false, lazy: false, sceneStyle: { backgroundColor: 'transparent' } }}
       >
         <MaterialTopTabs.Screen name="home" />
         <MaterialTopTabs.Screen name="protocol" />

@@ -1,108 +1,177 @@
 <script>
+    import { onMount } from 'svelte';
+    import { create } from 'filepond';
+    import 'filepond/dist/filepond.min.css';
     import { Button } from '$lib/components/ui';
-    import { cn } from '$lib/utils.js';
-    import { Upload, Image, Film, Music, Trash2, Plus, Loader2 } from '@lucide/svelte';
+    import { Image, Film, Music, Trash2, Plus } from '@lucide/svelte';
 
     let { libraryItemId = null, initial = [], oninsert } = $props();
 
-    let media = $state([...initial]);
-    let uploading = $state(false);
+    let media = $state([]);
     let error = $state('');
-    let dragging = $state(false);
     let input;
+    let pond;
+    const acceptedUploadIds = new Set();
 
     const csrf = () => document.querySelector('meta[name="csrf-token"]')?.content ?? '';
+    const configuredVideoLimit = () => Number(document.querySelector('meta[name="media-max-video-bytes"]')?.content) || 2 * 1024 * 1024 * 1024;
+    const configuredChunkSize = () => Number(document.querySelector('meta[name="media-chunk-size"]')?.content) || 5 * 1024 * 1024;
     const icons = { image: Image, video: Film, audio: Music };
+    const megabyte = 1024 * 1024;
+
+    function uploadRules() {
+        return [
+            { prefix: 'image/', extensions: ['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg'], label: 'Images', maxBytes: 10 * megabyte, maxLabel: '10 MB' },
+            { prefix: 'audio/', extensions: ['mp3', 'wav', 'ogg', 'm4a', 'aac'], label: 'Audio files', maxBytes: 30 * megabyte, maxLabel: '30 MB' },
+            { prefix: 'video/', extensions: ['mp4', 'webm', 'mov', 'm4v'], label: 'Videos', maxBytes: configuredVideoLimit(), maxLabel: humanSize(configuredVideoLimit()) },
+        ];
+    }
 
     function humanSize(bytes) {
         if (!bytes) return '';
-        const u = ['B', 'KB', 'MB', 'GB'];
-        let i = 0, n = bytes;
-        while (n >= 1024 && i < u.length - 1) { n /= 1024; i++; }
-        return `${n.toFixed(n < 10 && i > 0 ? 1 : 0)} ${u[i]}`;
+        const units = ['B', 'KB', 'MB', 'GB'];
+        let index = 0;
+        let size = bytes;
+        while (size >= 1024 && index < units.length - 1) {
+            size /= 1024;
+            index++;
+        }
+        return `${size.toFixed(size < 10 && index > 0 ? 1 : 0)} ${units[index]}`;
     }
 
-    async function uploadOne(file) {
-        const body = new FormData();
-        body.append('file', file);
-        if (libraryItemId) body.append('library_item_id', libraryItemId);
+    function validateFile(item) {
+        const file = item.file;
+        const extension = file.name.split('.').pop()?.toLowerCase();
+        const rule = uploadRules().find((candidate) => file.type.startsWith(candidate.prefix) || candidate.extensions.includes(extension));
 
-        const res = await fetch('/admin/library/media', {
-            method: 'POST',
-            body,
-            headers: { 'X-CSRF-TOKEN': csrf(), Accept: 'application/json' },
+        if (!rule) {
+            error = `${file.name} has an unsupported file type.`;
+            return false;
+        }
+        if (file.size > rule.maxBytes) {
+            error = `${file.name} is too large. ${rule.label} can be up to ${rule.maxLabel}.`;
+            return false;
+        }
+
+        error = '';
+        return true;
+    }
+
+    function serverError(body) {
+        if (typeof body !== 'string') return 'Upload failed.';
+        try {
+            const data = JSON.parse(body);
+            return data.errors?.file?.[0] || data.message || 'Upload failed.';
+        } catch {
+            return body || 'Upload failed.';
+        }
+    }
+
+    async function completedUpload(file) {
+        try {
+            const response = await fetch(`/admin/library/media/chunks/${file.serverId}/asset`, {
+                headers: { 'X-CSRF-TOKEN': csrf(), Accept: 'application/json' },
+            });
+            if (!response.ok) throw new Error(serverError(await response.text()));
+
+            const { asset } = await response.json();
+            media = [asset, ...media];
+            // FilePond normally calls `revert` when a completed chunked upload
+            // is removed from its queue. Mark this transfer as accepted first
+            // so clearing the queue does not delete the permanent media asset.
+            acceptedUploadIds.add(String(file.serverId));
+            pond.removeFile(file.id);
+        } catch (exception) {
+            error = exception.message;
+        }
+    }
+
+    async function revertUpload(uploadId, load, reject) {
+        const id = String(uploadId);
+
+        if (acceptedUploadIds.delete(id)) {
+            load();
+            return;
+        }
+
+        try {
+            const response = await fetch('/admin/library/media/chunks', {
+                method: 'DELETE',
+                headers: {
+                    'X-CSRF-TOKEN': csrf(),
+                    Accept: 'application/json',
+                    'Content-Type': 'text/plain',
+                },
+                body: id,
+            });
+            if (!response.ok) throw new Error(serverError(await response.text()));
+            load();
+        } catch (exception) {
+            error = exception.message;
+            reject(exception.message);
+        }
+    }
+
+    onMount(() => {
+        media = [...initial];
+        const headers = {
+            'X-CSRF-TOKEN': csrf(),
+            Accept: 'application/json',
+            ...(libraryItemId ? { 'X-Library-Item-Id': libraryItemId } : {}),
+        };
+
+        pond = create(input, {
+            allowMultiple: true,
+            instantUpload: true,
+            maxParallelUploads: 2,
+            chunkUploads: true,
+            chunkForce: true,
+            chunkSize: configuredChunkSize(),
+            chunkRetryDelays: [500, 1000, 3000],
+            labelIdle: 'Drop files or <span class="filepond--label-action">browse</span>',
+            beforeAddFile: validateFile,
+            server: {
+                process: {
+                    url: '/admin/library/media/chunks',
+                    method: 'POST',
+                    headers,
+                    onerror: serverError,
+                },
+                patch: {
+                    url: '/admin/library/media/chunks/',
+                    method: 'PATCH',
+                    headers: { 'X-CSRF-TOKEN': csrf(), Accept: 'application/json' },
+                    onerror: serverError,
+                },
+                revert: revertUpload,
+            },
+            onprocessfile: (processError, file) => {
+                if (processError) {
+                    error = processError.body || processError.main || 'Upload failed.';
+                    return;
+                }
+                completedUpload(file);
+            },
         });
 
-        if (!res.ok) {
-            const data = await res.json().catch(() => ({}));
-            throw new Error(data.message || `Upload failed for ${file.name}`);
-        }
-        const { asset } = await res.json();
-        media = [asset, ...media];
-    }
-
-    async function handleFiles(fileList) {
-        const files = Array.from(fileList);
-        if (!files.length) return;
-        error = '';
-        uploading = true;
-        try {
-            for (const f of files) await uploadOne(f);
-        } catch (e) {
-            error = e.message;
-        } finally {
-            uploading = false;
-            if (input) input.value = '';
-        }
-    }
-
-    function onDrop(e) {
-        e.preventDefault();
-        dragging = false;
-        handleFiles(e.dataTransfer.files);
-    }
+        return () => pond?.destroy();
+    });
 
     async function remove(asset) {
         if (!confirm(`Delete ${asset.original_name}? It will no longer load in any article that references it.`)) return;
-        const res = await fetch(`/admin/library/media/${asset.id}`, {
+        const response = await fetch(`/admin/library/media/${asset.id}`, {
             method: 'DELETE',
             headers: { 'X-CSRF-TOKEN': csrf(), Accept: 'application/json' },
         });
-        if (res.ok) media = media.filter((m) => m.id !== asset.id);
+        if (response.ok) media = media.filter((item) => item.id !== asset.id);
     }
 </script>
 
 <div>
-    <div
-        role="button"
-        tabindex="0"
-        class={cn(
-            'flex cursor-pointer flex-col items-center justify-center gap-1 rounded-lg border-2 border-dashed p-6 text-center text-sm transition-colors',
-            dragging ? 'border-primary bg-primary/5' : 'border-input hover:border-primary/60',
-        )}
-        onclick={() => input?.click()}
-        onkeydown={(e) => (e.key === 'Enter' || e.key === ' ') && input?.click()}
-        ondragover={(e) => { e.preventDefault(); dragging = true; }}
-        ondragleave={() => (dragging = false)}
-        ondrop={onDrop}
-    >
-        {#if uploading}
-            <Loader2 class="size-6 animate-spin text-primary" />
-            <span class="text-muted-foreground">Uploading…</span>
-        {:else}
-            <Upload class="size-6 text-muted-foreground" />
-            <span class="font-medium">Drop files or click to upload</span>
-            <span class="text-xs text-muted-foreground">Images, video and audio · multiple files</span>
-        {/if}
+    <div class="media-pond">
+        <input bind:this={input} type="file" multiple accept="image/*,video/*,audio/*" />
     </div>
-    <input
-        bind:this={input}
-        type="file"
-        class="hidden"
-        multiple
-        accept="image/*,video/*,audio/*"
-        onchange={(e) => handleFiles(e.currentTarget.files)}
-    />
+    <p class="-mt-1 text-xs text-muted-foreground">Images 10 MB · audio 30 MB · video {humanSize(configuredVideoLimit())} · resumable {humanSize(configuredChunkSize())} chunks</p>
 
     {#if error}<p class="mt-2 text-xs text-destructive">{error}</p>{/if}
 
@@ -137,3 +206,24 @@
         </div>
     {/if}
 </div>
+
+<style>
+    :global(.media-pond .filepond--root) {
+        margin-bottom: 0.5rem;
+        font-family: inherit;
+    }
+
+    :global(.media-pond .filepond--panel-root) {
+        background: var(--muted);
+        border: 1px dashed var(--border);
+    }
+
+    :global(.media-pond .filepond--drop-label) {
+        color: var(--foreground);
+    }
+
+    :global(.media-pond .filepond--label-action) {
+        color: var(--primary);
+        text-decoration-color: var(--primary);
+    }
+</style>

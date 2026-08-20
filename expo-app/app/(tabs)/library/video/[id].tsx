@@ -6,7 +6,6 @@ import { Bookmark, Play } from 'lucide-react-native';
 import { SubHeader } from '@/components/ui/SubHeader';
 import { IconButton } from '@/components/ui/IconButton';
 import { SectionTitle } from '@/components/ui/SectionTitle';
-import { Chip } from '@/components/ui/Chip';
 import { useTabBarPadding } from '@/hooks/useTabBarPadding';
 import {
   useLibraryChapters,
@@ -84,10 +83,7 @@ export default function VideoScreen() {
           </View>
 
           <View className="px-5 pt-5">
-            <View className="self-start">
-              <Chip label={(item.kind as string) ?? ''} />
-            </View>
-            <Text className="font-bold text-ink mt-2.5 mb-2" style={{ fontSize: 24, lineHeight: 30 }}>
+            <Text className="font-bold text-ink mb-2" style={{ fontSize: 24, lineHeight: 30 }}>
               {item.title as string}
             </Text>
             <View className="flex-row items-center gap-2">

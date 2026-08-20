@@ -5,10 +5,9 @@ import { Bookmark } from 'lucide-react-native';
 import { SubHeader } from '@/components/ui/SubHeader';
 import { IconButton } from '@/components/ui/IconButton';
 import { Eyebrow } from '@/components/ui/Eyebrow';
-import { Chip } from '@/components/ui/Chip';
+import { MarkdownBody } from '@/components/library/MarkdownBody';
 import { useTabBarPadding } from '@/hooks/useTabBarPadding';
 import {
-  useLibraryArticleSections,
   useLibraryItem,
   useTherapist,
 } from '@/db/hooks';
@@ -16,12 +15,9 @@ import {
 export default function ArticleScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const item = useLibraryItem(id ?? '');
-  const sections = useLibraryArticleSections(id ?? '');
   const therapist = useTherapist((item.authorTherapistId as string) || undefined);
   const padBottom = useTabBarPadding();
-
-  const intro = sections.find((s: any) => !s.heading);
-  const rest = sections.filter((s: any) => !!s.heading);
+  const body = (item.body as string) || '';
 
   return (
     <View className="flex-1 bg-canvas">
@@ -44,9 +40,6 @@ export default function ArticleScreen() {
               source={require('@/assets/images/logo-horse-white.png')}
               style={{ width: 120, height: 120, opacity: 0.4, resizeMode: 'contain' }}
             />
-            <View style={{ position: 'absolute', top: 12, left: 12 }}>
-              <Chip variant="tag" label={(item.kind as string) ?? ''} />
-            </View>
           </View>
 
           <Eyebrow className="mb-2">
@@ -56,22 +49,7 @@ export default function ArticleScreen() {
             {item.title as string}
           </Text>
 
-          {intro && (
-            <Text className="text-ink mb-3.5" style={{ fontSize: 16, lineHeight: 26 }}>
-              {intro.body as string}
-            </Text>
-          )}
-
-          {rest.map((s: any) => (
-            <View key={s.id}>
-              <Text className="font-bold text-teal-700 mt-6 mb-2" style={{ fontSize: 17 }}>
-                {s.heading}
-              </Text>
-              <Text className="text-ink-70 mb-3.5" style={{ fontSize: 15, lineHeight: 24 }}>
-                {s.body}
-              </Text>
-            </View>
-          ))}
+          {!!body && <MarkdownBody markdown={body} />}
         </ScrollView>
       </SafeAreaView>
     </View>

@@ -36,7 +36,6 @@ class LibraryItemController extends Controller
             ->through(fn (LibraryItem $i) => [
                 'id' => $i->id,
                 'title' => $i->title,
-                'kind' => $i->kind,
                 'format' => $i->format,
                 'author' => $i->author?->name,
                 'is_plus' => $i->is_plus,
@@ -117,11 +116,9 @@ class LibraryItemController extends Controller
         return $request->validate([
             'title' => ['required', 'string', 'max:255'],
             'slug' => ['nullable', 'string', 'max:255', 'unique:library_items,slug'.($id ? ",{$id}" : '')],
-            'kind' => ['required', 'string', 'max:32'],
             'format' => ['required', 'in:article,video,course,program'],
             'description' => ['nullable', 'string'],
             'body' => ['nullable', 'string'],
-            'video_url' => ['nullable', 'url'],
             'hero_image_url' => ['nullable', 'url'],
             'duration_label' => ['nullable', 'string', 'max:255'],
             'author_therapist_id' => ['nullable', 'exists:therapists,id'],

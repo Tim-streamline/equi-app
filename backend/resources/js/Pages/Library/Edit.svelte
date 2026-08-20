@@ -3,16 +3,18 @@
     import PageHeader from '$lib/components/PageHeader.svelte';
     import Field from '$lib/components/Field.svelte';
     import MediaUploader from '$lib/components/MediaUploader.svelte';
+    import LibraryItemPreviewModal from '$lib/components/LibraryItemPreviewModal.svelte';
     import { Link, useForm } from '@inertiajs/svelte';
     import { tick } from 'svelte';
     import { Card, CardContent, CardHeader, CardTitle, Button, Input, Textarea, Select } from '$lib/components/ui';
     import { cn } from '$lib/utils.js';
-    import { ArrowLeft } from '@lucide/svelte';
+    import { ArrowLeft, Eye } from '@lucide/svelte';
 
     let { item, categories, focusTopics, therapists } = $props();
     const isNew = !item;
 
     let bodyEl = $state(null);
+    let previewOpen = $state(false);
 
     // Build the markdown/HTML snippet embedded into the article body. Images
     // use markdown; video/audio use HTML5 tags (supported by the app's
@@ -41,11 +43,9 @@
     const form = useForm({
         title: item?.title ?? '',
         slug: item?.slug ?? '',
-        kind: item?.kind ?? 'Kruid',
         format: item?.format ?? 'article',
         description: item?.description ?? '',
         body: item?.body ?? '',
-        video_url: item?.video_url ?? '',
         hero_image_url: item?.hero_image_url ?? '',
         duration_label: item?.duration_label ?? '',
         author_therapist_id: item?.author_therapist_id ?? '',
@@ -71,21 +71,22 @@
     <Link href="/admin/library" class="mb-4 inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground">
         <ArrowLeft class="size-4" /> Back to library
     </Link>
-    <PageHeader title={isNew ? 'New library item' : `Edit: ${item.title}`} />
+    <PageHeader title={isNew ? 'New library item' : `Edit: ${item.title}`}>
+        {#snippet actions()}
+            <Button variant="outline" onclick={() => (previewOpen = true)}><Eye class="size-4" /> Preview</Button>
+        {/snippet}
+    </PageHeader>
 
     <form onsubmit={submit} class="grid gap-4 lg:grid-cols-3">
         <div class="space-y-4 lg:col-span-2">
             <Card>
                 <CardContent class="space-y-4 p-6">
                     <Field label="Title" error={$form.errors.title}><Input bind:value={$form.title} /></Field>
-                    <div class="grid gap-4 sm:grid-cols-2">
-                        <Field label="Format" error={$form.errors.format}>
-                            <Select bind:value={$form.format} options={[
-                                { value: 'article', label: 'Article' }, { value: 'video', label: 'Video' },
-                                { value: 'course', label: 'Course' }, { value: 'program', label: 'Program' }]} />
-                        </Field>
-                        <Field label="Kind" error={$form.errors.kind}><Input bind:value={$form.kind} placeholder="Kruid, Voeding…" /></Field>
-                    </div>
+                    <Field label="Format" error={$form.errors.format}>
+                        <Select bind:value={$form.format} options={[
+                            { value: 'article', label: 'Article' }, { value: 'video', label: 'Video' },
+                            { value: 'course', label: 'Course' }, { value: 'program', label: 'Program' }]} />
+                    </Field>
                     <Field label="Slug" hint="Leave blank to auto-generate" error={$form.errors.slug}><Input bind:value={$form.slug} /></Field>
                     <Field label="Description" error={$form.errors.description}><Textarea bind:value={$form.description} /></Field>
                     <Field label="Body (markdown)" hint="Use the Media panel to insert images, video and audio at the caret." error={$form.errors.body}>
@@ -97,9 +98,6 @@
                             )}
                         ></textarea>
                     </Field>
-                    {#if $form.format === 'video'}
-                        <Field label="Video URL" error={$form.errors.video_url}><Input bind:value={$form.video_url} /></Field>
-                    {/if}
                 </CardContent>
             </Card>
         </div>
@@ -161,4 +159,18 @@
             </div>
         </div>
     </form>
+
+    <LibraryItemPreviewModal
+        open={previewOpen}
+        onclose={() => (previewOpen = false)}
+        title={$form.title}
+        format={$form.format}
+        description={$form.description}
+        body={$form.body}
+        heroImageUrl={$form.hero_image_url}
+        durationLabel={$form.duration_label}
+        authorName={therapists.find((therapist) => therapist.id === $form.author_therapist_id)?.name ?? ''}
+        publishedAt={$form.published_at}
+        categories={categories.filter((category) => $form.category_ids.includes(category.id))}
+    />
 </AdminLayout>

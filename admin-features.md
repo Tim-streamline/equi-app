@@ -81,7 +81,7 @@ Related tables: `protocols`, `protocol_phases`, `protocol_phase_items`, `protoco
 
 Needed because the app has article, video, course, program, category, focus, featured, plus-gated, and seasonal content.
 
-- CRUD for library items with format (`article`, `video`, `course`, `program`), kind, title, description, body, video URL, hero image, author, duration, publication date, and order.
+- CRUD for library items with format (`article`, `video`, `course`, `program`), title, description, body, video URL, hero image, author, duration, publication date, and order.
 - Manage article sections and video chapters.
 - Manage library categories and focus-topic tagging.
 - Set featured content and plus-only gating.

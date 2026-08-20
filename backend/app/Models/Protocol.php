@@ -3,14 +3,15 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Attributes\Fillable;
-use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 
 #[Fillable([
     'horse_id',
+    'protocol_type_id',
     'therapist_id',
     'title',
     'subtitle_analyse',
@@ -24,6 +25,7 @@ use Illuminate\Database\Eloquent\Relations\HasOne;
 class Protocol extends Model
 {
     use HasUuids;
+
     protected function casts(): array
     {
         return [
@@ -36,6 +38,11 @@ class Protocol extends Model
         return $this->belongsTo(Horse::class);
     }
 
+    public function protocolType(): BelongsTo
+    {
+        return $this->belongsTo(ProtocolType::class);
+    }
+
     public function therapist(): BelongsTo
     {
         return $this->belongsTo(Therapist::class);
@@ -44,6 +51,13 @@ class Protocol extends Model
     public function phases(): HasMany
     {
         return $this->hasMany(ProtocolPhase::class)->orderBy('order');
+    }
+
+    public function currentPhase(): HasOne
+    {
+        return $this->hasOne(ProtocolPhase::class)
+            ->where('state', 'active')
+            ->orderBy('order');
     }
 
     public function analysis(): HasOne
