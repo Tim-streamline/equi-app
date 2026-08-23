@@ -159,19 +159,20 @@ Route::middleware('auth:admin')->group(function () {
     Route::middleware('admin.role:admin')->group(function () {
         Route::controller(ProtocolSettingsController::class)->prefix('protocol-settings')->as('protocol-settings.')->group(function () {
             Route::get('/', 'index')->name('index');
-            Route::post('types', 'storeType')->name('types.store');
-            Route::put('types/{protocolType}', 'updateType')->name('types.update');
-            Route::delete('types/{protocolType}', 'destroyType')->name('types.destroy');
+            Route::post('templates', 'storeTemplate')->name('templates.store');
+            Route::put('templates/{protocolTemplate}', 'updateTemplate')->name('templates.update');
+            Route::delete('templates/{protocolTemplate}', 'destroyTemplate')->name('templates.destroy');
             Route::post('phases', 'storePhase')->name('phases.store');
-            Route::put('phases/{protocolTypePhase}', 'updatePhase')->name('phases.update');
-            Route::delete('phases/{protocolTypePhase}', 'destroyPhase')->name('phases.destroy');
-            Route::post('phases/{protocolTypePhase}/weeks', 'storeWeek')->name('weeks.store');
-            Route::delete('weeks/{protocolTypePhaseWeek}', 'destroyWeek')->name('weeks.destroy');
+            Route::put('phases/{protocolTemplatePhase}', 'updatePhase')->name('phases.update');
+            Route::patch('phases/{protocolTemplatePhase}/order', 'movePhase')->name('phases.order');
+            Route::delete('phases/{protocolTemplatePhase}', 'destroyPhase')->name('phases.destroy');
+            Route::post('phases/{protocolTemplatePhase}/weeks', 'storeWeek')->name('weeks.store');
+            Route::delete('weeks/{protocolTemplatePhaseWeek}', 'destroyWeek')->name('weeks.destroy');
             Route::post('supplements', 'storeSupplement')->name('supplements.store');
             Route::put('supplements/{supplement}', 'updateSupplement')->name('supplements.update');
             Route::delete('supplements/{supplement}', 'destroySupplement')->name('supplements.destroy');
-            Route::put('supplements/{supplement}/weeks/{protocolTypePhaseWeek}', 'storeSupplementWeek')->name('supplement-weeks.store');
-            Route::delete('supplements/{supplement}/weeks/{protocolTypePhaseWeek}', 'destroySupplementWeek')->name('supplement-weeks.destroy');
+            Route::put('supplements/{supplement}/weeks/{protocolTemplatePhaseWeek}', 'storeSupplementWeek')->name('supplement-weeks.store');
+            Route::delete('supplements/{supplement}/weeks/{protocolTemplatePhaseWeek}', 'destroySupplementWeek')->name('supplement-weeks.destroy');
         });
 
         Route::controller(SettingsController::class)->prefix('settings')->as('settings.')->group(function () {

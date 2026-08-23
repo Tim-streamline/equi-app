@@ -9,10 +9,11 @@ return new class extends Migration
 {
     public function up(): void
     {
-        $hasProtocolTypePhaseReference = Schema::hasColumn('protocols', 'protocol_type_id')
-            && Schema::hasColumn('protocol_phases', 'protocol_type_phase_id');
+        $hasProtocolTemplatePhaseReference = Schema::hasColumn('protocols', 'protocol_template_id')
+            && Schema::hasColumn('protocol_phases', 'protocol_template_phase_id');
+        $hasProtocolPhaseItems = Schema::hasTable('protocol_phase_items');
 
-        DB::transaction(function () use ($hasProtocolTypePhaseReference) {
+        DB::transaction(function () use ($hasProtocolPhaseItems, $hasProtocolTemplatePhaseReference) {
             $protocols = DB::table('protocols')
                 ->get(['id', 'total_weeks', 'current_week']);
 
@@ -25,23 +26,25 @@ return new class extends Migration
                 if ($phases->count() > 3 && Str::contains(Str::lower($phases->first()->title), ['voorbereiding', 'preparation'])) {
                     $preparation = $phases->first();
                     $firstPhase = $phases[1];
-                    $lastItemOrder = DB::table('protocol_phase_items')
-                        ->where('phase_id', $firstPhase->id)
-                        ->max('order');
-                    $nextItemOrder = $lastItemOrder === null ? 0 : ((int) $lastItemOrder) + 1;
-                    $preparationItems = DB::table('protocol_phase_items')
-                        ->where('phase_id', $preparation->id)
-                        ->orderBy('order')
-                        ->get(['id']);
+                    if ($hasProtocolPhaseItems) {
+                        $lastItemOrder = DB::table('protocol_phase_items')
+                            ->where('phase_id', $firstPhase->id)
+                            ->max('order');
+                        $nextItemOrder = $lastItemOrder === null ? 0 : ((int) $lastItemOrder) + 1;
+                        $preparationItems = DB::table('protocol_phase_items')
+                            ->where('phase_id', $preparation->id)
+                            ->orderBy('order')
+                            ->get(['id']);
 
-                    foreach ($preparationItems as $item) {
-                        DB::table('protocol_phase_items')
-                            ->where('id', $item->id)
-                            ->update([
-                                'phase_id' => $firstPhase->id,
-                                'order' => $nextItemOrder++,
-                                'updated_at' => now(),
-                            ]);
+                        foreach ($preparationItems as $item) {
+                            DB::table('protocol_phase_items')
+                                ->where('id', $item->id)
+                                ->update([
+                                    'phase_id' => $firstPhase->id,
+                                    'order' => $nextItemOrder++,
+                                    'updated_at' => now(),
+                                ]);
+                        }
                     }
 
                     DB::table('protocol_tasks')
@@ -54,25 +57,29 @@ return new class extends Migration
                 if ($phases->count() > 3) {
                     $thirdPhase = $phases[2];
                     $extraPhases = $phases->slice(3);
-                    $lastItemOrder = DB::table('protocol_phase_items')
-                        ->where('phase_id', $thirdPhase->id)
-                        ->max('order');
-                    $nextItemOrder = $lastItemOrder === null ? 0 : ((int) $lastItemOrder) + 1;
+                    if ($hasProtocolPhaseItems) {
+                        $lastItemOrder = DB::table('protocol_phase_items')
+                            ->where('phase_id', $thirdPhase->id)
+                            ->max('order');
+                        $nextItemOrder = $lastItemOrder === null ? 0 : ((int) $lastItemOrder) + 1;
+                    }
 
                     foreach ($extraPhases as $extraPhase) {
-                        $items = DB::table('protocol_phase_items')
-                            ->where('phase_id', $extraPhase->id)
-                            ->orderBy('order')
-                            ->get(['id']);
+                        if ($hasProtocolPhaseItems) {
+                            $items = DB::table('protocol_phase_items')
+                                ->where('phase_id', $extraPhase->id)
+                                ->orderBy('order')
+                                ->get(['id']);
 
-                        foreach ($items as $item) {
-                            DB::table('protocol_phase_items')
-                                ->where('id', $item->id)
-                                ->update([
-                                    'phase_id' => $thirdPhase->id,
-                                    'order' => $nextItemOrder++,
-                                    'updated_at' => now(),
-                                ]);
+                            foreach ($items as $item) {
+                                DB::table('protocol_phase_items')
+                                    ->where('id', $item->id)
+                                    ->update([
+                                        'phase_id' => $thirdPhase->id,
+                                        'order' => $nextItemOrder++,
+                                        'updated_at' => now(),
+                                    ]);
+                            }
                         }
 
                         DB::table('protocol_tasks')
@@ -110,8 +117,8 @@ return new class extends Migration
                     $remainingWeeks = max($missingCount, (int) ($protocol->total_weeks ?? 0) - $lastWeek);
                     $baseLength = intdiv($remainingWeeks, $missingCount);
                     $remainder = $remainingWeeks % $missingCount;
-                    $usedDefinitionIds = $hasProtocolTypePhaseReference
-                        ? $phases->pluck('protocol_type_phase_id')->filter()->all()
+                    $usedDefinitionIds = $hasProtocolTemplatePhaseReference
+                        ? $phases->pluck('protocol_template_phase_id')->filter()->all()
                         : [];
 
                     for ($offset = 0; $offset < $missingCount; $offset++) {
@@ -136,16 +143,16 @@ return new class extends Migration
                             'updated_at' => now(),
                         ];
 
-                        if ($hasProtocolTypePhaseReference) {
-                            $protocolTypeId = DB::table('protocols')
+                        if ($hasProtocolTemplatePhaseReference) {
+                            $protocolTemplateId = DB::table('protocols')
                                 ->where('id', $protocol->id)
-                                ->value('protocol_type_id');
-                            $definitionId = DB::table('protocol_type_phases')
-                                ->where('protocol_type_id', $protocolTypeId)
+                                ->value('protocol_template_id');
+                            $definitionId = DB::table('protocol_template_phases')
+                                ->where('protocol_template_id', $protocolTemplateId)
                                 ->whereNotIn('id', $usedDefinitionIds)
                                 ->orderBy('order')
                                 ->value('id');
-                            $attributes['protocol_type_phase_id'] = $definitionId;
+                            $attributes['protocol_template_phase_id'] = $definitionId;
                             $usedDefinitionIds[] = $definitionId;
                         }
 

@@ -1,0 +1,205 @@
+- generic [ref=e965]:
+  - complementary [ref=e966]:
+    - generic [ref=e970]:
+      - generic [ref=e971]: EquiNova
+      - generic [ref=e972]: Admin console
+    - navigation [ref=e973]:
+      - link "Dashboard" [ref=e975] [cursor=pointer]:
+        - /url: http://localhost:81/admin
+      - generic [ref=e978]:
+        - generic [ref=e979]: Support
+        - link "Users" [ref=e980] [cursor=pointer]:
+          - /url: http://localhost:81/admin/users
+        - link "Horses" [ref=e983] [cursor=pointer]:
+          - /url: http://localhost:81/admin/horses
+        - link "Therapists" [ref=e986] [cursor=pointer]:
+          - /url: http://localhost:81/admin/therapists
+        - link "Intake bookings" [ref=e989] [cursor=pointer]:
+          - /url: http://localhost:81/admin/bookings
+        - link "Protocols" [ref=e992] [cursor=pointer]:
+          - /url: http://localhost:81/admin/protocols
+      - generic [ref=e995]:
+        - generic [ref=e996]: Content
+        - link "Library" [ref=e997] [cursor=pointer]:
+          - /url: http://localhost:81/admin/library
+        - link "Categories" [ref=e1000] [cursor=pointer]:
+          - /url: http://localhost:81/admin/library-categories
+        - link "Focus topics" [ref=e1003] [cursor=pointer]:
+          - /url: http://localhost:81/admin/focus-topics
+        - link "Seasonal tips" [ref=e1006] [cursor=pointer]:
+          - /url: http://localhost:81/admin/seasonal-tips
+        - link "Nova chat" [ref=e1009] [cursor=pointer]:
+          - /url: http://localhost:81/admin/nova
+      - generic [ref=e1012]:
+        - generic [ref=e1013]: Scanner
+        - link "Scan results" [ref=e1014] [cursor=pointer]:
+          - /url: http://localhost:81/admin/scans
+        - link "Products" [ref=e1017] [cursor=pointer]:
+          - /url: http://localhost:81/admin/products
+        - link "Ingredients" [ref=e1020] [cursor=pointer]:
+          - /url: http://localhost:81/admin/ingredients
+      - generic [ref=e1023]:
+        - generic [ref=e1024]: Community
+        - link "Posts & replies" [ref=e1025] [cursor=pointer]:
+          - /url: http://localhost:81/admin/community
+        - link "Reports" [ref=e1028] [cursor=pointer]:
+          - /url: http://localhost:81/admin/reports
+      - generic [ref=e1031]:
+        - generic [ref=e1032]: Billing
+        - link "Plans" [ref=e1033] [cursor=pointer]:
+          - /url: http://localhost:81/admin/plans
+        - link "Subscriptions" [ref=e1036] [cursor=pointer]:
+          - /url: http://localhost:81/admin/subscriptions
+        - link "Payments" [ref=e1039] [cursor=pointer]:
+          - /url: http://localhost:81/admin/payments
+      - generic [ref=e1042]:
+        - generic [ref=e1043]: Operations
+        - link "Data exports" [ref=e1044] [cursor=pointer]:
+          - /url: http://localhost:81/admin/exports
+        - link "Notifications" [ref=e1047] [cursor=pointer]:
+          - /url: http://localhost:81/admin/notifications
+        - link "Sync health" [ref=e1050] [cursor=pointer]:
+          - /url: http://localhost:81/admin/sync-health
+        - link "Audit log" [ref=e1053] [cursor=pointer]:
+          - /url: http://localhost:81/admin/audit-log
+        - link "Protocol Templates" [ref=e1056] [cursor=pointer]:
+          - /url: http://localhost:81/admin/protocol-settings
+        - link "Settings" [ref=e1059] [cursor=pointer]:
+          - /url: http://localhost:81/admin/settings
+    - generic [ref=e1063]:
+      - generic [ref=e1064]: EO
+      - generic [ref=e1065]:
+        - generic [ref=e1066]: EquiNova Owner
+        - generic [ref=e1067]: owner
+      - button "Log out" [ref=e1068]
+  - generic [ref=e1070]:
+    - banner [ref=e1071]:
+      - heading "Protocol bewerken" [level=1] [ref=e1072]
+    - main [ref=e1073]:
+      - generic [ref=e1075]:
+        - generic [ref=e1076]:
+          - generic [ref=e1077]:
+            - link "Protocollen" [ref=e1078] [cursor=pointer]:
+              - /url: http://localhost:81/admin/protocols
+            - generic [ref=e1081]:
+              - generic [ref=e1082]:
+                - generic [ref=e1083]: Diva's plan
+                - generic [ref=e1084]: Gepubliceerd
+              - generic [ref=e1085]: Darm protocol
+            - button "Volledige preview" [ref=e1086] [cursor=pointer]
+            - button "Opslaan" [ref=e1088] [cursor=pointer]
+            - button "Depubliceren" [ref=e1090] [cursor=pointer]
+          - navigation "Protocolonderdelen" [ref=e1091]:
+            - button "Basis" [ref=e1092]
+            - button "Planning" [ref=e1094]
+            - button "Analyse & advies" [ref=e1097]
+            - button "Klantweergave" [ref=e1099]
+        - generic [ref=e1101]:
+          - complementary [ref=e1102]:
+            - generic [ref=e1103]:
+              - generic [ref=e1104]: Paard
+              - generic [ref=e1105]: Diva
+              - generic [ref=e1106]: Haflinger · ruin · 8 jaar · 576 kg
+              - generic [ref=e1107]:
+                - text: "Eigenaar:"
+                - strong [ref=e1108]: Kian Wolters
+            - generic [ref=e1109]:
+              - generic [ref=e1110]: Plan
+              - generic [ref=e1111]:
+                - generic [ref=e1112]:
+                  - term [ref=e1113]: Fases
+                  - definition [ref=e1114]: "3"
+                - generic [ref=e1115]:
+                  - term [ref=e1116]: Duur
+                  - definition [ref=e1117]: 14 weken
+                - generic [ref=e1118]:
+                  - term [ref=e1119]: Huidige week
+                  - definition [ref=e1120]: "9"
+                - generic [ref=e1121]:
+                  - term [ref=e1122]: Supplementen
+                  - definition [ref=e1123]: "2"
+            - generic [ref=e1124]:
+              - generic [ref=e1125]: Gedetecteerde thema’s
+              - generic [ref=e1126]:
+                - generic [ref=e1127]: Staakgedrag
+                - generic [ref=e1128]: Hoeven
+          - main [ref=e1129]:
+            - generic [ref=e1130]:
+              - generic [ref=e1132]:
+                - generic [ref=e1133]: Stap 2
+                - heading "Planning" [level=2] [ref=e1134]
+                - paragraph [ref=e1135]: Fases volgen de templatevolgorde; timing sluit automatisch op elkaar aan.
+              - generic [ref=e1136]:
+                - button "Maag Week 1–8 · Afgerond" [ref=e1137]:
+                  - generic [ref=e1138]: Maag
+                  - generic [ref=e1140]: Week 1–8 · Afgerond
+                - button "Darm revalidatie Week 9–14 · Actief" [ref=e1141]:
+                  - generic [ref=e1142]: Darm revalidatie
+                  - generic [ref=e1145]: Week 9–14 · Actief
+                - button "Fase 3 Geen weken · Geen weken" [ref=e1146]:
+                  - generic [ref=e1147]: Fase 3
+                  - generic [ref=e1149]: Geen weken · Geen weken
+              - generic [ref=e1150]:
+                - generic [ref=e1151]:
+                  - generic [ref=e1152]:
+                    - heading "Maag" [level=3] [ref=e1154]
+                    - paragraph [ref=e1155]: Week 1–8 · Afgerond
+                  - button "Fase verwijderen" [ref=e1156] [cursor=pointer]
+                - generic [ref=e1158]:
+                  - generic [ref=e1159]:
+                    - generic [ref=e1160]: Templatefase
+                    - generic [ref=e1161]: Maag
+                    - paragraph [ref=e1162]: De naam en beschrijving zijn bij het aanmaken vanuit de template overgenomen.
+                  - generic [ref=e1163]:
+                    - generic [ref=e1164]:
+                      - generic [ref=e1165]: Duur in weken
+                      - spinbutton [ref=e1166]: "8"
+                    - paragraph [ref=e1167]: "Template: 8 weken"
+                - generic [ref=e1168]:
+                  - generic [ref=e1169]:
+                    - generic [ref=e1170]:
+                      - heading "Kruiden & supplementen" [level=4] [ref=e1171]
+                      - paragraph [ref=e1172]: Selecteer middelen, frequentie en de concrete weken voor dit paard.
+                    - generic [ref=e1173]: 1 geselecteerd
+                  - generic [ref=e1174]:
+                    - generic [ref=e1175]:
+                      - generic [ref=e1176]:
+                        - switch "Verwijder Kamille" [checked] [ref=e1177]
+                        - generic [ref=e1179]:
+                          - generic [ref=e1180]:
+                            - generic [ref=e1181]: Kamille
+                            - generic [ref=e1182]: Kruid
+                            - generic [ref=e1183]: Standaard
+                          - paragraph [ref=e1184]: Wordt je lekker rustig van.
+                          - paragraph [ref=e1185]: Min. 4×/week · max. 49 in fase · rust 2 weken
+                      - generic [ref=e1186]:
+                        - generic [ref=e1187]:
+                          - generic [ref=e1188]:
+                            - generic [ref=e1189]: Dosering voor dit paard
+                            - textbox "Bijv. 20 g per dag" [ref=e1190]: 576 g
+                          - paragraph [ref=e1191]: "Automatisch: 1 g/kg × 576 kg."
+                        - generic [ref=e1192]:
+                          - generic [ref=e1193]: Aantal per week
+                          - spinbutton [ref=e1194]: "4"
+                        - generic [ref=e1196]:
+                          - generic [ref=e1197]: Instructies
+                          - textbox "Optionele instructie voor de klant" [ref=e1198]
+                        - generic [ref=e1199]:
+                          - generic [ref=e1200]: Toedieningsweken binnen deze fase
+                          - generic [ref=e1201]:
+                            - button "1" [pressed] [ref=e1202]
+                            - button "2" [pressed] [ref=e1203]
+                            - button "3" [pressed] [ref=e1204]
+                            - button "4" [pressed] [ref=e1205]
+                            - button "5" [pressed] [ref=e1206]
+                            - button "6" [pressed] [ref=e1207]
+                            - button "7" [pressed] [ref=e1208]
+                            - button "8" [pressed] [ref=e1209]
+                    - generic [ref=e1211]:
+                      - switch "Voeg toe Psyliumzaad" [ref=e1212]
+                      - generic [ref=e1214]:
+                        - generic [ref=e1215]:
+                          - generic [ref=e1216]: Psyliumzaad
+                          - generic [ref=e1217]: Supplement
+                        - paragraph [ref=e1218]: bladiebla
+                        - paragraph [ref=e1219]: Min. 4×/week · max. onbeperkt in fase · rust 2 weken

@@ -11,7 +11,8 @@ use Illuminate\Database\Eloquent\Relations\HasOne;
 
 #[Fillable([
     'horse_id',
-    'protocol_type_id',
+    'protocol_template_id',
+    'protocol_template_name',
     'therapist_id',
     'title',
     'subtitle_analyse',
@@ -21,6 +22,7 @@ use Illuminate\Database\Eloquent\Relations\HasOne;
     'current_week',
     'started_at',
     'status',
+    'published_at',
 ])]
 class Protocol extends Model
 {
@@ -30,6 +32,7 @@ class Protocol extends Model
     {
         return [
             'started_at' => 'date',
+            'published_at' => 'datetime',
         ];
     }
 
@@ -38,9 +41,9 @@ class Protocol extends Model
         return $this->belongsTo(Horse::class);
     }
 
-    public function protocolType(): BelongsTo
+    public function protocolTemplate(): BelongsTo
     {
-        return $this->belongsTo(ProtocolType::class);
+        return $this->belongsTo(ProtocolTemplate::class);
     }
 
     public function therapist(): BelongsTo

@@ -7,7 +7,7 @@ use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\Pivot;
 
-#[Fillable(['supplement_id', 'protocol_type_phase_week_id'])]
+#[Fillable(['supplement_id', 'protocol_template_phase_week_id'])]
 class SupplementWeek extends Pivot
 {
     use HasUuids;
@@ -23,6 +23,6 @@ class SupplementWeek extends Pivot
 
     public function week(): BelongsTo
     {
-        return $this->belongsTo(ProtocolTypePhaseWeek::class, 'protocol_type_phase_week_id');
+        return $this->belongsTo(ProtocolTemplatePhaseWeek::class, 'protocol_template_phase_week_id');
     }
 }

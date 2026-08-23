@@ -9,13 +9,14 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 #[Fillable([
-    'protocol_type_id',
+    'protocol_template_id',
     'order',
     'name',
     'description',
     'required',
+    'start_after_previous_phase_weeks',
 ])]
-class ProtocolTypePhase extends Model
+class ProtocolTemplatePhase extends Model
 {
     use HasUuids;
 
@@ -23,17 +24,18 @@ class ProtocolTypePhase extends Model
     {
         return [
             'required' => 'boolean',
+            'start_after_previous_phase_weeks' => 'integer',
         ];
     }
 
-    public function protocolType(): BelongsTo
+    public function protocolTemplate(): BelongsTo
     {
-        return $this->belongsTo(ProtocolType::class);
+        return $this->belongsTo(ProtocolTemplate::class);
     }
 
     public function weeks(): HasMany
     {
-        return $this->hasMany(ProtocolTypePhaseWeek::class)->orderBy('number');
+        return $this->hasMany(ProtocolTemplatePhaseWeek::class)->orderBy('number');
     }
 
     public function supplements(): HasMany

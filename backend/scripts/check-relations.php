@@ -15,7 +15,6 @@ use App\Models\Plan;
 use App\Models\PlanBenefit;
 use App\Models\Protocol;
 use App\Models\ProtocolPhase;
-use App\Models\ProtocolPhaseItem;
 use App\Models\Subscription;
 use App\Models\Therapist;
 use App\Models\User;
@@ -36,7 +35,6 @@ HorseFocus::create(['horse_id' => $horse->id, 'focus_topic_id' => $focus->id]);
 
 $protocol = Protocol::create(['horse_id' => $horse->id, 'therapist_id' => $therapist->id, 'title' => 'P', 'status' => 'active']);
 $phase = ProtocolPhase::create(['protocol_id' => $protocol->id, 'order' => 0, 'title' => 'Phase 1', 'state' => 'active']);
-ProtocolPhaseItem::create(['phase_id' => $phase->id, 'order' => 0, 'label' => 'Item A']);
 
 $cat = LibraryCategory::create(['slug' => 'rel-c-'.time(), 'label' => 'Cat']);
 $item = LibraryItem::create(['slug' => 'rel-i-'.time(), 'format' => 'article', 'title' => 'Item']);
@@ -73,7 +71,6 @@ $checks = [
     'horse.focusTopics (pivot)' => $horse->focusTopics->first()?->id === $focus->id,
     'horse.activeProtocol' => $horse->activeProtocol->is($protocol),
     'protocol.phases' => $protocol->phases->first()?->title === 'Phase 1',
-    'phase.items' => $phase->items->first()?->label === 'Item A',
     'item.categories' => $item->categories->first()?->id === $cat->id,
     'item.focusTopics' => $item->focusTopics->first()?->id === $focus->id,
     'plan.benefits' => $plan->benefits->first()?->label === 'Unlimited scans',

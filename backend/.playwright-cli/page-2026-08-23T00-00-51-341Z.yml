@@ -1,0 +1,456 @@
+- generic [ref=e27]:
+  - complementary [ref=e28]:
+    - generic [ref=e32]:
+      - generic [ref=e33]: EquiNova
+      - generic [ref=e34]: Admin console
+    - navigation [ref=e35]:
+      - link "Dashboard" [ref=e37] [cursor=pointer]:
+        - /url: http://localhost:81/admin
+      - generic [ref=e40]:
+        - generic [ref=e41]: Support
+        - link "Users" [ref=e42] [cursor=pointer]:
+          - /url: http://localhost:81/admin/users
+        - link "Horses" [ref=e45] [cursor=pointer]:
+          - /url: http://localhost:81/admin/horses
+        - link "Therapists" [ref=e48] [cursor=pointer]:
+          - /url: http://localhost:81/admin/therapists
+        - link "Intake bookings" [ref=e51] [cursor=pointer]:
+          - /url: http://localhost:81/admin/bookings
+        - link "Protocols" [ref=e54] [cursor=pointer]:
+          - /url: http://localhost:81/admin/protocols
+      - generic [ref=e57]:
+        - generic [ref=e58]: Content
+        - link "Library" [ref=e59] [cursor=pointer]:
+          - /url: http://localhost:81/admin/library
+        - link "Categories" [ref=e62] [cursor=pointer]:
+          - /url: http://localhost:81/admin/library-categories
+        - link "Focus topics" [ref=e65] [cursor=pointer]:
+          - /url: http://localhost:81/admin/focus-topics
+        - link "Seasonal tips" [ref=e68] [cursor=pointer]:
+          - /url: http://localhost:81/admin/seasonal-tips
+        - link "Nova chat" [ref=e71] [cursor=pointer]:
+          - /url: http://localhost:81/admin/nova
+      - generic [ref=e74]:
+        - generic [ref=e75]: Scanner
+        - link "Scan results" [ref=e76] [cursor=pointer]:
+          - /url: http://localhost:81/admin/scans
+        - link "Products" [ref=e79] [cursor=pointer]:
+          - /url: http://localhost:81/admin/products
+        - link "Ingredients" [ref=e82] [cursor=pointer]:
+          - /url: http://localhost:81/admin/ingredients
+      - generic [ref=e85]:
+        - generic [ref=e86]: Community
+        - link "Posts & replies" [ref=e87] [cursor=pointer]:
+          - /url: http://localhost:81/admin/community
+        - link "Reports" [ref=e90] [cursor=pointer]:
+          - /url: http://localhost:81/admin/reports
+      - generic [ref=e93]:
+        - generic [ref=e94]: Billing
+        - link "Plans" [ref=e95] [cursor=pointer]:
+          - /url: http://localhost:81/admin/plans
+        - link "Subscriptions" [ref=e98] [cursor=pointer]:
+          - /url: http://localhost:81/admin/subscriptions
+        - link "Payments" [ref=e101] [cursor=pointer]:
+          - /url: http://localhost:81/admin/payments
+      - generic [ref=e104]:
+        - generic [ref=e105]: Operations
+        - link "Data exports" [ref=e106] [cursor=pointer]:
+          - /url: http://localhost:81/admin/exports
+        - link "Notifications" [ref=e109] [cursor=pointer]:
+          - /url: http://localhost:81/admin/notifications
+        - link "Sync health" [ref=e112] [cursor=pointer]:
+          - /url: http://localhost:81/admin/sync-health
+        - link "Audit log" [ref=e115] [cursor=pointer]:
+          - /url: http://localhost:81/admin/audit-log
+        - link "Protocol Templates" [ref=e118] [cursor=pointer]:
+          - /url: http://localhost:81/admin/protocol-settings
+        - link "Settings" [ref=e121] [cursor=pointer]:
+          - /url: http://localhost:81/admin/settings
+    - generic [ref=e125]:
+      - generic [ref=e126]: EO
+      - generic [ref=e127]:
+        - generic [ref=e128]: EquiNova Owner
+        - generic [ref=e129]: owner
+      - button "Log out" [ref=e130]
+  - generic [ref=e132]:
+    - banner [ref=e133]:
+      - heading "Protocol Templates" [level=1] [ref=e134]
+    - main [ref=e135]:
+      - generic [ref=e136]:
+        - generic [ref=e137]:
+          - heading "Protocol Templates" [level=2] [ref=e138]
+          - paragraph [ref=e139]: Configure reusable protocol templates, phases, weeks and supplements.
+        - generic [ref=e141]:
+          - generic [ref=e142]:
+            - strong [ref=e143]: "1"
+            - text: templates
+          - generic [ref=e144]:
+            - strong [ref=e145]: "3"
+            - text: phases
+          - generic [ref=e146]:
+            - strong [ref=e147]: "15"
+            - text: weeks
+          - generic [ref=e148]:
+            - strong [ref=e149]: "4"
+            - text: supplements
+      - generic [ref=e150]:
+        - generic [ref=e151]:
+          - generic [ref=e152]:
+            - generic [ref=e153]: Protocol template
+            - combobox "Select protocol template" [ref=e154]:
+              - option "Darm protocol" [selected]
+          - button "New protocol template" [ref=e155] [cursor=pointer]
+        - generic [ref=e158]:
+          - generic [ref=e159]:
+            - generic [ref=e160]:
+              - paragraph [ref=e161]: Selected protocol template
+              - heading "Darm protocol" [level=3] [ref=e162]
+              - paragraph [ref=e163]: 3 configured phases
+            - generic [ref=e164]:
+              - button "Edit template" [ref=e165] [cursor=pointer]
+              - button "Remove protocol template" [ref=e167] [cursor=pointer]
+          - generic [ref=e169]:
+            - generic [ref=e170]:
+              - generic [ref=e171]:
+                - heading "Fases" [level=4] [ref=e172]
+                - paragraph [ref=e173]: De ingestelde volgorde wordt altijd gebruikt, ook wanneer sommige fases optioneel zijn.
+              - button "Add phase" [ref=e174] [cursor=pointer]
+            - generic [ref=e176]:
+              - article [ref=e177]:
+                - generic [ref=e178]:
+                  - generic [ref=e179]: "1"
+                  - generic [ref=e180]:
+                    - generic [ref=e181]:
+                      - heading "Maag" [level=5] [ref=e182]
+                      - generic [ref=e183]: Optional
+                    - paragraph [ref=e184]: In deze fase repareren we de maag.
+                  - generic [ref=e185]:
+                    - button "Verplaats Maag omhoog" [disabled]
+                    - button "Verplaats Maag omlaag" [ref=e186] [cursor=pointer]
+                    - button "Edit Maag" [ref=e188] [cursor=pointer]
+                    - button "Remove Maag" [ref=e190] [cursor=pointer]
+                - generic [ref=e193]:
+                  - generic [ref=e194]: Weeks
+                  - generic [ref=e196]:
+                    - text: Week 1
+                    - button "Remove Week 1" [ref=e197]
+                  - generic [ref=e199]:
+                    - text: Week 2
+                    - button "Remove Week 2" [ref=e200]
+                  - generic [ref=e202]:
+                    - text: Week 3
+                    - button "Remove Week 3" [ref=e203]
+                  - generic [ref=e205]:
+                    - text: Week 4
+                    - button "Remove Week 4" [ref=e206]
+                  - generic [ref=e208]:
+                    - text: Week 5
+                    - button "Remove Week 5" [ref=e209]
+                  - generic [ref=e211]:
+                    - text: Week 6
+                    - button "Remove Week 6" [ref=e212]
+                  - generic [ref=e214]:
+                    - text: Week 7
+                    - button "Remove Week 7" [ref=e215]
+                  - generic [ref=e217]:
+                    - text: Week 8
+                    - button "Remove Week 8" [ref=e218]
+                  - button "Add week" [ref=e220]
+                - generic [ref=e222]:
+                  - generic [ref=e223]:
+                    - generic [ref=e224]:
+                      - paragraph [ref=e225]: Supplements
+                      - paragraph [ref=e226]: Supplements available within this phase.
+                    - button "Add supplement" [ref=e227] [cursor=pointer]
+                  - generic [ref=e229]:
+                    - generic [ref=e230]:
+                      - generic [ref=e231]:
+                        - generic [ref=e232]:
+                          - paragraph [ref=e233]: Kamille
+                          - generic [ref=e234]: Kruid
+                          - generic [ref=e235]: Added by default
+                        - paragraph [ref=e236]: Wordt je lekker rustig van.
+                        - generic [ref=e237]:
+                          - generic [ref=e238]:
+                            - strong [ref=e239]: 1 g/kg
+                            - text: dosis
+                          - generic [ref=e240]:
+                            - strong [ref=e241]: "49"
+                            - text: max in phase
+                          - generic [ref=e242]:
+                            - strong [ref=e243]: "4"
+                            - text: min per week
+                          - generic [ref=e244]:
+                            - strong [ref=e245]: "2"
+                            - text: rest weeks
+                      - generic [ref=e246]:
+                        - button "Edit Kamille" [ref=e247] [cursor=pointer]
+                        - button "Remove Kamille" [ref=e249] [cursor=pointer]
+                    - generic [ref=e251]:
+                      - generic [ref=e252]:
+                        - generic [ref=e253]:
+                          - paragraph [ref=e254]: Psyliumzaad
+                          - generic [ref=e255]: Supplement
+                        - paragraph [ref=e256]: bladiebla
+                        - generic [ref=e257]:
+                          - generic [ref=e258]:
+                            - strong [ref=e259]: 100 g per 600 kg
+                            - text: dosis
+                          - generic [ref=e260]:
+                            - strong [ref=e261]: ∞
+                            - text: max in phase
+                          - generic [ref=e262]:
+                            - strong [ref=e263]: "4"
+                            - text: min per week
+                          - generic [ref=e264]:
+                            - strong [ref=e265]: "2"
+                            - text: rest weeks
+                      - generic [ref=e266]:
+                        - button "Edit Psyliumzaad" [ref=e267] [cursor=pointer]
+                        - button "Remove Psyliumzaad" [ref=e269] [cursor=pointer]
+                  - generic [ref=e271]:
+                    - generic [ref=e272]:
+                      - paragraph [ref=e273]: Supplementplanning
+                      - paragraph [ref=e274]: Geef per week aan welke supplementen worden toegediend.
+                    - table [ref=e276]:
+                      - rowgroup [ref=e277]:
+                        - row [ref=e278]:
+                          - columnheader "Supplement" [ref=e279]
+                          - columnheader "Week 1" [ref=e280]
+                          - columnheader "Week 2" [ref=e281]
+                          - columnheader "Week 3" [ref=e282]
+                          - columnheader "Week 4" [ref=e283]
+                          - columnheader "Week 5" [ref=e284]
+                          - columnheader "Week 6" [ref=e285]
+                          - columnheader "Week 7" [ref=e286]
+                          - columnheader "Week 8" [ref=e287]
+                      - rowgroup [ref=e288]:
+                        - row [ref=e289]:
+                          - rowheader "Kamille Kruid" [ref=e290]:
+                            - generic [ref=e291]: Kamille
+                            - generic [ref=e292]: Kruid
+                          - cell [ref=e293]:
+                            - button "Kamille in week 1" [pressed] [ref=e294]
+                          - cell [ref=e296]:
+                            - button "Kamille in week 2" [pressed] [ref=e297]
+                          - cell [ref=e299]:
+                            - button "Kamille in week 3" [pressed] [ref=e300]
+                          - cell [ref=e302]:
+                            - button "Kamille in week 4" [pressed] [ref=e303]
+                          - cell [ref=e305]:
+                            - button "Kamille in week 5" [pressed] [ref=e306]
+                          - cell [ref=e308]:
+                            - button "Kamille in week 6" [pressed] [ref=e309]
+                          - cell [ref=e311]:
+                            - button "Kamille in week 7" [pressed] [ref=e312]
+                          - cell [ref=e314]:
+                            - button "Kamille in week 8" [pressed] [ref=e315]
+                        - row [ref=e317]:
+                          - rowheader "Psyliumzaad Supplement" [ref=e318]:
+                            - generic [ref=e319]: Psyliumzaad
+                            - generic [ref=e320]: Supplement
+                          - cell [ref=e321]:
+                            - button "Psyliumzaad in week 1" [pressed] [ref=e322]
+                          - cell [ref=e324]:
+                            - button "Psyliumzaad in week 2" [pressed] [ref=e325]
+                          - cell [ref=e327]:
+                            - button "Psyliumzaad in week 3" [pressed] [ref=e328]
+                          - cell [ref=e330]:
+                            - button "Psyliumzaad in week 4" [pressed] [ref=e331]
+                          - cell [ref=e333]:
+                            - button "Psyliumzaad in week 5" [pressed] [ref=e334]
+                          - cell [ref=e336]:
+                            - button "Psyliumzaad in week 6" [pressed] [ref=e337]
+                          - cell [ref=e339]:
+                            - button "Psyliumzaad in week 7" [pressed] [ref=e340]
+                          - cell [ref=e342]:
+                            - button "Psyliumzaad in week 8" [pressed] [ref=e343]
+              - article [ref=e345]:
+                - generic [ref=e346]:
+                  - generic [ref=e347]: "2"
+                  - generic [ref=e349]:
+                    - heading "Darm revalidatie" [level=5] [ref=e350]
+                    - generic [ref=e351]: Required
+                  - generic [ref=e353]:
+                    - button "Verplaats Darm revalidatie omhoog" [ref=e354] [cursor=pointer]
+                    - button "Verplaats Darm revalidatie omlaag" [ref=e356] [cursor=pointer]
+                    - button "Edit Darm revalidatie" [active] [ref=e358] [cursor=pointer]
+                    - button "Remove Darm revalidatie" [ref=e360] [cursor=pointer]
+                - generic [ref=e363]:
+                  - generic [ref=e364]: Weeks
+                  - generic [ref=e366]:
+                    - text: Week 1
+                    - button "Remove Week 1" [ref=e367]
+                  - generic [ref=e369]:
+                    - text: Week 2
+                    - button "Remove Week 2" [ref=e370]
+                  - generic [ref=e372]:
+                    - text: Week 3
+                    - button "Remove Week 3" [ref=e373]
+                  - generic [ref=e375]:
+                    - text: Week 4
+                    - button "Remove Week 4" [ref=e376]
+                  - generic [ref=e378]:
+                    - text: Week 5
+                    - button "Remove Week 5" [ref=e379]
+                  - generic [ref=e381]:
+                    - text: Week 6
+                    - button "Remove Week 6" [ref=e382]
+                  - button "Add week" [ref=e384]
+                - generic [ref=e386]:
+                  - generic [ref=e387]:
+                    - generic [ref=e388]:
+                      - paragraph [ref=e389]: Supplements
+                      - paragraph [ref=e390]: Supplements available within this phase.
+                    - button "Add supplement" [ref=e391] [cursor=pointer]
+                  - generic [ref=e393]:
+                    - generic [ref=e394]:
+                      - generic [ref=e395]:
+                        - generic [ref=e396]:
+                          - paragraph [ref=e397]: Kaneel
+                          - generic [ref=e398]: Supplement
+                          - generic [ref=e399]: Added by default
+                        - generic [ref=e400]:
+                          - generic [ref=e401]:
+                            - strong [ref=e402]: 10 g/kg
+                            - text: dosis
+                          - generic [ref=e403]:
+                            - strong [ref=e404]: ∞
+                            - text: max in phase
+                          - generic [ref=e405]:
+                            - strong [ref=e406]: "4"
+                            - text: min per week
+                          - generic [ref=e407]:
+                            - strong [ref=e408]: "2"
+                            - text: rest weeks
+                      - generic [ref=e409]:
+                        - button "Edit Kaneel" [ref=e410] [cursor=pointer]
+                        - button "Remove Kaneel" [ref=e412] [cursor=pointer]
+                    - generic [ref=e414]:
+                      - generic [ref=e415]:
+                        - generic [ref=e416]:
+                          - paragraph [ref=e417]: Zout
+                          - generic [ref=e418]: Mineraal
+                        - generic [ref=e419]:
+                          - generic [ref=e420]:
+                            - strong [ref=e421]: 5 g
+                            - text: dosis
+                          - generic [ref=e422]:
+                            - strong [ref=e423]: ∞
+                            - text: max in phase
+                          - generic [ref=e424]:
+                            - strong [ref=e425]: "4"
+                            - text: min per week
+                          - generic [ref=e426]:
+                            - strong [ref=e427]: "2"
+                            - text: rest weeks
+                      - generic [ref=e428]:
+                        - button "Edit Zout" [ref=e429] [cursor=pointer]
+                        - button "Remove Zout" [ref=e431] [cursor=pointer]
+                  - generic [ref=e433]:
+                    - generic [ref=e434]:
+                      - paragraph [ref=e435]: Supplementplanning
+                      - paragraph [ref=e436]: Geef per week aan welke supplementen worden toegediend.
+                    - table [ref=e438]:
+                      - rowgroup [ref=e439]:
+                        - row [ref=e440]:
+                          - columnheader "Supplement" [ref=e441]
+                          - columnheader "Week 1" [ref=e442]
+                          - columnheader "Week 2" [ref=e443]
+                          - columnheader "Week 3" [ref=e444]
+                          - columnheader "Week 4" [ref=e445]
+                          - columnheader "Week 5" [ref=e446]
+                          - columnheader "Week 6" [ref=e447]
+                      - rowgroup [ref=e448]:
+                        - row [ref=e449]:
+                          - rowheader "Kaneel Supplement" [ref=e450]:
+                            - generic [ref=e451]: Kaneel
+                            - generic [ref=e452]: Supplement
+                          - cell [ref=e453]:
+                            - button "Kaneel in week 1" [pressed] [ref=e454]
+                          - cell [ref=e456]:
+                            - button "Kaneel in week 2" [ref=e457]
+                          - cell [ref=e458]:
+                            - button "Kaneel in week 3" [pressed] [ref=e459]
+                          - cell [ref=e461]:
+                            - button "Kaneel in week 4" [ref=e462]
+                          - cell [ref=e463]:
+                            - button "Kaneel in week 5" [pressed] [ref=e464]
+                          - cell [ref=e466]:
+                            - button "Kaneel in week 6" [ref=e467]
+                        - row [ref=e468]:
+                          - rowheader "Zout Mineraal" [ref=e469]:
+                            - generic [ref=e470]: Zout
+                            - generic [ref=e471]: Mineraal
+                          - cell [ref=e472]:
+                            - button "Zout in week 1" [ref=e473]
+                          - cell [ref=e474]:
+                            - button "Zout in week 2" [pressed] [ref=e475]
+                          - cell [ref=e477]:
+                            - button "Zout in week 3" [ref=e478]
+                          - cell [ref=e479]:
+                            - button "Zout in week 4" [pressed] [ref=e480]
+                          - cell [ref=e482]:
+                            - button "Zout in week 5" [ref=e483]
+                          - cell [ref=e484]:
+                            - button "Zout in week 6" [pressed] [ref=e485]
+              - article [ref=e487]:
+                - generic [ref=e488]:
+                  - generic [ref=e489]: "3"
+                  - generic [ref=e491]:
+                    - heading "Fase 3" [level=5] [ref=e492]
+                    - generic [ref=e493]: Optional
+                  - generic [ref=e494]:
+                    - button "Verplaats Fase 3 omhoog" [ref=e495] [cursor=pointer]
+                    - button "Verplaats Fase 3 omlaag" [disabled]
+                    - button "Edit Fase 3" [ref=e497] [cursor=pointer]
+                    - button "Remove Fase 3" [ref=e499] [cursor=pointer]
+                - generic [ref=e502]:
+                  - generic [ref=e503]: Weeks
+                  - generic [ref=e505]:
+                    - text: Week 1
+                    - button "Remove Week 1" [ref=e506]
+                  - button "Add week" [ref=e508]
+                - generic [ref=e510]:
+                  - generic [ref=e511]:
+                    - generic [ref=e512]:
+                      - paragraph [ref=e513]: Supplements
+                      - paragraph [ref=e514]: Supplements available within this phase.
+                    - button "Add supplement" [ref=e515] [cursor=pointer]
+                  - paragraph [ref=e517]: No supplements configured for this phase.
+                  - generic [ref=e518]:
+                    - generic [ref=e519]:
+                      - paragraph [ref=e520]: Supplementplanning
+                      - paragraph [ref=e521]: Geef per week aan welke supplementen worden toegediend.
+                    - paragraph [ref=e522]: Voeg minimaal één week en één supplement toe om de planning te maken.
+      - generic [ref=e524]:
+        - generic [ref=e525]:
+          - generic [ref=e526]:
+            - heading "Edit phase" [level=3] [ref=e527]
+            - paragraph [ref=e528]: Configure the phase details and add its weeks from the overview.
+          - button "Close" [ref=e529]
+        - generic [ref=e532]:
+          - generic [ref=e533]:
+            - generic [ref=e534]: Protocol template
+            - combobox [ref=e535]:
+              - option "Darm protocol" [selected]
+          - generic [ref=e536]:
+            - generic [ref=e537]: Name
+            - textbox "e.g. Stabilisation" [ref=e538]: Darm revalidatie
+          - generic [ref=e539]:
+            - generic [ref=e540]: Description
+            - textbox [ref=e541]
+            - paragraph [ref=e542]: A short explanation of this phase.
+          - generic [ref=e543]:
+            - checkbox "Required phase This phase must be included when using this protocol template." [checked] [ref=e544]
+            - generic [ref=e545]:
+              - generic [ref=e546]: Required phase
+              - generic [ref=e547]: This phase must be included when using this protocol template.
+          - generic [ref=e549] [cursor=pointer]:
+            - checkbox "Afwijkende start Laat deze fase pas starten nadat de vorige fase een aantal volledige weken is afgerond. Uitgeschakeld betekent direct aansluiten." [ref=e550]
+            - generic [ref=e551]:
+              - generic [ref=e552]: Afwijkende start
+              - generic [ref=e553]: Laat deze fase pas starten nadat de vorige fase een aantal volledige weken is afgerond. Uitgeschakeld betekent direct aansluiten.
+        - generic [ref=e554]:
+          - button "Cancel" [ref=e555] [cursor=pointer]
+          - button "Save changes" [ref=e556] [cursor=pointer]

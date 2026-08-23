@@ -13,7 +13,6 @@ $models = [
     \App\Models\TimelineEvent::class,
     \App\Models\Protocol::class,
     \App\Models\ProtocolPhase::class,
-    \App\Models\ProtocolPhaseItem::class,
     \App\Models\ProtocolAnalysis::class,
     \App\Models\ProtocolAdvice::class,
     \App\Models\ProtocolTask::class,

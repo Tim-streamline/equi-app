@@ -7,10 +7,10 @@ use App\Models\Protocol;
 use App\Models\ProtocolAdvice;
 use App\Models\ProtocolAnalysis;
 use App\Models\ProtocolPhase;
-use App\Models\ProtocolPhaseItem;
+use App\Models\ProtocolPhaseWeek;
 use App\Models\ProtocolTask;
 use App\Models\ProtocolTaskCompletion;
-use App\Models\ProtocolType;
+use App\Models\ProtocolTemplate;
 use App\Models\Therapist;
 use App\Models\User;
 use Illuminate\Database\Seeder;
@@ -39,16 +39,24 @@ class ProtocolSeeder extends Seeder
 
     private function seedAnchorProtocol(Horse $horse, Therapist $therapist): void
     {
-        $protocolType = ProtocolType::query()->firstOrCreate(['name' => 'Darm protocol']);
-        $phaseDefinitions = $protocolType->phases()->orderBy('order')->get();
+        $protocolTemplate = ProtocolTemplate::query()->firstOrCreate(['name' => 'Darm protocol']);
+        $phaseDefinitions = $protocolTemplate->phases()->orderBy('order')->get();
         while ($phaseDefinitions->count() < 3) {
             $phaseNumber = $phaseDefinitions->count() + 1;
-            $phaseDefinitions->push($protocolType->phases()->create([
+            $phaseDefinitions->push($protocolTemplate->phases()->create([
                 'order' => ((int) $phaseDefinitions->max('order')) + 1,
                 'name' => "Fase {$phaseNumber}",
                 'description' => null,
                 'required' => $phaseNumber === 1,
             ]));
+        }
+        foreach ([4, 2, 2] as $phaseIndex => $weekCount) {
+            if ($phaseDefinitions[$phaseIndex]->weeks()->exists()) {
+                continue;
+            }
+            foreach (range(1, $weekCount) as $number) {
+                $phaseDefinitions[$phaseIndex]->weeks()->create(['number' => $number]);
+            }
         }
         $startedAt = now()->subWeeks(3);
         $protocol = Protocol::query()->updateOrCreate(
@@ -57,7 +65,8 @@ class ProtocolSeeder extends Seeder
                 'title' => self::ANCHOR_PROTOCOL,
             ],
             [
-                'protocol_type_id' => $protocolType->id,
+                'protocol_template_id' => $protocolTemplate->id,
+                'protocol_template_name' => $protocolTemplate->name,
                 'therapist_id' => $therapist->id,
                 'subtitle_analyse' => 'KWPN merrie · Jeuk / Zomereczeem',
                 'subtitle_protocol' => 'Week 3 van 8 · Fase 1 actief',
@@ -66,28 +75,26 @@ class ProtocolSeeder extends Seeder
                 'current_week' => 3,
                 'started_at' => $startedAt,
                 'status' => 'active',
+                'published_at' => now(),
             ],
         );
 
         $phases = [
-            ['Fase 1 — Darmen', 'active', 1, 4, 'Actief · wk 1–4', [
-                '1 el brandnetel door ruwvoer (ochtend)',
-                '1 el lijnzaad door ruwvoer (ochtend)',
-                'Krachtvoer met granen weglaten',
-                'Mest observeren en noteren',
-            ]],
-            ['Fase 2 — Lever en nieren', 'upcoming', 5, 6, 'Vanaf wk 5', []],
-            ['Fase 3 — Huid', 'upcoming', 7, 8, 'Vanaf wk 7', []],
+            ['Fase 1 — Darmen', 'active', 1, 4, 'Actief · wk 1–4'],
+            ['Fase 2 — Lever en nieren', 'upcoming', 5, 6, 'Vanaf wk 5'],
+            ['Fase 3 — Huid', 'upcoming', 7, 8, 'Vanaf wk 7'],
         ];
         $activePhase = null;
         $phaseIds = [];
 
-        foreach ($phases as $order => [$title, $state, $weekStart, $weekEnd, $chipLabel, $items]) {
+        foreach ($phases as $order => [$title, $state, $weekStart, $weekEnd, $chipLabel]) {
             $phase = ProtocolPhase::query()->updateOrCreate(
                 ['protocol_id' => $protocol->id, 'order' => $order],
                 [
-                    'protocol_type_phase_id' => $phaseDefinitions[$order]->id,
+                    'protocol_template_phase_id' => $phaseDefinitions[$order]->id,
                     'title' => $title,
+                    'description' => $phaseDefinitions[$order]->description,
+                    'required' => $phaseDefinitions[$order]->required,
                     'state' => $state,
                     'week_start' => $weekStart,
                     'week_end' => $weekEnd,
@@ -95,22 +102,18 @@ class ProtocolSeeder extends Seeder
                 ],
             );
             $phaseIds[] = $phase->id;
-            $itemIds = [];
-
-            foreach ($items as $itemOrder => $label) {
-                $item = ProtocolPhaseItem::query()->updateOrCreate(
-                    ['phase_id' => $phase->id, 'order' => $itemOrder],
-                    ['label' => $label],
+            $weekIds = [];
+            foreach (range(1, $weekEnd - $weekStart + 1) as $number) {
+                $week = ProtocolPhaseWeek::query()->updateOrCreate(
+                    ['protocol_phase_id' => $phase->id, 'number' => $number],
+                    [
+                        'protocol_template_phase_week_id' => $phaseDefinitions[$order]->weeks()->where('number', $number)->value('id'),
+                        'protocol_week_number' => $weekStart + $number - 1,
+                    ],
                 );
-                $itemIds[] = $item->id;
+                $weekIds[] = $week->id;
             }
-
-            if ($itemIds === []) {
-                $phase->items()->delete();
-            } else {
-                $phase->items()->whereNotIn('id', $itemIds)->delete();
-            }
-
+            $phase->weeks()->whereNotIn('id', $weekIds)->delete();
             if ($state === 'active') {
                 $activePhase = $phase;
             }

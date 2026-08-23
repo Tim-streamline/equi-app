@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\Enums\SupplementDoseType;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\SaveProtocolRequest;
 use App\Models\Horse;
@@ -9,10 +10,11 @@ use App\Models\Protocol;
 use App\Models\ProtocolAdvice;
 use App\Models\ProtocolAnalysis;
 use App\Models\ProtocolPhase;
-use App\Models\ProtocolPhaseItem;
+use App\Models\ProtocolPhaseSupplement;
 use App\Models\ProtocolTask;
-use App\Models\ProtocolType;
-use App\Models\ProtocolTypePhase;
+use App\Models\ProtocolTemplate;
+use App\Models\ProtocolTemplatePhase;
+use App\Models\Supplement;
 use App\Models\Therapist;
 use App\Support\AuditLogger;
 use Illuminate\Http\RedirectResponse;
@@ -29,10 +31,10 @@ class ProtocolController extends Controller
         $protocols = Protocol::query()
             ->when($request->string('status')->toString(), fn ($query, $s) => $query->where('status', $s))
             ->when($request->string('q')->toString(), fn ($query, $q) => $query->where(fn ($search) => $search
-                ->whereHas('protocolType', fn ($protocolType) => $protocolType->where('name', 'ilike', "%{$q}%"))
+                ->where('protocol_template_name', 'ilike', "%{$q}%")
                 ->orWhereHas('horse', fn ($horse) => $horse->where('name', 'ilike', "%{$q}%"))))
             ->with(
-                'protocolType:id,name',
+                'protocolTemplate:id,name',
                 'horse:id,name,owner_id',
                 'horse.owner:id,name',
                 'therapist:id,name',
@@ -58,10 +60,11 @@ class ProtocolController extends Controller
 
     public function store(SaveProtocolRequest $request): RedirectResponse
     {
+        $protocolTemplate = ProtocolTemplate::query()->findOrFail($request->validated('protocol_template_id'));
         $data = $this->withRequiredPhases($request->validated());
 
-        $protocol = DB::transaction(function () use ($data) {
-            $protocol = Protocol::query()->create($this->protocolAttributes($data));
+        $protocol = DB::transaction(function () use ($data, $protocolTemplate) {
+            $protocol = Protocol::query()->create($this->protocolAttributes($data, $protocolTemplate));
             $this->syncStructure($protocol, $data);
             AuditLogger::created($protocol);
 
@@ -69,22 +72,12 @@ class ProtocolController extends Controller
         });
 
         return to_route('admin.protocols.edit', $protocol)
-            ->with('success', 'Protocol created.');
+            ->with('success', 'Protocol aangemaakt.');
     }
 
     public function edit(Protocol $protocol): Response
     {
-        $protocol->load([
-            'horse:id,name,owner_id,breed,age,sex,weight_kg,status',
-            'horse.owner:id,name,email',
-            'horse.focusTopics:id,title,slug',
-            'therapist:id,name,title',
-            'phases.items',
-            'phases.phase:id,protocol_type_id,name,description,required,order',
-            'phases.supplements.supplement:id,protocol_type_phase_id,name,description,supplement_type,add_by_default,max_aantal_in_fase,min_aantal_per_week,rust_periode_in_weken',
-            'analysis.advice',
-            'tasks',
-        ]);
+        $this->loadEditorRelations($protocol);
 
         return Inertia::render('Protocols/Edit', [
             'protocol' => $protocol,
@@ -98,6 +91,9 @@ class ProtocolController extends Controller
 
         DB::transaction(function () use ($data, $protocol) {
             $attributes = $this->protocolAttributes($data);
+            if ($data['published'] && $protocol->published_at) {
+                $attributes['published_at'] = $protocol->published_at;
+            }
             $before = $protocol->only(array_keys($attributes));
             $protocol->update($attributes);
             $this->syncStructure($protocol, $data);
@@ -105,7 +101,7 @@ class ProtocolController extends Controller
         });
 
         return to_route('admin.protocols.edit', $protocol)
-            ->with('success', 'Protocol saved.');
+            ->with('success', 'Protocol opgeslagen.');
     }
 
     public function show(Protocol $protocol): Response
@@ -113,9 +109,10 @@ class ProtocolController extends Controller
         $protocol->load([
             'horse:id,name,owner_id', 'horse.owner:id,name',
             'therapist:id,name,title',
-            'phases.items',
+            'phases.weeks',
+            'phases.supplements.weeks.protocolPhaseWeek',
             'analysis',
-            'tasks' => fn ($q) => $q->withCount('completions'),
+            'tasks' => fn ($query) => $query->withCount('completions'),
         ]);
 
         return Inertia::render('Protocols/Show', ['protocol' => $protocol]);
@@ -126,14 +123,13 @@ class ProtocolController extends Controller
         $status = $request->validate(['status' => ['required', 'in:active,paused,completed']])['status'];
         $before = $protocol->only('status');
         $protocol->update(['status' => $status]);
+        $this->synchronizeProtocolTiming($protocol);
         AuditLogger::updated($protocol, $before, $request->input('reason'));
 
-        return back()->with('success', "Protocol marked {$status}.");
+        return back()->with('success', "Protocol gemarkeerd als {$status}.");
     }
 
-    /**
-     * @return array<string, mixed>
-     */
+    /** @return array<string, mixed> */
     private function editorOptions(?string $selectedHorseId = null): array
     {
         return [
@@ -146,11 +142,11 @@ class ProtocolController extends Controller
             'therapists' => Therapist::query()
                 ->orderBy('name')
                 ->get(['id', 'name', 'title']),
-            'protocolTypes' => ProtocolType::query()
+            'protocolTemplates' => ProtocolTemplate::query()
                 ->with([
-                    'phases:id,protocol_type_id,order,name,description,required',
-                    'phases.weeks:id,protocol_type_phase_id,number',
-                    'phases.supplements:id,protocol_type_phase_id,name,description,supplement_type,add_by_default,max_aantal_in_fase,min_aantal_per_week,rust_periode_in_weken',
+                    'phases:id,protocol_template_id,order,name,description,required,start_after_previous_phase_weeks',
+                    'phases.weeks:id,protocol_template_phase_id,number',
+                    'phases.supplements:id,protocol_template_phase_id,name,description,instructions,supplement_type,dosis_type,dosis,unit,add_by_default,max_aantal_in_fase,min_aantal_per_week,rust_periode_in_weken',
                     'phases.supplements.weeks:id,number',
                 ])
                 ->orderBy('name')
@@ -158,25 +154,39 @@ class ProtocolController extends Controller
         ];
     }
 
-    /**
-     * @param  array<string, mixed>  $data
+    private function loadEditorRelations(Protocol $protocol): void
+    {
+        $protocol->load([
+            'protocolTemplate:id,name',
+            'horse:id,name,owner_id,breed,age,sex,weight_kg,status',
+            'horse.owner:id,name,email',
+            'horse.focusTopics:id,title,slug',
+            'therapist:id,name,title',
+            'phases.weeks',
+            'phases.supplements.weeks.protocolPhaseWeek',
+            'analysis.advice',
+            'tasks',
+        ]);
+    }
+
+    /** @param array<string, mixed> $data
      * @return array<string, mixed>
      */
-    private function protocolAttributes(array $data): array
+    private function protocolAttributes(array $data, ?ProtocolTemplate $protocolTemplate = null): array
     {
         $attributes = Arr::only($data, [
             'horse_id',
-            'protocol_type_id',
+            'protocol_template_id',
             'therapist_id',
             'title',
-            'subtitle_analyse',
-            'subtitle_protocol',
-            'subtitle_calendar',
-            'total_weeks',
-            'current_week',
             'started_at',
             'status',
         ]);
+        $attributes['published_at'] = $data['published'] ? now() : null;
+
+        if ($protocolTemplate) {
+            $attributes['protocol_template_name'] = $protocolTemplate->name;
+        }
 
         foreach ($attributes as $key => $value) {
             if ($value === '') {
@@ -187,135 +197,211 @@ class ProtocolController extends Controller
         return $attributes;
     }
 
-    /**
-     * @param  array<string, mixed>  $data
-     */
+    /** @param array<string, mixed> $data */
     private function syncStructure(Protocol $protocol, array $data): void
     {
         $phaseIds = [];
         $phaseIdByClientKey = [];
+        $phases = collect($data['phases'])->values();
 
-        foreach ($data['phases'] as $order => $phaseData) {
-            $phase = isset($phaseData['id'])
+        foreach ($phases as $order => $phaseData) {
+            $isExisting = filled($phaseData['id'] ?? null);
+            $phase = $isExisting
                 ? $protocol->phases()->whereKey($phaseData['id'])->firstOrFail()
                 : new ProtocolPhase(['protocol_id' => $protocol->id]);
-
-            $phase->fill([
+            $attributes = [
                 'protocol_id' => $protocol->id,
-                'protocol_type_phase_id' => $phaseData['protocol_type_phase_id'],
                 'order' => $order,
-                'title' => $phaseData['title'],
-                'state' => $phaseData['state'],
-                'week_start' => $this->nullableValue($phaseData['week_start'] ?? null),
-                'week_end' => $this->nullableValue($phaseData['week_end'] ?? null),
-                'chip_label' => $this->nullableValue($phaseData['chip_label'] ?? null),
-            ])->save();
+                'state' => 'upcoming',
+                'week_start' => null,
+                'week_end' => null,
+                'chip_label' => null,
+            ];
+
+            if (! $isExisting) {
+                $phaseDefinition = ProtocolTemplatePhase::query()
+                    ->where('protocol_template_id', $protocol->protocol_template_id)
+                    ->findOrFail($phaseData['protocol_template_phase_id']);
+                $attributes += [
+                    'protocol_template_phase_id' => $phaseDefinition->id,
+                    'title' => $phaseDefinition->name,
+                    'description' => $phaseDefinition->description,
+                    'required' => $phaseDefinition->required,
+                    'start_after_previous_phase_weeks' => $phaseDefinition->start_after_previous_phase_weeks,
+                ];
+            }
+
+            if (array_key_exists('start_after_previous_phase_weeks', $phaseData)) {
+                $attributes['start_after_previous_phase_weeks'] = $phaseData['start_after_previous_phase_weeks'];
+            }
+
+            $phase->fill($attributes)->save();
 
             $phaseIds[] = $phase->id;
             $phaseIdByClientKey[$phaseData['client_key']] = $phase->id;
-            $this->syncPhaseItems($phase, $phaseData['items']);
-            $this->syncPhaseSupplements($phase, $phaseData['supplement_ids']);
+            $this->syncPhaseWeeks($phase, (int) $phaseData['week_count']);
+            $this->syncPhaseSupplements($phase, $phaseData['supplements']);
         }
 
         $protocol->phases()->whereNotIn('id', $phaseIds)->delete();
         $this->syncTasks($protocol, $data['tasks'], $phaseIdByClientKey);
         $this->syncAnalysis($protocol, $data['analysis']['cause'] ?? null, $data['advice']);
+        $this->synchronizeProtocolTiming($protocol);
     }
 
-    /**
-     * @param  array<string, mixed>  $data
+    /** @param array<string, mixed> $data
      * @return array<string, mixed>
      */
     private function withRequiredPhases(array $data): array
     {
-        $definitions = ProtocolTypePhase::query()
-            ->where('protocol_type_id', $data['protocol_type_id'])
+        $horseWeightKg = Horse::query()->whereKey($data['horse_id'])->value('weight_kg');
+        $definitions = ProtocolTemplatePhase::query()
+            ->where('protocol_template_id', $data['protocol_template_id'])
+            ->with('weeks', 'supplements.weeks')
             ->orderBy('order')
             ->get();
         $phases = collect($data['phases']);
-        $selectedDefinitionIds = $phases->pluck('protocol_type_phase_id');
-        $hasActivePhase = $phases->contains(fn (array $phase): bool => $phase['state'] === 'active');
+        $selectedDefinitionIds = $phases->pluck('protocol_template_phase_id');
 
         foreach ($definitions->where('required', true) as $definition) {
             if ($selectedDefinitionIds->contains($definition->id)) {
                 continue;
             }
 
-            $phases->push([
-                'id' => null,
-                'client_key' => 'required-'.$definition->id,
-                'protocol_type_phase_id' => $definition->id,
-                'title' => $definition->name,
-                'state' => $hasActivePhase ? 'upcoming' : 'active',
-                'week_start' => null,
-                'week_end' => null,
-                'chip_label' => 'Verplicht',
-                'items' => [],
-                'supplement_ids' => $definition->supplements()
-                    ->where('add_by_default', true)
-                    ->pluck('id')
-                    ->all(),
-            ]);
-            $hasActivePhase = true;
+            $phases->push($this->phasePayloadFromDefinition($definition, $horseWeightKg));
         }
 
         $definitionOrder = $definitions->pluck('order', 'id');
         $data['phases'] = $phases
-            ->sortBy(fn (array $phase) => $definitionOrder[$phase['protocol_type_phase_id']] ?? PHP_INT_MAX)
+            ->sortBy(fn (array $phase) => $definitionOrder[$phase['protocol_template_phase_id']] ?? PHP_INT_MAX)
             ->values()
             ->all();
 
         return $data;
     }
 
-    /**
-     * @param  array<int, array<string, mixed>>  $items
-     */
-    private function syncPhaseItems(ProtocolPhase $phase, array $items): void
+    /** @return array<string, mixed> */
+    private function phasePayloadFromDefinition(ProtocolTemplatePhase $definition, int|float|null $horseWeightKg): array
     {
-        $itemIds = [];
+        return [
+            'id' => null,
+            'client_key' => 'required-'.$definition->id,
+            'protocol_template_phase_id' => $definition->id,
+            'title' => $definition->name,
+            'description' => $definition->description,
+            'required' => $definition->required,
+            'start_after_previous_phase_weeks' => $definition->start_after_previous_phase_weeks,
+            'week_count' => $definition->weeks->count(),
+            'supplements' => $definition->supplements
+                ->where('add_by_default', true)
+                ->map(fn ($supplement): array => [
+                    'id' => null,
+                    'supplement_id' => $supplement->id,
+                    'dosage' => $this->templateDosage($supplement, $horseWeightKg),
+                    'aantal_per_week' => $supplement->min_aantal_per_week,
+                    'instructions' => $supplement->instructions,
+                    'week_numbers' => $supplement->weeks->pluck('number')->values()->all(),
+                ])->values()->all(),
+        ];
+    }
 
-        foreach ($items as $order => $itemData) {
-            $item = isset($itemData['id'])
-                ? $phase->items()->whereKey($itemData['id'])->firstOrFail()
-                : new ProtocolPhaseItem(['phase_id' => $phase->id]);
+    private function syncPhaseWeeks(ProtocolPhase $phase, int $weekCount): void
+    {
+        $templateWeeks = $phase->phase()->firstOrFail()->weeks()->get()->keyBy('number');
+        $weekIds = [];
 
-            $item->fill([
-                'phase_id' => $phase->id,
-                'order' => $order,
-                'label' => $itemData['label'],
-            ])->save();
-            $itemIds[] = $item->id;
+        for ($number = 1; $number <= $weekCount; $number++) {
+            $week = $phase->weeks()->firstOrNew(['number' => $number]);
+            if (! $week->exists) {
+                $week->protocol_template_phase_week_id = $templateWeeks->get($number)?->id;
+            }
+            $week->protocol_week_number = $number;
+            $week->save();
+            $weekIds[] = $week->id;
         }
 
-        $phase->items()->when($itemIds, fn ($query) => $query->whereNotIn('id', $itemIds))->delete();
-        if ($itemIds === []) {
-            $phase->items()->delete();
+        $phase->weeks()->when($weekIds, fn ($query) => $query->whereNotIn('id', $weekIds))->delete();
+        if ($weekIds === []) {
+            $phase->weeks()->delete();
         }
     }
 
-    /**
-     * @param  array<int, string>  $supplementIds
-     */
-    private function syncPhaseSupplements(ProtocolPhase $phase, array $supplementIds): void
+    /** @param array<int, array<string, mixed>> $supplements */
+    private function syncPhaseSupplements(ProtocolPhase $phase, array $supplements): void
     {
-        foreach ($supplementIds as $supplementId) {
-            $phase->supplements()->firstOrCreate([
-                'supplement_id' => $supplementId,
-            ]);
+        $selectionIds = [];
+
+        foreach ($supplements as $supplementData) {
+            $isExisting = filled($supplementData['id'] ?? null);
+            $selection = $isExisting
+                ? $phase->supplements()->whereKey($supplementData['id'])->firstOrFail()
+                : $phase->supplements()->firstOrNew([
+                    'supplement_id' => $supplementData['supplement_id'],
+                ]);
+            $catalogSupplement = ! $isExisting && filled($supplementData['supplement_id'] ?? null)
+                ? $phase->phase()->firstOrFail()->supplements()->whereKey($supplementData['supplement_id'])->firstOrFail()
+                : null;
+
+            $attributes = [
+                'protocol_phase_id' => $phase->id,
+                'dosage' => $this->nullableValue($supplementData['dosage'] ?? null),
+                'aantal_per_week' => $supplementData['aantal_per_week'] ?? null,
+                'instructions' => $this->nullableValue($supplementData['instructions'] ?? null),
+            ];
+            if ($catalogSupplement) {
+                $attributes += [
+                    'supplement_id' => $catalogSupplement->id,
+                    'name' => $catalogSupplement->name,
+                    'description' => $catalogSupplement->description,
+                    'supplement_type' => $catalogSupplement->supplement_type->value,
+                    'dosis_type' => $catalogSupplement->dosis_type?->value,
+                    'dosis' => $catalogSupplement->dosis,
+                    'unit' => $catalogSupplement->unit?->value,
+                    'add_by_default' => $catalogSupplement->add_by_default,
+                    'max_aantal_in_fase' => $catalogSupplement->max_aantal_in_fase,
+                    'min_aantal_per_week' => $catalogSupplement->min_aantal_per_week,
+                    'rust_periode_in_weken' => $catalogSupplement->rust_periode_in_weken,
+                ];
+            }
+            $selection->fill($attributes)->save();
+            $selectionIds[] = $selection->id;
+            $this->syncProtocolSupplementWeeks($selection, $phase, $supplementData['week_numbers']);
         }
 
-        $phase->supplements()
-            ->when($supplementIds, fn ($query) => $query->whereNotIn('supplement_id', $supplementIds))
-            ->delete();
-
-        if ($supplementIds === []) {
+        $phase->supplements()->when($selectionIds, fn ($query) => $query->whereNotIn('id', $selectionIds))->delete();
+        if ($selectionIds === []) {
             $phase->supplements()->delete();
         }
     }
 
-    /**
-     * @param  array<int, array<string, mixed>>  $tasks
+    /** @param array<int, int> $weekNumbers */
+    private function syncProtocolSupplementWeeks(
+        ProtocolPhaseSupplement $selection,
+        ProtocolPhase $phase,
+        array $weekNumbers,
+    ): void {
+        $phaseWeeks = $phase->weeks()->whereIn('number', $weekNumbers)->get()->keyBy('number');
+        $selectionWeekIds = [];
+
+        foreach ($weekNumbers as $weekNumber) {
+            $phaseWeek = $phaseWeeks->get((int) $weekNumber);
+            if (! $phaseWeek) {
+                continue;
+            }
+
+            $selectionWeek = $selection->weeks()->firstOrCreate([
+                'protocol_phase_week_id' => $phaseWeek->id,
+            ]);
+            $selectionWeekIds[] = $selectionWeek->id;
+        }
+
+        $selection->weeks()->when($selectionWeekIds, fn ($query) => $query->whereNotIn('id', $selectionWeekIds))->delete();
+        if ($selectionWeekIds === []) {
+            $selection->weeks()->delete();
+        }
+    }
+
+    /** @param array<int, array<string, mixed>> $tasks
      * @param  array<string, string>  $phaseIdByClientKey
      */
     private function syncTasks(Protocol $protocol, array $tasks, array $phaseIdByClientKey): void
@@ -347,9 +433,7 @@ class ProtocolController extends Controller
         }
     }
 
-    /**
-     * @param  array<int, array<string, mixed>>  $adviceRows
-     */
+    /** @param array<int, array<string, mixed>> $adviceRows */
     private function syncAnalysis(Protocol $protocol, mixed $cause, array $adviceRows): void
     {
         $cause = trim((string) ($cause ?? ''));
@@ -386,8 +470,121 @@ class ProtocolController extends Controller
         }
     }
 
+    private function synchronizeProtocolTiming(Protocol $protocol): void
+    {
+        $protocol->load('phases.weeks', 'horse.focusTopics');
+        $previousWeekStart = null;
+        $previousWeekEnd = null;
+        $latestWeekEnd = 0;
+
+        foreach ($protocol->phases as $phaseIndex => $phase) {
+            $phaseWeekStart = match (true) {
+                $phaseIndex === 0 => 1,
+                $phase->start_after_previous_phase_weeks !== null && $previousWeekStart !== null => $previousWeekStart + $phase->start_after_previous_phase_weeks,
+                $previousWeekEnd !== null => $previousWeekEnd + 1,
+                default => $latestWeekEnd + 1,
+            };
+
+            foreach ($phase->weeks as $weekIndex => $week) {
+                $week->update(['protocol_week_number' => $phaseWeekStart + $weekIndex]);
+            }
+
+            $previousWeekStart = $phase->weeks->isNotEmpty() ? $phaseWeekStart : null;
+            $previousWeekEnd = $phase->weeks->isNotEmpty()
+                ? $phaseWeekStart + $phase->weeks->count() - 1
+                : null;
+            $latestWeekEnd = max($latestWeekEnd, $previousWeekEnd ?? 0);
+        }
+
+        $totalWeeks = $latestWeekEnd;
+        $currentWeek = $this->currentWeek($protocol, $totalWeeks);
+
+        foreach ($protocol->phases as $phase) {
+            $weekStart = $phase->weeks->first()?->protocol_week_number;
+            $weekEnd = $phase->weeks->last()?->protocol_week_number;
+            $state = match (true) {
+                $weekStart === null => 'upcoming',
+                $protocol->status === 'completed' => 'done',
+                $weekEnd < $currentWeek => 'done',
+                $weekStart <= $currentWeek && $weekEnd >= $currentWeek => 'active',
+                default => 'upcoming',
+            };
+            $chip = match ($state) {
+                'done' => 'Afgerond',
+                'active' => "Actief · wk {$weekStart}–{$weekEnd}",
+                default => $weekStart ? "Vanaf wk {$weekStart}" : 'Geen weken',
+            };
+
+            $phase->update([
+                'state' => $state,
+                'week_start' => $weekStart,
+                'week_end' => $weekEnd,
+                'chip_label' => $chip,
+            ]);
+        }
+
+        $activePhase = $protocol->phases->firstWhere('state', 'active');
+        $analysisParts = collect([$protocol->horse?->breed])
+            ->merge($protocol->horse?->focusTopics?->pluck('title') ?? [])
+            ->filter()
+            ->values();
+
+        $protocol->update([
+            'total_weeks' => $totalWeeks ?: null,
+            'current_week' => $totalWeeks ? $currentWeek : null,
+            'subtitle_analyse' => $analysisParts->join(' · ') ?: null,
+            'subtitle_protocol' => $totalWeeks
+                ? "Week {$currentWeek} van {$totalWeeks}".($activePhase ? " · {$activePhase->title} actief" : '')
+                : 'Planning nog niet compleet',
+            'subtitle_calendar' => $protocol->started_at?->locale('nl')->translatedFormat('F Y'),
+        ]);
+    }
+
+    private function currentWeek(Protocol $protocol, int $totalWeeks): int
+    {
+        if ($totalWeeks < 1) {
+            return 1;
+        }
+
+        if ($protocol->status === 'completed') {
+            return $totalWeeks;
+        }
+
+        if ($protocol->status === 'paused' || ! $protocol->started_at) {
+            return max(1, min($totalWeeks, (int) ($protocol->current_week ?: 1)));
+        }
+
+        $days = $protocol->started_at->startOfDay()->diffInDays(now()->startOfDay(), false);
+
+        return max(1, min($totalWeeks, (int) floor(max(0, $days) / 7) + 1));
+    }
+
     private function nullableValue(mixed $value): mixed
     {
         return $value === '' ? null : $value;
+    }
+
+    private function templateDosage(Supplement $supplement, int|float|null $horseWeightKg): ?string
+    {
+        if ($supplement->dosis === null || $supplement->dosis_type === null || $supplement->unit === null) {
+            return null;
+        }
+
+        if (in_array($supplement->dosis_type, [SupplementDoseType::PerKilogram, SupplementDoseType::Per600Kilograms], true)) {
+            if ($horseWeightKg === null || $horseWeightKg <= 0) {
+                return null;
+            }
+
+            $dose = $supplement->dosis * $horseWeightKg;
+            if ($supplement->dosis_type === SupplementDoseType::Per600Kilograms) {
+                $dose /= 600;
+            }
+        } else {
+            $dose = $supplement->dosis;
+        }
+
+        $amount = rtrim(rtrim(number_format($dose, 12, '.', ''), '0'), '.');
+
+        return "{$amount} {$supplement->unit->value}";
     }
 }

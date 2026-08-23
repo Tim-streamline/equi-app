@@ -183,8 +183,19 @@ export function useProtocolPhases(protocolId: string) {
   return sorted(useCamelQuery(`SELECT * FROM protocol_phases WHERE protocol_id = ?`, [protocolId]));
 }
 
-export function usePhaseItems(phaseId: string) {
-  return sorted(useCamelQuery(`SELECT * FROM protocol_phase_items WHERE phase_id = ?`, [phaseId]));
+export function useProtocolPhaseWeeks(phaseId: string) {
+  return sorted(useCamelQuery(`SELECT * FROM protocol_phase_weeks WHERE protocol_phase_id = ?`, [phaseId]));
+}
+
+export function useProtocolPhaseSupplements(phaseId: string) {
+  return sorted(useCamelQuery(`SELECT * FROM protocol_phase_supplements WHERE protocol_phase_id = ?`, [phaseId]));
+}
+
+export function useProtocolPhaseSupplementWeeks(protocolPhaseSupplementId: string) {
+  return sorted(useCamelQuery(
+    `SELECT * FROM protocol_phase_supplement_weeks WHERE protocol_phase_supplement_id = ?`,
+    [protocolPhaseSupplementId],
+  ));
 }
 
 export function useProtocolAnalysis(protocolId: string): (Indexed & { advice: Indexed[] }) | null {

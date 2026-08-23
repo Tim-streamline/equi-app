@@ -2,10 +2,12 @@
 
 namespace Tests\Feature;
 
+use App\Enums\SupplementDoseType;
+use App\Enums\SupplementDoseUnit;
 use App\Enums\SupplementType;
 use App\Models\AdminUser;
-use App\Models\ProtocolType;
-use App\Models\ProtocolTypePhase;
+use App\Models\ProtocolTemplate;
+use App\Models\ProtocolTemplatePhase;
 use App\Models\Supplement;
 use App\Models\SupplementWeek;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -33,7 +35,7 @@ class AdminProtocolSettingsTest extends TestCase
 
     public function test_admin_can_open_protocol_settings_from_its_page(): void
     {
-        $type = ProtocolType::query()->create(['name' => 'Recovery']);
+        $type = ProtocolTemplate::query()->create(['name' => 'Recovery']);
         $phase = $type->phases()->create([
             'order' => 1,
             'name' => 'Restore',
@@ -45,11 +47,14 @@ class AdminProtocolSettingsTest extends TestCase
             'name' => 'Psyllium',
             'description' => 'Supports digestion.',
             'supplement_type' => SupplementType::Herb,
+            'dosis_type' => SupplementDoseType::PerKilogram,
+            'dosis' => 0.25,
+            'unit' => SupplementDoseUnit::Gram,
             'add_by_default' => true,
         ]);
         SupplementWeek::query()->create([
             'supplement_id' => $supplement->id,
-            'protocol_type_phase_week_id' => $week->id,
+            'protocol_template_phase_week_id' => $week->id,
         ]);
 
         $this->actingAs($this->admin, 'admin')
@@ -57,85 +62,146 @@ class AdminProtocolSettingsTest extends TestCase
             ->assertOk()
             ->assertInertia(fn (Assert $page) => $page
                 ->component('ProtocolSettings/Index')
-                ->has('protocolTypes', 1)
-                ->where('protocolTypes.0.name', 'Recovery')
-                ->where('protocolTypes.0.phases.0.name', 'Restore')
-                ->where('protocolTypes.0.phases.0.required', true)
-                ->where('protocolTypes.0.phases.0.weeks.0.number', 1)
-                ->where('protocolTypes.0.phases.0.supplements.0.name', 'Psyllium')
-                ->where('protocolTypes.0.phases.0.supplements.0.supplement_type', 'kruid')
-                ->where('protocolTypes.0.phases.0.supplements.0.weeks.0.id', $week->id));
+                ->has('protocolTemplates', 1)
+                ->where('protocolTemplates.0.name', 'Recovery')
+                ->missing('protocolTemplates.0.version')
+                ->where('protocolTemplates.0.phases.0.name', 'Restore')
+                ->where('protocolTemplates.0.phases.0.required', true)
+                ->where('protocolTemplates.0.phases.0.weeks.0.number', 1)
+                ->where('protocolTemplates.0.phases.0.supplements.0.name', 'Psyllium')
+                ->where('protocolTemplates.0.phases.0.supplements.0.supplement_type', 'kruid')
+                ->where('protocolTemplates.0.phases.0.supplements.0.dosis_type', 'per_kg')
+                ->where('protocolTemplates.0.phases.0.supplements.0.dosis', 0.25)
+                ->where('protocolTemplates.0.phases.0.supplements.0.unit', 'g')
+                ->where('protocolTemplates.0.phases.0.supplements.0.weeks.0.id', $week->id));
     }
 
-    public function test_admin_can_create_update_and_remove_protocol_types(): void
+    public function test_admin_can_create_update_and_remove_protocol_templates(): void
     {
         $this->actingAs($this->admin, 'admin')
-            ->post('/admin/protocol-settings/types', ['name' => 'General recovery'])
+            ->post('/admin/protocol-settings/templates', ['name' => 'General recovery'])
             ->assertSessionHasNoErrors();
 
-        $type = ProtocolType::query()->where('name', 'General recovery')->firstOrFail();
+        $type = ProtocolTemplate::query()->where('name', 'General recovery')->firstOrFail();
         $this->assertDatabaseHas('audit_logs', [
             'action' => 'created',
-            'target_type' => 'ProtocolType',
+            'target_type' => 'ProtocolTemplate',
             'target_id' => $type->id,
         ]);
 
         $this->actingAs($this->admin, 'admin')
-            ->put("/admin/protocol-settings/types/{$type->id}", ['name' => 'Digestive recovery'])
+            ->put("/admin/protocol-settings/templates/{$type->id}", ['name' => 'Digestive recovery'])
             ->assertSessionHasNoErrors();
 
-        $this->assertDatabaseHas('protocol_types', ['id' => $type->id, 'name' => 'Digestive recovery']);
+        $this->assertDatabaseHas('protocol_templates', ['id' => $type->id, 'name' => 'Digestive recovery']);
 
         $this->actingAs($this->admin, 'admin')
-            ->delete("/admin/protocol-settings/types/{$type->id}")
+            ->delete("/admin/protocol-settings/templates/{$type->id}")
             ->assertSessionHasNoErrors();
 
-        $this->assertDatabaseMissing('protocol_types', ['id' => $type->id]);
+        $this->assertDatabaseMissing('protocol_templates', ['id' => $type->id]);
     }
 
-    public function test_admin_can_configure_phases_and_move_them_between_protocol_types(): void
+    public function test_admin_can_configure_phases_and_move_them_between_protocol_templates(): void
     {
-        $firstType = ProtocolType::query()->create(['name' => 'Digestive']);
-        $secondType = ProtocolType::query()->create(['name' => 'Mobility']);
+        $firstType = ProtocolTemplate::query()->create(['name' => 'Digestive']);
+        $secondType = ProtocolTemplate::query()->create(['name' => 'Mobility']);
 
         $this->actingAs($this->admin, 'admin')
             ->post('/admin/protocol-settings/phases', [
-                'protocol_type_id' => $firstType->id,
+                'protocol_template_id' => $firstType->id,
                 'name' => 'Gut reset',
                 'description' => 'A deliberately longer phase description.',
                 'required' => true,
+                'start_after_previous_phase_weeks' => 2,
             ])
             ->assertSessionHasNoErrors();
 
-        $phase = ProtocolTypePhase::query()->where('name', 'Gut reset')->firstOrFail();
+        $phase = ProtocolTemplatePhase::query()->where('name', 'Gut reset')->firstOrFail();
         $this->assertSame(1, $phase->order);
         $this->assertTrue($phase->required);
-        $this->assertSame($firstType->id, $phase->protocol_type_id);
+        $this->assertSame($firstType->id, $phase->protocol_template_id);
+        $this->assertSame(2, $phase->start_after_previous_phase_weeks);
 
         $this->actingAs($this->admin, 'admin')
             ->put("/admin/protocol-settings/phases/{$phase->id}", [
-                'protocol_type_id' => $secondType->id,
+                'protocol_template_id' => $secondType->id,
                 'name' => 'Mobility reset',
                 'description' => null,
                 'required' => false,
+                'start_after_previous_phase_weeks' => null,
             ])
             ->assertSessionHasNoErrors();
 
         $phase->refresh();
-        $this->assertSame($secondType->id, $phase->protocol_type_id);
+        $this->assertSame($secondType->id, $phase->protocol_template_id);
         $this->assertSame('Mobility reset', $phase->name);
         $this->assertFalse($phase->required);
+        $this->assertNull($phase->start_after_previous_phase_weeks);
 
         $this->actingAs($this->admin, 'admin')
             ->delete("/admin/protocol-settings/phases/{$phase->id}")
             ->assertSessionHasNoErrors();
 
-        $this->assertDatabaseMissing('protocol_type_phases', ['id' => $phase->id]);
+        $this->assertDatabaseMissing('protocol_template_phases', ['id' => $phase->id]);
+    }
+
+    public function test_phase_start_delay_must_be_a_positive_number_of_weeks_when_enabled(): void
+    {
+        $template = ProtocolTemplate::query()->create(['name' => 'Delayed phase validation']);
+
+        $this->actingAs($this->admin, 'admin')
+            ->post('/admin/protocol-settings/phases', [
+                'protocol_template_id' => $template->id,
+                'name' => 'Delayed phase',
+                'description' => null,
+                'required' => false,
+                'start_after_previous_phase_weeks' => 0,
+            ])
+            ->assertSessionHasErrors('start_after_previous_phase_weeks');
+
+        $this->assertDatabaseMissing('protocol_template_phases', ['name' => 'Delayed phase']);
+    }
+
+    public function test_admin_can_configure_the_fixed_phase_order(): void
+    {
+        $type = ProtocolTemplate::query()->create(['name' => 'Ordered protocol']);
+        $first = $type->phases()->create([
+            'order' => 1,
+            'name' => 'First',
+            'required' => true,
+        ]);
+        $second = $type->phases()->create([
+            'order' => 2,
+            'name' => 'Second',
+            'required' => false,
+        ]);
+        $third = $type->phases()->create([
+            'order' => 3,
+            'name' => 'Third',
+            'required' => true,
+        ]);
+
+        $this->actingAs($this->admin, 'admin')
+            ->patch("/admin/protocol-settings/phases/{$second->id}/order", ['direction' => 'up'])
+            ->assertSessionHasNoErrors();
+
+        $this->assertSame(
+            [$second->id, $first->id, $third->id],
+            $type->phases()->pluck('id')->all(),
+        );
+        $this->assertSame([1, 2, 3], $type->phases()->pluck('order')->all());
+
+        $this->actingAs($this->admin, 'admin')
+            ->patch("/admin/protocol-settings/phases/{$second->id}/order", ['direction' => 'up'])
+            ->assertSessionHasNoErrors();
+
+        $this->assertSame([$second->id, $first->id, $third->id], $type->phases()->pluck('id')->all());
     }
 
     public function test_phase_weeks_are_numbered_and_renumbered_automatically(): void
     {
-        $type = ProtocolType::query()->create(['name' => 'Skin']);
+        $type = ProtocolTemplate::query()->create(['name' => 'Skin']);
         $phase = $type->phases()->create([
             'order' => 1,
             'name' => 'Calm inflammation',
@@ -159,9 +225,9 @@ class AdminProtocolSettingsTest extends TestCase
         $this->assertSame([1, 2], $phase->weeks()->pluck('number')->all());
     }
 
-    public function test_removing_a_protocol_type_cascades_to_its_phases_and_weeks(): void
+    public function test_removing_a_protocol_template_cascades_to_its_phases_and_weeks(): void
     {
-        $type = ProtocolType::query()->create(['name' => 'Cascade test']);
+        $type = ProtocolTemplate::query()->create(['name' => 'Cascade test']);
         $phase = $type->phases()->create([
             'order' => 1,
             'name' => 'Phase',
@@ -177,17 +243,17 @@ class AdminProtocolSettingsTest extends TestCase
         ]);
 
         $this->actingAs($this->admin, 'admin')
-            ->delete("/admin/protocol-settings/types/{$type->id}")
+            ->delete("/admin/protocol-settings/templates/{$type->id}")
             ->assertSessionHasNoErrors();
 
-        $this->assertDatabaseMissing('protocol_type_phases', ['id' => $phase->id]);
-        $this->assertDatabaseMissing('protocol_type_phase_weeks', ['id' => $week->id]);
+        $this->assertDatabaseMissing('protocol_template_phases', ['id' => $phase->id]);
+        $this->assertDatabaseMissing('protocol_template_phase_weeks', ['id' => $week->id]);
         $this->assertDatabaseMissing('supplements', ['id' => $supplement->id]);
     }
 
     public function test_admin_can_create_update_move_and_remove_a_supplement(): void
     {
-        $type = ProtocolType::query()->create(['name' => 'Supplement settings']);
+        $type = ProtocolTemplate::query()->create(['name' => 'Supplement settings']);
         $firstPhase = $type->phases()->create([
             'order' => 1,
             'name' => 'First phase',
@@ -203,15 +269,23 @@ class AdminProtocolSettingsTest extends TestCase
 
         $this->actingAs($this->admin, 'admin')
             ->post('/admin/protocol-settings/supplements', [
-                'protocol_type_phase_id' => $firstPhase->id,
+                'protocol_template_phase_id' => $firstPhase->id,
                 'name' => 'Zinc',
                 'description' => 'Supports the skin.',
+                'instructions' => 'Mix thoroughly with the feed.',
                 'supplement_type' => 'mineraal',
+                'dosis_type' => 'vast',
+                'dosis' => 40,
+                'unit' => 'g',
             ])
             ->assertSessionHasNoErrors();
 
         $supplement = Supplement::query()->where('name', 'Zinc')->firstOrFail();
         $this->assertSame(SupplementType::Mineral, $supplement->supplement_type);
+        $this->assertSame(SupplementDoseType::Fixed, $supplement->dosis_type);
+        $this->assertSame(40.0, $supplement->dosis);
+        $this->assertSame(SupplementDoseUnit::Gram, $supplement->unit);
+        $this->assertSame('Mix thoroughly with the feed.', $supplement->instructions);
         $this->assertFalse($supplement->add_by_default);
         $this->assertNull($supplement->max_aantal_in_fase);
         $this->assertSame(4, $supplement->min_aantal_per_week);
@@ -219,10 +293,14 @@ class AdminProtocolSettingsTest extends TestCase
 
         $this->actingAs($this->admin, 'admin')
             ->put("/admin/protocol-settings/supplements/{$supplement->id}", [
-                'protocol_type_phase_id' => $secondPhase->id,
+                'protocol_template_phase_id' => $secondPhase->id,
                 'name' => 'Zinc complex',
                 'description' => 'Updated description.',
+                'instructions' => 'Divide over two feedings.',
                 'supplement_type' => 'supplement',
+                'dosis_type' => 'per_kg',
+                'dosis' => 0.08,
+                'unit' => 'g',
                 'add_by_default' => true,
                 'max_aantal_in_fase' => 3,
                 'min_aantal_per_week' => 5,
@@ -231,9 +309,13 @@ class AdminProtocolSettingsTest extends TestCase
             ->assertSessionHasNoErrors();
 
         $supplement->refresh();
-        $this->assertSame($secondPhase->id, $supplement->protocol_type_phase_id);
+        $this->assertSame($secondPhase->id, $supplement->protocol_template_phase_id);
         $this->assertSame('Zinc complex', $supplement->name);
         $this->assertSame(SupplementType::Supplement, $supplement->supplement_type);
+        $this->assertSame(SupplementDoseType::PerKilogram, $supplement->dosis_type);
+        $this->assertSame(0.08, $supplement->dosis);
+        $this->assertSame(SupplementDoseUnit::Gram, $supplement->unit);
+        $this->assertSame('Divide over two feedings.', $supplement->instructions);
         $this->assertTrue($supplement->add_by_default);
         $this->assertSame(3, $supplement->max_aantal_in_fase);
         $this->assertSame(5, $supplement->min_aantal_per_week);
@@ -248,7 +330,7 @@ class AdminProtocolSettingsTest extends TestCase
 
     public function test_supplement_type_must_be_one_of_the_configured_enum_values(): void
     {
-        $type = ProtocolType::query()->create(['name' => 'Validation']);
+        $type = ProtocolTemplate::query()->create(['name' => 'Validation']);
         $phase = $type->phases()->create([
             'order' => 1,
             'name' => 'Phase',
@@ -258,7 +340,7 @@ class AdminProtocolSettingsTest extends TestCase
 
         $this->actingAs($this->admin, 'admin')
             ->post('/admin/protocol-settings/supplements', [
-                'protocol_type_phase_id' => $phase->id,
+                'protocol_template_phase_id' => $phase->id,
                 'name' => 'Invalid',
                 'supplement_type' => 'vitamine',
             ])
@@ -267,9 +349,70 @@ class AdminProtocolSettingsTest extends TestCase
         $this->assertDatabaseMissing('supplements', ['name' => 'Invalid']);
     }
 
+    public function test_supplement_dosage_fields_are_validated_as_a_complete_set(): void
+    {
+        $type = ProtocolTemplate::query()->create(['name' => 'Dosage validation']);
+        $phase = $type->phases()->create([
+            'order' => 1,
+            'name' => 'Phase',
+            'description' => null,
+            'required' => false,
+        ]);
+
+        $this->actingAs($this->admin, 'admin')
+            ->post('/admin/protocol-settings/supplements', [
+                'protocol_template_phase_id' => $phase->id,
+                'name' => 'Incomplete dosage',
+                'supplement_type' => 'kruid',
+                'dosis_type' => 'per_kg',
+                'unit' => 'kg',
+            ])
+            ->assertSessionHasErrors(['dosis', 'unit']);
+
+        $this->assertDatabaseMissing('supplements', ['name' => 'Incomplete dosage']);
+    }
+
+    public function test_supplement_supports_per_600_kg_dosage_and_spoon_units(): void
+    {
+        $type = ProtocolTemplate::query()->create(['name' => 'Extended dosage']);
+        $phase = $type->phases()->create([
+            'order' => 1,
+            'name' => 'Phase',
+            'required' => true,
+        ]);
+
+        $this->actingAs($this->admin, 'admin')
+            ->post('/admin/protocol-settings/supplements', [
+                'protocol_template_phase_id' => $phase->id,
+                'name' => 'Herbal mix',
+                'supplement_type' => 'kruid',
+                'dosis_type' => 'per_600_kg',
+                'dosis' => 3,
+                'unit' => 'theelepel',
+            ])
+            ->assertSessionHasNoErrors();
+
+        $supplement = Supplement::query()->where('name', 'Herbal mix')->firstOrFail();
+        $this->assertSame(SupplementDoseType::Per600Kilograms, $supplement->dosis_type);
+        $this->assertSame(SupplementDoseUnit::Teaspoon, $supplement->unit);
+
+        $this->actingAs($this->admin, 'admin')
+            ->put("/admin/protocol-settings/supplements/{$supplement->id}", [
+                'protocol_template_phase_id' => $phase->id,
+                'name' => 'Herbal mix',
+                'supplement_type' => 'kruid',
+                'dosis_type' => 'per_600_kg',
+                'dosis' => 3,
+                'unit' => 'eetlepel',
+            ])
+            ->assertSessionHasNoErrors();
+
+        $this->assertSame(SupplementDoseUnit::Tablespoon, $supplement->fresh()->unit);
+    }
+
     public function test_admin_can_toggle_a_supplement_for_a_week_in_the_same_phase(): void
     {
-        $type = ProtocolType::query()->create(['name' => 'Gantt planning']);
+        $type = ProtocolTemplate::query()->create(['name' => 'Gantt planning']);
         $phase = $type->phases()->create([
             'order' => 1,
             'name' => 'Active phase',
@@ -296,7 +439,7 @@ class AdminProtocolSettingsTest extends TestCase
         $this->actingAs($this->admin, 'admin')->put($url)->assertSessionHasNoErrors();
         $this->assertDatabaseHas('supplement_weeks', [
             'supplement_id' => $supplement->id,
-            'protocol_type_phase_week_id' => $week->id,
+            'protocol_template_phase_week_id' => $week->id,
         ]);
 
         $this->actingAs($this->admin, 'admin')->put($url)->assertSessionHasNoErrors();
@@ -310,7 +453,7 @@ class AdminProtocolSettingsTest extends TestCase
 
         $this->actingAs($this->admin, 'admin')
             ->put("/admin/protocol-settings/supplements/{$supplement->id}", [
-                'protocol_type_phase_id' => $otherPhase->id,
+                'protocol_template_phase_id' => $otherPhase->id,
                 'name' => $supplement->name,
                 'description' => $supplement->description,
                 'supplement_type' => $supplement->supplement_type->value,
@@ -323,7 +466,7 @@ class AdminProtocolSettingsTest extends TestCase
 
         $this->assertDatabaseMissing('supplement_weeks', [
             'supplement_id' => $supplement->id,
-            'protocol_type_phase_week_id' => $week->id,
+            'protocol_template_phase_week_id' => $week->id,
         ]);
 
         $otherUrl = "/admin/protocol-settings/supplements/{$supplement->id}/weeks/{$otherWeek->id}";
@@ -331,7 +474,7 @@ class AdminProtocolSettingsTest extends TestCase
         $this->actingAs($this->admin, 'admin')->delete($otherUrl)->assertSessionHasNoErrors();
         $this->assertDatabaseMissing('supplement_weeks', [
             'supplement_id' => $supplement->id,
-            'protocol_type_phase_week_id' => $otherWeek->id,
+            'protocol_template_phase_week_id' => $otherWeek->id,
         ]);
     }
 

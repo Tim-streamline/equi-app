@@ -8,13 +8,13 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 #[Fillable(['name'])]
-class ProtocolType extends Model
+class ProtocolTemplate extends Model
 {
     use HasUuids;
 
     public function phases(): HasMany
     {
-        return $this->hasMany(ProtocolTypePhase::class)->orderBy('order');
+        return $this->hasMany(ProtocolTemplatePhase::class)->orderBy('order');
     }
 
     public function protocols(): HasMany

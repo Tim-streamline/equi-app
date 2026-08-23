@@ -1,0 +1,315 @@
+- generic [ref=e561]:
+  - complementary [ref=e562]:
+    - generic [ref=e566]:
+      - generic [ref=e567]: EquiNova
+      - generic [ref=e568]: Admin console
+    - navigation [ref=e569]:
+      - link "Dashboard" [ref=e571] [cursor=pointer]:
+        - /url: http://localhost:81/admin
+      - generic [ref=e574]:
+        - generic [ref=e575]: Support
+        - link "Users" [ref=e576] [cursor=pointer]:
+          - /url: http://localhost:81/admin/users
+        - link "Horses" [ref=e579] [cursor=pointer]:
+          - /url: http://localhost:81/admin/horses
+        - link "Therapists" [ref=e582] [cursor=pointer]:
+          - /url: http://localhost:81/admin/therapists
+        - link "Intake bookings" [ref=e585] [cursor=pointer]:
+          - /url: http://localhost:81/admin/bookings
+        - link "Protocols" [ref=e588] [cursor=pointer]:
+          - /url: http://localhost:81/admin/protocols
+      - generic [ref=e591]:
+        - generic [ref=e592]: Content
+        - link "Library" [ref=e593] [cursor=pointer]:
+          - /url: http://localhost:81/admin/library
+        - link "Categories" [ref=e596] [cursor=pointer]:
+          - /url: http://localhost:81/admin/library-categories
+        - link "Focus topics" [ref=e599] [cursor=pointer]:
+          - /url: http://localhost:81/admin/focus-topics
+        - link "Seasonal tips" [ref=e602] [cursor=pointer]:
+          - /url: http://localhost:81/admin/seasonal-tips
+        - link "Nova chat" [ref=e605] [cursor=pointer]:
+          - /url: http://localhost:81/admin/nova
+      - generic [ref=e608]:
+        - generic [ref=e609]: Scanner
+        - link "Scan results" [ref=e610] [cursor=pointer]:
+          - /url: http://localhost:81/admin/scans
+        - link "Products" [ref=e613] [cursor=pointer]:
+          - /url: http://localhost:81/admin/products
+        - link "Ingredients" [ref=e616] [cursor=pointer]:
+          - /url: http://localhost:81/admin/ingredients
+      - generic [ref=e619]:
+        - generic [ref=e620]: Community
+        - link "Posts & replies" [ref=e621] [cursor=pointer]:
+          - /url: http://localhost:81/admin/community
+        - link "Reports" [ref=e624] [cursor=pointer]:
+          - /url: http://localhost:81/admin/reports
+      - generic [ref=e627]:
+        - generic [ref=e628]: Billing
+        - link "Plans" [ref=e629] [cursor=pointer]:
+          - /url: http://localhost:81/admin/plans
+        - link "Subscriptions" [ref=e632] [cursor=pointer]:
+          - /url: http://localhost:81/admin/subscriptions
+        - link "Payments" [ref=e635] [cursor=pointer]:
+          - /url: http://localhost:81/admin/payments
+      - generic [ref=e638]:
+        - generic [ref=e639]: Operations
+        - link "Data exports" [ref=e640] [cursor=pointer]:
+          - /url: http://localhost:81/admin/exports
+        - link "Notifications" [ref=e643] [cursor=pointer]:
+          - /url: http://localhost:81/admin/notifications
+        - link "Sync health" [ref=e646] [cursor=pointer]:
+          - /url: http://localhost:81/admin/sync-health
+        - link "Audit log" [ref=e649] [cursor=pointer]:
+          - /url: http://localhost:81/admin/audit-log
+        - link "Protocol Templates" [ref=e652] [cursor=pointer]:
+          - /url: http://localhost:81/admin/protocol-settings
+        - link "Settings" [ref=e655] [cursor=pointer]:
+          - /url: http://localhost:81/admin/settings
+    - generic [ref=e659]:
+      - generic [ref=e660]: EO
+      - generic [ref=e661]:
+        - generic [ref=e662]: EquiNova Owner
+        - generic [ref=e663]: owner
+      - button "Log out" [ref=e664]
+  - generic [ref=e666]:
+    - banner [ref=e667]:
+      - heading "Protocols" [level=1] [ref=e668]
+    - main [ref=e669]:
+      - generic [ref=e670]:
+        - generic [ref=e671]:
+          - heading "Protocols" [level=2] [ref=e672]
+          - paragraph [ref=e673]: 30 protocols assigned to horses
+        - link "New protocol" [ref=e675] [cursor=pointer]:
+          - /url: /admin/protocols/create
+      - generic [ref=e678]:
+        - generic [ref=e679]:
+          - textbox "Search protocol template or horse…" [ref=e681]
+          - combobox [ref=e682]:
+            - option "All" [selected]
+            - option "Active"
+            - option "Paused"
+            - option "Completed"
+        - table [ref=e684]:
+          - rowgroup [ref=e685]:
+            - row [ref=e686]:
+              - columnheader "Protocol template" [ref=e687]
+              - columnheader "Horse" [ref=e688]
+              - columnheader "Owner" [ref=e689]
+              - columnheader "Therapist" [ref=e690]
+              - columnheader "Week" [ref=e691]
+              - columnheader "Current phase" [ref=e692]
+              - columnheader "State" [ref=e693]
+              - columnheader "Publication" [ref=e694]
+              - columnheader "Open" [ref=e695]
+          - rowgroup [ref=e697]:
+            - row [ref=e698] [cursor=pointer]:
+              - cell "Darm protocol" [ref=e699]
+              - cell "Diva" [ref=e700]
+              - cell "Kian Wolters" [ref=e701]
+              - cell "Anneke Smit" [ref=e702]
+              - cell "9/14" [ref=e703]
+              - cell "Darm revalidatie" [ref=e704]
+              - cell "active" [ref=e705]
+              - cell "Published" [ref=e707]
+              - cell [ref=e709]
+            - row [ref=e711] [cursor=pointer]:
+              - cell "Darm protocol" [ref=e712]
+              - cell "Nova" [ref=e713]
+              - cell "Shelley Meeuwsen" [ref=e714]
+              - cell "Shelley" [ref=e715]
+              - cell "4/14" [ref=e716]
+              - cell "Maag" [ref=e717]
+              - cell "active" [ref=e718]
+              - cell "Published" [ref=e720]
+              - cell [ref=e722]
+            - row [ref=e724] [cursor=pointer]:
+              - cell "Darm protocol" [ref=e725]
+              - cell "Mickey" [ref=e726]
+              - cell "Job Özcan" [ref=e727]
+              - cell "Pieter de Boer" [ref=e728]
+              - cell "4/6" [ref=e729]
+              - cell "—" [ref=e730]
+              - cell "active" [ref=e731]
+              - cell "Published" [ref=e733]
+              - cell [ref=e735]
+            - row [ref=e737] [cursor=pointer]:
+              - cell "Darm protocol" [ref=e738]
+              - cell "Nova" [ref=e739]
+              - cell "Kian Wolters" [ref=e740]
+              - cell "Marlies van der Heuvel" [ref=e741]
+              - cell "2/5" [ref=e742]
+              - cell "Fase 2 — Huid" [ref=e743]
+              - cell "active" [ref=e744]
+              - cell "Published" [ref=e746]
+              - cell [ref=e748]
+            - row [ref=e750] [cursor=pointer]:
+              - cell "Darm protocol" [ref=e751]
+              - cell "Nova" [ref=e752]
+              - cell "Dani Elsjan of Wipper" [ref=e753]
+              - cell "Shelley" [ref=e754]
+              - cell "2/5" [ref=e755]
+              - cell "Fase 2 — Darmen" [ref=e756]
+              - cell "active" [ref=e757]
+              - cell "Published" [ref=e759]
+              - cell [ref=e761]
+            - row [ref=e763] [cursor=pointer]:
+              - cell "Darm protocol" [ref=e764]
+              - cell "Bliksem" [ref=e765]
+              - cell "Micha van Doorn" [ref=e766]
+              - cell "Anneke Smit" [ref=e767]
+              - cell "4/5" [ref=e768]
+              - cell "—" [ref=e769]
+              - cell "active" [ref=e770]
+              - cell "Published" [ref=e772]
+              - cell [ref=e774]
+            - row [ref=e776] [cursor=pointer]:
+              - cell "Darm protocol" [ref=e777]
+              - cell "Rosa" [ref=e778]
+              - cell "Dean van Henegouwen" [ref=e779]
+              - cell "Anneke Smit" [ref=e780]
+              - cell "3/5" [ref=e781]
+              - cell "Fase 3 — Lever" [ref=e782]
+              - cell "active" [ref=e783]
+              - cell "Published" [ref=e785]
+              - cell [ref=e787]
+            - row [ref=e789] [cursor=pointer]:
+              - cell "Darm protocol" [ref=e790]
+              - cell "Nova" [ref=e791]
+              - cell "Dani Elsjan of Wipper" [ref=e792]
+              - cell "Shelley" [ref=e793]
+              - cell "7/9" [ref=e794]
+              - cell "—" [ref=e795]
+              - cell "active" [ref=e796]
+              - cell "Published" [ref=e798]
+              - cell [ref=e800]
+            - row [ref=e802] [cursor=pointer]:
+              - cell "Darm protocol" [ref=e803]
+              - cell "Hera" [ref=e804]
+              - cell "Lina Blewanus" [ref=e805]
+              - cell "Anneke Smit" [ref=e806]
+              - cell "8/11" [ref=e807]
+              - cell "Fase 3" [ref=e808]
+              - cell "active" [ref=e809]
+              - cell "Published" [ref=e811]
+              - cell [ref=e813]
+            - row [ref=e815] [cursor=pointer]:
+              - cell "Darm protocol" [ref=e816]
+              - cell "Tijger" [ref=e817]
+              - cell "Saar van Dooren" [ref=e818]
+              - cell "Marlies van der Heuvel" [ref=e819]
+              - cell "6/10" [ref=e820]
+              - cell "—" [ref=e821]
+              - cell "active" [ref=e822]
+              - cell "Published" [ref=e824]
+              - cell [ref=e826]
+            - row [ref=e828] [cursor=pointer]:
+              - cell "Darm protocol" [ref=e829]
+              - cell "Indy" [ref=e830]
+              - cell "Olivier Lopes" [ref=e831]
+              - cell "Marlies van der Heuvel" [ref=e832]
+              - cell "1/7" [ref=e833]
+              - cell "Fase 1 — Darmen" [ref=e834]
+              - cell "active" [ref=e835]
+              - cell "Published" [ref=e837]
+              - cell [ref=e839]
+            - row [ref=e841] [cursor=pointer]:
+              - cell "Darm protocol" [ref=e842]
+              - cell "Gypsy" [ref=e843]
+              - cell "Linn Broeshart" [ref=e844]
+              - cell "Pieter de Boer" [ref=e845]
+              - cell "2/10" [ref=e846]
+              - cell "Fase 2 — Hoeven" [ref=e847]
+              - cell "active" [ref=e848]
+              - cell "Published" [ref=e850]
+              - cell [ref=e852]
+            - row [ref=e854] [cursor=pointer]:
+              - cell "Darm protocol" [ref=e855]
+              - cell "Echo" [ref=e856]
+              - cell "Lois Bosch" [ref=e857]
+              - cell "Anneke Smit" [ref=e858]
+              - cell "5/6" [ref=e859]
+              - cell "—" [ref=e860]
+              - cell "active" [ref=e861]
+              - cell "Published" [ref=e863]
+              - cell [ref=e865]
+            - row [ref=e867] [cursor=pointer]:
+              - cell "Darm protocol" [ref=e868]
+              - cell "Felix" [ref=e869]
+              - cell "Lois Bosch" [ref=e870]
+              - cell "Anneke Smit" [ref=e871]
+              - cell "10/10" [ref=e872]
+              - cell "—" [ref=e873]
+              - cell "active" [ref=e874]
+              - cell "Published" [ref=e876]
+              - cell [ref=e878]
+            - row [ref=e880] [cursor=pointer]:
+              - cell "Darm protocol" [ref=e881]
+              - cell "Sam" [ref=e882]
+              - cell "Ivy van Loon" [ref=e883]
+              - cell "Pieter de Boer" [ref=e884]
+              - cell "3/4" [ref=e885]
+              - cell "Fase 3 — Hoeven" [ref=e886]
+              - cell "active" [ref=e887]
+              - cell "Published" [ref=e889]
+              - cell [ref=e891]
+            - row [ref=e893] [cursor=pointer]:
+              - cell "Darm protocol" [ref=e894]
+              - cell "Sam" [ref=e895]
+              - cell "Sylvie van Dam" [ref=e896]
+              - cell "Pieter de Boer" [ref=e897]
+              - cell "5/5" [ref=e898]
+              - cell "Fase 3" [ref=e899]
+              - cell "active" [ref=e900]
+              - cell "Published" [ref=e902]
+              - cell [ref=e904]
+            - row [ref=e906] [cursor=pointer]:
+              - cell "Darm protocol" [ref=e907]
+              - cell "Nova" [ref=e908]
+              - cell "Linn Broeshart" [ref=e909]
+              - cell "Marlies van der Heuvel" [ref=e910]
+              - cell "10/11" [ref=e911]
+              - cell "Fase 3" [ref=e912]
+              - cell "active" [ref=e913]
+              - cell "Published" [ref=e915]
+              - cell [ref=e917]
+            - row [ref=e919] [cursor=pointer]:
+              - cell "Darm protocol" [ref=e920]
+              - cell "Storm" [ref=e921]
+              - cell "Collin Moussaoui" [ref=e922]
+              - cell "Pieter de Boer" [ref=e923]
+              - cell "3/8" [ref=e924]
+              - cell "Fase 3 — Lever" [ref=e925]
+              - cell "active" [ref=e926]
+              - cell "Published" [ref=e928]
+              - cell [ref=e930]
+            - row [ref=e932] [cursor=pointer]:
+              - cell "Darm protocol" [ref=e933]
+              - cell "Romeo" [ref=e934]
+              - cell "Nora van Hugenpoth tot den Berenclauw" [ref=e935]
+              - cell "Anneke Smit" [ref=e936]
+              - cell "8/8" [ref=e937]
+              - cell "—" [ref=e938]
+              - cell "active" [ref=e939]
+              - cell "Published" [ref=e941]
+              - cell [ref=e943]
+            - row [ref=e945] [cursor=pointer]:
+              - cell "Darm protocol" [ref=e946]
+              - cell "Cleo" [ref=e947]
+              - cell "Collin Moussaoui" [ref=e948]
+              - cell "Marlies van der Heuvel" [ref=e949]
+              - cell "8/9" [ref=e950]
+              - cell "Fase 3" [ref=e951]
+              - cell "active" [ref=e952]
+              - cell "Published" [ref=e954]
+              - cell [ref=e956]
+        - generic [ref=e958]:
+          - generic [ref=e959]: 1–20 of 30
+          - generic [ref=e960]:
+            - generic [ref=e961]: « Previous
+            - link "1" [ref=e962] [cursor=pointer]:
+              - /url: http://localhost:81/admin/protocols?page=1
+            - link "2" [ref=e963] [cursor=pointer]:
+              - /url: http://localhost:81/admin/protocols?page=2
+            - link "Next »" [ref=e964] [cursor=pointer]:
+              - /url: http://localhost:81/admin/protocols?page=2

@@ -46,11 +46,6 @@
                             <span>{phase.title ?? phase.label ?? 'Phase'}</span>
                             {#if phase.state}<Badge variant="muted">{phase.state}</Badge>{/if}
                         </div>
-                        {#if phase.items?.length}
-                            <ul class="mt-1 list-disc pl-5 text-sm text-muted-foreground">
-                                {#each phase.items as it (it.id)}<li>{it.label ?? it.title}</li>{/each}
-                            </ul>
-                        {/if}
                     </div>
                 {:else}
                     <p class="text-sm text-muted-foreground">No phases.</p>

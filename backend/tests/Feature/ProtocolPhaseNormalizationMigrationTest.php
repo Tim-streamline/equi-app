@@ -5,9 +5,8 @@ namespace Tests\Feature;
 use App\Models\Horse;
 use App\Models\Protocol;
 use App\Models\ProtocolPhase;
-use App\Models\ProtocolPhaseItem;
 use App\Models\ProtocolTask;
-use App\Models\ProtocolType;
+use App\Models\ProtocolTemplate;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -24,9 +23,9 @@ class ProtocolPhaseNormalizationMigrationTest extends TestCase
             'name' => 'Nova',
             'status' => 'active',
         ]);
-        $protocolType = ProtocolType::query()->create(['name' => 'Migration test type']);
+        $protocolTemplate = ProtocolTemplate::query()->create(['name' => 'Migration test type']);
         $phaseDefinitions = collect(range(1, 4))
-            ->map(fn (int $phaseNumber) => $protocolType->phases()->create([
+            ->map(fn (int $phaseNumber) => $protocolTemplate->phases()->create([
                 'order' => $phaseNumber,
                 'name' => "Definition {$phaseNumber}",
                 'required' => $phaseNumber === 1,
@@ -34,7 +33,7 @@ class ProtocolPhaseNormalizationMigrationTest extends TestCase
 
         $longProtocol = Protocol::query()->create([
             'horse_id' => $horse->id,
-            'protocol_type_id' => $protocolType->id,
+            'protocol_template_id' => $protocolTemplate->id,
             'title' => 'Four phases',
             'total_weeks' => 8,
             'current_week' => 5,
@@ -44,7 +43,7 @@ class ProtocolPhaseNormalizationMigrationTest extends TestCase
         foreach (range(1, 4) as $phaseNumber) {
             $longPhases->push(ProtocolPhase::query()->create([
                 'protocol_id' => $longProtocol->id,
-                'protocol_type_phase_id' => $phaseDefinitions[$phaseNumber - 1]->id,
+                'protocol_template_phase_id' => $phaseDefinitions[$phaseNumber - 1]->id,
                 'order' => $phaseNumber - 1,
                 'title' => "Phase {$phaseNumber}",
                 'state' => $phaseNumber < 3 ? 'done' : ($phaseNumber === 3 ? 'active' : 'upcoming'),
@@ -52,11 +51,6 @@ class ProtocolPhaseNormalizationMigrationTest extends TestCase
                 'week_end' => $phaseNumber * 2,
             ]));
         }
-        $extraItem = ProtocolPhaseItem::query()->create([
-            'phase_id' => $longPhases[3]->id,
-            'order' => 0,
-            'label' => 'Preserve this summary',
-        ]);
         $extraTask = ProtocolTask::query()->create([
             'protocol_id' => $longProtocol->id,
             'phase_id' => $longPhases[3]->id,
@@ -67,7 +61,7 @@ class ProtocolPhaseNormalizationMigrationTest extends TestCase
 
         $shortProtocol = Protocol::query()->create([
             'horse_id' => $horse->id,
-            'protocol_type_id' => $protocolType->id,
+            'protocol_template_id' => $protocolTemplate->id,
             'title' => 'Two phases',
             'total_weeks' => 6,
             'current_week' => 2,
@@ -76,7 +70,7 @@ class ProtocolPhaseNormalizationMigrationTest extends TestCase
         foreach (range(1, 2) as $phaseNumber) {
             ProtocolPhase::query()->create([
                 'protocol_id' => $shortProtocol->id,
-                'protocol_type_phase_id' => $phaseDefinitions[$phaseNumber - 1]->id,
+                'protocol_template_phase_id' => $phaseDefinitions[$phaseNumber - 1]->id,
                 'order' => $phaseNumber - 1,
                 'title' => "Phase {$phaseNumber}",
                 'state' => $phaseNumber === 1 ? 'active' : 'upcoming',
@@ -87,7 +81,7 @@ class ProtocolPhaseNormalizationMigrationTest extends TestCase
 
         $preparedProtocol = Protocol::query()->create([
             'horse_id' => $horse->id,
-            'protocol_type_id' => $protocolType->id,
+            'protocol_template_id' => $protocolTemplate->id,
             'title' => 'Preparation plus three phases',
             'total_weeks' => 8,
             'current_week' => 2,
@@ -97,7 +91,7 @@ class ProtocolPhaseNormalizationMigrationTest extends TestCase
         foreach (['Voorbereiding', 'Phase 1', 'Phase 2', 'Phase 3'] as $order => $title) {
             $preparedPhases->push(ProtocolPhase::query()->create([
                 'protocol_id' => $preparedProtocol->id,
-                'protocol_type_phase_id' => $phaseDefinitions[$order]->id,
+                'protocol_template_phase_id' => $phaseDefinitions[$order]->id,
                 'order' => $order,
                 'title' => $title,
                 'state' => $order === 1 ? 'active' : ($order === 0 ? 'done' : 'upcoming'),
@@ -105,11 +99,6 @@ class ProtocolPhaseNormalizationMigrationTest extends TestCase
                 'week_end' => $order === 0 ? 0 : $order * 2,
             ]));
         }
-        $preparationItem = ProtocolPhaseItem::query()->create([
-            'phase_id' => $preparedPhases[0]->id,
-            'order' => 0,
-            'label' => 'Preparation summary',
-        ]);
         $preparationTask = ProtocolTask::query()->create([
             'protocol_id' => $preparedProtocol->id,
             'phase_id' => $preparedPhases[0]->id,
@@ -126,10 +115,6 @@ class ProtocolPhaseNormalizationMigrationTest extends TestCase
 
         $this->assertCount(3, $longProtocol->phases);
         $this->assertSame(8, $thirdPhase->week_end);
-        $this->assertDatabaseHas('protocol_phase_items', [
-            'id' => $extraItem->id,
-            'phase_id' => $thirdPhase->id,
-        ]);
         $this->assertDatabaseHas('protocol_tasks', [
             'id' => $extraTask->id,
             'phase_id' => $thirdPhase->id,
@@ -139,10 +124,6 @@ class ProtocolPhaseNormalizationMigrationTest extends TestCase
         $preparedProtocol->load('phases');
         $this->assertCount(3, $preparedProtocol->phases);
         $this->assertSame('Phase 1', $preparedProtocol->phases[0]->title);
-        $this->assertDatabaseHas('protocol_phase_items', [
-            'id' => $preparationItem->id,
-            'phase_id' => $preparedProtocol->phases[0]->id,
-        ]);
         $this->assertDatabaseHas('protocol_tasks', [
             'id' => $preparationTask->id,
             'phase_id' => $preparedProtocol->phases[0]->id,

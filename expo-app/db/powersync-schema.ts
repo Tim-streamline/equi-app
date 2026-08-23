@@ -101,6 +101,8 @@ const timeline_events = new Table({
 
 const protocols = new Table({
   horse_id: column.text,
+  protocol_template_id: column.text,
+  protocol_template_name: column.text,
   therapist_id: column.text,
   title: column.text,
   subtitle_analyse: column.text,
@@ -110,23 +112,52 @@ const protocols = new Table({
   current_week: column.integer,
   started_at: column.text,
   status: column.text,
+  published_at: column.text,
 }, { indexes: { byHorse: ['horse_id'] } });
 
 const protocol_phases = new Table({
   protocol_id: column.text,
+  protocol_template_phase_id: column.text,
   order: column.integer,
   title: column.text,
+  description: column.text,
+  required: column.integer,
+  start_after_previous_phase_weeks: column.integer,
   state: column.text,
   week_start: column.integer,
   week_end: column.integer,
   chip_label: column.text,
 }, { indexes: { byProtocol: ['protocol_id'] } });
 
-const protocol_phase_items = new Table({
-  phase_id: column.text,
-  order: column.integer,
-  label: column.text,
-}, { indexes: { byPhase: ['phase_id'] } });
+const protocol_phase_weeks = new Table({
+  protocol_phase_id: column.text,
+  protocol_template_phase_week_id: column.text,
+  number: column.integer,
+  protocol_week_number: column.integer,
+}, { indexes: { byPhase: ['protocol_phase_id'] } });
+
+const protocol_phase_supplements = new Table({
+  protocol_phase_id: column.text,
+  supplement_id: column.text,
+  name: column.text,
+  description: column.text,
+  supplement_type: column.text,
+  dosis_type: column.text,
+  dosis: column.real,
+  unit: column.text,
+  add_by_default: column.integer,
+  max_aantal_in_fase: column.integer,
+  min_aantal_per_week: column.integer,
+  rust_periode_in_weken: column.integer,
+  dosage: column.text,
+  aantal_per_week: column.integer,
+  instructions: column.text,
+}, { indexes: { byPhase: ['protocol_phase_id'] } });
+
+const protocol_phase_supplement_weeks = new Table({
+  protocol_phase_supplement_id: column.text,
+  protocol_phase_week_id: column.text,
+}, { indexes: { bySupplement: ['protocol_phase_supplement_id'] } });
 
 const protocol_analyses = new Table({
   protocol_id: column.text,
@@ -483,7 +514,9 @@ export const AppSchema = new Schema({
   timeline_events,
   protocols,
   protocol_phases,
-  protocol_phase_items,
+  protocol_phase_weeks,
+  protocol_phase_supplements,
+  protocol_phase_supplement_weeks,
   protocol_analyses,
   protocol_advice,
   protocol_tasks,

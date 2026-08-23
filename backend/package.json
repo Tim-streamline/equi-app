@@ -3,8 +3,9 @@
     "private": true,
     "type": "module",
     "scripts": {
-        "build": "vite build",
-        "dev": "vite"
+        "build": "vite build && node scripts/reload-octane-after-build.mjs",
+        "dev": "vite",
+        "test:frontend": "node --test tests/frontend/*.test.js"
     },
     "devDependencies": {
         "@inertiajs/svelte": "^2.3.24",

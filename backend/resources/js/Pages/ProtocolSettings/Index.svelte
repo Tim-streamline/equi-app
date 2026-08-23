@@ -5,117 +5,141 @@
     import Field from '$lib/components/Field.svelte';
     import { router, useForm } from '@inertiajs/svelte';
     import { Badge, Button, Input, Select, Textarea } from '$lib/components/ui';
-    import { CalendarDays, Check, ChevronRight, Layers3, Pencil, Plus, Trash2, X } from '@lucide/svelte';
+    import { ArrowDown, ArrowUp, CalendarDays, Check, Layers3, Pencil, Plus, Trash2, X } from '@lucide/svelte';
     import { fade } from 'svelte/transition';
 
-    let { protocolTypes } = $props();
+    let { protocolTemplates } = $props();
 
-    let selectedTypeId = $state(null);
-    let typeModalOpen = $state(false);
+    let selectedTemplateId = $state('');
+    let templateModalOpen = $state(false);
     let phaseModalOpen = $state(false);
     let supplementModalOpen = $state(false);
     let deleteModalOpen = $state(false);
-    let editingType = $state(null);
+    let editingTemplate = $state(null);
     let editingPhase = $state(null);
     let editingSupplement = $state(null);
     let pendingDeletion = $state(null);
     let deletionProcessing = $state(false);
+    let phaseOrderBusy = $state(false);
+    let phaseStartDelayEnabled = $state(false);
     let planningCellsBusy = $state([]);
 
-    const selectedType = $derived(protocolTypes.find((type) => type.id === selectedTypeId) ?? protocolTypes[0] ?? null);
-    const phaseCount = $derived(protocolTypes.reduce((total, type) => total + type.phases.length, 0));
-    const weekCount = $derived(protocolTypes.reduce(
+    const selectedTemplate = $derived(protocolTemplates.find((template) => template.id === selectedTemplateId) ?? protocolTemplates[0] ?? null);
+    const phaseCount = $derived(protocolTemplates.reduce((total, type) => total + type.phases.length, 0));
+    const weekCount = $derived(protocolTemplates.reduce(
         (total, type) => total + type.phases.reduce((phaseTotal, phase) => phaseTotal + phase.weeks.length, 0),
         0,
     ));
-    const supplementCount = $derived(protocolTypes.reduce(
+    const supplementCount = $derived(protocolTemplates.reduce(
         (total, type) => total + type.phases.reduce((phaseTotal, phase) => phaseTotal + phase.supplements.length, 0),
         0,
     ));
 
-    const typeForm = useForm({ name: '' });
+    $effect(() => {
+        if (!protocolTemplates.some((template) => template.id === selectedTemplateId)) {
+            selectedTemplateId = protocolTemplates[0]?.id ?? '';
+        }
+    });
+
+    const templateForm = useForm({ name: '' });
     const phaseForm = useForm({
-        protocol_type_id: '',
+        protocol_template_id: '',
         name: '',
         description: '',
         required: false,
+        start_after_previous_phase_weeks: null,
     });
     const supplementForm = useForm({
-        protocol_type_phase_id: '',
+        protocol_template_phase_id: '',
         name: '',
         description: '',
+        instructions: '',
         supplement_type: 'supplement',
+        dosis_type: 'vast',
+        dosis: '',
+        unit: 'g',
         add_by_default: false,
         max_aantal_in_fase: '',
         min_aantal_per_week: 4,
         rust_periode_in_weken: 2,
     });
 
-    function createType() {
-        editingType = null;
-        $typeForm.defaults({ name: '' });
-        $typeForm.reset();
-        $typeForm.clearErrors();
-        typeModalOpen = true;
+    function createTemplate() {
+        editingTemplate = null;
+        $templateForm.defaults({ name: '' });
+        $templateForm.reset();
+        $templateForm.clearErrors();
+        templateModalOpen = true;
     }
 
-    function editType(type) {
-        editingType = type;
-        $typeForm.defaults({ name: type.name });
-        $typeForm.reset();
-        $typeForm.clearErrors();
-        typeModalOpen = true;
+    function editTemplate(template) {
+        editingTemplate = template;
+        $templateForm.defaults({ name: template.name });
+        $templateForm.reset();
+        $templateForm.clearErrors();
+        templateModalOpen = true;
     }
 
-    function submitType(event) {
+    function submitTemplate(event) {
         event.preventDefault();
-        const options = { preserveScroll: true, onSuccess: () => (typeModalOpen = false) };
+        const options = { preserveScroll: true, onSuccess: () => (templateModalOpen = false) };
 
-        if (editingType) {
-            $typeForm.put(`/admin/protocol-settings/types/${editingType.id}`, options);
+        if (editingTemplate) {
+            $templateForm.put(`/admin/protocol-settings/templates/${editingTemplate.id}`, options);
         } else {
-            $typeForm.post('/admin/protocol-settings/types', options);
+            $templateForm.post('/admin/protocol-settings/templates', options);
         }
     }
 
-    function removeType(type) {
+    function removeTemplate(template) {
         requestDeletion({
-            title: `Remove ${type.name}?`,
-            description: 'All phases, weeks and supplements in this protocol type will also be removed.',
-            url: `/admin/protocol-settings/types/${type.id}`,
+            title: `Remove ${template.name}?`,
+            description: 'All phases, weeks and supplements in this protocol template will also be removed.',
+            url: `/admin/protocol-settings/templates/${template.id}`,
             onSuccess: () => {
-                if (selectedTypeId === type.id) {
-                    selectedTypeId = protocolTypes.find((candidate) => candidate.id !== type.id)?.id ?? null;
+                if (selectedTemplateId === template.id) {
+                    selectedTemplateId = protocolTemplates.find((candidate) => candidate.id !== template.id)?.id ?? null;
                 }
             },
         });
     }
 
     function createPhase() {
-        if (!selectedType) return;
+        if (!selectedTemplate) return;
         editingPhase = null;
         $phaseForm.defaults({
-            protocol_type_id: selectedType.id,
+            protocol_template_id: selectedTemplate.id,
             name: '',
             description: '',
             required: false,
+            start_after_previous_phase_weeks: null,
         });
         $phaseForm.reset();
         $phaseForm.clearErrors();
+        phaseStartDelayEnabled = false;
         phaseModalOpen = true;
     }
 
     function editPhase(phase) {
         editingPhase = phase;
         $phaseForm.defaults({
-            protocol_type_id: phase.protocol_type_id,
+            protocol_template_id: phase.protocol_template_id,
             name: phase.name,
             description: phase.description ?? '',
             required: phase.required,
+            start_after_previous_phase_weeks: phase.start_after_previous_phase_weeks,
         });
         $phaseForm.reset();
         $phaseForm.clearErrors();
+        phaseStartDelayEnabled = phase.start_after_previous_phase_weeks !== null;
         phaseModalOpen = true;
+    }
+
+    function togglePhaseStartDelay() {
+        phaseStartDelayEnabled = !phaseStartDelayEnabled;
+        $phaseForm.start_after_previous_phase_weeks = phaseStartDelayEnabled
+            ? ($phaseForm.start_after_previous_phase_weeks ?? 1)
+            : null;
     }
 
     function submitPhase(event) {
@@ -123,7 +147,7 @@
         const options = {
             preserveScroll: true,
             onSuccess: () => {
-                selectedTypeId = $phaseForm.protocol_type_id;
+                selectedTemplateId = $phaseForm.protocol_template_id;
                 phaseModalOpen = false;
             },
         };
@@ -143,6 +167,16 @@
         });
     }
 
+    function movePhase(phase, direction) {
+        if (phaseOrderBusy) return;
+
+        phaseOrderBusy = true;
+        router.patch(`/admin/protocol-settings/phases/${phase.id}/order`, { direction }, {
+            preserveScroll: true,
+            onFinish: () => (phaseOrderBusy = false),
+        });
+    }
+
     function addWeek(phase) {
         router.post(`/admin/protocol-settings/phases/${phase.id}/weeks`, {}, { preserveScroll: true });
     }
@@ -158,10 +192,14 @@
     function createSupplement(phase) {
         editingSupplement = null;
         $supplementForm.defaults({
-            protocol_type_phase_id: phase.id,
+            protocol_template_phase_id: phase.id,
             name: '',
             description: '',
+            instructions: '',
             supplement_type: 'supplement',
+            dosis_type: 'vast',
+            dosis: '',
+            unit: 'g',
             add_by_default: false,
             max_aantal_in_fase: '',
             min_aantal_per_week: 4,
@@ -175,10 +213,14 @@
     function editSupplement(supplement) {
         editingSupplement = supplement;
         $supplementForm.defaults({
-            protocol_type_phase_id: supplement.protocol_type_phase_id,
+            protocol_template_phase_id: supplement.protocol_template_phase_id,
             name: supplement.name,
             description: supplement.description ?? '',
+            instructions: supplement.instructions ?? '',
             supplement_type: supplement.supplement_type,
+            dosis_type: supplement.dosis_type ?? '',
+            dosis: supplement.dosis ?? '',
+            unit: supplement.unit ?? 'g',
             add_by_default: supplement.add_by_default,
             max_aantal_in_fase: supplement.max_aantal_in_fase ?? '',
             min_aantal_per_week: supplement.min_aantal_per_week,
@@ -253,8 +295,8 @@
         }
     }
 
-    const typeOptions = $derived(protocolTypes.map((type) => ({ value: type.id, label: type.name })));
-    const phaseOptions = $derived(protocolTypes.flatMap((type) => type.phases.map((phase) => ({
+    const templateOptions = $derived(protocolTemplates.map((template) => ({ value: template.id, label: template.name })));
+    const phaseOptions = $derived(protocolTemplates.flatMap((type) => type.phases.map((phase) => ({
         value: phase.id,
         label: `${type.name} · ${phase.name}`,
     }))));
@@ -263,17 +305,39 @@
         { value: 'mineraal', label: 'Mineraal' },
         { value: 'supplement', label: 'Supplement' },
     ];
+    const doseTypeOptions = [
+        { value: 'vast', label: 'Vaste dosis' },
+        { value: 'per_kg', label: 'Per kg lichaamsgewicht' },
+        { value: 'per_600_kg', label: 'Per 600 kg lichaamsgewicht' },
+    ];
+    const doseUnitOptions = [
+        { value: 'g', label: 'g' },
+        { value: 'ml', label: 'ml' },
+        { value: 'theelepel', label: 'Theelepel' },
+        { value: 'eetlepel', label: 'Eetlepel' },
+    ];
     const supplementTypeLabel = (value) => supplementTypeOptions.find((type) => type.value === value)?.label ?? value;
+    const supplementDose = (supplement) => {
+        if (supplement.dosis === null || supplement.dosis === undefined || !supplement.dosis_type || !supplement.unit) {
+            return null;
+        }
+
+        const doseTypeSuffix = supplement.dosis_type === 'per_kg'
+            ? '/kg'
+            : supplement.dosis_type === 'per_600_kg' ? ' per 600 kg' : '';
+
+        return `${supplement.dosis} ${supplement.unit}${doseTypeSuffix}`;
+    };
 </script>
 
-<AdminLayout title="Protocol Settings">
+<AdminLayout title="Protocol Templates">
     <PageHeader
-        title="Protocol Settings"
-        description="Configure reusable protocol types, phases, weeks and supplements."
+        title="Protocol Templates"
+        description="Configure reusable protocol templates, phases, weeks and supplements."
     >
         {#snippet actions()}
             <div class="hidden items-center gap-5 text-sm text-muted-foreground md:flex">
-                <span><strong class="text-foreground">{protocolTypes.length}</strong> types</span>
+                <span><strong class="text-foreground">{protocolTemplates.length}</strong> templates</span>
                 <span><strong class="text-foreground">{phaseCount}</strong> phases</span>
                 <span><strong class="text-foreground">{weekCount}</strong> weeks</span>
                 <span><strong class="text-foreground">{supplementCount}</strong> supplements</span>
@@ -281,65 +345,39 @@
         {/snippet}
     </PageHeader>
 
-    <div class="overflow-hidden rounded-xl border bg-white shadow-sm lg:grid lg:min-h-[650px] lg:grid-cols-[300px_minmax(0,1fr)]">
-        <aside class="border-b bg-muted/20 lg:border-b-0 lg:border-r">
-            <div class="flex items-center justify-between border-b px-5 py-4">
-                <div>
-                    <p class="text-sm font-semibold">Protocol types</p>
-                    <p class="mt-0.5 text-xs text-muted-foreground">Choose a type to configure</p>
-                </div>
-                <Button size="icon" variant="outline" onclick={createType} aria-label="New protocol type" title="New protocol type">
-                    <Plus class="size-4" />
-                </Button>
+    <div class="min-h-[650px] overflow-hidden rounded-xl border bg-white shadow-sm">
+        <div class="flex flex-col gap-3 border-b bg-muted/20 px-5 py-4 sm:flex-row sm:items-end sm:justify-between sm:px-7">
+            <div class="w-full max-w-xl">
+                <label for="protocol-template-selector" class="mb-1.5 block text-sm font-semibold">Protocol template</label>
+                <Select
+                    id="protocol-template-selector"
+                    bind:value={selectedTemplateId}
+                    options={templateOptions}
+                    placeholder={protocolTemplates.length ? undefined : 'No templates available'}
+                    disabled={!protocolTemplates.length}
+                    aria-label="Select protocol template"
+                />
             </div>
-
-            {#if protocolTypes.length}
-                <div class="space-y-1 p-3">
-                    {#each protocolTypes as type (type.id)}
-                        <div
-                            class:selected={selectedType?.id === type.id}
-                            class="group flex items-center rounded-lg border border-transparent transition-colors hover:bg-white [&.selected]:border-primary/20 [&.selected]:bg-primary/10"
-                        >
-                            <button
-                                class="min-w-0 flex-1 px-3 py-3 text-left"
-                                onclick={() => (selectedTypeId = type.id)}
-                            >
-                                <span class="block truncate text-sm font-semibold">{type.name}</span>
-                                <span class="mt-1 block text-xs text-muted-foreground">
-                                    {type.phases.length} {type.phases.length === 1 ? 'phase' : 'phases'}
-                                </span>
-                            </button>
-                            <ChevronRight class="mr-3 size-4 text-muted-foreground transition-transform group-hover:translate-x-0.5" />
-                        </div>
-                    {/each}
-                </div>
-            {:else}
-                <div class="px-6 py-14 text-center">
-                    <div class="mx-auto flex size-11 items-center justify-center rounded-full bg-primary/10 text-primary">
-                        <Layers3 class="size-5" />
-                    </div>
-                    <p class="mt-4 text-sm font-semibold">No protocol types yet</p>
-                    <p class="mt-1 text-xs leading-5 text-muted-foreground">Create the first type to start defining its phases.</p>
-                    <Button class="mt-4" size="sm" onclick={createType}><Plus class="size-4" /> New type</Button>
-                </div>
-            {/if}
-        </aside>
+            <Button class="shrink-0" size="icon" variant="outline" onclick={createTemplate} aria-label="New protocol template" title="New protocol template">
+                <Plus class="size-4" />
+            </Button>
+        </div>
 
         <section class="min-w-0">
-            {#if selectedType}
-                {#key selectedType.id}
+            {#if selectedTemplate}
+                {#key selectedTemplate.id}
                     <div in:fade={{ duration: 160 }}>
                         <div class="flex flex-wrap items-start justify-between gap-4 border-b px-5 py-5 sm:px-7">
                             <div>
-                                <p class="text-xs font-semibold uppercase tracking-[0.16em] text-primary">Selected protocol type</p>
-                                <h3 class="mt-1 text-xl font-bold tracking-tight">{selectedType.name}</h3>
-                                <p class="mt-1 text-sm text-muted-foreground">{selectedType.phases.length} configured {selectedType.phases.length === 1 ? 'phase' : 'phases'}</p>
+                                <p class="text-xs font-semibold uppercase tracking-[0.16em] text-primary">Selected protocol template</p>
+                                <h3 class="mt-1 text-xl font-bold tracking-tight">{selectedTemplate.name}</h3>
+                                <p class="mt-1 text-sm text-muted-foreground">{selectedTemplate.phases.length} configured {selectedTemplate.phases.length === 1 ? 'phase' : 'phases'}</p>
                             </div>
                             <div class="flex items-center gap-2">
-                                <Button variant="outline" size="sm" onclick={() => editType(selectedType)}>
-                                    <Pencil class="size-4" /> Edit type
+                                <Button variant="outline" size="sm" onclick={() => editTemplate(selectedTemplate)}>
+                                    <Pencil class="size-4" /> Edit template
                                 </Button>
-                                <Button variant="ghost" size="icon" onclick={() => removeType(selectedType)} aria-label="Remove protocol type" title="Remove protocol type">
+                                <Button variant="ghost" size="icon" onclick={() => removeTemplate(selectedTemplate)} aria-label="Remove protocol template" title="Remove protocol template">
                                     <Trash2 class="size-4 text-destructive" />
                                 </Button>
                             </div>
@@ -348,15 +386,15 @@
                         <div class="p-5 sm:p-7">
                             <div class="mb-4 flex items-center justify-between gap-3">
                                 <div>
-                                    <h4 class="font-semibold">Phases</h4>
-                                    <p class="mt-0.5 text-xs text-muted-foreground">Each phase can span any number of automatically numbered weeks.</p>
+                                    <h4 class="font-semibold">Fases</h4>
+                                    <p class="mt-0.5 text-xs text-muted-foreground">De ingestelde volgorde wordt altijd gebruikt, ook wanneer sommige fases optioneel zijn.</p>
                                 </div>
                                 <Button size="sm" onclick={createPhase}><Plus class="size-4" /> Add phase</Button>
                             </div>
 
-                            {#if selectedType.phases.length}
+                            {#if selectedTemplate.phases.length}
                                 <div class="divide-y rounded-xl border">
-                                    {#each selectedType.phases as phase, index (phase.id)}
+                                    {#each selectedTemplate.phases as phase, index (phase.id)}
                                         <article class="p-5 transition-colors hover:bg-muted/10">
                                             <div class="flex items-start gap-4">
                                                 <div class="flex size-9 shrink-0 items-center justify-center rounded-full bg-primary/10 text-sm font-bold text-primary">
@@ -374,8 +412,33 @@
                                                     {#if phase.description}
                                                         <p class="mt-1 max-w-3xl text-sm leading-6 text-muted-foreground">{phase.description}</p>
                                                     {/if}
+                                                    {#if phase.start_after_previous_phase_weeks !== null}
+                                                        <p class="mt-1.5 flex items-center gap-1.5 text-xs font-medium text-primary">
+                                                            <CalendarDays class="size-3.5" /> Start na {phase.start_after_previous_phase_weeks} complete {phase.start_after_previous_phase_weeks === 1 ? 'week' : 'weken'} van de vorige fase
+                                                        </p>
+                                                    {/if}
                                                 </div>
                                                 <div class="flex shrink-0 items-center gap-1">
+                                                    <Button
+                                                        size="icon"
+                                                        variant="ghost"
+                                                        onclick={() => movePhase(phase, 'up')}
+                                                        disabled={phaseOrderBusy || index === 0}
+                                                        aria-label={`Verplaats ${phase.name} omhoog`}
+                                                        title="Fase omhoog"
+                                                    >
+                                                        <ArrowUp class="size-4" />
+                                                    </Button>
+                                                    <Button
+                                                        size="icon"
+                                                        variant="ghost"
+                                                        onclick={() => movePhase(phase, 'down')}
+                                                        disabled={phaseOrderBusy || index === selectedTemplate.phases.length - 1}
+                                                        aria-label={`Verplaats ${phase.name} omlaag`}
+                                                        title="Fase omlaag"
+                                                    >
+                                                        <ArrowDown class="size-4" />
+                                                    </Button>
                                                     <Button size="icon" variant="ghost" onclick={() => editPhase(phase)} aria-label={`Edit ${phase.name}`} title="Edit phase">
                                                         <Pencil class="size-4" />
                                                     </Button>
@@ -440,6 +503,9 @@
                                                                         <p class="mt-1 text-sm leading-5 text-muted-foreground">{supplement.description}</p>
                                                                     {/if}
                                                                     <div class="mt-2 flex flex-wrap gap-x-5 gap-y-1 text-xs text-muted-foreground">
+                                                                        {#if supplementDose(supplement)}
+                                                                            <span><strong class="text-foreground">{supplementDose(supplement)}</strong> dosis</span>
+                                                                        {/if}
                                                                         <span><strong class="text-foreground">{supplement.max_aantal_in_fase ?? '∞'}</strong> max in phase</span>
                                                                         <span><strong class="text-foreground">{supplement.min_aantal_per_week}</strong> min per week</span>
                                                                         <span><strong class="text-foreground">{supplement.rust_periode_in_weken}</strong> rest weeks</span>
@@ -529,7 +595,7 @@
                                         <CalendarDays class="size-5" />
                                     </div>
                                     <p class="mt-4 text-sm font-semibold">No phases configured</p>
-                                    <p class="mt-1 text-xs text-muted-foreground">Add the first phase for {selectedType.name}.</p>
+                                    <p class="mt-1 text-xs text-muted-foreground">Add the first phase for {selectedTemplate.name}.</p>
                                     <Button class="mt-4" size="sm" onclick={createPhase}><Plus class="size-4" /> Add phase</Button>
                                 </div>
                             {/if}
@@ -537,26 +603,26 @@
                     </div>
                 {/key}
             {:else}
-                <div class="hidden min-h-[500px] items-center justify-center p-8 text-center lg:flex">
+                <div class="flex min-h-[500px] items-center justify-center p-8 text-center">
                     <div>
                         <Layers3 class="mx-auto size-8 text-muted-foreground" />
-                        <p class="mt-3 text-sm font-semibold">Create a protocol type to begin</p>
+                        <p class="mt-3 text-sm font-semibold">Create a protocol template to begin</p>
                     </div>
                 </div>
             {/if}
         </section>
     </div>
 
-    <Modal bind:open={typeModalOpen} title={editingType ? 'Edit protocol type' : 'New protocol type'}>
-        <form id="protocol-type-form" class="space-y-4" onsubmit={submitType}>
-            <Field label="Name" error={$typeForm.errors.name}>
-                <Input bind:value={$typeForm.name} placeholder="e.g. Digestive recovery" autofocus />
+    <Modal bind:open={templateModalOpen} title={editingTemplate ? 'Edit protocol template' : 'New protocol template'}>
+        <form id="protocol-template-form" class="space-y-4" onsubmit={submitTemplate}>
+            <Field label="Name" error={$templateForm.errors.name}>
+                <Input bind:value={$templateForm.name} placeholder="e.g. Digestive recovery" autofocus />
             </Field>
         </form>
         {#snippet footer()}
-            <Button variant="outline" onclick={() => (typeModalOpen = false)}>Cancel</Button>
-            <Button type="submit" form="protocol-type-form" disabled={$typeForm.processing}>
-                {editingType ? 'Save changes' : 'Create type'}
+            <Button variant="outline" onclick={() => (templateModalOpen = false)}>Cancel</Button>
+            <Button type="submit" form="protocol-template-form" disabled={$templateForm.processing}>
+                {editingTemplate ? 'Save changes' : 'Create template'}
             </Button>
         {/snippet}
     </Modal>
@@ -568,8 +634,8 @@
         size="lg"
     >
         <form id="protocol-phase-form" class="space-y-4" onsubmit={submitPhase}>
-            <Field label="Protocol type" error={$phaseForm.errors.protocol_type_id}>
-                <Select bind:value={$phaseForm.protocol_type_id} options={typeOptions} />
+            <Field label="Protocol template" error={$phaseForm.errors.protocol_template_id}>
+                <Select bind:value={$phaseForm.protocol_template_id} options={templateOptions} />
             </Field>
             <Field label="Name" error={$phaseForm.errors.name}>
                 <Input bind:value={$phaseForm.name} placeholder="e.g. Stabilisation" />
@@ -581,10 +647,33 @@
                 <input type="checkbox" bind:checked={$phaseForm.required} class="mt-0.5 size-4 rounded border-input accent-primary" />
                 <span>
                     <span class="block text-sm font-semibold">Required phase</span>
-                    <span class="mt-0.5 block text-xs text-muted-foreground">This phase must be included when using this protocol type.</span>
+                    <span class="mt-0.5 block text-xs text-muted-foreground">This phase must be included when using this protocol template.</span>
                 </span>
             </label>
             {#if $phaseForm.errors.required}<p class="text-xs text-destructive">{$phaseForm.errors.required}</p>{/if}
+            <div class="rounded-lg border p-4">
+                <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                    <label class="flex max-w-md cursor-pointer items-start gap-3">
+                        <input
+                            type="checkbox"
+                            checked={phaseStartDelayEnabled}
+                            onchange={togglePhaseStartDelay}
+                            class="mt-0.5 size-4 rounded border-input accent-primary"
+                        />
+                        <span>
+                            <span class="block text-sm font-semibold">Afwijkende start</span>
+                            <span class="mt-0.5 block text-xs leading-5 text-muted-foreground">Laat deze fase starten zodra het ingestelde aantal weken van de vorige fase compleet is. Uitgeschakeld betekent starten na de volledige vorige fase.</span>
+                        </span>
+                    </label>
+                    {#if phaseStartDelayEnabled}
+                        <div class="w-full shrink-0 sm:w-48">
+                            <Field label="Start na aantal complete weken vorige fase" error={$phaseForm.errors.start_after_previous_phase_weeks}>
+                                <Input type="number" min="1" max="104" bind:value={$phaseForm.start_after_previous_phase_weeks} />
+                            </Field>
+                        </div>
+                    {/if}
+                </div>
+            </div>
         </form>
         {#snippet footer()}
             <Button variant="outline" onclick={() => (phaseModalOpen = false)}>Cancel</Button>
@@ -601,8 +690,8 @@
         size="lg"
     >
         <form id="supplement-form" class="space-y-4" onsubmit={submitSupplement}>
-            <Field label="Protocolfase" error={$supplementForm.errors.protocol_type_phase_id}>
-                <Select bind:value={$supplementForm.protocol_type_phase_id} options={phaseOptions} />
+            <Field label="Protocolfase" error={$supplementForm.errors.protocol_template_phase_id}>
+                <Select bind:value={$supplementForm.protocol_template_phase_id} options={phaseOptions} />
             </Field>
             <div class="grid gap-4 sm:grid-cols-2">
                 <Field label="Naam" error={$supplementForm.errors.name}>
@@ -615,6 +704,20 @@
             <Field label="Beschrijving" error={$supplementForm.errors.description}>
                 <Textarea bind:value={$supplementForm.description} rows="3" />
             </Field>
+            <Field label="Instructie" error={$supplementForm.errors.instructions}>
+                <Textarea bind:value={$supplementForm.instructions} rows="3" placeholder="bijv. Goed door het voer mengen" />
+            </Field>
+            <div class="grid gap-4 sm:grid-cols-3">
+                <Field label="Dosistype" error={$supplementForm.errors.dosis_type}>
+                    <Select bind:value={$supplementForm.dosis_type} options={doseTypeOptions} />
+                </Field>
+                <Field label="Dosis" error={$supplementForm.errors.dosis}>
+                    <Input type="number" min="0" step="any" bind:value={$supplementForm.dosis} placeholder="bijv. 20" />
+                </Field>
+                <Field label="Eenheid" error={$supplementForm.errors.unit}>
+                    <Select bind:value={$supplementForm.unit} options={doseUnitOptions} />
+                </Field>
+            </div>
             <label class="flex items-start gap-3 rounded-lg border p-4">
                 <input type="checkbox" bind:checked={$supplementForm.add_by_default} class="mt-0.5 size-4 rounded border-input accent-primary" />
                 <span>

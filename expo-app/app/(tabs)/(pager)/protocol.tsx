@@ -27,7 +27,6 @@ import { useIntake } from '@/lib/intake/store';
 import {
   useActiveProtocolForHorse,
   useAllTaskCompletions,
-  usePhaseItems,
   useProtocolAnalysis,
   useProtocolPhases,
   useProtocolTasks,
@@ -506,7 +505,6 @@ function ProtocolPhasesView({ protocolId }: { protocolId: string }) {
 }
 
 function PhaseCard({ phase }: { phase: any }) {
-  const items = usePhaseItems(phase.id);
   const tone =
     phase.state === 'done'
       ? { border: 'border-mint-200', chipBg: 'bg-mint-50', chipText: 'text-mint-700' }
@@ -522,16 +520,6 @@ function PhaseCard({ phase }: { phase: any }) {
           <Text className={`font-semi text-[11px] ${tone.chipText}`}>{phase.chipLabel}</Text>
         </View>
       </View>
-      {items.length > 0 && (
-        <View className="mt-3 gap-1.5">
-          {items.map((it: any) => (
-            <View key={it.id} className="flex-row items-start gap-2">
-              <View className="mt-2 h-1 w-1 rounded-full bg-mint-500" />
-              <Text className="flex-1 text-[13.5px] text-ink-70 leading-[20px]">{it.label}</Text>
-            </View>
-          ))}
-        </View>
-      )}
     </View>
   );
 }

@@ -11,10 +11,10 @@ use App\Models\Protocol;
 use App\Models\ProtocolAdvice;
 use App\Models\ProtocolAnalysis;
 use App\Models\ProtocolPhase;
-use App\Models\ProtocolPhaseItem;
+use App\Models\ProtocolPhaseWeek;
 use App\Models\ProtocolTask;
 use App\Models\ProtocolTaskCompletion;
-use App\Models\ProtocolType;
+use App\Models\ProtocolTemplate;
 use App\Models\Therapist;
 use App\Models\TimelineEvent;
 use App\Models\User;
@@ -216,16 +216,24 @@ class HorseSeeder extends Seeder
 
     private function seedProtocol(Horse $horse, string $therapistId): void
     {
-        $protocolType = ProtocolType::query()->firstOrCreate(['name' => 'Darm protocol']);
-        $phaseDefinitions = $protocolType->phases()->orderBy('order')->get();
+        $protocolTemplate = ProtocolTemplate::query()->firstOrCreate(['name' => 'Darm protocol']);
+        $phaseDefinitions = $protocolTemplate->phases()->orderBy('order')->get();
         while ($phaseDefinitions->count() < 3) {
             $phaseNumber = $phaseDefinitions->count() + 1;
-            $phaseDefinitions->push($protocolType->phases()->create([
+            $phaseDefinitions->push($protocolTemplate->phases()->create([
                 'order' => ((int) $phaseDefinitions->max('order')) + 1,
                 'name' => "Fase {$phaseNumber}",
                 'description' => null,
                 'required' => $phaseNumber === 1,
             ]));
+        }
+        foreach ([4, 2, 2] as $phaseIndex => $weekCount) {
+            if ($phaseDefinitions[$phaseIndex]->weeks()->exists()) {
+                continue;
+            }
+            foreach (range(1, $weekCount) as $number) {
+                $phaseDefinitions[$phaseIndex]->weeks()->create(['number' => $number]);
+            }
         }
         $totalWeeks = fake()->numberBetween(4, 12);
         $currentWeek = fake()->numberBetween(1, $totalWeeks);
@@ -247,13 +255,15 @@ class HorseSeeder extends Seeder
 
         $protocol = Protocol::create([
             'horse_id' => $horse->id, 'therapist_id' => $therapistId,
-            'protocol_type_id' => $protocolType->id,
+            'protocol_template_id' => $protocolTemplate->id,
+            'protocol_template_name' => $protocolTemplate->name,
             'title' => $horse->name."'s plan",
             'subtitle_protocol' => "Week {$currentWeek} van {$totalWeeks} · Fase {$activePhaseNumber} actief",
             'subtitle_analyse' => $horse->breed.' · '.fake()->randomElement(['Jeuk', 'Darmen', 'Hoeven', 'Allergie']),
             'subtitle_calendar' => 'Mei '.now()->year,
             'total_weeks' => $totalWeeks, 'current_week' => $currentWeek,
             'started_at' => now()->subWeeks($currentWeek), 'status' => 'active',
+            'published_at' => now(),
         ]);
 
         $activePhase = null;
@@ -262,8 +272,10 @@ class HorseSeeder extends Seeder
             $weekEnd = $weekCursor + $phaseLength - 1;
             $state = $currentWeek > $weekEnd ? 'done' : ($currentWeek >= $weekCursor ? 'active' : 'upcoming');
             $phase = ProtocolPhase::create([
-                'protocol_id' => $protocol->id, 'protocol_type_phase_id' => $phaseDefinitions[$i]->id, 'order' => $i,
+                'protocol_id' => $protocol->id, 'protocol_template_phase_id' => $phaseDefinitions[$i]->id, 'order' => $i,
                 'title' => 'Fase '.($i + 1).' — '.fake()->randomElement(['Darmen', 'Lever', 'Huid', 'Hoeven']),
+                'description' => $phaseDefinitions[$i]->description,
+                'required' => $phaseDefinitions[$i]->required,
                 'state' => $state,
                 'week_start' => $weekCursor, 'week_end' => $weekEnd,
                 'chip_label' => $state === 'done' ? 'Klaar' : ($state === 'active' ? 'Actief' : 'Komende'),
@@ -271,8 +283,13 @@ class HorseSeeder extends Seeder
             if ($state === 'active') {
                 $activePhase = $phase;
             }
-            for ($j = 0; $j < fake()->numberBetween(2, 5); $j++) {
-                ProtocolPhaseItem::create(['phase_id' => $phase->id, 'order' => $j, 'label' => fake()->sentence(6)]);
+            foreach (range(1, $phaseLength) as $phaseWeekNumber) {
+                ProtocolPhaseWeek::create([
+                    'protocol_phase_id' => $phase->id,
+                    'protocol_template_phase_week_id' => $phaseDefinitions[$i]->weeks()->where('number', $phaseWeekNumber)->value('id'),
+                    'number' => $phaseWeekNumber,
+                    'protocol_week_number' => $weekCursor + $phaseWeekNumber - 1,
+                ]);
             }
             $weekCursor = $weekEnd + 1;
         }
