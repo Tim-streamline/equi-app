@@ -10,6 +10,7 @@ import { ClipboardList, ArrowRight, Check } from 'lucide-react-native';
 import { intakeProgress } from '@/lib/intake/logic';
 import { useIntake } from '@/lib/intake/store';
 import { useActiveProtocolForHorse } from '@/db/hooks';
+import { useIntakeSchema } from '@/lib/intake/schema-provider';
 
 type Props = {
   /** Compact variant tones down padding when used as a Home banner. */
@@ -19,6 +20,7 @@ type Props = {
 export function IntakeEntryCard({ variant = 'banner' }: Props) {
   const { state, loaded } = useIntake();
   const protocol = useActiveProtocolForHorse();
+  const { schema, noneOptions } = useIntakeSchema();
 
   // Pre-hydration the safer default is to render nothing — avoids a
   // "start your intake" flash on screens where the user already submitted.
@@ -28,7 +30,7 @@ export function IntakeEntryCard({ variant = 'banner' }: Props) {
   // implicitly complete — don't nag the user to re-do it.
   if (protocol) return null;
 
-  const { done, total, pct } = intakeProgress(state.answers);
+  const { done, total, pct } = intakeProgress(state.answers, schema, noneOptions);
   const hasStarted = Object.keys(state.answers).length > 0;
 
   const headline = hasStarted ? 'Ga verder met je intake' : 'Start jouw protocol-intake';

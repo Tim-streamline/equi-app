@@ -1,4 +1,4 @@
-import { View, Text, ScrollView, Image } from 'react-native';
+import { View, Text, ScrollView } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Bookmark } from 'lucide-react-native';
@@ -31,25 +31,21 @@ export default function ArticleScreen() {
             </IconButton>
           }
         />
-        <ScrollView contentContainerStyle={{ padding: 20, paddingBottom: padBottom }}>
-          <View
-            className="mb-5 overflow-hidden rounded-2xl"
-            style={{ height: 200, backgroundColor: '#0D5C5B', position: 'relative', alignItems: 'center', justifyContent: 'center' }}
-          >
-            <Image
-              source={require('@/assets/images/logo-horse-white.png')}
-              style={{ width: 120, height: 120, opacity: 0.4, resizeMode: 'contain' }}
-            />
+        <ScrollView contentContainerStyle={{ width: '100%', paddingBottom: padBottom }}>
+          <View className="px-5">
+            <Eyebrow className="mb-2">
+              {`Lezen · ${item.durationLabel as string}${therapist.name ? ` · door ${therapist.name as string}` : ''}`}
+            </Eyebrow>
+            <Text className="font-bold text-ink mb-4" style={{ fontSize: 28, lineHeight: 32 }}>
+              {item.title as string}
+            </Text>
           </View>
 
-          <Eyebrow className="mb-2">
-            {`Lezen · ${item.durationLabel as string}${therapist.name ? ` · door ${therapist.name as string}` : ''}`}
-          </Eyebrow>
-          <Text className="font-bold text-ink mb-4" style={{ fontSize: 28, lineHeight: 32 }}>
-            {item.title as string}
-          </Text>
-
-          {!!body && <MarkdownBody markdown={body} />}
+          {!!body && (
+            <View className="w-full px-5">
+              <MarkdownBody markdown={body} />
+            </View>
+          )}
         </ScrollView>
       </SafeAreaView>
     </View>

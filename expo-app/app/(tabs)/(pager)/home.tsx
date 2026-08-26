@@ -19,10 +19,12 @@ import {
   useCurrentUser,
   useHorse,
   useLibraryFeatured,
+  useProtocolPlan,
+  useSupplementIntakesForDate,
   useStoreMutations,
-  useTodayTasks,
   useValue,
 } from '@/db/hooks';
+import { protocolSupplementRowsForDay } from '@/lib/protocol-plan';
 
 export default function HomeScreen() {
   const user = useCurrentUser();
@@ -34,8 +36,14 @@ export default function HomeScreen() {
   const mutations = useStoreMutations();
   const now = new Date();
   const todayIso = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
-  const tasks = useTodayTasks(protocol?.id ?? '', todayIso);
-  const done = tasks.filter((t) => t.done).length;
+  const protocolPlan = useProtocolPlan(protocol?.id ?? '');
+  const supplementIntakes = useSupplementIntakesForDate(todayIso);
+  const supplements = protocolSupplementRowsForDay(
+    protocolPlan,
+    Number(protocol?.currentWeek ?? 0),
+    supplementIntakes,
+  );
+  const done = supplements.filter((supplement) => supplement.done).length;
   const padBottom = useTabBarPadding();
   // Open the protocol tab on its calendar sub-tab; the unique token forces the
   // sub-tab effect to re-fire on every tap, and the calendar remounts on today.
@@ -88,33 +96,42 @@ export default function HomeScreen() {
                 <Text className="font-bold text-ink text-[15px]">Dagelijks protocol</Text>
                 <View className="flex-row items-center gap-2">
                   <Text className="text-[12px] text-ink-50">
-                    {done} van {tasks.length} gedaan
+                    {done} van {supplements.length} gedaan
                   </Text>
-                  <ProgressRing value={tasks.length ? (done / tasks.length) * 100 : 0} size={28} stroke={3} />
+                  <ProgressRing value={supplements.length ? (done / supplements.length) * 100 : 0} size={28} stroke={3} />
                 </View>
               </View>
               <View className="gap-2 mt-2">
-                {tasks.map((p) => (
+                {supplements.map((supplement) => (
                   <Pressable
-                    key={p.id}
-                    onPress={() => mutations.toggleTaskCompletion(p.id, todayIso, horseId)}
+                    key={supplement.id}
+                    accessibilityRole="checkbox"
+                    accessibilityState={{ checked: supplement.done }}
+                    onPress={() => mutations.toggleSupplementIntake(
+                      supplement.id,
+                      supplement.dosage,
+                      todayIso,
+                      horseId,
+                    )}
                     className="flex-row items-center gap-3 py-1"
                     hitSlop={6}
                   >
                     <View
                       className={`h-5 w-5 items-center justify-center rounded-full border-2 ${
-                        p.done ? 'border-mint-500 bg-mint-500' : 'border-ink-15 bg-white'
+                        supplement.done ? 'border-mint-500 bg-mint-500' : 'border-ink-15 bg-white'
                       }`}
                     >
-                      {p.done && <Check size={12} color="#fff" strokeWidth={3} />}
+                      {supplement.done && <Check size={12} color="#fff" strokeWidth={3} />}
                     </View>
                     <View className="flex-1">
                       <Text
-                        className={`text-[14px] ${p.done ? 'text-ink-50 line-through' : 'text-ink'}`}
+                        className={`text-[14px] ${supplement.done ? 'text-ink-50 line-through' : 'text-ink'}`}
                       >
-                        {p.label}
+                        {supplement.title}
                       </Text>
-                      <Text className="mt-0.5 text-[11px] text-ink-50">{p.meta}</Text>
+                      <Text className="mt-0.5 text-[11px] text-ink-50">
+                        {supplement.dosage ?? 'Dosering niet ingesteld'}
+                      </Text>
                     </View>
                   </Pressable>
                 ))}

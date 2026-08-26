@@ -15,7 +15,6 @@ streams:
         queries:
             # identity/reference
             - SELECT * FROM therapists
-            - SELECT * FROM focus_topics
 
             # scanner catalog
             - SELECT * FROM products
@@ -27,7 +26,6 @@ streams:
             - SELECT * FROM library_article_sections
             - SELECT * FROM library_categories
             - SELECT * FROM library_item_categories
-            - SELECT * FROM library_item_focus
             - SELECT * FROM seasonal_tips
 
             # community is intentionally public inside the signed-in app
@@ -44,6 +42,11 @@ streams:
 
             # static assistant copy
             - SELECT * FROM nova_fallback_replies
+
+            # backend-managed protocol-intake definition
+            - SELECT * FROM intake_questionnaires WHERE active = TRUE
+            - SELECT * FROM intake_sections WHERE active = TRUE
+            - SELECT * FROM intake_fields WHERE active = TRUE
 
     user_private:
         auto_subscribe: true
@@ -105,17 +108,6 @@ streams:
                         WHERE grantee_user_id = auth.user_id()
                    )
             - |
-                SELECT * FROM horse_focus
-                WHERE horse_id IN (
-                    SELECT id FROM horses
-                    WHERE owner_id = auth.user_id()
-                       OR id IN (
-                            SELECT horse_id
-                            FROM horse_shares
-                            WHERE grantee_user_id = auth.user_id()
-                       )
-                )
-            - |
                 SELECT * FROM horse_shares
                 WHERE horse_id IN (
                     SELECT id FROM horses
@@ -152,7 +144,8 @@ streams:
             # Protocol data for visible horses.
             - |
                 SELECT * FROM protocols
-                WHERE horse_id IN (
+                WHERE published_at IS NOT NULL
+                  AND horse_id IN (
                     SELECT id FROM horses
                     WHERE owner_id = auth.user_id()
                        OR id IN (
@@ -166,12 +159,13 @@ streams:
                 WHERE protocol_id IN (
                     SELECT p.id FROM protocols p
                     JOIN horses h ON h.id = p.horse_id
-                    WHERE h.owner_id = auth.user_id()
+                    WHERE p.published_at IS NOT NULL
+                      AND (h.owner_id = auth.user_id()
                        OR h.id IN (
                             SELECT horse_id
                             FROM horse_shares
                             WHERE grantee_user_id = auth.user_id()
-                       )
+                       ))
                 )
             - |
                 SELECT * FROM protocol_phase_weeks
@@ -179,12 +173,13 @@ streams:
                     SELECT pp.id FROM protocol_phases pp
                     JOIN protocols p ON p.id = pp.protocol_id
                     JOIN horses h ON h.id = p.horse_id
-                    WHERE h.owner_id = auth.user_id()
+                    WHERE p.published_at IS NOT NULL
+                      AND (h.owner_id = auth.user_id()
                        OR h.id IN (
                             SELECT horse_id
                             FROM horse_shares
                             WHERE grantee_user_id = auth.user_id()
-                       )
+                       ))
                 )
             - |
                 SELECT * FROM protocol_phase_supplements
@@ -192,12 +187,13 @@ streams:
                     SELECT pp.id FROM protocol_phases pp
                     JOIN protocols p ON p.id = pp.protocol_id
                     JOIN horses h ON h.id = p.horse_id
-                    WHERE h.owner_id = auth.user_id()
+                    WHERE p.published_at IS NOT NULL
+                      AND (h.owner_id = auth.user_id()
                        OR h.id IN (
                             SELECT horse_id
                             FROM horse_shares
                             WHERE grantee_user_id = auth.user_id()
-                       )
+                       ))
                 )
             - |
                 SELECT * FROM protocol_phase_supplement_weeks
@@ -206,24 +202,26 @@ streams:
                     JOIN protocol_phases pp ON pp.id = pps.protocol_phase_id
                     JOIN protocols p ON p.id = pp.protocol_id
                     JOIN horses h ON h.id = p.horse_id
-                    WHERE h.owner_id = auth.user_id()
+                    WHERE p.published_at IS NOT NULL
+                      AND (h.owner_id = auth.user_id()
                        OR h.id IN (
                             SELECT horse_id
                             FROM horse_shares
                             WHERE grantee_user_id = auth.user_id()
-                       )
+                       ))
                 )
             - |
                 SELECT * FROM protocol_analyses
                 WHERE protocol_id IN (
                     SELECT p.id FROM protocols p
                     JOIN horses h ON h.id = p.horse_id
-                    WHERE h.owner_id = auth.user_id()
+                    WHERE p.published_at IS NOT NULL
+                      AND (h.owner_id = auth.user_id()
                        OR h.id IN (
                             SELECT horse_id
                             FROM horse_shares
                             WHERE grantee_user_id = auth.user_id()
-                       )
+                       ))
                 )
             - |
                 SELECT * FROM protocol_advice
@@ -231,35 +229,67 @@ streams:
                     SELECT pa.id FROM protocol_analyses pa
                     JOIN protocols p ON p.id = pa.protocol_id
                     JOIN horses h ON h.id = p.horse_id
-                    WHERE h.owner_id = auth.user_id()
+                    WHERE p.published_at IS NOT NULL
+                      AND (h.owner_id = auth.user_id()
                        OR h.id IN (
                             SELECT horse_id
                             FROM horse_shares
                             WHERE grantee_user_id = auth.user_id()
-                       )
+                       ))
                 )
             - |
-                SELECT * FROM protocol_tasks
+                SELECT * FROM protocol_voeding_adviezen
                 WHERE protocol_id IN (
                     SELECT p.id FROM protocols p
                     JOIN horses h ON h.id = p.horse_id
-                    WHERE h.owner_id = auth.user_id()
+                    WHERE p.published_at IS NOT NULL
+                      AND (h.owner_id = auth.user_id()
                        OR h.id IN (
                             SELECT horse_id
                             FROM horse_shares
                             WHERE grantee_user_id = auth.user_id()
-                       )
+                       ))
                 )
             - |
-                SELECT * FROM protocol_task_completions
-                WHERE horse_id IN (
-                    SELECT id FROM horses
-                    WHERE owner_id = auth.user_id()
-                       OR id IN (
+                SELECT * FROM protocol_management_adviezen
+                WHERE protocol_id IN (
+                    SELECT p.id FROM protocols p
+                    JOIN horses h ON h.id = p.horse_id
+                    WHERE p.published_at IS NOT NULL
+                      AND (h.owner_id = auth.user_id()
+                       OR h.id IN (
                             SELECT horse_id
                             FROM horse_shares
                             WHERE grantee_user_id = auth.user_id()
-                       )
+                       ))
+                )
+            - |
+                SELECT * FROM protocol_beweging_adviezen
+                WHERE protocol_id IN (
+                    SELECT p.id FROM protocols p
+                    JOIN horses h ON h.id = p.horse_id
+                    WHERE p.published_at IS NOT NULL
+                      AND (h.owner_id = auth.user_id()
+                       OR h.id IN (
+                            SELECT horse_id
+                            FROM horse_shares
+                            WHERE grantee_user_id = auth.user_id()
+                       ))
+                )
+            - |
+                SELECT * FROM protocol_supplement_intakes
+                WHERE protocol_phase_supplement_id IN (
+                    SELECT pps.id FROM protocol_phase_supplements pps
+                    JOIN protocol_phases pp ON pp.id = pps.protocol_phase_id
+                    JOIN protocols p ON p.id = pp.protocol_id
+                    JOIN horses h ON h.id = p.horse_id
+                    WHERE p.published_at IS NOT NULL
+                      AND (h.owner_id = auth.user_id()
+                       OR h.id IN (
+                            SELECT horse_id
+                            FROM horse_shares
+                            WHERE grantee_user_id = auth.user_id()
+                       ))
                 )
 
             # Observations for visible horses.

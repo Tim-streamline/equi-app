@@ -14,7 +14,7 @@ class SyncBenchmark extends Command
         {--url= : Sync upload endpoint URL}
         {--requests=20 : Number of POST requests to send}
         {--token= : Bearer token to use instead of minting a local PowerSync JWT}
-        {--user=sync-benchmark : JWT subject used when minting a local token}
+        {--user=00000000-0000-4000-8000-000000000001 : JWT subject used when minting a local token}
         {--timeout=30 : HTTP timeout in seconds}';
 
     protected $description = 'Benchmark the sync upload endpoint by repeatedly posting a saved payload';

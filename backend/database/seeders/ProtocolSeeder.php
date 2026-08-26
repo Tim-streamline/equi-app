@@ -8,8 +8,6 @@ use App\Models\ProtocolAdvice;
 use App\Models\ProtocolAnalysis;
 use App\Models\ProtocolPhase;
 use App\Models\ProtocolPhaseWeek;
-use App\Models\ProtocolTask;
-use App\Models\ProtocolTaskCompletion;
 use App\Models\ProtocolTemplate;
 use App\Models\Therapist;
 use App\Models\User;
@@ -139,38 +137,5 @@ class ProtocolSeeder extends Seeder
             );
         }
 
-        $tasks = [
-            ['1 el brandnetel door ruwvoer', 'Ochtendvoer', 'feeding'],
-            ['1 el lijnzaad door ruwvoer', 'Ochtendvoer', 'feeding'],
-            ['Foto van mest in app loggen', 'Na ochtendmest', 'observation'],
-            ['5 min borstelen rond manen', 'Vóór beweging', 'care'],
-        ];
-
-        foreach ($tasks as $order => [$label, $meta, $kind]) {
-            $task = ProtocolTask::query()->updateOrCreate(
-                ['protocol_id' => $protocol->id, 'order' => $order],
-                [
-                    'phase_id' => $activePhase?->id,
-                    'label' => $label,
-                    'meta' => $meta,
-                    'kind' => $kind,
-                    'active_from' => $startedAt,
-                ],
-            );
-
-            for ($daysAgo = 0; $daysAgo < 14; $daysAgo++) {
-                $date = now()->subDays($daysAgo);
-                $done = $daysAgo > 1 || $daysAgo === 0;
-
-                ProtocolTaskCompletion::query()->updateOrCreate(
-                    ['task_id' => $task->id, 'date' => $date->toDateString()],
-                    [
-                        'horse_id' => $horse->id,
-                        'done' => $done,
-                        'done_at' => $done ? $date : null,
-                    ],
-                );
-            }
-        }
     }
 }

@@ -4,7 +4,6 @@ namespace Database\Seeders;
 
 use App\Models\CommunityCategory;
 use App\Models\CommunityTag;
-use App\Models\FocusTopic;
 use App\Models\Ingredient;
 use App\Models\LibraryCategory;
 use App\Models\NovaFallbackReply;
@@ -16,29 +15,12 @@ class ReferenceSeeder extends Seeder
 {
     public function run(): void
     {
-        $this->seedFocusTopics();
         $this->seedLibraryCategories();
         $this->seedCommunityCategories();
         $this->seedCommunityTags();
         $this->seedPlans();
         $this->seedIngredients();
         $this->seedNovaReplies();
-    }
-
-    private function seedFocusTopics(): void
-    {
-        $topics = [
-            ['slug' => 'jeuk', 'icon' => '🌿', 'title' => 'Jeukklachten', 'description' => 'Huid, manen, staart'],
-            ['slug' => 'staak', 'icon' => '🐎', 'title' => 'Staakgedrag', 'description' => 'Onder zadel of in stal'],
-            ['slug' => 'darm', 'icon' => '💧', 'title' => 'Darmproblemen', 'description' => 'Mest, kolieken, gas'],
-            ['slug' => 'prev', 'icon' => '✨', 'title' => 'Preventief', 'description' => 'Geen klachten, wel meer weten'],
-            ['slug' => 'and', 'icon' => '✦', 'title' => 'Iets anders', 'description' => 'Vertel het in een vrij veld'],
-            ['slug' => 'hoef', 'icon' => '🦶', 'title' => 'Hoeven', 'description' => 'Bevangenheid, rotstraal, scheuren'],
-            ['slug' => 'gewicht', 'icon' => '⚖️', 'title' => 'Gewicht', 'description' => 'Te dik, te dun, conditie'],
-        ];
-        foreach ($topics as $i => $t) {
-            FocusTopic::create([...$t, 'order' => $i]);
-        }
     }
 
     private function seedLibraryCategories(): void

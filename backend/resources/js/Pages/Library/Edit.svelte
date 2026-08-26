@@ -10,7 +10,7 @@
     import { cn } from '$lib/utils.js';
     import { ArrowLeft, Eye } from '@lucide/svelte';
 
-    let { item, categories, focusTopics, therapists } = $props();
+    let { item, categories, therapists } = $props();
     const isNew = !item;
 
     let bodyEl = $state(null);
@@ -54,7 +54,6 @@
         is_featured: item?.is_featured ?? false,
         order: item?.order ?? 0,
         category_ids: item?.categories?.map((c) => c.id) ?? [],
-        focus_ids: item?.focus_topics?.map((f) => f.id) ?? [],
     });
 
     function toggle(arr, id) {
@@ -136,18 +135,6 @@
                         <button type="button" onclick={() => ($form.category_ids = toggle($form.category_ids, c.id))}
                             class={'rounded-full border px-3 py-1 text-xs ' + ($form.category_ids.includes(c.id) ? 'border-primary bg-primary text-primary-foreground' : 'hover:bg-accent')}>
                             {c.label}
-                        </button>
-                    {/each}
-                </CardContent>
-            </Card>
-
-            <Card>
-                <CardHeader><CardTitle>Focus topics</CardTitle></CardHeader>
-                <CardContent class="flex flex-wrap gap-2">
-                    {#each focusTopics as f (f.id)}
-                        <button type="button" onclick={() => ($form.focus_ids = toggle($form.focus_ids, f.id))}
-                            class={'rounded-full border px-3 py-1 text-xs ' + ($form.focus_ids.includes(f.id) ? 'border-primary bg-primary text-primary-foreground' : 'hover:bg-accent')}>
-                            {f.title}
                         </button>
                     {/each}
                 </CardContent>

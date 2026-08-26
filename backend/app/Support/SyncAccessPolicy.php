@@ -12,14 +12,12 @@ class SyncAccessPolicy
         'community_categories',
         'community_tags',
         'data_exports',
-        'focus_topics',
         'horse_stats',
         'ingredients',
         'library_article_sections',
         'library_categories',
         'library_chapters',
         'library_item_categories',
-        'library_item_focus',
         'library_items',
         'nova_fallback_replies',
         'payments',
@@ -32,7 +30,6 @@ class SyncAccessPolicy
         'protocol_phase_supplements',
         'protocol_phase_weeks',
         'protocol_phases',
-        'protocol_tasks',
         'protocols',
         'seasonal_tips',
         'subscriptions',
@@ -55,8 +52,8 @@ class SyncAccessPolicy
         $allowed = match ($table) {
             'users' => $this->ownsSelfRow($userId, $id, $op),
             'horses' => $this->ownsHorseRow($userId, $existing, $data),
-            'horse_focus', 'horse_shares' => $this->ownsHorseByRowHorseId($userId, $existing, $data),
-            'protocol_task_completions' => $this->ownsTaskCompletion($userId, $existing, $data),
+            'horse_shares' => $this->ownsHorseByRowHorseId($userId, $existing, $data),
+            'protocol_supplement_intakes' => $this->ownsSupplementIntake($userId, $existing, $data),
             'observations' => $this->ownsObservation($userId, $existing, $data),
             'observation_photos' => $this->ownsObservationPhoto($userId, $existing, $data),
             'scan_results' => $this->ownsScanResult($userId, $existing, $data),
@@ -98,21 +95,22 @@ class SyncAccessPolicy
         return is_string($horseId) && $this->ownsHorse($userId, $horseId);
     }
 
-    private function ownsTaskCompletion(string $userId, ?object $existing, array $data): bool
+    private function ownsSupplementIntake(string $userId, ?object $existing, array $data): bool
     {
         $horseId = $this->value('horse_id', $existing, $data);
         if (! is_string($horseId) || ! $this->ownsHorse($userId, $horseId)) {
             return false;
         }
 
-        $taskId = $this->value('task_id', $existing, $data);
-        if (! is_string($taskId)) {
-            return true;
+        $supplementId = $this->value('protocol_phase_supplement_id', $existing, $data);
+        if (! is_string($supplementId)) {
+            return false;
         }
 
-        return DB::table('protocol_tasks')
-            ->join('protocols', 'protocols.id', '=', 'protocol_tasks.protocol_id')
-            ->where('protocol_tasks.id', $taskId)
+        return DB::table('protocol_phase_supplements')
+            ->join('protocol_phases', 'protocol_phases.id', '=', 'protocol_phase_supplements.protocol_phase_id')
+            ->join('protocols', 'protocols.id', '=', 'protocol_phases.protocol_id')
+            ->where('protocol_phase_supplements.id', $supplementId)
             ->where('protocols.horse_id', $horseId)
             ->exists();
     }

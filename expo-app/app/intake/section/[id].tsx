@@ -12,23 +12,27 @@ import { ChevronLeft, X } from 'lucide-react-native';
 import { Button } from '@/components/ui/Button';
 import { IconButton } from '@/components/ui/IconButton';
 import { IntakeField } from '@/components/intake/IntakeField';
-import { INTAKE_SCHEMA, getSection } from '@/lib/intake/schema';
+import { useIntakeSchema } from '@/lib/intake/schema-provider';
 import { showField, answeredCount } from '@/lib/intake/logic';
 import { useIntake } from '@/lib/intake/store';
 
 export default function IntakeSectionScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const insets = useSafeAreaInsets();
-  const section = id ? getSection(id) : undefined;
+  const { schema, noneOptions } = useIntakeSchema();
+  const section = id ? schema.find((candidate) => candidate.id === id) : undefined;
   const { state } = useIntake();
   const sectionId = section?.id ?? '';
-  const answers = state.answers[sectionId] ?? {};
+  const answers = useMemo(
+    () => state.answers[sectionId] ?? {},
+    [sectionId, state.answers],
+  );
   // Filter fields by showIf, but keep sectionheads since they wrap visible
   // children — the renderer just skips numbering them. Hook lives above the
   // missing-section guard so the order stays stable across renders.
   const visible = useMemo(
-    () => (section ? section.fields.filter((f) => showField(f, answers, state.answers)) : []),
-    [section, answers, state.answers],
+    () => (section ? section.fields.filter((f) => showField(f, answers, state.answers, noneOptions)) : []),
+    [section, answers, state.answers, noneOptions],
   );
 
   if (!section) {
@@ -43,7 +47,7 @@ export default function IntakeSectionScreen() {
   // they are. `answeredCount` only counts values that are genuinely valid for
   // the field (e.g. a radio value still present in its options), so stale
   // answers from an earlier schema version don't inflate the tally.
-  const { answered: filled, total } = answeredCount(section, answers, state.answers);
+  const { answered: filled, total } = answeredCount(section, answers, state.answers, noneOptions);
   const pct = total ? Math.round((filled / total) * 100) : 0;
 
   // Every visible question answered (not just the required ones) flips the
@@ -67,7 +71,7 @@ export default function IntakeSectionScreen() {
               className="font-bold uppercase text-ink-50"
               style={{ fontSize: 10.5, letterSpacing: 1.5 }}
             >
-              Sectie {section.nr + 1} van {INTAKE_SCHEMA.length}
+              Sectie {section.nr + 1} van {schema.length}
             </Text>
             <Text
               className="font-bold text-[15px] text-ink"
@@ -117,6 +121,7 @@ export default function IntakeSectionScreen() {
                   field={f}
                   sectionId={section.id}
                   n={fieldCounter}
+                  noneOptions={noneOptions}
                 />
               );
             })}

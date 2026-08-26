@@ -43,11 +43,6 @@ class ProtocolPhase extends Model
         return $this->belongsTo(ProtocolTemplatePhase::class, 'protocol_template_phase_id');
     }
 
-    public function tasks(): HasMany
-    {
-        return $this->hasMany(ProtocolTask::class, 'phase_id');
-    }
-
     public function supplements(): HasMany
     {
         return $this->hasMany(ProtocolPhaseSupplement::class);

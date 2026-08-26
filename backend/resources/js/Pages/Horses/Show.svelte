@@ -2,7 +2,7 @@
     import AdminLayout from '../../Layouts/AdminLayout.svelte';
     import PageHeader from '$lib/components/PageHeader.svelte';
     import { Link, router } from '@inertiajs/svelte';
-    import { Card, CardHeader, CardTitle, CardContent, Button, Badge, Separator } from '$lib/components/ui';
+    import { Card, CardHeader, CardTitle, CardContent, Button, Badge } from '$lib/components/ui';
     import { formatDate } from '$lib/utils.js';
     import { statusVariant } from '$lib/badges.js';
     import { ArrowLeft, Archive, RotateCcw } from '@lucide/svelte';
@@ -41,12 +41,6 @@
                 <div class="flex justify-between"><span class="text-muted-foreground">Weight</span><span>{horse.weight_kg ? `${horse.weight_kg} kg` : '—'}</span></div>
                 <div class="flex justify-between"><span class="text-muted-foreground">Stable</span><span>{horse.stable ?? '—'}</span></div>
                 <div class="flex justify-between items-center"><span class="text-muted-foreground">Status</span><Badge variant={statusVariant(horse.status)}>{horse.status}</Badge></div>
-                {#if horse.focus_topics?.length}
-                    <Separator class="my-2" />
-                    <div class="flex flex-wrap gap-1">
-                        {#each horse.focus_topics as f (f.id)}<Badge variant="secondary">{f.icon ?? ''} {f.title}</Badge>{/each}
-                    </div>
-                {/if}
             </CardContent>
         </Card>
 

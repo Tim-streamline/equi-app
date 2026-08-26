@@ -3,7 +3,6 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
-use App\Models\FocusTopic;
 use App\Models\LibraryCategory;
 use App\Models\LibraryItem;
 use App\Models\Therapist;
@@ -58,9 +57,8 @@ class LibraryItemController extends Controller
     public function edit(?LibraryItem $library = null): Response
     {
         return Inertia::render('Library/Edit', [
-            'item' => $library?->load('categories:id', 'focusTopics:id', 'media'),
+            'item' => $library?->load('categories:id', 'media'),
             'categories' => LibraryCategory::orderBy('order')->get(['id', 'label']),
-            'focusTopics' => FocusTopic::orderBy('order')->get(['id', 'title']),
             'therapists' => Therapist::orderBy('name')->get(['id', 'name']),
         ]);
     }
@@ -105,9 +103,6 @@ class LibraryItemController extends Controller
     {
         if ($request->has('category_ids')) {
             $item->categories()->sync($request->input('category_ids', []));
-        }
-        if ($request->has('focus_ids')) {
-            $item->focusTopics()->sync($request->input('focus_ids', []));
         }
     }
 

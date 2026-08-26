@@ -3,10 +3,9 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Attributes\Fillable;
-use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 
@@ -26,6 +25,7 @@ use Illuminate\Database\Eloquent\Relations\HasOne;
 class Horse extends Model
 {
     use HasUuids;
+
     protected function casts(): array
     {
         return [
@@ -38,18 +38,6 @@ class Horse extends Model
     public function owner(): BelongsTo
     {
         return $this->belongsTo(User::class, 'owner_id');
-    }
-
-    public function focusTopics(): BelongsToMany
-    {
-        return $this->belongsToMany(FocusTopic::class, 'horse_focus')
-            ->withPivot('extra_label', 'added_at')
-            ->withTimestamps();
-    }
-
-    public function focus(): HasMany
-    {
-        return $this->hasMany(HorseFocus::class);
     }
 
     public function shares(): HasMany
@@ -97,8 +85,8 @@ class Horse extends Model
         return $this->hasMany(IntakeBooking::class);
     }
 
-    public function taskCompletions(): HasMany
+    public function supplementIntakes(): HasMany
     {
-        return $this->hasMany(ProtocolTaskCompletion::class);
+        return $this->hasMany(ProtocolSupplementIntake::class);
     }
 }

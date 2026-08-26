@@ -36,14 +36,6 @@ const therapists = new Table({
   updated_at: column.text,
 });
 
-const focus_topics = new Table({
-  slug: column.text,
-  icon: column.text,
-  title: column.text,
-  description: column.text,
-  order: column.integer,
-});
-
 const horses = new Table({
   owner_id: column.text,
   name: column.text,
@@ -59,13 +51,6 @@ const horses = new Table({
   created_at: column.text,
   updated_at: column.text,
 }, { indexes: { byOwner: ['owner_id'] } });
-
-const horse_focus = new Table({
-  horse_id: column.text,
-  focus_topic_id: column.text,
-  extra_label: column.text,
-  added_at: column.text,
-}, { indexes: { byHorse: ['horse_id'] } });
 
 const horse_shares = new Table({
   horse_id: column.text,
@@ -172,25 +157,43 @@ const protocol_advice = new Table({
   order: column.integer,
 }, { indexes: { byAnalysis: ['analysis_id'] } });
 
-const protocol_tasks = new Table({
+const protocol_voeding_adviezen = new Table({
   protocol_id: column.text,
-  phase_id: column.text,
-  label: column.text,
-  meta: column.text,
-  kind: column.text,
-  order: column.integer,
-  active_from: column.text,
-  active_until: column.text,
-  reference_item_id: column.text,
+  voeding_advies_id: column.text,
+  title: column.text,
+  description: column.text,
+  layout: column.text,
 }, { indexes: { byProtocol: ['protocol_id'] } });
 
-const protocol_task_completions = new Table({
-  task_id: column.text,
+const protocol_management_adviezen = new Table({
+  protocol_id: column.text,
+  management_advies_id: column.text,
+  title: column.text,
+  description: column.text,
+  layout: column.text,
+}, { indexes: { byProtocol: ['protocol_id'] } });
+
+const protocol_beweging_adviezen = new Table({
+  protocol_id: column.text,
+  beweging_advies_id: column.text,
+  title: column.text,
+  description: column.text,
+  layout: column.text,
+}, { indexes: { byProtocol: ['protocol_id'] } });
+
+const protocol_supplement_intakes = new Table({
+  protocol_phase_supplement_id: column.text,
   horse_id: column.text,
   date: column.text,
+  dosage: column.text,
   done: column.integer,
-  done_at: column.text,
-}, { indexes: { byTaskDate: ['task_id', 'date'], byHorseDate: ['horse_id', 'date'] } });
+  taken_at: column.text,
+}, {
+  indexes: {
+    bySupplementDate: ['protocol_phase_supplement_id', 'date'],
+    byHorseDate: ['horse_id', 'date'],
+  },
+});
 
 const observations = new Table({
   horse_id: column.text,
@@ -199,7 +202,6 @@ const observations = new Table({
   note: column.text,
   mood: column.integer,
   stool_score: column.text,
-  protocol_task_id: column.text,
 }, { indexes: { byHorse: ['horse_id'] } });
 
 const observation_photos = new Table({
@@ -288,11 +290,6 @@ const library_categories = new Table({
 const library_item_categories = new Table({
   item_id: column.text,
   category_id: column.text,
-});
-
-const library_item_focus = new Table({
-  item_id: column.text,
-  focus_topic_id: column.text,
 });
 
 const library_bookmarks = new Table({
@@ -481,6 +478,57 @@ const intake_bookings = new Table({
   notes: column.text,
 }, { indexes: { byUser: ['user_id'] } });
 
+const intake_questionnaires = new Table({
+  slug: column.text,
+  name: column.text,
+  disclaimer_short: column.text,
+  disclaimer_long: column.text,
+  none_options: column.text,
+  active: column.integer,
+  created_at: column.text,
+  updated_at: column.text,
+});
+
+const intake_sections = new Table({
+  questionnaire_id: column.text,
+  key: column.text,
+  order: column.integer,
+  title: column.text,
+  intro: column.text,
+  minutes: column.integer,
+  icon: column.text,
+  subtitle: column.text,
+  active: column.integer,
+  created_at: column.text,
+  updated_at: column.text,
+}, { indexes: { byQuestionnaire: ['questionnaire_id'] } });
+
+const intake_fields = new Table({
+  section_id: column.text,
+  key: column.text,
+  order: column.integer,
+  label: column.text,
+  type: column.text,
+  hint: column.text,
+  required: column.integer,
+  optional: column.integer,
+  unit: column.text,
+  step: column.real,
+  tall: column.integer,
+  lines: column.integer,
+  placeholder: column.text,
+  link: column.text,
+  options: column.text,
+  show_if: column.text,
+  flag_if: column.text,
+  critical_if: column.text,
+  protocol_if: column.text,
+  repeater_sub: column.text,
+  active: column.integer,
+  created_at: column.text,
+  updated_at: column.text,
+}, { indexes: { bySection: ['section_id'] } });
+
 // Protocol-intake form: one response row per user, with one answer row per
 // answered question. `value` holds the JSON-encoded answer (scalar, multi
 // array, or repeater rows) — see lib/intake/store.tsx.
@@ -506,9 +554,7 @@ const intake_answers = new Table({
 export const AppSchema = new Schema({
   users,
   therapists,
-  focus_topics,
   horses,
-  horse_focus,
   horse_shares,
   horse_stats,
   timeline_events,
@@ -519,8 +565,10 @@ export const AppSchema = new Schema({
   protocol_phase_supplement_weeks,
   protocol_analyses,
   protocol_advice,
-  protocol_tasks,
-  protocol_task_completions,
+  protocol_voeding_adviezen,
+  protocol_management_adviezen,
+  protocol_beweging_adviezen,
+  protocol_supplement_intakes,
   observations,
   observation_photos,
   products,
@@ -532,7 +580,6 @@ export const AppSchema = new Schema({
   library_article_sections,
   library_categories,
   library_item_categories,
-  library_item_focus,
   library_bookmarks,
   library_progress,
   seasonal_tips,
@@ -553,6 +600,9 @@ export const AppSchema = new Schema({
   chat_messages,
   nova_fallback_replies,
   intake_bookings,
+  intake_questionnaires,
+  intake_sections,
+  intake_fields,
   intake_responses,
   intake_answers,
 });

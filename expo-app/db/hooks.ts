@@ -11,6 +11,12 @@ import { useQuery, usePowerSync } from '@powersync/react';
 import { APP_STRINGS } from './app-strings';
 import { IDS } from './ids';
 import { useDb } from './provider';
+import {
+  ACTIVE_PROTOCOL_SQL,
+  buildProtocolPlan,
+  type ProtocolSupplementIntakeRow,
+} from '@/lib/protocol-plan';
+import { groupProtocolAdvice } from '@/lib/protocol-advice';
 
 // RFC4122 v4 UUID — Postgres `uuid` columns reject anything else.
 const newId = (): string =>
@@ -32,7 +38,7 @@ const BOOLEAN_KEYS = new Set([
   'notificationsOn', 'verified', 'isNow', 'bookmarked', 'isPlus', 'isFeatured',
   'isDefault', 'completed', 'active', 'hasExpertReply', 'authorIsExpert',
   'isRecommended', 'reminderProtocol', 'reminderCommunity',
-  'reminderSeasonalTips', 'done',
+  'reminderSeasonalTips', 'done', 'required', 'addByDefault',
 ]);
 
 function camelRow(row: Record<string, any>): Indexed {
@@ -103,36 +109,6 @@ export function useHorsesByOwner(ownerId?: string): Indexed[] {
   return useCamelQuery(`SELECT * FROM horses WHERE owner_id = ?`, [target]);
 }
 
-export function useFocusForHorse(horseId?: string) {
-  const fallback = useCurrentHorseId();
-  const id = horseId ?? fallback;
-  const joins = useCamelQuery(
-    `SELECT hf.*, ft.id AS topic_id, ft.icon AS topic_icon, ft.title AS topic_title,
-            ft.description AS topic_description, ft."order" AS topic_order
-     FROM horse_focus hf
-     LEFT JOIN focus_topics ft ON ft.id = hf.focus_topic_id
-     WHERE hf.horse_id = ?`,
-    [id],
-  );
-  return joins.map((j: any) => ({
-    id: j.id,
-    horseId: j.horseId,
-    focusTopicId: j.focusTopicId,
-    extraLabel: j.extraLabel,
-    topic: {
-      id: j.topicId,
-      icon: j.topicIcon,
-      title: j.topicTitle,
-      description: j.topicDescription,
-      order: j.topicOrder,
-    } as Indexed,
-  }));
-}
-
-export function useFocusTopics() {
-  return sorted(useCamelQuery(`SELECT * FROM focus_topics`));
-}
-
 export function useHorseShares(horseId?: string) {
   const fallback = useCurrentHorseId();
   const id = horseId ?? fallback;
@@ -172,10 +148,7 @@ export function useTimeline(horseId?: string) {
 export function useActiveProtocolForHorse(horseId?: string) {
   const fallback = useCurrentHorseId();
   const id = horseId ?? fallback;
-  const rows = useCamelQuery(
-    `SELECT * FROM protocols WHERE horse_id = ? AND status = 'active' LIMIT 1`,
-    [id],
-  );
+  const rows = useCamelQuery(ACTIVE_PROTOCOL_SQL, [id]);
   return rows[0] ?? null;
 }
 
@@ -184,18 +157,64 @@ export function useProtocolPhases(protocolId: string) {
 }
 
 export function useProtocolPhaseWeeks(phaseId: string) {
-  return sorted(useCamelQuery(`SELECT * FROM protocol_phase_weeks WHERE protocol_phase_id = ?`, [phaseId]));
+  return useCamelQuery(
+    `SELECT * FROM protocol_phase_weeks WHERE protocol_phase_id = ? ORDER BY number`,
+    [phaseId],
+  );
 }
 
 export function useProtocolPhaseSupplements(phaseId: string) {
-  return sorted(useCamelQuery(`SELECT * FROM protocol_phase_supplements WHERE protocol_phase_id = ?`, [phaseId]));
+  return useCamelQuery(
+    `SELECT * FROM protocol_phase_supplements WHERE protocol_phase_id = ? ORDER BY name`,
+    [phaseId],
+  );
 }
 
 export function useProtocolPhaseSupplementWeeks(protocolPhaseSupplementId: string) {
-  return sorted(useCamelQuery(
-    `SELECT * FROM protocol_phase_supplement_weeks WHERE protocol_phase_supplement_id = ?`,
+  return useCamelQuery(
+    `SELECT links.*
+     FROM protocol_phase_supplement_weeks links
+     JOIN protocol_phase_weeks weeks ON weeks.id = links.protocol_phase_week_id
+     WHERE links.protocol_phase_supplement_id = ?
+     ORDER BY weeks.number`,
     [protocolPhaseSupplementId],
-  ));
+  );
+}
+
+export function useProtocolPlan(protocolId: string) {
+  const phases = useProtocolPhases(protocolId);
+  const weeks = useCamelQuery(
+    `SELECT weeks.*
+     FROM protocol_phase_weeks weeks
+     JOIN protocol_phases phases ON phases.id = weeks.protocol_phase_id
+     WHERE phases.protocol_id = ?
+     ORDER BY phases."order", weeks.number`,
+    [protocolId],
+  );
+  const supplements = useCamelQuery(
+    `SELECT supplements.*
+     FROM protocol_phase_supplements supplements
+     JOIN protocol_phases phases ON phases.id = supplements.protocol_phase_id
+     WHERE phases.protocol_id = ?
+     ORDER BY phases."order", supplements.name`,
+    [protocolId],
+  );
+  const supplementWeeks = useCamelQuery(
+    `SELECT links.*
+     FROM protocol_phase_supplement_weeks links
+     JOIN protocol_phase_supplements supplements
+       ON supplements.id = links.protocol_phase_supplement_id
+     JOIN protocol_phases phases ON phases.id = supplements.protocol_phase_id
+     JOIN protocol_phase_weeks weeks ON weeks.id = links.protocol_phase_week_id
+     WHERE phases.protocol_id = ?
+     ORDER BY phases."order", weeks.number`,
+    [protocolId],
+  );
+
+  return useMemo(
+    () => buildProtocolPlan({ phases, weeks, supplements, supplementWeeks }),
+    [phases, weeks, supplements, supplementWeeks],
+  );
 }
 
 export function useProtocolAnalysis(protocolId: string): (Indexed & { advice: Indexed[] }) | null {
@@ -242,21 +261,35 @@ export function useProtocolAnalysis(protocolId: string): (Indexed & { advice: In
   }, [rows]);
 }
 
-export function useProtocolTasks(protocolId: string) {
-  return sorted(useCamelQuery(`SELECT * FROM protocol_tasks WHERE protocol_id = ?`, [protocolId]));
+export function useProtocolAdvice(protocolId: string) {
+  const voeding = useCamelQuery(
+    'SELECT * FROM protocol_voeding_adviezen WHERE protocol_id = ? ORDER BY title',
+    [protocolId],
+  );
+  const management = useCamelQuery(
+    'SELECT * FROM protocol_management_adviezen WHERE protocol_id = ? ORDER BY title',
+    [protocolId],
+  );
+  const beweging = useCamelQuery(
+    'SELECT * FROM protocol_beweging_adviezen WHERE protocol_id = ? ORDER BY title',
+    [protocolId],
+  );
+
+  return useMemo(
+    () => groupProtocolAdvice({ voeding, management, beweging }),
+    [voeding, management, beweging],
+  );
 }
 
-export function useTaskCompletionsForDate(date: string) {
-  return useCamelQuery(`SELECT * FROM protocol_task_completions WHERE date = ?`, [date]);
+export function useSupplementIntakesForDate(date: string) {
+  return useCamelQuery(
+    `SELECT * FROM protocol_supplement_intakes WHERE date = ?`,
+    [date],
+  ) as ProtocolSupplementIntakeRow[];
 }
 
-export function useTodayTasks(protocolId: string, date: string) {
-  const tasks = useProtocolTasks(protocolId);
-  const completions = useTaskCompletionsForDate(date);
-  return tasks.map((t: any) => {
-    const c = completions.find((x) => x.taskId === t.id);
-    return { ...t, done: !!c?.done, completionId: c?.id, doneAt: c?.doneAt };
-  });
+export function useAllSupplementIntakes() {
+  return useCamelQuery(`SELECT * FROM protocol_supplement_intakes`) as ProtocolSupplementIntakeRow[];
 }
 
 // ---------------------------------------------------------------- scanner
@@ -345,10 +378,6 @@ export function usePlan(id: string): Indexed {
 export function usePlans() {
   return sorted(useCamelQuery(`SELECT * FROM plans`));
 }
-export function useAllTaskCompletions() {
-  return useCamelQuery(`SELECT * FROM protocol_task_completions`);
-}
-
 // ---------------------------------------------------------------- settings
 export function useAccountSettings() {
   const uid = useCurrentUserId();
@@ -398,45 +427,31 @@ export function useStoreMutations() {
   const powersync = usePowerSync();
   return useMemo(
     () => ({
-      async toggleTaskCompletion(taskId: string, date: string, horseId: string) {
-        // Look up any existing completion synchronously; if found toggle in
-        // place, otherwise INSERT a fresh UUID row. The (task_id, date)
-        // unique constraint on the server keeps things consistent.
+      async toggleSupplementIntake(
+        protocolPhaseSupplementId: string,
+        dosage: string | null,
+        date: string,
+        horseId: string,
+      ) {
         const existing = await powersync.getOptional<{ id: string; done: number }>(
-          `SELECT id, done FROM protocol_task_completions WHERE task_id = ? AND date = ? LIMIT 1`,
-          [taskId, date],
+          `SELECT id, done FROM protocol_supplement_intakes
+           WHERE protocol_phase_supplement_id = ? AND date = ? LIMIT 1`,
+          [protocolPhaseSupplementId, date],
         );
         if (existing) {
           const next = existing.done ? 0 : 1;
           await powersync.execute(
-            `UPDATE protocol_task_completions SET done = ?, done_at = ? WHERE id = ?`,
-            [next, next ? new Date().toISOString() : '', existing.id],
+            `UPDATE protocol_supplement_intakes SET done = ?, taken_at = ? WHERE id = ?`,
+            [next, next ? new Date().toISOString() : null, existing.id],
           );
         } else {
           await powersync.execute(
-            `INSERT INTO protocol_task_completions (id, task_id, horse_id, date, done, done_at)
-             VALUES (?, ?, ?, ?, 1, ?)`,
-            [newId(), taskId, horseId, date, new Date().toISOString()],
+            `INSERT INTO protocol_supplement_intakes
+               (id, protocol_phase_supplement_id, horse_id, date, dosage, done, taken_at)
+             VALUES (?, ?, ?, ?, ?, 1, ?)`,
+            [newId(), protocolPhaseSupplementId, horseId, date, dosage, new Date().toISOString()],
           );
         }
-      },
-      async addHorseFocus(horseId: string, focusTopicId: string) {
-        const existing = await powersync.getOptional<{ id: string }>(
-          `SELECT id FROM horse_focus WHERE horse_id = ? AND focus_topic_id = ? LIMIT 1`,
-          [horseId, focusTopicId],
-        );
-        if (existing) return;
-        await powersync.execute(
-          `INSERT INTO horse_focus (id, horse_id, focus_topic_id, added_at, extra_label)
-           VALUES (?, ?, ?, ?, '')`,
-          [newId(), horseId, focusTopicId, new Date().toISOString()],
-        );
-      },
-      async removeHorseFocus(horseId: string, focusTopicId: string) {
-        await powersync.execute(
-          `DELETE FROM horse_focus WHERE horse_id = ? AND focus_topic_id = ?`,
-          [horseId, focusTopicId],
-        );
       },
       async setOnboarded(value: boolean, userId: string) {
         if (!value || !userId) return;

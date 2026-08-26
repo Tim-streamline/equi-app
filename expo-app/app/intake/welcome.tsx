@@ -11,11 +11,12 @@ import { X, ClipboardList, Camera, Heart, ArrowRight } from 'lucide-react-native
 import { Button } from '@/components/ui/Button';
 import { IconButton } from '@/components/ui/IconButton';
 import { useCurrentUser, useHorse } from '@/db/hooks';
-import { INTAKE_SCHEMA, INTAKE_DISCLAIMER_LONG } from '@/lib/intake/schema';
+import { useIntakeSchema } from '@/lib/intake/schema-provider';
 
 export default function IntakeWelcome() {
   const user = useCurrentUser();
   const horse = useHorse();
+  const { schema, disclaimerLong } = useIntakeSchema();
   const firstName = ((user.name as string) ?? 'er').split(' ')[0];
   const horseName = (horse.name as string) ?? 'je paard';
 
@@ -49,7 +50,7 @@ export default function IntakeWelcome() {
             Vertel me over <Text className="text-mint-300">{horseName}</Text>.
           </Text>
           <Text className="mb-4 text-[14px] leading-[22px] text-white/80">
-            {INTAKE_SCHEMA.length - 1} korte secties. Tussentijds opslaan kan altijd; je hoeft
+            {Math.max(0, schema.length - 1)} korte secties. Tussentijds opslaan kan altijd; je hoeft
             het niet in één keer af te ronden.
           </Text>
           <View className="mb-6 rounded-2xl bg-mint-500/20 p-4">
@@ -92,7 +93,7 @@ export default function IntakeWelcome() {
 
           <View className="rounded-2xl bg-white/10 p-4">
             <Text className="text-[12.5px] leading-[19px] text-white/80">
-              {INTAKE_DISCLAIMER_LONG}
+              {disclaimerLong}
             </Text>
           </View>
         </ScrollView>

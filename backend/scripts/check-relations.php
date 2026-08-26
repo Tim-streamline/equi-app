@@ -6,9 +6,7 @@ use App\Models\CommunityCategory;
 use App\Models\CommunityPost;
 use App\Models\CommunityReaction;
 use App\Models\CommunityReply;
-use App\Models\FocusTopic;
 use App\Models\Horse;
-use App\Models\HorseFocus;
 use App\Models\LibraryCategory;
 use App\Models\LibraryItem;
 use App\Models\Plan;
@@ -30,16 +28,12 @@ $user = User::create([
 $therapist = Therapist::create(['name' => 'Test Therapist']);
 $horse = Horse::create(['owner_id' => $user->id, 'name' => 'Thunder']);
 
-$focus = FocusTopic::create(['slug' => 'rel-test-'.time(), 'title' => 'Test', 'order' => 0]);
-HorseFocus::create(['horse_id' => $horse->id, 'focus_topic_id' => $focus->id]);
-
 $protocol = Protocol::create(['horse_id' => $horse->id, 'therapist_id' => $therapist->id, 'title' => 'P', 'status' => 'active']);
 $phase = ProtocolPhase::create(['protocol_id' => $protocol->id, 'order' => 0, 'title' => 'Phase 1', 'state' => 'active']);
 
 $cat = LibraryCategory::create(['slug' => 'rel-c-'.time(), 'label' => 'Cat']);
 $item = LibraryItem::create(['slug' => 'rel-i-'.time(), 'format' => 'article', 'title' => 'Item']);
 $item->categories()->attach($cat);
-$item->focusTopics()->attach($focus);
 
 $plan = Plan::create(['slug' => 'rel-p-'.time(), 'name' => 'Plus', 'price_cents' => 1200, 'interval' => 'monthly']);
 PlanBenefit::create(['plan_id' => $plan->id, 'label' => 'Unlimited scans', 'order' => 0]);
@@ -68,11 +62,9 @@ CommunityReaction::create([
 $checks = [
     'user.horses' => $user->horses->first()?->name === 'Thunder',
     'horse.owner' => $horse->owner->is($user),
-    'horse.focusTopics (pivot)' => $horse->focusTopics->first()?->id === $focus->id,
     'horse.activeProtocol' => $horse->activeProtocol->is($protocol),
     'protocol.phases' => $protocol->phases->first()?->title === 'Phase 1',
     'item.categories' => $item->categories->first()?->id === $cat->id,
-    'item.focusTopics' => $item->focusTopics->first()?->id === $focus->id,
     'plan.benefits' => $plan->benefits->first()?->label === 'Unlimited scans',
     'subscription.plan' => $sub->plan->is($plan),
     'subscription.user' => $sub->user->is($user),

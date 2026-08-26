@@ -2,8 +2,8 @@
 
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
-use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
@@ -17,7 +17,6 @@ return new class extends Migration
             $table->text('note')->nullable();
             $table->unsignedTinyInteger('mood')->nullable(); // 1..5
             $table->string('stool_score', 8)->nullable();
-            $table->foreignUuid('protocol_task_id')->nullable()->constrained('protocol_tasks')->nullOnDelete();
             $table->timestamps();
             $table->index(['horse_id', 'date']);
         });

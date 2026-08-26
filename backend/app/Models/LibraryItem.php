@@ -60,12 +60,6 @@ class LibraryItem extends Model
             ->withTimestamps();
     }
 
-    public function focusTopics(): BelongsToMany
-    {
-        return $this->belongsToMany(FocusTopic::class, 'library_item_focus', 'item_id', 'focus_topic_id')
-            ->withTimestamps();
-    }
-
     public function bookmarks(): HasMany
     {
         return $this->hasMany(LibraryBookmark::class, 'item_id');

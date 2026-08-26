@@ -1,0 +1,662 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+<template id="__bundler_thumbnail" data-bg-color="#0D5C5B">
+  <svg viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg">
+    <rect width="120" height="120" fill="#0D5C5B"/>
+    <rect x="30" y="24" width="60" height="72" rx="10" fill="#FBF8F3"/>
+    <rect x="40" y="38" width="40" height="6" rx="3" fill="#18BAB0"/>
+    <rect x="40" y="52" width="28" height="5" rx="2.5" fill="#99E8DF"/>
+    <rect x="40" y="63" width="34" height="5" rx="2.5" fill="#99E8DF"/>
+    <circle cx="46" cy="80" r="5" fill="#18BAB0"/>
+    <rect x="56" y="77" width="24" height="5" rx="2.5" fill="#C9F3EE"/>
+  </svg>
+</template>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="" />
+<link href="https://fonts.googleapis.com/css2?family=Source+Sans+3:ital,wght@0,400;0,500;0,600;0,700;1,400;1,600&display=swap" rel="stylesheet" />
+<style>
+  html, body { margin: 0; padding: 0; background: #EFE8DE; font-family: 'Source Sans 3', system-ui, sans-serif; color: #1B2A2A; -webkit-font-smoothing: antialiased; }
+  a { color: #127A79; text-decoration: none; }
+  a:hover { color: #108A82; }
+  * { box-sizing: border-box; }
+  ::-webkit-scrollbar { width: 0; height: 0; }
+</style>
+</helmet>
+
+<div style="display: flex; gap: 56px; align-items: flex-start; justify-content: center; padding: 56px 40px 80px; min-height: 100vh; background: #EFE8DE;">
+
+  <div style="width: 300px; padding-top: 28px; display: flex; flex-direction: column; gap: 28px;">
+    <div>
+      <div style="font-size: 12px; font-weight: 600; letter-spacing: 0.14em; text-transform: uppercase; color: #108A82; margin-bottom: 10px;">EquiApp · Plus-abonnement</div>
+      <div style="font-family: 'Source Sans 3'; font-weight: 600; font-size: 34px; line-height: 1.1; letter-spacing: 0.02em; color: #127A79; text-transform: uppercase;">Het protocol<br />van jouw paard</div>
+      <p style="font-size: 15px; line-height: 1.6; color: rgba(27,42,42,0.7); margin: 14px 0 0;">Het volledige adviesdocument wordt één dagelijkse lijst. De app rekent zelf uit welke stap actief is en welke dosering vandaag geldt, de rest van het schema blijft uit beeld.</p>
+    </div>
+
+    <div style="display: flex; flex-direction: column; gap: 16px;">
+      <div style="display: flex; gap: 12px; align-items: flex-start;">
+        <div style="width: 26px; height: 26px; border-radius: 999px; background: #C9F3EE; color: #0E6F69; display: grid; place-items: center; font-size: 12px; font-weight: 700; flex-shrink: 0;">1</div>
+        <div><div style="font-weight: 600; font-size: 14.5px;">Vandaag is de startpagina</div><div style="font-size: 13.5px; line-height: 1.5; color: rgba(27,42,42,0.6);">Alleen wat vandaag gegeven wordt, met de dosering van vandaag. Opbouwweken rekent de app door.</div></div>
+      </div>
+      <div style="display: flex; gap: 12px; align-items: flex-start;">
+        <div style="width: 26px; height: 26px; border-radius: 999px; background: #C9F3EE; color: #0E6F69; display: grid; place-items: center; font-size: 12px; font-weight: 700; flex-shrink: 0;">2</div>
+        <div><div style="font-weight: 600; font-size: 14.5px;">Kalender bewaakt de trouw</div><div style="font-size: 13.5px; line-height: 1.5; color: rgba(27,42,42,0.6);">Niet-afgevinkte dagen kleuren oranje. Na drie dagen vraagt de app of het wél gegeven is.</div></div>
+      </div>
+      <div style="display: flex; gap: 12px; align-items: flex-start;">
+        <div style="width: 26px; height: 26px; border-radius: 999px; background: #C9F3EE; color: #0E6F69; display: grid; place-items: center; font-size: 12px; font-weight: 700; flex-shrink: 0;">3</div>
+        <div><div style="font-weight: 600; font-size: 14.5px;">Management en voeding apart</div><div style="font-size: 13.5px; line-height: 1.5; color: rgba(27,42,42,0.6);">Alles wat niet dagelijks afgevinkt hoeft te worden staat als naslag onder een eigen tab.</div></div>
+      </div>
+      <div style="display: flex; gap: 12px; align-items: flex-start;">
+        <div style="width: 26px; height: 26px; border-radius: 999px; background: #C9F3EE; color: #0E6F69; display: grid; place-items: center; font-size: 12px; font-weight: 700; flex-shrink: 0;">4</div>
+        <div><div style="font-weight: 600; font-size: 14.5px;">Bestellijst vooraf</div><div style="font-size: 13.5px; line-height: 1.5; color: rgba(27,42,42,0.6);">Totaal aantal grammen per product voor het hele protocol, via het lijst-icoon rechtsboven.</div></div>
+      </div>
+    </div>
+
+    <div style="border-top: 1px solid rgba(27,42,42,0.15); padding-top: 18px; font-size: 13px; line-height: 1.55; color: rgba(27,42,42,0.5);">Voorbeeldinhoud uit het protocol van Boaz, week 3 van 9, waarin stap 2 (darmgezondheid) start.</div>
+  </div>
+
+  <div style="width: 390px; height: 844px; background: #FBF8F3; border-radius: 46px; position: relative; overflow: hidden; box-shadow: 0 0 0 11px #1B2A2A, 0 40px 90px rgba(18,122,121,0.28); display: flex; flex-direction: column; flex-shrink: 0;">
+
+    <div style="height: 52px; display: flex; align-items: center; justify-content: space-between; padding: 0 30px 0 34px; font-size: 14px; font-weight: 600; flex-shrink: 0; z-index: 3;">
+      <span>9:41</span>
+      <span style="display: flex; align-items: center; gap: 6px;">
+        <svg width="17" height="12" viewBox="0 0 17 12" fill="currentColor"><rect x="0" y="7" width="3" height="5" rx="1"/><rect x="4.5" y="5" width="3" height="7" rx="1"/><rect x="9" y="2.5" width="3" height="9.5" rx="1"/><rect x="13.5" y="0" width="3" height="12" rx="1"/></svg>
+        <svg width="16" height="12" viewBox="0 0 16 12" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><path d="M1 4.2a10 10 0 0 1 14 0"/><path d="M3.6 7a6.4 6.4 0 0 1 8.8 0"/><circle cx="8" cy="10" r="1.1" fill="currentColor" stroke="none"/></svg>
+        <svg width="24" height="12" viewBox="0 0 24 12" fill="none"><rect x="0.6" y="0.6" width="19" height="10.8" rx="3" stroke="currentColor" stroke-opacity="0.4"/><rect x="2.4" y="2.4" width="14" height="7.2" rx="1.8" fill="currentColor"/><path d="M21.4 4.2v3.6a2.6 2.6 0 0 0 0-3.6Z" fill="currentColor" fill-opacity="0.5"/></svg>
+      </span>
+    </div>
+
+    <div style="padding: 4px 20px 14px; flex-shrink: 0; background: #FBF8F3;">
+      <div style="display: flex; align-items: flex-start; justify-content: space-between; gap: 12px;">
+        <div>
+          <div style="font-family: 'Source Sans 3'; font-weight: 700; font-size: 26px; line-height: 1.1; color: #1B2A2A;">{{ horseName }}</div>
+          <div style="font-size: 13px; color: rgba(27,42,42,0.55); margin-top: 3px;">{{ screenSub }}</div>
+        </div>
+        <div style="display: flex; gap: 8px;">
+          <button onClick="{{ openOrders }}" style="width: 38px; height: 38px; border-radius: 12px; border: 1px solid rgba(27,42,42,0.14); background: #FFFFFF; color: #127A79; display: grid; place-items: center; cursor: pointer;" style-hover="border-color: #18BAB0;">
+            <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4Z"/><path d="M3 6h18"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>
+          </button>
+          <div style="width: 38px; height: 38px; border-radius: 999px; background: linear-gradient(140deg, #30C7BA, #0D5C5B); color: white; display: grid; place-items: center; font-weight: 700; font-size: 14px;">K</div>
+        </div>
+      </div>
+    </div>
+
+
+    <div style="display: flex; gap: 18px; padding: 4px 20px 0; flex-shrink: 0; overflow-x: auto; border-bottom: 1px solid rgba(27,42,42,0.1); background: #FBF8F3;">
+      <button onClick="{{ goVandaag }}" style="background: transparent; border: 0; border-bottom: 2px solid {{ uVandaag }}; padding: 0 0 11px; font-family: inherit; font-size: 13.5px; font-weight: 600; cursor: pointer; white-space: nowrap; color: {{ sVandaag }};">Vandaag</button>
+      <button onClick="{{ goKalender }}" style="background: transparent; border: 0; border-bottom: 2px solid {{ uKalender }}; padding: 0 0 11px; font-family: inherit; font-size: 13.5px; font-weight: 600; cursor: pointer; white-space: nowrap; color: {{ sKalender }};">Kalender</button>
+      <button onClick="{{ goVoeding }}" style="background: transparent; border: 0; border-bottom: 2px solid {{ uVoeding }}; padding: 0 0 11px; font-family: inherit; font-size: 13.5px; font-weight: 600; cursor: pointer; white-space: nowrap; color: {{ sVoeding }};">Voeding</button>
+      <button onClick="{{ goManagement }}" style="background: transparent; border: 0; border-bottom: 2px solid {{ uManagement }}; padding: 0 0 11px; font-family: inherit; font-size: 13.5px; font-weight: 600; cursor: pointer; white-space: nowrap; color: {{ sManagement }};">Management</button>
+      <button onClick="{{ goAnalyse }}" style="background: transparent; border: 0; border-bottom: 2px solid {{ uAnalyse }}; padding: 0 0 11px; font-family: inherit; font-size: 13.5px; font-weight: 600; cursor: pointer; white-space: nowrap; color: {{ sAnalyse }};">Analyse</button>
+    </div>
+
+    <div style="flex: 1; overflow-y: auto; padding: 16px 20px 110px;">
+
+      <sc-if value="{{ isVandaag }}" hint-placeholder-val="{{ true }}">
+        <div style="background: #FFFFFF; border: 1px solid rgba(27,42,42,0.1); border-radius: 20px; padding: 16px 18px; box-shadow: 0 4px 12px rgba(18,122,121,0.06); margin-bottom: 16px;">
+          <div style="display: flex; align-items: center; justify-content: space-between; gap: 12px;">
+            <div>
+              <div style="font-weight: 700; font-size: 16px;">Vandaag afvinken</div>
+              <div style="font-size: 13px; color: rgba(27,42,42,0.55); margin-top: 2px;">{{ doneCount }} van {{ totalCount }} gedaan</div>
+            </div>
+            <div style="font-family: 'Source Sans 3'; font-weight: 700; font-size: 15px; color: #108A82;">{{ donePct }}%</div>
+          </div>
+          <div style="height: 6px; border-radius: 999px; background: rgba(27,42,42,0.09); margin-top: 12px; overflow: hidden;">
+            <div style="height: 100%; border-radius: 999px; background: #18BAB0; width: {{ doneWidth }};"></div>
+          </div>
+        </div>
+
+        <div style="font-size: 11px; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase; color: rgba(27,42,42,0.45); margin-bottom: 10px;">Door de geweekte bijvoeding</div>
+        <div style="display: flex; flex-direction: column; gap: 6px; margin-bottom: 20px;">
+          <sc-for list="{{ feedItems }}" as="it" hint-placeholder-count="6">
+            <div style="background: #FFFFFF; border: 1px solid rgba(27,42,42,0.1); border-radius: 13px; padding: 9px 12px; display: flex; gap: 10px; align-items: center;">
+              <button onClick="{{ it.toggle }}" style="width: 21px; height: 21px; border-radius: 7px; flex-shrink: 0; cursor: pointer; display: grid; place-items: center; border: 2px solid {{ it.boxBorder }}; background: {{ it.boxBg }};">
+                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3.6" stroke-linecap="round" stroke-linejoin="round" style="opacity: {{ it.tickOpacity }};"><path d="M20 6 9 17l-5-5"/></svg>
+              </button>
+              <div onClick="{{ it.open }}" style="flex: 1; cursor: pointer; display: flex; align-items: center; justify-content: space-between; gap: 10px; min-width: 0;">
+                <div style="display: flex; align-items: center; gap: 6px; min-width: 0;">
+                  <span style="font-weight: 600; font-size: 14px; color: {{ it.nameColor }}; text-decoration: {{ it.nameDeco }}; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">{{ it.name }}</span>
+                  <sc-if value="{{ it.hasTag }}" hint-placeholder-val="{{ false }}">
+                    <span style="font-size: 8.5px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; padding: 2px 6px; border-radius: 999px; background: {{ it.tagBg }}; color: {{ it.tagColor }}; flex-shrink: 0;">{{ it.tag }}</span>
+                  </sc-if>
+                </div>
+                <span style="font-family: 'Source Sans 3'; font-weight: 700; font-size: 13px; color: #127A79; white-space: nowrap; font-variant-numeric: tabular-nums; flex-shrink: 0;">{{ it.dose }}</span>
+              </div>
+            </div>
+          </sc-for>
+        </div>
+
+        <div style="background: #FDF4E4; border: 1px solid rgba(217,164,65,0.4); border-radius: 18px; padding: 15px 17px; margin-bottom: 20px;">
+          <div style="display: flex; gap: 10px; align-items: flex-start;">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#B5842B" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink: 0; margin-top: 1px;"><path d="M12 9v4"/><path d="M10.3 3.9 2.4 18a2 2 0 0 0 1.7 3h15.8a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z"/><path d="M12 17h.01"/></svg>
+            <div>
+              <div style="font-weight: 700; font-size: 14.5px; color: #7A5A16;">Let op: volgende week</div>
+              <div style="font-size: 13px; line-height: 1.5; color: rgba(27,42,42,0.65); margin-top: 3px;">Stap 2 begint met drie nieuwe kruiden. Check of je ze al in huis hebt.</div>
+            </div>
+          </div>
+          <div style="display: flex; flex-direction: column; gap: 6px; margin-top: 12px;">
+            <sc-for list="{{ upcomingItems }}" as="it" hint-placeholder-count="3">
+              <div style="display: flex; align-items: center; justify-content: space-between; gap: 10px; background: rgba(255,255,255,0.55); border-radius: 11px; padding: 8px 11px;">
+                <span style="font-size: 13.5px; font-weight: 600; color: #5B4413;">{{ it.name }}</span>
+                <span style="font-family: 'Source Sans 3'; font-weight: 700; font-size: 13px; color: #7A5A16;">{{ it.dose }}</span>
+              </div>
+            </sc-for>
+          </div>
+          <button onClick="{{ openOrders }}" style="width: 100%; margin-top: 12px; padding: 10px; border-radius: 999px; border: 1px solid rgba(217,164,65,0.5); background: transparent; color: #7A5A16; font-family: inherit; font-weight: 600; font-size: 13px; cursor: pointer;">Bekijk de bestellijst</button>
+        </div>
+
+        <div style="font-size: 11px; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase; color: rgba(27,42,42,0.45); margin-bottom: 10px;">Los geven</div>
+        <div style="display: flex; flex-direction: column; gap: 6px; margin-bottom: 16px;">
+          <sc-for list="{{ looseItems }}" as="it" hint-placeholder-count="3">
+            <div style="background: #FFFFFF; border: 1px solid rgba(27,42,42,0.1); border-radius: 13px; padding: 9px 12px; display: flex; gap: 10px; align-items: center;">
+              <button onClick="{{ it.toggle }}" style="width: 21px; height: 21px; border-radius: 7px; flex-shrink: 0; cursor: pointer; display: grid; place-items: center; border: 2px solid {{ it.boxBorder }}; background: {{ it.boxBg }};">
+                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3.6" stroke-linecap="round" stroke-linejoin="round" style="opacity: {{ it.tickOpacity }};"><path d="M20 6 9 17l-5-5"/></svg>
+              </button>
+              <div onClick="{{ it.open }}" style="flex: 1; cursor: pointer; display: flex; align-items: center; justify-content: space-between; gap: 10px; min-width: 0;">
+                <span style="font-weight: 600; font-size: 14px; color: {{ it.nameColor }}; text-decoration: {{ it.nameDeco }}; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">{{ it.name }}</span>
+                <span style="font-family: 'Source Sans 3'; font-weight: 700; font-size: 13px; color: #127A79; white-space: nowrap; flex-shrink: 0;">{{ it.dose }}</span>
+              </div>
+            </div>
+          </sc-for>
+        </div>
+
+        <button onClick="{{ openOrders }}" style="width: 100%; padding: 14px; border-radius: 999px; border: 1px solid rgba(27,42,42,0.14); background: transparent; color: #127A79; font-family: inherit; font-weight: 600; font-size: 14.5px; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px;" style-hover="border-color: #18BAB0; color: #108A82;">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4Z"/><path d="M3 6h18"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>
+          Bekijk de bestellijst
+        </button>
+      </sc-if>
+
+      <sc-if value="{{ isKalender }}" hint-placeholder-val="{{ false }}">
+        <sc-if value="{{ showMissed }}" hint-placeholder-val="{{ true }}">
+          <div style="background: #FDF4E4; border: 1px solid rgba(217,164,65,0.4); border-radius: 20px; padding: 16px 18px; margin-bottom: 16px;">
+            <div style="display: flex; gap: 10px; align-items: flex-start;">
+              <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="#B5842B" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink: 0; margin-top: 1px;"><path d="M12 9v4"/><path d="M10.3 3.9 2.4 18a2 2 0 0 0 1.7 3h15.8a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z"/><path d="M12 17h.01"/></svg>
+              <div>
+                <div style="font-weight: 700; font-size: 15px; color: #7A5A16;">Drie dagen niet afgevinkt</div>
+                <div style="font-size: 13.5px; line-height: 1.5; color: rgba(27,42,42,0.65); margin-top: 3px;">Vr 7, za 8 en zo 9 augustus staan nog open. Heb je het protocol wél gegeven?</div>
+              </div>
+            </div>
+            <div style="display: flex; gap: 8px; margin-top: 14px;">
+              <button onClick="{{ resolveMissedYes }}" style="flex: 1; padding: 11px; border-radius: 999px; border: 0; background: #18BAB0; color: white; font-family: inherit; font-weight: 600; font-size: 13.5px; cursor: pointer;" style-hover="background: #108A82;">Ja, alsnog afvinken</button>
+              <button onClick="{{ resolveMissedNo }}" style="flex: 1; padding: 11px; border-radius: 999px; border: 1px solid rgba(27,42,42,0.18); background: transparent; color: #1B2A2A; font-family: inherit; font-weight: 600; font-size: 13.5px; cursor: pointer;">Nee, overgeslagen</button>
+            </div>
+          </div>
+        </sc-if>
+
+        <div style="background: #FFFFFF; border: 1px solid rgba(27,42,42,0.1); border-radius: 22px; padding: 18px 16px 16px; box-shadow: 0 4px 12px rgba(18,122,121,0.06); margin-bottom: 16px;">
+          <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; padding: 0 4px;">
+            <button style="width: 30px; height: 30px; border-radius: 999px; border: 0; background: transparent; color: rgba(27,42,42,0.4); cursor: pointer; display: grid; place-items: center;">
+              <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg>
+            </button>
+            <div style="font-family: 'Source Sans 3'; font-weight: 700; font-size: 16px;">Augustus 2026</div>
+            <button style="width: 30px; height: 30px; border-radius: 999px; border: 0; background: transparent; color: rgba(27,42,42,0.4); cursor: pointer; display: grid; place-items: center;">
+              <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg>
+            </button>
+          </div>
+          <div style="display: grid; grid-template-columns: repeat(7, 1fr); gap: 5px;">
+            <div style="text-align: center; font-size: 10.5px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: rgba(27,42,42,0.4); padding-bottom: 4px;">ma</div>
+            <div style="text-align: center; font-size: 10.5px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: rgba(27,42,42,0.4); padding-bottom: 4px;">di</div>
+            <div style="text-align: center; font-size: 10.5px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: rgba(27,42,42,0.4); padding-bottom: 4px;">wo</div>
+            <div style="text-align: center; font-size: 10.5px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: rgba(27,42,42,0.4); padding-bottom: 4px;">do</div>
+            <div style="text-align: center; font-size: 10.5px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: rgba(27,42,42,0.4); padding-bottom: 4px;">vr</div>
+            <div style="text-align: center; font-size: 10.5px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: rgba(27,42,42,0.4); padding-bottom: 4px;">za</div>
+            <div style="text-align: center; font-size: 10.5px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: rgba(27,42,42,0.4); padding-bottom: 4px;">zo</div>
+            <sc-for list="{{ days }}" as="d" hint-placeholder-count="35">
+              <button onClick="{{ d.select }}" style="aspect-ratio: 1; border-radius: 12px; border: 1.5px solid {{ d.border }}; background: {{ d.bg }}; color: {{ d.color }}; font-family: inherit; font-weight: {{ d.weight }}; font-size: 13.5px; cursor: pointer; display: grid; place-items: center; font-variant-numeric: tabular-nums;">{{ d.label }}</button>
+            </sc-for>
+          </div>
+          <div style="display: flex; gap: 14px; margin-top: 14px; padding: 0 4px; flex-wrap: wrap;">
+            <span style="display: inline-flex; align-items: center; gap: 6px; font-size: 11.5px; color: rgba(27,42,42,0.55);"><i style="width: 10px; height: 10px; border-radius: 4px; background: #18BAB0; display: inline-block;"></i>Compleet</span>
+            <span style="display: inline-flex; align-items: center; gap: 6px; font-size: 11.5px; color: rgba(27,42,42,0.55);"><i style="width: 10px; height: 10px; border-radius: 4px; background: #99E8DF; display: inline-block;"></i>Deels</span>
+            <span style="display: inline-flex; align-items: center; gap: 6px; font-size: 11.5px; color: rgba(27,42,42,0.55);"><i style="width: 10px; height: 10px; border-radius: 4px; background: #E8A33C; display: inline-block;"></i>Gemist</span>
+          </div>
+        </div>
+
+        <div style="font-size: 11px; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase; color: rgba(27,42,42,0.45); margin-bottom: 10px;">Verloop van het protocol, tik voor uitleg</div>
+        <div style="display: flex; flex-direction: column; gap: 8px;">
+          <button onClick="{{ openStep1 }}" style="width: 100%; text-align: left; background: #FFFFFF; border: 1px solid rgba(27,42,42,0.1); border-radius: 16px; padding: 13px 15px; display: flex; align-items: center; justify-content: space-between; gap: 10px; font-family: inherit; cursor: pointer;">
+            <div><div style="font-weight: 600; font-size: 14.5px; color: #1B2A2A;">Stap 1: maag verzorgen</div><div style="font-size: 12.5px; color: rgba(27,42,42,0.5); margin-top: 2px;">Week 1 t/m 6</div></div>
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <span style="font-size: 10px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; padding: 5px 10px; border-radius: 999px; background: #EAFBF9; color: #0E6F69;">Loopt</span>
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="rgba(27,42,42,0.35)" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg>
+            </div>
+          </button>
+          <button onClick="{{ openStep2 }}" style="width: 100%; text-align: left; background: #EAFBF9; border: 1.5px solid #18BAB0; border-radius: 16px; padding: 13px 15px; display: flex; align-items: center; justify-content: space-between; gap: 10px; font-family: inherit; cursor: pointer;">
+            <div><div style="font-weight: 700; font-size: 14.5px; color: #1B2A2A;">Stap 2: darmgezondheid</div><div style="font-size: 12.5px; color: rgba(27,42,42,0.55); margin-top: 2px;">Week 3 t/m 8 · start vandaag</div></div>
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <span style="font-size: 10px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; padding: 5px 10px; border-radius: 999px; background: #18BAB0; color: white;">Nieuw</span>
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#108A82" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg>
+            </div>
+          </button>
+          <button onClick="{{ openStepContact }}" style="width: 100%; text-align: left; background: #FFFFFF; border: 1px solid rgba(27,42,42,0.1); border-radius: 16px; padding: 13px 15px; display: flex; align-items: center; justify-content: space-between; gap: 10px; font-family: inherit; cursor: pointer;">
+            <div><div style="font-weight: 600; font-size: 14.5px; color: #1B2A2A;">Contactmoment</div><div style="font-size: 12.5px; color: rgba(27,42,42,0.5); margin-top: 2px;">Week 7 · update sturen</div></div>
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <span style="font-size: 10px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; padding: 5px 10px; border-radius: 999px; background: rgba(27,42,42,0.07); color: rgba(27,42,42,0.5);">Over 4 wk</span>
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="rgba(27,42,42,0.35)" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg>
+            </div>
+          </button>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{ isVoeding }}" hint-placeholder-val="{{ false }}">
+        <div style="background: #0D5C5B; border-radius: 20px; padding: 18px 20px; color: #FBF8F3; margin-bottom: 12px;">
+          <div style="font-size: 10.5px; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase; color: #99E8DF; margin-bottom: 8px;">Ruwvoer, de basis</div>
+          <div style="display: flex; align-items: baseline; gap: 8px;">
+            <div style="font-family: 'Source Sans 3'; font-weight: 700; font-size: 27px; line-height: 1;">{{ hayMin }} – {{ hayMax }} kg</div>
+            <div style="font-size: 12px; font-weight: 500; color: rgba(255,255,255,0.65);">per 24 uur</div>
+          </div>
+          <div style="font-size: 12px; line-height: 1.55; color: rgba(255,255,255,0.72); margin-top: 8px;">2 tot 3 kg ruwvoer per 100 kg gewenst lichaamsgewicht. Bij een streefgewicht van {{ targetWeight }} kg komt dat uit op {{ hayMin }} tot {{ hayMax }} kg per dag. Maximaal 1 uur leegstand, ook 's nachts, liever geen.</div>
+          <div style="display: flex; gap: 8px; margin-top: 14px; padding-top: 14px; border-top: 1px solid rgba(255,255,255,0.14);">
+            <div style="flex: 1; background: rgba(255,255,255,0.08); border-radius: 10px; padding: 8px 10px;">
+              <div style="font-size: 9.5px; color: rgba(255,255,255,0.6); letter-spacing: 0.06em; text-transform: uppercase;">Suiker</div>
+              <div style="font-weight: 700; font-size: 14px; margin-top: 2px;">onder 7%</div>
+            </div>
+            <div style="flex: 1; background: rgba(255,255,255,0.08); border-radius: 10px; padding: 8px 10px;">
+              <div style="font-size: 9.5px; color: rgba(255,255,255,0.6); letter-spacing: 0.06em; text-transform: uppercase;">Eiwit</div>
+              <div style="font-weight: 700; font-size: 14px; margin-top: 2px;">6 – 9%</div>
+            </div>
+          </div>
+        </div>
+
+        <div style="display: flex; align-items: center; gap: 12px; background: #FFFFFF; border: 1px solid rgba(27,42,42,0.1); border-radius: 16px; padding: 12px 14px; margin-bottom: 16px;">
+          <div style="width: 34px; height: 34px; border-radius: 10px; background: #EAFBF9; color: #108A82; display: grid; place-items: center; flex-shrink: 0;">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2Z"/></svg>
+          </div>
+          <div style="flex: 1;">
+            <div style="font-weight: 600; font-size: 13.5px;">Hooi laten analyseren of zelf testen</div>
+            <div style="font-size: 12px; color: rgba(27,42,42,0.55); margin-top: 1px;">Check uitleg in de bibliotheek</div>
+          </div>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="rgba(27,42,42,0.35)" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg>
+        </div>
+
+        <div style="background: #FFFFFF; border: 1px solid rgba(27,42,42,0.1); border-radius: 20px; padding: 18px; margin-bottom: 16px;">
+          <div style="font-weight: 700; font-size: 15.5px; margin-bottom: 12px;">Bijvoeding: goedgekeurd</div>
+          <div style="display: flex; flex-direction: column; gap: 10px;">
+            <div style="display: flex; gap: 10px; align-items: flex-start;">
+              <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#18BAB0" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink: 0; margin-top: 2px;"><path d="M20 6 9 17l-5-5"/></svg>
+              <div><div style="font-weight: 600; font-size: 14px;">Metazoa balancer · 250 g per dag</div><div style="font-size: 12.5px; color: rgba(27,42,42,0.55); line-height: 1.45;">Prima basis met anorganische mineralen. Blijft ongewijzigd.</div></div>
+            </div>
+            <div style="display: flex; gap: 10px; align-items: flex-start;">
+              <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#18BAB0" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink: 0; margin-top: 2px;"><path d="M20 6 9 17l-5-5"/></svg>
+              <div><div style="font-weight: 600; font-size: 14px;">Digestfit Esparcette of Okapi Heucobs</div><div style="font-size: 12.5px; color: rgba(27,42,42,0.55); line-height: 1.45;">Geweekt tot slobber, als drager voor het protocol. Zo min mogelijk, max 250 g.</div></div>
+            </div>
+          </div>
+        </div>
+
+        <div style="background: #FFFFFF; border: 1px solid rgba(27,42,42,0.1); border-radius: 20px; padding: 18px;">
+          <div style="font-weight: 700; font-size: 15.5px; margin-bottom: 4px;">Water</div>
+          <div style="font-size: 13.5px; line-height: 1.55; color: rgba(27,42,42,0.6);">Drinkbakken wekelijks schoonmaken, nu algen en bruine aanslag. Controleer ook de kuip buiten. Goed drinkwater is de voorwaarde voor alles wat het protocol doet.</div>
+          <div style="display: inline-flex; align-items: center; gap: 7px; margin-top: 12px; padding: 7px 12px; border-radius: 999px; background: #EAFBF9; color: #0E6F69; font-size: 12px; font-weight: 600;">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
+            Herinnering elke zondag
+          </div>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{ isManagement }}" hint-placeholder-val="{{ false }}">
+        <div style="background: #FFFFFF; border: 1px solid rgba(27,42,42,0.1); border-radius: 20px; padding: 18px; margin-bottom: 12px;">
+          <div style="display: flex; gap: 12px; align-items: center; margin-bottom: 12px;">
+            <div style="width: 38px; height: 38px; border-radius: 12px; background: #EAFBF9; color: #108A82; display: grid; place-items: center; flex-shrink: 0;">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="13" cy="4" r="2"/><path d="m4 22 5-9 4 3-1 6"/><path d="M10 13 8 9l4-3 3 4 4 1"/></svg>
+            </div>
+            <div>
+              <div style="font-weight: 700; font-size: 16px;">Beweging &amp; weidegang</div>
+            </div>
+          </div>
+          <div style="font-size: 13.5px; line-height: 1.55; color: rgba(27,42,42,0.65); margin-bottom: 14px;">Dagelijks rustig bewegen binnen de grenzen van het revalidatieplan. Voor het gewicht, de benen, de darmen én de luchtwegen.</div>
+          <div style="display: flex; flex-direction: column; gap: 9px;">
+            <div style="display: flex; gap: 10px; align-items: flex-start;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#18BAB0" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink: 0; margin-top: 2px;"><path d="M20 6 9 17l-5-5"/></svg><span style="font-size: 14px; line-height: 1.45;">15 tot 20 minuten stap aan de hand is al waardevol</span></div>
+            <div style="display: flex; gap: 10px; align-items: flex-start;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#18BAB0" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink: 0; margin-top: 2px;"><path d="M20 6 9 17l-5-5"/></svg><span style="font-size: 14px; line-height: 1.45;">Korte stukken tellen mee, het gaat om regelmaat</span></div>
+            <div style="display: flex; gap: 10px; align-items: flex-start;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#18BAB0" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink: 0; margin-top: 2px;"><path d="M20 6 9 17l-5-5"/></svg><span style="font-size: 14px; line-height: 1.45;">Snackwandeling met vers groen: wilg, weegbree, brandnetel</span></div>
+            <div style="display: flex; gap: 10px; align-items: flex-start;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#C2543E" stroke-width="2.6" stroke-linecap="round" style="flex-shrink: 0; margin-top: 3px;"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg><span style="font-size: 14px; line-height: 1.45;">Van het gras afhouden tijdens het protocol</span></div>
+          </div>
+        </div>
+
+        <div style="background: #FFFFFF; border: 1px solid rgba(27,42,42,0.1); border-radius: 20px; padding: 18px; margin-bottom: 12px;">
+          <div style="display: flex; gap: 12px; align-items: center; margin-bottom: 12px;">
+            <div style="width: 38px; height: 38px; border-radius: 12px; background: #EAFBF9; color: #108A82; display: grid; place-items: center; flex-shrink: 0;">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20V10"/><path d="M18 20V4"/><path d="M6 20v-6"/></svg>
+            </div>
+            <div>
+              <div style="font-weight: 700; font-size: 16px;">Training &amp; belasting</div>
+            </div>
+          </div>
+          <div style="display: flex; flex-direction: column; gap: 9px;">
+            <div style="display: flex; gap: 10px; align-items: flex-start;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#18BAB0" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink: 0; margin-top: 2px;"><path d="M20 6 9 17l-5-5"/></svg><span style="font-size: 14px; line-height: 1.45;">Maximaal 3 × 2 minuten draf, zoals in het revalidatieplan</span></div>
+            <div style="display: flex; gap: 10px; align-items: flex-start;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#C2543E" stroke-width="2.6" stroke-linecap="round" style="flex-shrink: 0; margin-top: 3px;"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg><span style="font-size: 14px; line-height: 1.45;">Geen korte volte aan de longeerlijn</span></div>
+            <div style="display: flex; gap: 10px; align-items: flex-start;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#18BAB0" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink: 0; margin-top: 2px;"><path d="M20 6 9 17l-5-5"/></svg><span style="font-size: 14px; line-height: 1.45;">Laat gedrag en herstel het tempo bepalen, niet de kalender</span></div>
+          </div>
+          <div style="background: #FDF4E4; border-radius: 14px; padding: 12px 14px; margin-top: 14px; font-size: 13px; line-height: 1.5; color: #7A5A16;">Hoest bij het aandraven? Noteer het en stuur het door, dit kan met spanning rond het middenrif samenhangen.</div>
+        </div>
+
+        <div style="background: #FFFFFF; border: 1px solid rgba(27,42,42,0.1); border-radius: 20px; padding: 18px;">
+          <div style="display: flex; gap: 12px; align-items: center; margin-bottom: 12px;">
+            <div style="width: 38px; height: 38px; border-radius: 12px; background: #EAFBF9; color: #108A82; display: grid; place-items: center; flex-shrink: 0;">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/></svg>
+            </div>
+            <div>
+              <div style="font-weight: 700; font-size: 16px;">Stress &amp; kudde</div>
+            </div>
+          </div>
+          <div style="display: flex; flex-direction: column; gap: 9px;">
+            <div style="display: flex; gap: 10px; align-items: flex-start;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#18BAB0" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink: 0; margin-top: 2px;"><path d="M20 6 9 17l-5-5"/></svg><span style="font-size: 14px; line-height: 1.45;">Voer in porties gescheiden aanbieden, voernijd met Kenzo</span></div>
+            <div style="display: flex; gap: 10px; align-items: flex-start;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#18BAB0" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink: 0; margin-top: 2px;"><path d="M20 6 9 17l-5-5"/></svg><span style="font-size: 14px; line-height: 1.45;">Grote veranderingen zoveel mogelijk vermijden of gefaseerd</span></div>
+            <div style="display: flex; gap: 10px; align-items: flex-start;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#18BAB0" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink: 0; margin-top: 2px;"><path d="M20 6 9 17l-5-5"/></svg><span style="font-size: 14px; line-height: 1.45;">Bachbloesems: Chicory, Vine, Holly en Walnut, 8 weken</span></div>
+          </div>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{ isAnalyse }}" hint-placeholder-val="{{ false }}">
+        <div style="background: #EAFBF9; border-radius: 22px; padding: 20px; margin-bottom: 16px;">
+          <div style="font-size: 11px; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase; color: #108A82; margin-bottom: 8px;">Focuspunten vanuit de intake</div>
+          <div style="font-size: 15px; line-height: 1.6; color: #1B2A2A;">Een gevoelige darmgezondheid, overgewicht en een mogelijk verstoorde suikerstofwisseling. Het mestwater, de opgeblazen buik, het vocht in de benen en de jeuk hangen met elkaar samen, het lichaam vangt veranderingen niet meer op.</div>
+        </div>
+
+        <div style="font-size: 11px; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase; color: rgba(27,42,42,0.45); margin-bottom: 10px;">Waar we aan gaan werken</div>
+        <div style="display: flex; flex-direction: column; gap: 8px; margin-bottom: 20px;">
+          <div style="background: #FFFFFF; border: 1px solid rgba(27,42,42,0.1); border-radius: 16px; padding: 14px 15px;">
+            <div style="font-weight: 600; font-size: 14.5px;">Darmflora herstellen</div>
+            <div style="font-size: 13px; line-height: 1.5; color: rgba(27,42,42,0.55); margin-top: 2px;">Jaren voordroog hebben de pH verlaagd. Slijmstoffen en lapacho bouwen het milieu terug op.</div>
+          </div>
+          <div style="background: #FFFFFF; border: 1px solid rgba(27,42,42,0.1); border-radius: 16px; padding: 14px 15px;">
+            <div style="font-weight: 600; font-size: 14.5px;">Stabiele suikerinname</div>
+            <div style="font-size: 13px; line-height: 1.5; color: rgba(27,42,42,0.55); margin-top: 2px;">Suikerarm ruwvoer en rustig afvallen, niet door minder hooi, maar door ander hooi.</div>
+          </div>
+          <div style="background: #FFFFFF; border: 1px solid rgba(27,42,42,0.1); border-radius: 16px; padding: 14px 15px;">
+            <div style="font-weight: 600; font-size: 14.5px;">Lymfe en belastbaarheid</div>
+            <div style="font-size: 13px; line-height: 1.5; color: rgba(27,42,42,0.55); margin-top: 2px;">Dagelijkse rustige beweging binnen het revalidatieplan van de dierenarts.</div>
+          </div>
+        </div>
+
+
+      </sc-if>
+    </div>
+
+    <div style="position: absolute; left: 0; right: 0; bottom: 0; height: 88px; background: rgba(251,248,243,0.94); backdrop-filter: blur(12px); border-top: 1px solid rgba(27,42,42,0.1); display: flex; align-items: flex-start; padding: 10px 8px 0; z-index: 5;">
+      <button style="flex: 1; background: transparent; border: 0; display: flex; flex-direction: column; align-items: center; gap: 4px; cursor: pointer; font-family: inherit; padding: 4px 0; color: rgba(27,42,42,0.6);">
+        <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9.5 12 3l9 6.5V20a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1Z"/></svg>
+        <span style="font-size: 10px; font-weight: 600;">Home</span>
+      </button>
+      <button style="flex: 1; background: transparent; border: 0; display: flex; flex-direction: column; align-items: center; gap: 4px; cursor: pointer; font-family: inherit; padding: 4px 0; color: rgba(27,42,42,0.6);">
+        <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7V5a2 2 0 0 1 2-2h2"/><path d="M17 3h2a2 2 0 0 1 2 2v2"/><path d="M21 17v2a2 2 0 0 1-2 2h-2"/><path d="M7 21H5a2 2 0 0 1-2-2v-2"/><path d="M3 12h18"/></svg>
+        <span style="font-size: 10px; font-weight: 600;">Scanner</span>
+      </button>
+      <button style="flex: 1; background: transparent; border: 0; display: flex; flex-direction: column; align-items: center; gap: 4px; cursor: pointer; font-family: inherit; padding: 4px 0; color: #108A82;">
+        <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 2H9a1 1 0 0 0-1 1v2a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1V3a1 1 0 0 0-1-1Z"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><path d="m9 15 2 2 4-4"/></svg>
+        <span style="font-size: 10px; font-weight: 700;">Protocol</span>
+      </button>
+      <button style="flex: 1; background: transparent; border: 0; display: flex; flex-direction: column; align-items: center; gap: 4px; cursor: pointer; font-family: inherit; padding: 4px 0; color: rgba(27,42,42,0.6);">
+        <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2Z"/></svg>
+        <span style="font-size: 10px; font-weight: 600;">Bibliotheek</span>
+      </button>
+      <button style="flex: 1; background: transparent; border: 0; display: flex; flex-direction: column; align-items: center; gap: 4px; cursor: pointer; font-family: inherit; padding: 4px 0; color: rgba(27,42,42,0.6);">
+        <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+        <span style="font-size: 10px; font-weight: 600;">Community</span>
+      </button>
+    </div>
+
+    <sc-if value="{{ sheetHerb }}" hint-placeholder-val="{{ false }}">
+      <div onClick="{{ closeSheet }}" style="position: absolute; inset: 0; background: rgba(11,74,73,0.42); z-index: 10; display: flex; align-items: flex-end;">
+        <div style="width: 100%; background: #FBF8F3; border-radius: 28px 28px 0 0; padding: 12px 22px 34px; max-height: 78%; overflow-y: auto;">
+          <div style="width: 40px; height: 4px; border-radius: 999px; background: rgba(27,42,42,0.18); margin: 0 auto 18px;"></div>
+          <div style="font-family: 'Source Sans 3'; font-weight: 700; font-size: 22px; line-height: 1.15;">{{ herbName }}</div>
+          <div style="font-size: 13px; color: rgba(27,42,42,0.5); margin-top: 4px;">{{ herbWeeks }}</div>
+
+          <div style="background: #FFFFFF; border: 1px solid rgba(27,42,42,0.1); border-radius: 18px; padding: 16px; margin-top: 18px;">
+            <div style="font-size: 11px; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase; color: #108A82; margin-bottom: 6px;">Vandaag geven</div>
+            <div style="font-family: 'Source Sans 3'; font-weight: 700; font-size: 22px; color: #127A79;">{{ herbDose }}</div>
+            <div style="font-size: 13.5px; line-height: 1.55; color: rgba(27,42,42,0.65); margin-top: 8px;">{{ herbHow }}</div>
+          </div>
+
+          <button onClick="{{ closeSheet }}" style="width: 100%; margin-top: 18px; padding: 14px; border-radius: 999px; border: 0; background: #18BAB0; color: white; font-family: inherit; font-weight: 600; font-size: 15px; cursor: pointer;" style-hover="background: #108A82;">Sluiten</button>
+        </div>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{ sheetStep }}" hint-placeholder-val="{{ false }}">
+      <div onClick="{{ closeSheet }}" style="position: absolute; inset: 0; background: rgba(11,74,73,0.42); z-index: 10; display: flex; align-items: flex-end;">
+        <div style="width: 100%; background: #FBF8F3; border-radius: 28px 28px 0 0; padding: 12px 22px 34px; max-height: 84%; overflow-y: auto;">
+          <div style="width: 40px; height: 4px; border-radius: 999px; background: rgba(27,42,42,0.18); margin: 0 auto 18px;"></div>
+          <div style="font-family: 'Source Sans 3'; font-weight: 700; font-size: 21px; line-height: 1.15;">{{ stepTitle }}</div>
+          <div style="font-size: 13px; color: rgba(27,42,42,0.5); margin-top: 4px;">{{ stepWeeks }}</div>
+          <div style="font-size: 14.5px; line-height: 1.6; color: rgba(27,42,42,0.75); margin-top: 14px;">{{ stepFocus }}</div>
+
+          <sc-if value="{{ stepHasItems }}" hint-placeholder-val="{{ true }}">
+            <div style="font-size: 11px; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase; color: rgba(27,42,42,0.45); margin: 20px 0 10px;">Per kruid</div>
+            <div style="display: flex; flex-direction: column; gap: 8px;">
+              <sc-for list="{{ stepItems }}" as="it" hint-placeholder-count="4">
+                <div style="background: #FFFFFF; border: 1px solid rgba(27,42,42,0.1); border-radius: 14px; padding: 12px 14px;">
+                  <div style="display: flex; align-items: baseline; justify-content: space-between; gap: 8px;">
+                    <span style="font-weight: 700; font-size: 14.5px;">{{ it.name }}</span>
+                    <span style="font-family: 'Source Sans 3'; font-weight: 700; font-size: 13.5px; color: #127A79; white-space: nowrap;">{{ it.dose }}</span>
+                  </div>
+                  <div style="font-size: 13px; line-height: 1.5; color: rgba(27,42,42,0.6); margin-top: 4px;">{{ it.why }}</div>
+                </div>
+              </sc-for>
+            </div>
+          </sc-if>
+
+          <button onClick="{{ closeSheet }}" style="width: 100%; margin-top: 22px; padding: 14px; border-radius: 999px; border: 0; background: #18BAB0; color: white; font-family: inherit; font-weight: 600; font-size: 15px; cursor: pointer;" style-hover="background: #108A82;">Sluiten</button>
+        </div>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{ sheetOrders }}" hint-placeholder-val="{{ false }}">
+      <div onClick="{{ closeSheet }}" style="position: absolute; inset: 0; background: rgba(11,74,73,0.42); z-index: 10; display: flex; align-items: flex-end;">
+        <div style="width: 100%; background: #FBF8F3; border-radius: 28px 28px 0 0; padding: 12px 22px 34px; max-height: 86%; overflow-y: auto;">
+          <div style="width: 40px; height: 4px; border-radius: 999px; background: rgba(27,42,42,0.18); margin: 0 auto 18px;"></div>
+          <div style="font-family: 'Source Sans 3'; font-weight: 700; font-size: 22px; line-height: 1.15;">Bestellijst</div>
+          <div style="font-size: 13.5px; line-height: 1.5; color: rgba(27,42,42,0.55); margin-top: 5px;">Wat je nodig hebt voor het hele protocol, inclusief de opbouwweken. Afgerond naar boven.</div>
+
+          <div style="background: #FFFFFF; border: 1px solid rgba(27,42,42,0.1); border-radius: 18px; margin-top: 16px; overflow: hidden;">
+            <sc-for list="{{ orderRows }}" as="r" hint-placeholder-count="8">
+              <div style="display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 15px; border-bottom: 1px solid rgba(27,42,42,0.07);">
+                <div>
+                  <div style="font-weight: 600; font-size: 14.5px;">{{ r.name }}</div>
+                  <div style="font-size: 12px; color: rgba(27,42,42,0.5); margin-top: 1px;">{{ r.detail }}</div>
+                </div>
+                <div style="font-family: 'Source Sans 3'; font-weight: 700; font-size: 15px; color: #127A79; white-space: nowrap; font-variant-numeric: tabular-nums;">{{ r.total }}</div>
+              </div>
+            </sc-for>
+          </div>
+
+          <div style="background: #EAFBF9; border-radius: 16px; padding: 14px 16px; margin-top: 14px; font-size: 13px; line-height: 1.55; color: #0E6F69;">Met code <strong>paardentherapeut</strong> krijg je 5% korting boven de € 35 bij D-tails.</div>
+
+          <button style="width: 100%; margin-top: 16px; padding: 14px; border-radius: 999px; border: 0; background: #18BAB0; color: white; font-family: inherit; font-weight: 600; font-size: 15px; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px;" style-hover="background: #108A82;">
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 3h6v6"/><path d="M10 14 21 3"/><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/></svg>
+            Open de webshop
+          </button>
+          <button onClick="{{ closeSheet }}" style="width: 100%; margin-top: 8px; padding: 13px; border-radius: 999px; border: 0; background: transparent; color: rgba(27,42,42,0.55); font-family: inherit; font-weight: 600; font-size: 14px; cursor: pointer;">Sluiten</button>
+        </div>
+      </div>
+    </sc-if>
+
+  </div>
+</div>
+
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;horseName&quot;:{&quot;editor&quot;:&quot;text&quot;,&quot;default&quot;:&quot;Boaz&quot;,&quot;tsType&quot;:&quot;string&quot;},&quot;targetWeightKg&quot;:{&quot;editor&quot;:&quot;int&quot;,&quot;default&quot;:500,&quot;min&quot;:100,&quot;max&quot;:900,&quot;step&quot;:10,&quot;unit&quot;:&quot;kg&quot;,&quot;tsType&quot;:&quot;number&quot;},&quot;showOrderLinks&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true,&quot;tsType&quot;:&quot;boolean&quot;},&quot;showMissedPrompt&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true,&quot;tsType&quot;:&quot;boolean&quot;}}">
+class Component extends DCLogic {
+  state = {
+    tab: 'vandaag',
+    checked: { psyllium: true, heemst: true, kamille: true },
+    sheet: null,
+    herb: null,
+    selectedDay: 10,
+    missedResolved: false,
+  };
+
+  items() {
+    return [
+      { id: 'psyllium', group: 'feed', name: 'Psylliumzaad', dose: '175 g · 2× daags', why: 'Legt een beschermend laagje in de maag tegen stress en maagzuur.',
+        weeks: 'Week 1 t/m 6', how: 'Mee laten weken met warm (niet kokend) water samen met de balancer. Zorg altijd voor voldoende vers drinkwater.' },
+      { id: 'heemst', group: 'feed', name: 'Heemstwortel', dose: '20 g', why: 'Verzacht en beschermt de maag- en darmslijmvliezen.',
+        weeks: 'Week 1 t/m 6', how: '20 g laten weken in circa 200 ml heet water (60–80 °C), 20 tot 30 minuten, regelmatig doorroeren. Vocht met restant kruid door de bijvoeding.' },
+      { id: 'kamille', group: 'feed', name: 'Kamille', dose: '25 g', why: 'Koelend en ontspannend op het zenuwstelsel, helpt ontkrampen.',
+        weeks: 'Week 1 t/m 6', how: 'Samen met de heemstwortel mee laten weken. Vocht met restant kruiden gebruiken om de bijvoeding aan te maken.' },
+      { id: 'msm', group: 'feed', name: 'MSM (zwavel)', dose: 'Dosering leverancier', why: 'Ondersteunt pezen, banden en bindweefsel, belangrijk met zijn peesgeschiedenis.',
+        weeks: 'Week 2 t/m 9', how: 'Aanbevolen dosering van de leverancier aanhouden voor een paard, door de bijvoeding.' },
+      { id: 'zink', group: 'feed', name: 'Zink', dose: '40 g', why: 'Voor hoeven, huid en immuunsysteem. Denk aan de diepe straalgroeven.',
+        weeks: 'Week 2 t/m 9', how: 'Okapi Zinkchelaat Plus, 1× daags 40 gram door de bijvoeding.' },
+      { id: 'colo', group: 'feed', name: 'Colobalance', dose: '50 g', tag: 'Laatste dag', tagBg: '#FDF4E4', tagColor: '#7A5A16', why: 'Versterkt de darmflora en kalmeert het acute mestwater.',
+        weeks: 'Week 2 t/m 3 · vandaag de laatste', how: '50 gram per dag door de bijvoeding. De natte variant Veendrenk kan ook: 4 eetlepels per dag.' },
+      { id: 'lapacho', group: 'new', name: 'Lapachoschors', dose: '5 gram', previewDose: '20 g / dag', buildLabel: 'dag 1 van 7', order: true,
+        why: 'Herstelt het darmmilieu na jaren van verzuring.',
+        weeks: 'Week 3 t/m 8', how: 'Gemalen, over het voer. De hoeveelheid loopt in zeven dagen op naar de volledige dosering, de app past het elke dag voor je aan.' },
+      { id: 'weegbree', group: 'new', name: 'Smalle weegbree', dose: '6 gram', previewDose: '25 g / dag', buildLabel: 'dag 1 van 7', order: true,
+        why: 'Ontlasting regulerend. Voert overtollig vocht en afvalstoffen af.',
+        weeks: 'Week 3 t/m 8', how: 'Gedroogd door het voer. De hoeveelheid loopt in zeven dagen op naar de volledige dosering, de app past het elke dag voor je aan.' },
+      { id: 'brandnetel', group: 'new', name: 'Brandnetel', dose: '6 gram', previewDose: '25 g / dag', buildLabel: 'dag 1 van 7', order: true,
+        why: 'Rijk aan vitamines en mineralen, werkt vochtafdrijvend bij de dikke benen.',
+        weeks: 'Week 3 t/m 8', how: 'Gedroogd door het voer. De hoeveelheid loopt in zeven dagen op naar de volledige dosering, de app past het elke dag voor je aan.' },
+      { id: 'bach', group: 'loose', name: 'Bachbloesems', dose: '6 druppels · 2 tot 4× daags', why: 'Chicory, Vine, Holly en Walnut, voor voernijd, dominantie en de vele verhuizingen.',
+        weeks: '8 weken', how: 'Nooit het pipet in de mond. Druppel gelijkmatig over drie grasbrokjes, of als allerlaatste over het voer.' },
+      { id: 'bessen', group: 'loose', name: 'Duindoorn, rozenbottel & paardenbloemwortel', dose: '1 tl · handje · handje', why: 'Los uit de hand, naast het protocol. Omega-vetzuren, vitamine C en antioxidanten.',
+        weeks: '4 weken', how: 'Gewoon uit de hand is prima. 1 theelepel duindoornbessen, een klein handje rozenbottels en een handje paardenbloemwortel.' },
+      { id: 'wandeling', group: 'loose', name: 'Snackwandeling', dose: '15 tot 20 minuten stap', why: 'Met vers groen: wilgentakken, kleefkruid, weegbree, paardenbloem, brandnetel.',
+        weeks: 'Dagelijks', how: 'Rustig aan de hand, binnen het revalidatieplan. Beweging is voor hem medicijn nummer 1, voor gewicht, benen, darmen en luchtwegen.' },
+    ];
+  }
+
+  stepMeta() {
+    return {
+      step1: { title: 'Stap 1: maag verzorgen', weeks: 'Week 1 t/m 6',
+        focus: 'We beschermen en verzachten het maag- en darmslijmvlies. De slijmstoffen verminderen irritatie, neutraliseren maagzuur en zorgen dat de bloedsuikerpiek na een maaltijd lager uitvalt.',
+        items: ['psyllium', 'heemst', 'kamille'] },
+      step2: { title: 'Stap 2: darmgezondheid', weeks: 'Week 3 t/m 8 · gestart deze week',
+        focus: 'Na jaren voordroog en wisselend hooi is de darmflora uit balans. Deze stap herstelt het darmmilieu en reguleert het mestwater.',
+        items: ['colo', 'lapacho', 'weegbree', 'brandnetel'] },
+      contact: { title: 'Contactmoment', weeks: 'Week 7',
+        focus: 'Je stuurt in week 7 een update over hoe het gaat: eetlust, mest, gedrag en gewicht. Op basis daarvan bepalen we samen de vervolgstappen.',
+        items: [] },
+    };
+  }
+
+  decorate(it) {
+    const on = !!this.state.checked[it.id];
+    return {
+      ...it,
+      hasTag: !!it.tag,
+      tagBg: it.tagBg || '#EAFBF9',
+      tagColor: it.tagColor || '#0E6F69',
+      showOrder: !!it.order && (this.props.showOrderLinks ?? true),
+      boxBg: on ? '#18BAB0' : 'transparent',
+      boxBorder: on ? '#18BAB0' : 'rgba(27,42,42,0.22)',
+      tickOpacity: on ? 1 : 0,
+      nameColor: on ? 'rgba(27,42,42,0.4)' : '#1B2A2A',
+      nameDeco: on ? 'line-through' : 'none',
+      toggle: () => this.setState((s) => ({ checked: { ...s.checked, [it.id]: !s.checked[it.id] } })),
+      open: () => this.setState({ sheet: 'herb', herb: it }),
+    };
+  }
+
+  dayCells() {
+    const cells = [];
+    for (let i = 0; i < 5; i++) cells.push({ blank: true, key: 'b' + i });
+    for (let d = 1; d <= 31; d++) cells.push({ blank: false, d });
+    return cells.map((c, i) => {
+      if (c.blank) return { key: 'x' + i, label: '', bg: 'transparent', border: 'transparent', color: 'transparent', weight: 400, select: () => {} };
+      const d = c.d;
+      const missed = !this.state.missedResolved && (d === 7 || d === 8 || d === 9);
+      const sel = this.state.selectedDay === d;
+      let bg = '#FFFFFF', color = 'rgba(27,42,42,0.35)', border = 'rgba(27,42,42,0.07)', weight = 500;
+      if (d < 10 && !missed) { bg = '#18BAB0'; color = '#FFFFFF'; border = '#18BAB0'; weight = 600; }
+      if (d === 6) { bg = '#99E8DF'; color = '#0A4F4B'; border = '#99E8DF'; }
+      if (missed) { bg = '#F7E2C4'; color = '#8A6417'; border = '#E8A33C'; weight = 600; }
+      if (d === 10) { bg = '#0B4A49'; color = '#FFFFFF'; border = '#0B4A49'; weight = 700; }
+      if (sel && d !== 10) border = '#0B4A49';
+      return { key: 'd' + d, label: String(d), bg, color, border, weight, select: () => this.setState({ selectedDay: d }) };
+    });
+  }
+
+  renderVals() {
+    const tab = this.state.tab;
+    const all = this.items();
+    const dueToday = all.filter((i) => i.group !== 'new');
+    const total = dueToday.length;
+    const done = dueToday.filter((i) => this.state.checked[i.id]).length;
+    const pct = Math.round((done / total) * 100);
+    const d = this.state.selectedDay;
+    const missedDays = [7, 8, 9];
+    const isMissed = !this.state.missedResolved && missedDays.indexOf(d) !== -1;
+
+    const tabC = (name) => tab === name ? '#108A82' : 'rgba(27,42,42,0.68)';
+    const under = (name) => tab === name ? '#18BAB0' : 'transparent';
+
+    const herb = this.state.herb || {};
+    const step = this.stepMeta()[this.state.stepId] || {};
+    const stepItemsDetailed = (step.items || []).map((id) => all.find((i) => i.id === id)).filter(Boolean).map((i) => ({ name: i.name, dose: i.dose, why: i.why }));
+
+    const targetWeight = this.props.targetWeightKg ?? 500;
+
+    return {
+      horseName: this.props.horseName ?? 'Boaz',
+      targetWeight,
+      hayMin: Math.round(targetWeight * 2 / 100),
+      hayMax: Math.round(targetWeight * 3 / 100),
+      isVandaag: tab === 'vandaag', isKalender: tab === 'kalender', isVoeding: tab === 'voeding',
+      isManagement: tab === 'management', isAnalyse: tab === 'analyse',
+      screenSub: tab === 'vandaag' ? 'Week 3 van 9 · maandag 10 augustus'
+        : tab === 'kalender' ? 'Kalender · augustus 2026'
+        : tab === 'voeding' ? 'Basisvoeding'
+        : tab === 'management' ? 'Managementadvies'
+        : 'Analyse en fases',
+      sVandaag: tabC('vandaag'), sKalender: tabC('kalender'), sVoeding: tabC('voeding'),
+      sManagement: tabC('management'), sAnalyse: tabC('analyse'),
+      uVandaag: under('vandaag'), uKalender: under('kalender'), uVoeding: under('voeding'),
+      uManagement: under('management'), uAnalyse: under('analyse'),
+      goVandaag: () => this.setState({ tab: 'vandaag' }),
+      goKalender: () => this.setState({ tab: 'kalender' }),
+      goVoeding: () => this.setState({ tab: 'voeding' }),
+      goManagement: () => this.setState({ tab: 'management' }),
+      goAnalyse: () => this.setState({ tab: 'analyse' }),
+
+      feedItems: all.filter((i) => i.group === 'feed').map((i) => this.decorate(i)),
+      upcomingItems: all.filter((i) => i.group === 'new').map((i) => ({ name: i.name, dose: i.previewDose })),
+      looseItems: all.filter((i) => i.group === 'loose').map((i) => this.decorate(i)),
+      doneCount: done, totalCount: total, donePct: pct, doneWidth: pct + '%',
+
+      days: this.dayCells(),
+      showMissed: (this.props.showMissedPrompt ?? true) && !this.state.missedResolved,
+      resolveMissedYes: () => this.setState({ missedResolved: true }),
+      resolveMissedNo: () => this.setState({ missedResolved: true }),
+
+      sheetHerb: this.state.sheet === 'herb',
+      sheetOrders: this.state.sheet === 'orders',
+      sheetStep: this.state.sheet === 'step',
+      openOrders: () => this.setState({ sheet: 'orders' }),
+      openStep1: () => this.setState({ sheet: 'step', stepId: 'step1' }),
+      openStep2: () => this.setState({ sheet: 'step', stepId: 'step2' }),
+      openStepContact: () => this.setState({ sheet: 'step', stepId: 'contact' }),
+      closeSheet: () => this.setState({ sheet: null }),
+      herbName: herb.name || '', herbDose: herb.dose || '', herbWhy: herb.why || '',
+      herbHow: herb.how || '', herbWeeks: herb.weeks || '',
+      stepTitle: step.title || '', stepWeeks: step.weeks || '', stepFocus: step.focus || '',
+      stepHasItems: stepItemsDetailed.length > 0, stepItems: stepItemsDetailed,
+
+      orderRows: [
+        { name: 'Psylliumzaad', detail: '175 g per dag · 6 weken', total: '7,4 kg' },
+        { name: 'Heemstwortel', detail: '20 g per dag · 6 weken', total: '850 g' },
+        { name: 'Kamille', detail: '25 g per dag · 6 weken', total: '1,1 kg' },
+        { name: 'Aardpeerpellets', detail: '50 g per dag · 14 dagen', total: '700 g' },
+        { name: 'MSM (zwavel)', detail: 'dosering leverancier · 8 weken', total: '8 wk' },
+        { name: 'Zink', detail: '40 g per dag · 8 weken', total: '2,3 kg' },
+        { name: 'Colobalance', detail: '50 g per dag · 14 dagen', total: '700 g' },
+        { name: 'Lapachoschors', detail: '20 g per dag · 6 weken', total: '850 g' },
+        { name: 'Smalle weegbree', detail: '25 g per dag · 6 weken', total: '1,1 kg' },
+        { name: 'Brandnetel', detail: '25 g per dag · 6 weken', total: '1,1 kg' },
+        { name: 'Bachbloesem-mengsel', detail: 'receptuurflesje · 8 weken', total: '1 flesje' },
+      ],
+    };
+  }
+}
+</script>
+</body>
+</html>

@@ -47,9 +47,6 @@ return new class extends Migration
                         }
                     }
 
-                    DB::table('protocol_tasks')
-                        ->where('phase_id', $preparation->id)
-                        ->update(['phase_id' => $firstPhase->id, 'updated_at' => now()]);
                     DB::table('protocol_phases')->where('id', $preparation->id)->delete();
                     $phases = $phases->slice(1)->values();
                 }
@@ -81,10 +78,6 @@ return new class extends Migration
                                     ]);
                             }
                         }
-
-                        DB::table('protocol_tasks')
-                            ->where('phase_id', $extraPhase->id)
-                            ->update(['phase_id' => $thirdPhase->id, 'updated_at' => now()]);
                     }
 
                     $mergedWeekEnd = $phases->slice(2)

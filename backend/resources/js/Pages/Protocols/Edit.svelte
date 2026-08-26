@@ -19,6 +19,8 @@
         Clock3,
         Eye,
         FileText,
+        Dumbbell,
+        Leaf,
         Lock,
         Plus,
         Save,
@@ -34,6 +36,9 @@
         horses,
         therapists,
         protocolTemplates,
+        voedingAdviezen,
+        managementAdviezen,
+        bewegingAdviezen,
         selectedHorseId = null,
     } = $props();
 
@@ -170,6 +175,17 @@
 
     const protocolTemplateName = initialProtocol?.protocol_template_name ?? initialTemplate?.name;
     const defaultTitle = [protocolTemplateName, initialHorse?.name].filter(Boolean).join(' · ');
+
+    function adviceCatalogWithSnapshots(settings, snapshots, sourceKey) {
+        return settings.map((setting) => {
+            const snapshot = (snapshots ?? []).find((candidate) => candidate[sourceKey] === setting.id);
+
+            return snapshot
+                ? { ...setting, title: snapshot.title, description: snapshot.description, snapshot: true }
+                : { ...setting, snapshot: false };
+        });
+    }
+
     const form = useForm({
         horse_id: initialProtocol?.horse_id ?? initialSelectedHorseId ?? '',
         protocol_template_id: initialProtocolTemplateId,
@@ -185,17 +201,10 @@
             title: row.title ?? '',
             body: row.body ?? '',
         })),
+        voeding_advies_ids: (initialProtocol?.voeding_adviezen ?? []).map((row) => row.voeding_advies_id),
+        management_advies_ids: (initialProtocol?.management_adviezen ?? []).map((row) => row.management_advies_id),
+        beweging_advies_ids: (initialProtocol?.beweging_adviezen ?? []).map((row) => row.beweging_advies_id),
         phases: initialPhases,
-        tasks: (initialProtocol?.tasks ?? []).map((task) => ({
-            id: task.id ?? null,
-            phase_key: initialPhases.find((phase) => phase.id === task.phase_id)?.client_key ?? '',
-            label: task.label ?? '',
-            meta: task.meta ?? '',
-            kind: task.kind ?? 'other',
-            active_from: task.active_from?.slice(0, 10) ?? '',
-            active_until: task.active_until?.slice(0, 10) ?? '',
-            reference_item_id: task.reference_item_id ?? '',
-        })),
     });
 
     let workingTemplate = $state(initialTemplate);
@@ -213,6 +222,9 @@
     const sections = [
         { id: 'basis', label: 'Basis', icon: UserRound },
         { id: 'planning', label: 'Planning', icon: CalendarDays },
+        { id: 'voeding', label: 'Voeding', icon: Leaf, formKey: 'voeding_advies_ids' },
+        { id: 'management', label: 'Management', icon: Settings2, formKey: 'management_advies_ids' },
+        { id: 'beweging', label: 'Beweging', icon: Dumbbell, formKey: 'beweging_advies_ids' },
         { id: 'content', label: 'Analyse & advies', icon: FileText },
         { id: 'preview', label: 'Klantweergave', icon: Eye },
     ];
@@ -254,6 +266,46 @@
         label: `${definition.name}${definition.required ? ' · verplicht' : ''}${definition.weeks.length ? ` · ${definition.weeks.length} wk` : ' · geen weken'}`,
     })));
     const allActiveSupplements = $derived($form.phases.flatMap((phase) => phase.supplements));
+    const adviceCategories = $derived([
+        {
+            id: 'voeding',
+            label: 'Voeding',
+            entity: 'ProtocolVoedingAdvies',
+            formKey: 'voeding_advies_ids',
+            step: 3,
+            description: 'Selecteer de voedingsadviezen die bij dit protocol horen.',
+            items: adviceCatalogWithSnapshots(voedingAdviezen, initialProtocol?.voeding_adviezen, 'voeding_advies_id'),
+            next: 'management',
+            nextLabel: 'Management',
+        },
+        {
+            id: 'management',
+            label: 'Management',
+            entity: 'ProtocolManagementAdvies',
+            formKey: 'management_advies_ids',
+            step: 4,
+            description: 'Selecteer adviezen over huisvesting, routine en herstel.',
+            items: adviceCatalogWithSnapshots(managementAdviezen, initialProtocol?.management_adviezen, 'management_advies_id'),
+            next: 'beweging',
+            nextLabel: 'Beweging',
+        },
+        {
+            id: 'beweging',
+            label: 'Beweging',
+            entity: 'ProtocolBewegingAdvies',
+            formKey: 'beweging_advies_ids',
+            step: 5,
+            description: 'Selecteer adviezen over training, opbouw en bewegingsvrijheid.',
+            items: adviceCatalogWithSnapshots(bewegingAdviezen, initialProtocol?.beweging_adviezen, 'beweging_advies_id'),
+            next: 'content',
+            nextLabel: 'Analyse & advies',
+        },
+    ]);
+    const activeAdviceCategory = $derived(adviceCategories.find((category) => category.id === activeSection) ?? null);
+    const selectedProtocolAdviceCount = $derived(adviceCategories.reduce(
+        (total, category) => total + $form[category.formKey].length,
+        0,
+    ));
 
     onMount(() => {
         const warnBeforeUnload = (event) => {
@@ -325,7 +377,6 @@
         $form.phases = (workingTemplate?.phases ?? [])
             .filter((phase) => phase.required)
             .map((phase) => phaseFromDefinition(phase, selectedHorse?.weight_kg));
-        $form.tasks = [];
         $form.title = [workingTemplate?.name, selectedHorse?.name].filter(Boolean).join(' · ');
         activePhaseKey = $form.phases[0]?.client_key ?? null;
         phaseToAddId = '';
@@ -371,7 +422,6 @@
         const removedIndex = activePhaseIndex;
         const remaining = $form.phases.filter((phase) => phase.client_key !== activePhase.client_key);
         $form.phases = remaining;
-        $form.tasks = $form.tasks.filter((task) => task.phase_key !== activePhase.client_key);
         activePhaseKey = remaining[Math.min(removedIndex, remaining.length - 1)]?.client_key ?? null;
     }
 
@@ -486,6 +536,21 @@
         $form.advice = $form.advice.filter((_, adviceIndex) => adviceIndex !== index);
     }
 
+    function isProtocolAdviceSelected(category, adviceId) {
+        return $form[category.formKey].includes(adviceId);
+    }
+
+    function toggleProtocolAdvice(category, adviceId) {
+        const selectedIds = $form[category.formKey];
+        $form[category.formKey] = selectedIds.includes(adviceId)
+            ? selectedIds.filter((id) => id !== adviceId)
+            : [...selectedIds, adviceId];
+    }
+
+    function selectedProtocolAdvice(category) {
+        return category.items.filter((advice) => isProtocolAdviceSelected(category, advice.id));
+    }
+
     function save(published = $form.published) {
         $form.published = published;
         if (isNew) $form.post('/admin/protocols');
@@ -552,6 +617,11 @@
                             class={`relative inline-flex shrink-0 items-center gap-2 px-3 py-3 text-sm font-semibold transition ${activeSection === section.id ? 'text-[#0E6F69]' : 'text-[#1B2A2A]/50 hover:text-[#1B2A2A]'}`}
                         >
                             <SectionIcon class="size-4" /> {section.label}
+                            {#if section.formKey}
+                                <span class={`min-w-5 rounded-full px-1.5 py-0.5 text-center text-[10px] ${activeSection === section.id ? 'bg-[#EAFBF9] text-[#0E6F69]' : 'bg-[#1B2A2A]/5 text-[#1B2A2A]/45'}`}>
+                                    {$form[section.formKey].length}
+                                </span>
+                            {/if}
                             {#if activeSection === section.id}<span class="absolute inset-x-2 bottom-0 h-0.5 rounded-full bg-[#18BAB0]"></span>{/if}
                         </button>
                     {/each}
@@ -589,19 +659,10 @@
                             <div class="flex justify-between gap-3"><dt class="text-[#1B2A2A]/50">Duur</dt><dd class="font-bold">{totalWeeks} weken</dd></div>
                             <div class="flex justify-between gap-3"><dt class="text-[#1B2A2A]/50">Huidige week</dt><dd class="font-bold">{currentWeek || '—'}</dd></div>
                             <div class="flex justify-between gap-3"><dt class="text-[#1B2A2A]/50">Supplementen</dt><dd class="font-bold">{allActiveSupplements.length}</dd></div>
+                            <div class="flex justify-between gap-3"><dt class="text-[#1B2A2A]/50">Adviezen</dt><dd class="font-bold">{selectedProtocolAdviceCount}</dd></div>
                         </dl>
                     </div>
 
-                    <div class="border-t border-[#1B2A2A]/10 pt-5">
-                        <div class="mb-2 text-[10px] font-bold uppercase tracking-[0.14em] text-[#108A82]">Gedetecteerde thema’s</div>
-                        {#if selectedHorse?.focus_topics?.length}
-                            <div class="flex flex-wrap gap-1.5">
-                                {#each selectedHorse.focus_topics as topic (topic.id)}
-                                    <span class="rounded-full bg-[#EAFBF9] px-2.5 py-1 text-[11px] font-bold text-[#0E6F69]">{topic.title}</span>
-                                {/each}
-                            </div>
-                        {:else}<p class="text-xs text-[#1B2A2A]/45">Geen thema’s gekoppeld.</p>{/if}
-                    </div>
                 </aside>
 
                 <main class="min-w-0">
@@ -829,11 +890,68 @@
                                     </div>
                                 </div>
                             {/if}
+                            <div class="mt-6 flex justify-end">
+                                <Button type="button" class="rounded-full bg-[#18BAB0] hover:bg-[#108A82]" onclick={() => (activeSection = 'voeding')}>
+                                    Naar voeding <ChevronRight class="size-4" />
+                                </Button>
+                            </div>
+                        </section>
+                    {:else if activeAdviceCategory}
+                        <section class="overflow-hidden rounded-[22px] border border-[#1B2A2A]/10 bg-white">
+                            <div class="flex flex-wrap items-start justify-between gap-4 border-b border-[#1B2A2A]/10 px-5 py-6 md:px-7">
+                                <div class="max-w-2xl">
+                                    <div class="text-[10px] font-bold uppercase tracking-[0.14em] text-[#108A82]">Stap {activeAdviceCategory.step} · {activeAdviceCategory.entity}</div>
+                                    <h2 class="mt-1 text-xl font-bold">{activeAdviceCategory.label}</h2>
+                                    <p class="mt-1 text-sm text-[#1B2A2A]/50">{activeAdviceCategory.description}</p>
+                                </div>
+                                <div class="rounded-full bg-[#EAFBF9] px-3 py-1.5 text-xs font-bold text-[#0E6F69]">
+                                    {$form[activeAdviceCategory.formKey].length} geselecteerd
+                                </div>
+                            </div>
+
+                            <div class="divide-y divide-[#1B2A2A]/10">
+                                {#each activeAdviceCategory.items as advice (advice.id)}
+                                    {@const selected = isProtocolAdviceSelected(activeAdviceCategory, advice.id)}
+                                    <label class={`flex cursor-pointer items-start gap-4 px-5 py-5 transition-colors md:px-7 ${selected ? 'bg-[#EAFBF9]/55' : 'hover:bg-[#FBF8F3]'}`}>
+                                        <input
+                                            type="checkbox"
+                                            checked={selected}
+                                            onchange={() => toggleProtocolAdvice(activeAdviceCategory, advice.id)}
+                                            aria-label={`${advice.title} selecteren`}
+                                            class="mt-1 size-4 shrink-0 accent-[#18BAB0]"
+                                        />
+                                        <span class={`min-w-0 flex-1 ${selected ? '' : 'opacity-65'}`}>
+                                            <span class="flex flex-wrap items-center gap-2">
+                                                <span class="font-bold">{advice.title}</span>
+                                                {#if advice.snapshot}
+                                                    <span class="rounded-full bg-white px-2 py-0.5 text-[9px] font-bold uppercase tracking-wide text-[#0E6F69]">Protocolkopie</span>
+                                                {/if}
+                                            </span>
+                                            <span class="mt-1 block whitespace-pre-line text-sm leading-6 text-[#1B2A2A]/55">{advice.description}</span>
+                                        </span>
+                                        <span class={`mt-0.5 flex size-6 shrink-0 items-center justify-center rounded-full transition ${selected ? 'bg-[#18BAB0] text-white' : 'bg-[#1B2A2A]/5 text-transparent'}`}>
+                                            <Check class="size-3.5" />
+                                        </span>
+                                    </label>
+                                {:else}
+                                    <div class="px-6 py-12 text-center">
+                                        <p class="font-bold">Geen {activeAdviceCategory.label.toLowerCase()}adviezen beschikbaar</p>
+                                        <p class="mt-1 text-sm text-[#1B2A2A]/45">Voeg adviezen toe via Protocol Settings.</p>
+                                        <Button type="button" href="/admin/protocol-settings/advice" variant="outline" class="mt-4 rounded-full">Naar Protocol Settings</Button>
+                                    </div>
+                                {/each}
+                            </div>
+
+                            <div class="flex justify-end border-t border-[#1B2A2A]/10 bg-[#FBF8F3] px-5 py-4 md:px-7">
+                                <Button type="button" class="rounded-full bg-[#18BAB0] hover:bg-[#108A82]" onclick={() => (activeSection = activeAdviceCategory.next)}>
+                                    Naar {activeAdviceCategory.nextLabel} <ChevronRight class="size-4" />
+                                </Button>
+                            </div>
                         </section>
                     {:else if activeSection === 'content'}
                         <section class="rounded-[22px] border border-[#1B2A2A]/10 bg-white p-5 md:p-7">
                             <div class="mb-7 max-w-xl">
-                                <div class="text-[10px] font-bold uppercase tracking-[0.14em] text-[#108A82]">Stap 3</div>
+                                <div class="text-[10px] font-bold uppercase tracking-[0.14em] text-[#108A82]">Stap 6</div>
                                 <h2 class="mt-1 text-xl font-bold">Analyse & advies</h2>
                                 <p class="mt-1 text-sm text-[#1B2A2A]/50">Deze inhoud hoort bij het hele paardprotocol en staat los van de geselecteerde fase.</p>
                             </div>
@@ -871,6 +989,7 @@
                                     <span class="rounded-full bg-white/10 px-3 py-1.5">{totalWeeks} weken</span>
                                     <span class="rounded-full bg-white/10 px-3 py-1.5">{$form.phases.length} fases</span>
                                     <span class="rounded-full bg-white/10 px-3 py-1.5">{allActiveSupplements.length} supplementen</span>
+                                    <span class="rounded-full bg-white/10 px-3 py-1.5">{selectedProtocolAdviceCount} adviezen</span>
                                 </div>
                             </div>
                             <div class="space-y-8 px-6 py-7 md:px-8">
@@ -891,6 +1010,29 @@
                                         {/each}
                                     </div>
                                 </section>
+                                {#if selectedProtocolAdviceCount}
+                                    <section>
+                                        <div class="text-[10px] font-bold uppercase tracking-[0.12em] text-[#108A82]">Geselecteerde adviezen</div>
+                                        <div class="mt-3 space-y-5">
+                                            {#each adviceCategories as category (category.id)}
+                                                {@const selectedItems = selectedProtocolAdvice(category)}
+                                                {#if selectedItems.length}
+                                                    <div>
+                                                        <div class="text-xs font-bold text-[#1B2A2A]/45">{category.label}</div>
+                                                        <div class="mt-2 divide-y divide-[#1B2A2A]/10 rounded-xl bg-[#FBF8F3] px-4">
+                                                            {#each selectedItems as advice (advice.id)}
+                                                                <div class="py-3">
+                                                                    <div class="font-bold">{advice.title}</div>
+                                                                    <p class="mt-1 whitespace-pre-line text-sm leading-5 text-[#1B2A2A]/60">{advice.description}</p>
+                                                                </div>
+                                                            {/each}
+                                                        </div>
+                                                    </div>
+                                                {/if}
+                                            {/each}
+                                        </div>
+                                    </section>
+                                {/if}
                                 {#if $form.advice.length}
                                     <section><div class="text-[10px] font-bold uppercase tracking-[0.12em] text-[#108A82]">Advies</div><div class="mt-3 grid gap-3 md:grid-cols-2">{#each $form.advice as advice (advice.id ?? advice.title)}<div class="rounded-xl bg-[#FBF8F3] p-4"><div class="font-bold">{advice.title}</div><p class="mt-1 text-sm leading-5 text-[#1B2A2A]/60">{advice.body}</p></div>{/each}</div></section>
                                 {/if}

@@ -49,7 +49,6 @@ class HorseController extends Controller
     {
         $horse->load([
             'owner:id,name,email',
-            'focusTopics:id,title,icon',
             'shares.granteeUser:id,name', 'shares.therapist:id,name',
             'stats',
             'activeProtocol',

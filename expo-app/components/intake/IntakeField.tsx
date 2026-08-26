@@ -36,9 +36,11 @@ type Props = {
   sectionId: string;
   /** Auto-numbered position used for the eyebrow ("01", "02", …). */
   n: number;
+  /** Backend-configured mutually exclusive none/not-applicable answers. */
+  noneOptions: readonly string[];
 };
 
-export function IntakeField({ field, sectionId, n }: Props) {
+export function IntakeField({ field, sectionId, n, noneOptions }: Props) {
   const { state, setField } = useIntake();
   const value = state.answers[sectionId]?.[field.id];
   const set = (next: FieldValue) => setField(sectionId, field.id, next);
@@ -73,12 +75,17 @@ export function IntakeField({ field, sectionId, n }: Props) {
         required={isFieldRequired(field)}
         link={field.link}
       />
-      {renderInput(field, value, set)}
+      {renderInput(field, value, set, noneOptions)}
     </View>
   );
 }
 
-function renderInput(field: Field, value: FieldValue, set: (v: FieldValue) => void) {
+function renderInput(
+  field: Field,
+  value: FieldValue,
+  set: (v: FieldValue) => void,
+  noneOptions: readonly string[],
+) {
   switch (field.type) {
     case 'text':
       if (field.lines && field.lines > 1) {
@@ -140,6 +147,7 @@ function renderInput(field: Field, value: FieldValue, set: (v: FieldValue) => vo
           options={field.options ?? []}
           value={asArray(value)}
           onChange={set}
+          noneOptions={noneOptions}
         />
       );
     case 'photo':
@@ -341,21 +349,23 @@ function MultiField({
   options,
   value,
   onChange,
+  noneOptions,
 }: {
   options: string[];
   value: string[];
   onChange: (v: string[]) => void;
+  noneOptions: readonly string[];
 }) {
   const toggle = (o: string) => {
     // Mutually exclusive "none" sentinel ("geen", "Geen van onderstaande",
     // "Nee, nooit", …) — picking it clears everything else; picking any other
     // option clears a previously selected sentinel. Mirrors how the therapist
     // reads the answers.
-    if (isNoneOption(o)) {
+    if (isNoneOption(o, noneOptions)) {
       onChange(value.includes(o) ? [] : [o]);
       return;
     }
-    const filtered = value.filter((v) => !isNoneOption(v));
+    const filtered = value.filter((v) => !isNoneOption(v, noneOptions));
     onChange(
       filtered.includes(o) ? filtered.filter((v) => v !== o) : [...filtered, o],
     );

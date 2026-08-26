@@ -5,11 +5,13 @@
 import {
   Field,
   IntakeAnswers,
+  INTAKE_NONE_OPTIONS,
   INTAKE_SCHEMA,
   Section,
   SectionAnswers,
   Trigger,
 } from './schema';
+import { isConfiguredNoneOption } from './config';
 
 /** Field-level "the answer is non-empty" check used for `flagIf: 'non-empty'`. */
 export function isEmpty(v: unknown): boolean {
@@ -33,25 +35,14 @@ function matches(value: unknown, trigger: Trigger): boolean {
  * to also cover "Geen van onderstaande", "Geen andere diersoorten",
  * "Nee, nooit", etc. that the deel-2 spec introduced.
  */
-const NONE_OPTIONS = new Set([
-  'geen',
-  'nee',
-  'nee, nooit',
-  'niet van toepassing',
-  'geen van onderstaande',
-  'geen andere diersoorten',
-  'geen belangrijke veranderingen',
-  'geen echte schuilmogelijkheid',
-  'geen opvallende bijzonderheden',
-  'geen bijzonderheden',
-  'geen merkbare gevolgen meer',
-]);
-
-export function isNoneOption(option: string): boolean {
+export function isNoneOption(
+  option: string,
+  noneOptions: readonly string[] = INTAKE_NONE_OPTIONS,
+): boolean {
   // Explicit allowlist rather than a `startsWith('geen')` rule: several
   // legitimate, combinable traits also start with "Geen" (e.g. "Geen actief
   // beheer", "Geen duidelijke klachten, maar…") and must NOT clear the rest.
-  return NONE_OPTIONS.has(option.trim().toLowerCase());
+  return isConfiguredNoneOption(option, noneOptions);
 }
 
 /** Whether the field/value indicates "every question is mandatory" gating. */
@@ -102,9 +93,9 @@ export function isFieldAnswered(field: Field, value: unknown): boolean {
 }
 
 /** Count of selected options that are not a "none / not-applicable" sentinel. */
-function checkedCount(value: unknown): number {
-  if (Array.isArray(value)) return value.filter((v) => !isNoneOption(String(v))).length;
-  if (value == null || value === '' || isNoneOption(String(value))) return 0;
+function checkedCount(value: unknown, noneOptions: readonly string[]): number {
+  if (Array.isArray(value)) return value.filter((v) => !isNoneOption(String(v), noneOptions)).length;
+  if (value == null || value === '' || isNoneOption(String(value), noneOptions)) return 0;
   return 1;
 }
 
@@ -122,6 +113,7 @@ export function showField(
   field: Field,
   sectionAnswers: SectionAnswers,
   allAnswers?: IntakeAnswers,
+  noneOptions: readonly string[] = INTAKE_NONE_OPTIONS,
 ): boolean {
   if (!field.showIf) return true;
   for (const [k, trigger] of Object.entries(field.showIf)) {
@@ -135,14 +127,14 @@ export function showField(
     // Special marker: show when the referenced multi field has at least one
     // non-"geen" option selected (used for "describe what you picked" follow-ups).
     if (set.includes('any-checked')) {
-      if (checkedCount(value) < 1) return false;
+      if (checkedCount(value, noneOptions) < 1) return false;
       continue;
     }
     // Special marker: show when the referenced multi field has two or more
     // non-"geen" options selected (used for the water "licht toe hoe dit
     // verdeeld is" follow-ups, which only make sense with multiple picks).
     if (set.includes('multi-checked')) {
-      if (checkedCount(value) < 2) return false;
+      if (checkedCount(value, noneOptions) < 2) return false;
       continue;
     }
     if (!matches(value, trigger)) return false;
@@ -155,10 +147,11 @@ export function visibleFields(
   section: Section,
   answers: SectionAnswers,
   allAnswers?: IntakeAnswers,
+  noneOptions: readonly string[] = INTAKE_NONE_OPTIONS,
 ): Field[] {
   return section.fields
     .filter((f) => f.type !== 'sectionhead')
-    .filter((f) => showField(f, answers, allAnswers));
+    .filter((f) => showField(f, answers, allAnswers, noneOptions));
 }
 
 /** All schema-visible fields (including sectionheads) after showIf. */
@@ -166,8 +159,9 @@ export function visibleFieldsForRender(
   section: Section,
   answers: SectionAnswers,
   allAnswers?: IntakeAnswers,
+  noneOptions: readonly string[] = INTAKE_NONE_OPTIONS,
 ): Field[] {
-  return section.fields.filter((f) => showField(f, answers, allAnswers));
+  return section.fields.filter((f) => showField(f, answers, allAnswers, noneOptions));
 }
 
 /**
@@ -179,8 +173,9 @@ export function missingRequired(
   section: Section,
   answers: SectionAnswers,
   allAnswers?: IntakeAnswers,
+  noneOptions: readonly string[] = INTAKE_NONE_OPTIONS,
 ): Field[] {
-  return visibleFields(section, answers, allAnswers).filter(
+  return visibleFields(section, answers, allAnswers, noneOptions).filter(
     (f) => isFieldRequired(f) && !isFieldAnswered(f, answers[f.id]),
   );
 }
@@ -190,11 +185,12 @@ export function answeredCount(
   section: Section,
   answers: SectionAnswers,
   allAnswers?: IntakeAnswers,
+  noneOptions: readonly string[] = INTAKE_NONE_OPTIONS,
 ): {
   answered: number;
   total: number;
 } {
-  const renderable = visibleFields(section, answers, allAnswers);
+  const renderable = visibleFields(section, answers, allAnswers, noneOptions);
   const answered = renderable.filter((f) => isFieldAnswered(f, answers[f.id])).length;
   return { answered, total: renderable.length };
 }
@@ -204,8 +200,9 @@ export function isSectionComplete(
   section: Section,
   answers: SectionAnswers,
   allAnswers?: IntakeAnswers,
+  noneOptions: readonly string[] = INTAKE_NONE_OPTIONS,
 ): boolean {
-  return missingRequired(section, answers, allAnswers).length === 0;
+  return missingRequired(section, answers, allAnswers, noneOptions).length === 0;
 }
 
 /** Lifecycle status used to render the section list. */
@@ -216,44 +213,57 @@ export function sectionStatus(
   answers: SectionAnswers,
   isFirstUnfinished: boolean,
   allAnswers?: IntakeAnswers,
+  noneOptions: readonly string[] = INTAKE_NONE_OPTIONS,
 ): SectionStatus {
-  if (isSectionComplete(section, answers, allAnswers) && Object.keys(answers).length > 0) {
+  if (isSectionComplete(section, answers, allAnswers, noneOptions) && Object.keys(answers).length > 0) {
     return 'done';
   }
   return isFirstUnfinished ? 'active' : 'todo';
 }
 
 /** Overall progress 0..100 across all sections. */
-export function intakeProgress(answers: IntakeAnswers): {
+export function intakeProgress(
+  answers: IntakeAnswers,
+  schema: Section[] = INTAKE_SCHEMA,
+  noneOptions: readonly string[] = INTAKE_NONE_OPTIONS,
+): {
   done: number;
   total: number;
   pct: number;
 } {
-  const total = INTAKE_SCHEMA.length;
+  const total = schema.length;
   let done = 0;
-  for (const sec of INTAKE_SCHEMA) {
+  for (const sec of schema) {
     const a = answers[sec.id] ?? {};
-    if (isSectionComplete(sec, a, answers) && Object.keys(a).length > 0) done++;
+    if (isSectionComplete(sec, a, answers, noneOptions) && Object.keys(a).length > 0) done++;
   }
   return { done, total, pct: total ? Math.round((done / total) * 100) : 0 };
 }
 
 /** Returns the id of the section the customer should land on. */
-export function nextSectionId(answers: IntakeAnswers): string {
-  for (const sec of INTAKE_SCHEMA) {
+export function nextSectionId(
+  answers: IntakeAnswers,
+  schema: Section[] = INTAKE_SCHEMA,
+  noneOptions: readonly string[] = INTAKE_NONE_OPTIONS,
+): string {
+  for (const sec of schema) {
     const a = answers[sec.id] ?? {};
-    if (!isSectionComplete(sec, a, answers) || Object.keys(a).length === 0) return sec.id;
+    if (!isSectionComplete(sec, a, answers, noneOptions) || Object.keys(a).length === 0) return sec.id;
   }
-  return INTAKE_SCHEMA[INTAKE_SCHEMA.length - 1].id;
+  return schema[schema.length - 1]?.id ?? '';
 }
 
 /** Whether the answer triggers a `flagIf` on the field. */
-export function fieldFlagged(field: Field, value: unknown): boolean {
+export function fieldFlagged(
+  field: Field,
+  value: unknown,
+  noneOptions: readonly string[] = INTAKE_NONE_OPTIONS,
+): boolean {
   if (!field.flagIf) return false;
   if (field.flagIf === 'non-empty') return !isEmpty(value);
   if (field.flagIf === 'any') {
-    if (Array.isArray(value)) return value.filter((v) => !isNoneOption(String(v))).length > 0;
-    return !isEmpty(value) && !isNoneOption(String(value));
+    if (Array.isArray(value)) return value.filter((v) => !isNoneOption(String(v), noneOptions)).length > 0;
+    return !isEmpty(value) && !isNoneOption(String(value), noneOptions);
   }
   return matches(value, field.flagIf);
 }
@@ -265,8 +275,8 @@ export function fieldCritical(field: Field, value: unknown): boolean {
 }
 
 /** Whether the entire intake is blocked from auto-start because of a critical answer. */
-export function hasCriticalAnswers(answers: IntakeAnswers): boolean {
-  for (const sec of INTAKE_SCHEMA) {
+export function hasCriticalAnswers(answers: IntakeAnswers, schema: Section[] = INTAKE_SCHEMA): boolean {
+  for (const sec of schema) {
     const a = answers[sec.id] ?? {};
     for (const f of sec.fields) {
       if (fieldCritical(f, a[f.id])) return true;
@@ -276,12 +286,16 @@ export function hasCriticalAnswers(answers: IntakeAnswers): boolean {
 }
 
 /** Sum of all flagged answers — used for the submit-screen tally. */
-export function countFlags(answers: IntakeAnswers): number {
+export function countFlags(
+  answers: IntakeAnswers,
+  schema: Section[] = INTAKE_SCHEMA,
+  noneOptions: readonly string[] = INTAKE_NONE_OPTIONS,
+): number {
   let n = 0;
-  for (const sec of INTAKE_SCHEMA) {
+  for (const sec of schema) {
     const a = answers[sec.id] ?? {};
     for (const f of sec.fields) {
-      if (fieldFlagged(f, a[f.id])) n++;
+      if (fieldFlagged(f, a[f.id], noneOptions)) n++;
     }
   }
   return n;

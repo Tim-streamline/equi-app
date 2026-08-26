@@ -24,7 +24,7 @@ export default function ConnectScreen() {
       <SubHeader title={`Verbind met ${(therapist.name as string) ?? 'Shelley'}`} onBack={() => router.back()} />
       <ScrollView contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 180 }}>
         <View className="mb-5">
-          <Eyebrow className="mb-1.5">Stap 3 van 3 · Optioneel</Eyebrow>
+          <Eyebrow className="mb-1.5">Stap 2 van 2 · Optioneel</Eyebrow>
           <ProgressBar value={100} />
         </View>
 

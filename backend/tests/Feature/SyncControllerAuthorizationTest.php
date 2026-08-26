@@ -2,11 +2,12 @@
 
 namespace Tests\Feature;
 
-use App\Models\FocusTopic;
 use App\Models\Horse;
+use App\Models\ProtocolTemplate;
 use App\Models\User;
 use Firebase\JWT\JWT;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Str;
 use Tests\TestCase;
 
 class SyncControllerAuthorizationTest extends TestCase
@@ -88,26 +89,76 @@ class SyncControllerAuthorizationTest extends TestCase
         ]);
     }
 
-    public function test_client_cannot_write_reference_tables_through_sync(): void
+    public function test_removed_focus_topic_table_is_skipped_as_an_unknown_sync_type(): void
     {
         $user = User::factory()->create();
-        $topic = FocusTopic::query()->create([
-            'slug' => 'jeuk',
-            'title' => 'Jeukklachten',
-            'order' => 0,
-        ]);
 
         $this->postSyncAs($user, [[
             'op' => 'PATCH',
             'type' => 'focus_topics',
-            'id' => $topic->id,
+            'id' => (string) Str::uuid(),
             'data' => ['title' => 'Changed'],
-        ]])->assertForbidden();
+        ]])->assertOk()->assertJson(['applied' => 0, 'skipped' => 1]);
+    }
 
-        $this->assertDatabaseHas('focus_topics', [
-            'id' => $topic->id,
-            'title' => 'Jeukklachten',
+    public function test_owner_can_register_an_intake_for_their_protocol_supplement(): void
+    {
+        $owner = User::factory()->create();
+        $horse = Horse::query()->create([
+            'owner_id' => $owner->id,
+            'name' => 'Nova',
+            'status' => 'active',
         ]);
+        $supplement = $this->createProtocolSupplement($horse);
+        $intakeId = (string) Str::uuid();
+
+        $this->postSyncAs($owner, [[
+            'op' => 'PUT',
+            'type' => 'protocol_supplement_intakes',
+            'id' => $intakeId,
+            'data' => [
+                'protocol_phase_supplement_id' => $supplement->id,
+                'horse_id' => $horse->id,
+                'date' => '2026-08-23',
+                'dosage' => '90 g',
+                'done' => 1,
+                'taken_at' => '2026-08-23T08:30:00.000Z',
+            ],
+        ]])->assertOk();
+
+        $this->assertDatabaseHas('protocol_supplement_intakes', [
+            'id' => $intakeId,
+            'protocol_phase_supplement_id' => $supplement->id,
+            'horse_id' => $horse->id,
+            'dosage' => '90 g',
+            'done' => true,
+        ]);
+    }
+
+    public function test_user_cannot_register_an_intake_for_another_users_protocol_supplement(): void
+    {
+        $owner = User::factory()->create();
+        $attacker = User::factory()->create();
+        $horse = Horse::query()->create([
+            'owner_id' => $owner->id,
+            'name' => 'Nova',
+            'status' => 'active',
+        ]);
+        $supplement = $this->createProtocolSupplement($horse);
+
+        $this->postSyncAs($attacker, [[
+            'op' => 'PUT',
+            'type' => 'protocol_supplement_intakes',
+            'id' => (string) Str::uuid(),
+            'data' => [
+                'protocol_phase_supplement_id' => $supplement->id,
+                'horse_id' => $horse->id,
+                'date' => '2026-08-23',
+                'dosage' => '90 g',
+                'done' => 1,
+                'taken_at' => '2026-08-23T08:30:00.000Z',
+            ],
+        ]])->assertForbidden();
     }
 
     public function test_unauthorized_operation_aborts_entire_batch(): void
@@ -155,6 +206,34 @@ class SyncControllerAuthorizationTest extends TestCase
         return $this
             ->withHeader('Authorization', 'Bearer '.$this->tokenFor($user))
             ->postJson('/api/sync/upload', ['operations' => $operations]);
+    }
+
+    private function createProtocolSupplement(Horse $horse)
+    {
+        $template = ProtocolTemplate::query()->create(['name' => 'Darmprotocol']);
+        $templatePhase = $template->phases()->create([
+            'order' => 0,
+            'name' => 'Herstel',
+            'required' => true,
+        ]);
+        $protocol = $horse->protocols()->create([
+            'protocol_template_id' => $template->id,
+            'protocol_template_name' => $template->name,
+            'title' => 'Darmprotocol',
+            'status' => 'active',
+            'published_at' => now(),
+        ]);
+        $phase = $protocol->phases()->create([
+            'protocol_template_phase_id' => $templatePhase->id,
+            'order' => 0,
+            'title' => 'Herstel',
+            'state' => 'active',
+        ]);
+
+        return $phase->supplements()->create([
+            'name' => 'Gekookt (bio) lijnzaad',
+            'dosage' => '90 g',
+        ]);
     }
 
     private function tokenFor(User $user): string

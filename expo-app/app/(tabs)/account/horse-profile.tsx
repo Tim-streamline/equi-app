@@ -7,13 +7,12 @@ import { SubHeader } from '@/components/ui/SubHeader';
 import { SectionTitle } from '@/components/ui/SectionTitle';
 import { IconButton } from '@/components/ui/IconButton';
 import { useTabBarPadding } from '@/hooks/useTabBarPadding';
-import { useFocusForHorse, useHorse, useHorseStats, useTimeline } from '@/db/hooks';
+import { useHorse, useHorseStats, useTimeline } from '@/db/hooks';
 
 export default function HorseProfileScreen() {
   const padBottom = useTabBarPadding();
   const horse = useHorse();
   const stats = useHorseStats();
-  const focus = useFocusForHorse();
   const timeline = useTimeline();
 
   return (
@@ -48,15 +47,6 @@ export default function HorseProfileScreen() {
                   source={require('@/assets/images/logo-horse-white.png')}
                   style={{ width: 60, height: 60, opacity: 0.5, resizeMode: 'contain' }}
                 />
-              </View>
-              <View className="mt-4 flex-row flex-wrap gap-1.5">
-                {focus.map((f) => (
-                  <View key={f.id} className="rounded-pill bg-white/20 px-3 py-1">
-                    <Text className="font-semi text-white text-[12px]">
-                      {(f.extraLabel as string) || (f.topic.title as string)}
-                    </Text>
-                  </View>
-                ))}
               </View>
             </LinearGradient>
           </View>

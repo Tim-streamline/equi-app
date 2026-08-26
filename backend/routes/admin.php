@@ -6,10 +6,10 @@ use App\Http\Controllers\Admin\ChunkedMediaUploadController;
 use App\Http\Controllers\Admin\CommunityController;
 use App\Http\Controllers\Admin\DashboardController;
 use App\Http\Controllers\Admin\DataExportController;
-use App\Http\Controllers\Admin\FocusTopicController;
 use App\Http\Controllers\Admin\HorseController;
 use App\Http\Controllers\Admin\IngredientController;
 use App\Http\Controllers\Admin\IntakeBookingController;
+use App\Http\Controllers\Admin\IntakeQuestionnaireController;
 use App\Http\Controllers\Admin\LibraryCategoryController;
 use App\Http\Controllers\Admin\LibraryItemController;
 use App\Http\Controllers\Admin\MediaAssetController;
@@ -19,6 +19,7 @@ use App\Http\Controllers\Admin\NovaController;
 use App\Http\Controllers\Admin\PaymentController;
 use App\Http\Controllers\Admin\PlanController;
 use App\Http\Controllers\Admin\ProductController;
+use App\Http\Controllers\Admin\ProtocolAdviceSettingsController;
 use App\Http\Controllers\Admin\ProtocolController;
 use App\Http\Controllers\Admin\ProtocolSettingsController;
 use App\Http\Controllers\Admin\ScanResultController;
@@ -85,7 +86,6 @@ Route::middleware('auth:admin')->group(function () {
         Route::delete('library/media/{medium}', [MediaAssetController::class, 'destroy'])->name('library.media.destroy');
         Route::resource('library', LibraryItemController::class)->except('show');
         Route::resource('library-categories', LibraryCategoryController::class)->only(['index', 'store', 'update', 'destroy']);
-        Route::resource('focus-topics', FocusTopicController::class)->only(['index', 'store', 'update', 'destroy']);
         Route::resource('seasonal-tips', SeasonalTipController::class)->only(['index', 'store', 'update', 'destroy']);
         Route::resource('nova', NovaController::class)->only(['index', 'store', 'update', 'destroy']);
     });
@@ -157,6 +157,17 @@ Route::middleware('auth:admin')->group(function () {
 
     // ---- Settings: admin users ------------------------------------------
     Route::middleware('admin.role:admin')->group(function () {
+        Route::controller(IntakeQuestionnaireController::class)->prefix('intake-questionnaire')->as('intake-questionnaire.')->group(function () {
+            Route::get('/', 'index')->name('index');
+            Route::put('{intakeQuestionnaire}', 'updateQuestionnaire')->name('update');
+            Route::post('sections', 'storeSection')->name('sections.store');
+            Route::put('sections/{intakeSection}', 'updateSection')->name('sections.update');
+            Route::delete('sections/{intakeSection}', 'destroySection')->name('sections.destroy');
+            Route::post('fields', 'storeField')->name('fields.store');
+            Route::put('fields/{intakeField}', 'updateField')->name('fields.update');
+            Route::delete('fields/{intakeField}', 'destroyField')->name('fields.destroy');
+        });
+
         Route::controller(ProtocolSettingsController::class)->prefix('protocol-settings')->as('protocol-settings.')->group(function () {
             Route::get('/', 'index')->name('index');
             Route::post('templates', 'storeTemplate')->name('templates.store');
@@ -173,6 +184,13 @@ Route::middleware('auth:admin')->group(function () {
             Route::delete('supplements/{supplement}', 'destroySupplement')->name('supplements.destroy');
             Route::put('supplements/{supplement}/weeks/{protocolTemplatePhaseWeek}', 'storeSupplementWeek')->name('supplement-weeks.store');
             Route::delete('supplements/{supplement}/weeks/{protocolTemplatePhaseWeek}', 'destroySupplementWeek')->name('supplement-weeks.destroy');
+        });
+
+        Route::controller(ProtocolAdviceSettingsController::class)->prefix('protocol-settings/advice')->as('protocol-advice-settings.')->group(function () {
+            Route::get('/', 'index')->name('index');
+            Route::post('{category}', 'store')->whereIn('category', ['voeding', 'management', 'beweging'])->name('store');
+            Route::put('{category}/{advice}', 'update')->whereIn('category', ['voeding', 'management', 'beweging'])->name('update');
+            Route::delete('{category}/{advice}', 'destroy')->whereIn('category', ['voeding', 'management', 'beweging'])->name('destroy');
         });
 
         Route::controller(SettingsController::class)->prefix('settings')->as('settings.')->group(function () {

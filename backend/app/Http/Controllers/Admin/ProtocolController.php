@@ -5,17 +5,19 @@ namespace App\Http\Controllers\Admin;
 use App\Enums\SupplementDoseType;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\SaveProtocolRequest;
+use App\Models\BewegingAdvies;
 use App\Models\Horse;
+use App\Models\ManagementAdvies;
 use App\Models\Protocol;
 use App\Models\ProtocolAdvice;
 use App\Models\ProtocolAnalysis;
 use App\Models\ProtocolPhase;
 use App\Models\ProtocolPhaseSupplement;
-use App\Models\ProtocolTask;
 use App\Models\ProtocolTemplate;
 use App\Models\ProtocolTemplatePhase;
 use App\Models\Supplement;
 use App\Models\Therapist;
+use App\Models\VoedingAdvies;
 use App\Support\AuditLogger;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -112,7 +114,9 @@ class ProtocolController extends Controller
             'phases.weeks',
             'phases.supplements.weeks.protocolPhaseWeek',
             'analysis',
-            'tasks' => fn ($query) => $query->withCount('completions'),
+            'voedingAdviezen',
+            'managementAdviezen',
+            'bewegingAdviezen',
         ]);
 
         return Inertia::render('Protocols/Show', ['protocol' => $protocol]);
@@ -136,12 +140,15 @@ class ProtocolController extends Controller
             'selectedHorseId' => $selectedHorseId ?: null,
             'horses' => Horse::query()
                 ->where('status', 'active')
-                ->with('owner:id,name,email', 'focusTopics:id,title,slug')
+                ->with('owner:id,name,email')
                 ->orderBy('name')
                 ->get(['id', 'owner_id', 'name', 'breed', 'age', 'sex', 'weight_kg', 'status']),
             'therapists' => Therapist::query()
                 ->orderBy('name')
                 ->get(['id', 'name', 'title']),
+            'voedingAdviezen' => VoedingAdvies::query()->orderBy('title')->get(),
+            'managementAdviezen' => ManagementAdvies::query()->orderBy('title')->get(),
+            'bewegingAdviezen' => BewegingAdvies::query()->orderBy('title')->get(),
             'protocolTemplates' => ProtocolTemplate::query()
                 ->with([
                     'phases:id,protocol_template_id,order,name,description,required,start_after_previous_phase_weeks',
@@ -160,12 +167,13 @@ class ProtocolController extends Controller
             'protocolTemplate:id,name',
             'horse:id,name,owner_id,breed,age,sex,weight_kg,status',
             'horse.owner:id,name,email',
-            'horse.focusTopics:id,title,slug',
             'therapist:id,name,title',
             'phases.weeks',
             'phases.supplements.weeks.protocolPhaseWeek',
             'analysis.advice',
-            'tasks',
+            'voedingAdviezen',
+            'managementAdviezen',
+            'bewegingAdviezen',
         ]);
     }
 
@@ -201,7 +209,6 @@ class ProtocolController extends Controller
     private function syncStructure(Protocol $protocol, array $data): void
     {
         $phaseIds = [];
-        $phaseIdByClientKey = [];
         $phases = collect($data['phases'])->values();
 
         foreach ($phases as $order => $phaseData) {
@@ -238,14 +245,15 @@ class ProtocolController extends Controller
             $phase->fill($attributes)->save();
 
             $phaseIds[] = $phase->id;
-            $phaseIdByClientKey[$phaseData['client_key']] = $phase->id;
             $this->syncPhaseWeeks($phase, (int) $phaseData['week_count']);
             $this->syncPhaseSupplements($phase, $phaseData['supplements']);
         }
 
         $protocol->phases()->whereNotIn('id', $phaseIds)->delete();
-        $this->syncTasks($protocol, $data['tasks'], $phaseIdByClientKey);
         $this->syncAnalysis($protocol, $data['analysis']['cause'] ?? null, $data['advice']);
+        $this->syncAdviceSelections($protocol, $data['voeding_advies_ids'], 'voedingAdviezen', VoedingAdvies::class, 'voeding_advies_id');
+        $this->syncAdviceSelections($protocol, $data['management_advies_ids'], 'managementAdviezen', ManagementAdvies::class, 'management_advies_id');
+        $this->syncAdviceSelections($protocol, $data['beweging_advies_ids'], 'bewegingAdviezen', BewegingAdvies::class, 'beweging_advies_id');
         $this->synchronizeProtocolTiming($protocol);
     }
 
@@ -401,38 +409,6 @@ class ProtocolController extends Controller
         }
     }
 
-    /** @param array<int, array<string, mixed>> $tasks
-     * @param  array<string, string>  $phaseIdByClientKey
-     */
-    private function syncTasks(Protocol $protocol, array $tasks, array $phaseIdByClientKey): void
-    {
-        $taskIds = [];
-
-        foreach ($tasks as $order => $taskData) {
-            $task = isset($taskData['id'])
-                ? $protocol->tasks()->whereKey($taskData['id'])->firstOrFail()
-                : new ProtocolTask(['protocol_id' => $protocol->id]);
-
-            $task->fill([
-                'protocol_id' => $protocol->id,
-                'phase_id' => $phaseIdByClientKey[$taskData['phase_key'] ?? ''] ?? null,
-                'label' => $taskData['label'],
-                'meta' => $this->nullableValue($taskData['meta'] ?? null),
-                'kind' => $taskData['kind'],
-                'order' => $order,
-                'active_from' => $this->nullableValue($taskData['active_from'] ?? null),
-                'active_until' => $this->nullableValue($taskData['active_until'] ?? null),
-                'reference_item_id' => $this->nullableValue($taskData['reference_item_id'] ?? null),
-            ])->save();
-            $taskIds[] = $task->id;
-        }
-
-        $protocol->tasks()->when($taskIds, fn ($query) => $query->whereNotIn('id', $taskIds))->delete();
-        if ($taskIds === []) {
-            $protocol->tasks()->delete();
-        }
-    }
-
     /** @param array<int, array<string, mixed>> $adviceRows */
     private function syncAnalysis(Protocol $protocol, mixed $cause, array $adviceRows): void
     {
@@ -470,9 +446,45 @@ class ProtocolController extends Controller
         }
     }
 
+    /**
+     * @param  array<int, string>  $sourceIds
+     * @param  class-string<VoedingAdvies|ManagementAdvies|BewegingAdvies>  $sourceModel
+     */
+    private function syncAdviceSelections(
+        Protocol $protocol,
+        array $sourceIds,
+        string $relation,
+        string $sourceModel,
+        string $sourceForeignKey,
+    ): void {
+        $sourceIds = collect($sourceIds)->unique()->values();
+        $snapshots = $protocol->{$relation}()->get()->keyBy($sourceForeignKey);
+        $snapshotIds = [];
+
+        foreach ($sourceIds as $sourceId) {
+            $snapshot = $snapshots->get($sourceId);
+
+            if (! $snapshot) {
+                $source = $sourceModel::query()->findOrFail($sourceId);
+                $snapshot = $protocol->{$relation}()->create([
+                    $sourceForeignKey => $source->id,
+                    'title' => $source->title,
+                    'description' => $source->description,
+                    'layout' => $source->layout,
+                ]);
+            }
+
+            $snapshotIds[] = $snapshot->id;
+        }
+
+        $protocol->{$relation}()
+            ->when($snapshotIds, fn ($query) => $query->whereNotIn('id', $snapshotIds))
+            ->delete();
+    }
+
     private function synchronizeProtocolTiming(Protocol $protocol): void
     {
-        $protocol->load('phases.weeks', 'horse.focusTopics');
+        $protocol->load('phases.weeks', 'horse');
         $previousWeekStart = null;
         $previousWeekEnd = null;
         $latestWeekEnd = 0;
@@ -524,10 +536,7 @@ class ProtocolController extends Controller
         }
 
         $activePhase = $protocol->phases->firstWhere('state', 'active');
-        $analysisParts = collect([$protocol->horse?->breed])
-            ->merge($protocol->horse?->focusTopics?->pluck('title') ?? [])
-            ->filter()
-            ->values();
+        $analysisParts = collect([$protocol->horse?->breed])->filter()->values();
 
         $protocol->update([
             'total_weeks' => $totalWeeks ?: null,

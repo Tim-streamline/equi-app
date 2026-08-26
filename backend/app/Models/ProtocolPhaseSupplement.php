@@ -61,4 +61,9 @@ class ProtocolPhaseSupplement extends Model
     {
         return $this->hasMany(ProtocolPhaseSupplementWeek::class);
     }
+
+    public function intakes(): HasMany
+    {
+        return $this->hasMany(ProtocolSupplementIntake::class);
+    }
 }

@@ -188,7 +188,7 @@ function EmbeddedVideo({ url }: { url: string }) {
   const player = useVideoPlayer(url);
 
   return (
-    <View className="mb-5 aspect-video overflow-hidden rounded-2xl bg-teal-800">
+    <View className="mb-5 w-full aspect-video overflow-hidden rounded-2xl bg-teal-800">
       <VideoView
         player={player}
         nativeControls

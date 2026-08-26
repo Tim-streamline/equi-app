@@ -19,6 +19,7 @@ import {
 } from '@expo-google-fonts/source-sans-3';
 import { DbProvider } from '@/db/provider';
 import { IntakeProvider } from '@/lib/intake/store';
+import { IntakeSchemaProvider } from '@/lib/intake/schema-provider';
 
 SplashScreen.preventAutoHideAsync().catch(() => {});
 
@@ -48,21 +49,23 @@ export default function RootLayout() {
     <GestureHandlerRootView style={{ flex: 1, backgroundColor: '#FBF8F3' }}>
       <SafeAreaProvider>
         <DbProvider>
-          <IntakeProvider>
-            <View style={{ flex: 1, backgroundColor: '#FBF8F3' }}>
-              <StatusBar style="dark" />
-              <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: '#FBF8F3' } }}>
-                <Stack.Screen name="index" />
-                <Stack.Screen name="onboarding" />
-                <Stack.Screen name="(tabs)" />
-                <Stack.Screen name="intake" />
-                <Stack.Screen
-                  name="nova-chat"
-                  options={{ presentation: 'transparentModal', animation: 'fade' }}
-                />
-              </Stack>
-            </View>
-          </IntakeProvider>
+          <IntakeSchemaProvider>
+            <IntakeProvider>
+              <View style={{ flex: 1, backgroundColor: '#FBF8F3' }}>
+                <StatusBar style="dark" />
+                <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: '#FBF8F3' } }}>
+                  <Stack.Screen name="index" />
+                  <Stack.Screen name="onboarding" />
+                  <Stack.Screen name="(tabs)" />
+                  <Stack.Screen name="intake" />
+                  <Stack.Screen
+                    name="nova-chat"
+                    options={{ presentation: 'transparentModal', animation: 'fade' }}
+                  />
+                </Stack>
+              </View>
+            </IntakeProvider>
+          </IntakeSchemaProvider>
         </DbProvider>
       </SafeAreaProvider>
     </GestureHandlerRootView>

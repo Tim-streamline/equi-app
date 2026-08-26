@@ -42,7 +42,7 @@ class ProtocolSeederTest extends TestCase
         $protocol = Protocol::query()
             ->where('horse_id', $horse->id)
             ->where('title', "Nova's plan")
-            ->with(['phases.weeks', 'analysis.advice', 'tasks.completions'])
+            ->with(['phases.weeks', 'analysis.advice'])
             ->sole();
 
         $this->assertTrue($protocol->horse->owner->is($anchorUser));
@@ -52,11 +52,7 @@ class ProtocolSeederTest extends TestCase
         $this->assertNotNull($protocol->published_at);
         $this->assertSame('Darm protocol', $protocol->protocol_template_name);
         $this->assertCount(3, $protocol->analysis->advice);
-        $this->assertCount(4, $protocol->tasks);
-        $this->assertSame(56, $protocol->tasks->sum(fn ($task) => $task->completions->count()));
         $this->assertDatabaseCount('protocols', 1);
         $this->assertDatabaseCount('protocol_phases', 3);
-        $this->assertDatabaseCount('protocol_tasks', 4);
-        $this->assertDatabaseCount('protocol_task_completions', 56);
     }
 }

@@ -68,8 +68,18 @@ class Protocol extends Model
         return $this->hasOne(ProtocolAnalysis::class);
     }
 
-    public function tasks(): HasMany
+    public function voedingAdviezen(): HasMany
     {
-        return $this->hasMany(ProtocolTask::class);
+        return $this->hasMany(ProtocolVoedingAdvies::class)->orderBy('title');
+    }
+
+    public function managementAdviezen(): HasMany
+    {
+        return $this->hasMany(ProtocolManagementAdvies::class)->orderBy('title');
+    }
+
+    public function bewegingAdviezen(): HasMany
+    {
+        return $this->hasMany(ProtocolBewegingAdvies::class)->orderBy('title');
     }
 }

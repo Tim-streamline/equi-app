@@ -10,7 +10,7 @@ import { Chip } from '@/components/ui/Chip';
 import { Bigchip } from '@/components/ui/Bigchip';
 import { SectionTitle } from '@/components/ui/SectionTitle';
 import { useTabBarPadding } from '@/hooks/useTabBarPadding';
-import { useFocusForHorse, useHorseShares, useHorsesByOwner } from '@/db/hooks';
+import { useHorseShares, useHorsesByOwner } from '@/db/hooks';
 
 export default function MyHorsesScreen() {
   const padBottom = useTabBarPadding();
@@ -90,7 +90,6 @@ export default function MyHorsesScreen() {
 }
 
 function ActiveHorseCard({ horse }: { horse: any }) {
-  const focus = useFocusForHorse(horse.id);
   return (
     <Card onPress={() => router.push('/(tabs)/account/horse-profile')}>
       <View className="flex-row items-start gap-3">
@@ -113,11 +112,6 @@ function ActiveHorseCard({ horse }: { horse: any }) {
           <Text className="mt-0.5 text-[12px] text-ink-50">
             {horse.breed} · {horse.age} jaar · {horse.sex} · {horse.weightKg} kg
           </Text>
-          <View className="mt-2 flex-row gap-1.5 flex-wrap">
-            {focus.map((f) => (
-              <Chip key={f.id} label={(f.topic.title as string)?.split('klachten')[0] || (f.topic.title as string)} variant="outline" />
-            ))}
-          </View>
         </View>
       </View>
     </Card>

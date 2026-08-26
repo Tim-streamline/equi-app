@@ -156,7 +156,6 @@ class AdminProtocolManagementTest extends TestCase
             'aantal_per_week' => 4,
         ]);
         $this->assertDatabaseCount('protocol_phase_supplement_weeks', 6);
-        $this->assertSame(2, $protocol->tasks()->count());
         $this->assertSame('Restore the gut first.', $protocol->analysis()->firstOrFail()->cause);
         $this->assertSame(2, $protocol->analysis()->firstOrFail()->advice()->count());
         $this->assertDatabaseHas('audit_logs', [
@@ -216,8 +215,7 @@ class AdminProtocolManagementTest extends TestCase
                 ->component('Protocols/Index')
                 ->where('protocols.data.0.protocol_template_name', 'Darm protocol')
                 ->where('protocols.data.0.protocol_template.name', 'Darm protocol')
-                ->where('protocols.data.0.current_phase.title', 'Configured phase 1')
-                ->missing('protocols.data.0.tasks_count'));
+                ->where('protocols.data.0.current_phase.title', 'Configured phase 1'));
     }
 
     public function test_protocol_can_contain_more_than_three_template_phases(): void
@@ -303,12 +301,11 @@ class AdminProtocolManagementTest extends TestCase
     {
         $this->actingAs($this->admin, 'admin')->post('/admin/protocols', $this->payload());
         $protocol = Protocol::query()->where('title', 'Boaz recovery protocol')->firstOrFail();
-        $protocol->load('phases.supplements', 'tasks', 'analysis.advice');
+        $protocol->load('phases.supplements', 'analysis.advice');
 
         $firstPhase = $protocol->phases[0];
         $secondPhase = $protocol->phases[1];
         $thirdPhase = $protocol->phases[2];
-        $keptTask = $protocol->tasks[0];
         $keptAdvice = $protocol->analysis->advice[0];
 
         $payload = $this->payload();
@@ -337,16 +334,6 @@ class AdminProtocolManagementTest extends TestCase
                 'week_numbers' => [1, 4],
             ]],
         ];
-        $payload['tasks'] = [[
-            'id' => $keptTask->id,
-            'phase_key' => $firstPhase->id,
-            'label' => 'Updated linseed task',
-            'meta' => '2 tbsp',
-            'kind' => 'feeding',
-            'active_from' => '2026-08-17',
-            'active_until' => null,
-            'reference_item_id' => null,
-        ]];
         $payload['advice'] = [[
             'id' => $keptAdvice->id,
             'icon_key' => 'leaf',
@@ -378,8 +365,6 @@ class AdminProtocolManagementTest extends TestCase
             'protocol_phase_id' => $firstPhase->id,
             'supplement_id' => $this->defaultSupplement->id,
         ]);
-        $this->assertSame(1, $protocol->tasks()->count());
-        $this->assertDatabaseHas('protocol_tasks', ['id' => $keptTask->id, 'label' => 'Updated linseed task']);
         $this->assertSame(1, $protocol->analysis()->firstOrFail()->advice()->count());
         $this->assertDatabaseHas('protocol_advice', ['id' => $keptAdvice->id, 'title' => 'Updated nutrition']);
         $this->assertDatabaseHas('audit_logs', [
@@ -628,6 +613,9 @@ class AdminProtocolManagementTest extends TestCase
                 ['id' => null, 'icon_key' => 'leaf', 'title' => 'Nutrition', 'body' => 'Adjust roughage and supplements.'],
                 ['id' => null, 'icon_key' => 'run', 'title' => 'Movement', 'body' => 'Build movement gradually.'],
             ],
+            'voeding_advies_ids' => [],
+            'management_advies_ids' => [],
+            'beweging_advies_ids' => [],
             'phases' => [
                 [
                     'id' => null,
@@ -666,28 +654,6 @@ class AdminProtocolManagementTest extends TestCase
                     'title' => 'Phase 3 — Stabilize',
                     'week_count' => 2,
                     'supplements' => [],
-                ],
-            ],
-            'tasks' => [
-                [
-                    'id' => null,
-                    'phase_key' => 'phase-one',
-                    'label' => 'Linseed through roughage',
-                    'meta' => '1 tbsp',
-                    'kind' => 'feeding',
-                    'active_from' => '2026-08-17',
-                    'active_until' => null,
-                    'reference_item_id' => null,
-                ],
-                [
-                    'id' => null,
-                    'phase_key' => 'phase-one',
-                    'label' => 'Observe manure',
-                    'meta' => null,
-                    'kind' => 'observation',
-                    'active_from' => null,
-                    'active_until' => null,
-                    'reference_item_id' => null,
                 ],
             ],
         ];

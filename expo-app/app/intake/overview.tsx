@@ -10,11 +10,8 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { ChevronLeft, MoreHorizontal, Check, X, AlertTriangle } from 'lucide-react-native';
 
 import { IconButton } from '@/components/ui/IconButton';
-import {
-  INTAKE_SCHEMA,
-  INTAKE_DISCLAIMER_SHORT,
-  Section,
-} from '@/lib/intake/schema';
+import { Section } from '@/lib/intake/schema';
+import { useIntakeSchema } from '@/lib/intake/schema-provider';
 import {
   intakeProgress,
   isSectionComplete,
@@ -26,8 +23,9 @@ type Status = 'done' | 'active' | 'todo';
 
 export default function IntakeOverview() {
   const { state } = useIntake();
-  const { done, total, pct } = intakeProgress(state.answers);
-  const upcomingId = nextSectionId(state.answers);
+  const { schema, disclaimerShort, noneOptions } = useIntakeSchema();
+  const { done, total, pct } = intakeProgress(state.answers, schema, noneOptions);
+  const upcomingId = nextSectionId(state.answers, schema, noneOptions);
 
   // Re-render the "X min geleden" label every minute without blocking input.
   const [, setNow] = useState(0);
@@ -96,16 +94,16 @@ export default function IntakeOverview() {
                 Disclaimer
               </Text>
               <Text className="text-[12.5px] italic leading-[18px] text-[#5A4214]">
-                {INTAKE_DISCLAIMER_SHORT}
+                {disclaimerShort}
               </Text>
             </View>
           </View>
 
           <View className="mx-4 gap-2">
-            {INTAKE_SCHEMA.map((s) => {
+            {schema.map((s) => {
               const a = state.answers[s.id] ?? {};
               const status: Status =
-                isSectionComplete(s, a, state.answers) && Object.keys(a).length > 0
+                isSectionComplete(s, a, state.answers, noneOptions) && Object.keys(a).length > 0
                   ? 'done'
                   : s.id === upcomingId
                     ? 'active'

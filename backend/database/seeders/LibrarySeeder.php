@@ -2,7 +2,6 @@
 
 namespace Database\Seeders;
 
-use App\Models\FocusTopic;
 use App\Models\LibraryArticleSection;
 use App\Models\LibraryCategory;
 use App\Models\LibraryChapter;
@@ -18,7 +17,6 @@ class LibrarySeeder extends Seeder
         $shelley = Therapist::where('name', 'Shelley')->first();
         $therapistIds = Therapist::pluck('id')->all();
         $categoriesBySlug = LibraryCategory::pluck('id', 'slug');
-        $focusBySlug = FocusTopic::pluck('id', 'slug');
 
         // Hand-crafted featured + a few well-known items.
         $brandnetel = LibraryItem::create([
@@ -47,19 +45,18 @@ class LibrarySeeder extends Seeder
             ['Niet doen.', 'Geen gedroogde brandnetel zonder broeien — dit verstoort de werking. En niet langer dan zes weken aan een stuk: bouw daarna af.'],
         ]);
         $brandnetel->categories()->attach([$categoriesBySlug['kruiden'], $categoriesBySlug['aanbevolen']]);
-        $brandnetel->focusTopics()->attach([$focusBySlug['jeuk'], $focusBySlug['darm']]);
 
         $knownTitles = [
-            ['lijnzaad', 'article', 'Lijnzaad: doseren in 7 dagen', '8 min · Artikel', ['voeding', 'aanbevolen'], ['darm']],
-            ['mest-score', 'video', 'Lees de mest van je paard', '6 min · Video', ['aanbevolen'], ['darm']],
-            ['darmen-cursus', 'course', 'Darmen Cursus — Hoofdstuk 3 · 4 lessen', '42 min · Video', ['cursussen', 'darmen'], ['darm']],
-            ['locatie', 'program', 'In balans bij locatiewissel', '4 weken · Programma', ['aanbevolen'], []],
-            ['hoefb', 'article', 'Hoefbevangenheid — de eerste signalen', '7 min · Artikel', ['hoeven'], ['hoef']],
-            ['zomereczeem', 'article', 'Zomereczeem — preventief beleid', '9 min · Artikel', ['jeuk'], ['jeuk']],
-            ['krachtvoer', 'article', 'Krachtvoer zonder granen — waarom?', '6 min · Artikel', ['voeding'], ['darm']],
-            ['mariadistel', 'article', 'Mariadistel voor de lever', '5 min · Artikel', ['kruiden'], []],
+            ['lijnzaad', 'article', 'Lijnzaad: doseren in 7 dagen', '8 min · Artikel', ['voeding', 'aanbevolen']],
+            ['mest-score', 'video', 'Lees de mest van je paard', '6 min · Video', ['aanbevolen']],
+            ['darmen-cursus', 'course', 'Darmen Cursus — Hoofdstuk 3 · 4 lessen', '42 min · Video', ['cursussen', 'darmen']],
+            ['locatie', 'program', 'In balans bij locatiewissel', '4 weken · Programma', ['aanbevolen']],
+            ['hoefb', 'article', 'Hoefbevangenheid — de eerste signalen', '7 min · Artikel', ['hoeven']],
+            ['zomereczeem', 'article', 'Zomereczeem — preventief beleid', '9 min · Artikel', ['jeuk']],
+            ['krachtvoer', 'article', 'Krachtvoer zonder granen — waarom?', '6 min · Artikel', ['voeding']],
+            ['mariadistel', 'article', 'Mariadistel voor de lever', '5 min · Artikel', ['kruiden']],
         ];
-        foreach ($knownTitles as $i => [$slug, $format, $title, $duration, $catSlugs, $focusSlugs]) {
+        foreach ($knownTitles as $i => [$slug, $format, $title, $duration, $catSlugs]) {
             $item = LibraryItem::create([
                 'slug' => $slug,
                 'format' => $format,
@@ -93,14 +90,11 @@ class LibrarySeeder extends Seeder
             }
             $catIds = collect($catSlugs)->map(fn ($s) => $categoriesBySlug[$s])->all();
             if ($catIds) $item->categories()->attach($catIds);
-            $focusIds = collect($focusSlugs)->map(fn ($s) => $focusBySlug[$s])->all();
-            if ($focusIds) $item->focusTopics()->attach($focusIds);
         }
 
         // Fill out to ~50 items with generated content.
         $formats = ['article', 'video', 'course', 'program'];
         $allCatIds = $categoriesBySlug->values()->all();
-        $allFocusIds = $focusBySlug->values()->all();
         for ($i = 0; $i < 40; $i++) {
             $format = fake()->randomElement($formats);
             $minutes = fake()->numberBetween(3, 30);
@@ -141,7 +135,6 @@ class LibrarySeeder extends Seeder
                 }
             }
             $item->categories()->attach(fake()->randomElements($allCatIds, fake()->numberBetween(1, 3)));
-            $item->focusTopics()->attach(fake()->randomElements($allFocusIds, fake()->numberBetween(0, 2)));
         }
 
         // Seasonal tips — one per month, current month active.

@@ -110,6 +110,25 @@ export type Section = {
   fields: Field[];
 };
 
+/**
+ * Multi-select answers that are mutually exclusive with every substantive
+ * answer. The backend-managed questionnaire can override this list; this copy
+ * remains the offline/first-start fallback.
+ */
+export const INTAKE_NONE_OPTIONS = [
+  'geen',
+  'nee',
+  'nee, nooit',
+  'niet van toepassing',
+  'geen van onderstaande',
+  'geen andere diersoorten',
+  'geen belangrijke veranderingen',
+  'geen echte schuilmogelijkheid',
+  'geen opvallende bijzonderheden',
+  'geen bijzonderheden',
+  'geen merkbare gevolgen meer',
+];
+
 /** Short disclaimer shown at the top of the intake overview screen. */
 export const INTAKE_DISCLAIMER_SHORT =
   'Vul dit formulier zo volledig mogelijk in. We kunnen alleen meedenken op ' +

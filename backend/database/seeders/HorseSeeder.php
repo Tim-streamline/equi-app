@@ -2,7 +2,6 @@
 
 namespace Database\Seeders;
 
-use App\Models\FocusTopic;
 use App\Models\Horse;
 use App\Models\HorseShare;
 use App\Models\HorseStat;
@@ -12,8 +11,6 @@ use App\Models\ProtocolAdvice;
 use App\Models\ProtocolAnalysis;
 use App\Models\ProtocolPhase;
 use App\Models\ProtocolPhaseWeek;
-use App\Models\ProtocolTask;
-use App\Models\ProtocolTaskCompletion;
 use App\Models\ProtocolTemplate;
 use App\Models\Therapist;
 use App\Models\TimelineEvent;
@@ -40,8 +37,6 @@ class HorseSeeder extends Seeder
         $anchorUser = User::where('email', UserSeeder::ANCHOR_EMAIL)->firstOrFail();
         $shelley = Therapist::where('name', 'Shelley')->first();
         $therapistIds = Therapist::pluck('id')->all();
-        $focusIds = FocusTopic::pluck('id')->all();
-        $focusBySlug = FocusTopic::pluck('id', 'slug');
 
         // Seed the anchor user's hand-crafted horses first.
         $nova = Horse::create([
@@ -54,9 +49,6 @@ class HorseSeeder extends Seeder
             'stable' => 'Manege De Hoeve · Box 4',
             'status' => 'active',
             'created_at' => now()->subWeeks(3),
-        ]);
-        $nova->focusTopics()->attach([$focusBySlug['jeuk'], $focusBySlug['darm']], [
-            'extra_label' => 'Jeukklachten', 'added_at' => now()->subWeeks(3),
         ]);
         $this->seedNovaSpecifics($nova, $anchorUser, $shelley);
 
@@ -87,10 +79,6 @@ class HorseSeeder extends Seeder
                     'status' => 'active',
                     'created_at' => fake()->dateTimeBetween('-9 months', '-1 week'),
                 ]);
-                $picks = fake()->randomElements($focusIds, fake()->numberBetween(0, 3));
-                foreach ($picks as $fid) {
-                    $horse->focusTopics()->attach($fid, ['added_at' => $horse->created_at]);
-                }
                 $this->seedStats($horse);
                 $this->seedTimeline($horse);
                 if (fake()->boolean(40)) {
@@ -307,28 +295,6 @@ class HorseSeeder extends Seeder
             ]);
         }
 
-        $taskCount = fake()->numberBetween(3, 6);
-        $taskIds = [];
-        for ($i = 0; $i < $taskCount; $i++) {
-            $task = ProtocolTask::create([
-                'protocol_id' => $protocol->id, 'phase_id' => $activePhase->id,
-                'label' => fake()->sentence(5),
-                'meta' => fake()->randomElement(['Ochtendvoer', 'Avondvoer', 'Na ochtendmest', 'Vóór beweging', 'Bij opstallen']),
-                'kind' => fake()->randomElement(['feeding', 'observation', 'care', 'other']),
-                'order' => $i, 'active_from' => $protocol->started_at,
-            ]);
-            $taskIds[] = $task->id;
-        }
-        for ($d = 0; $d < 10; $d++) {
-            $date = now()->subDays($d)->toDateString();
-            foreach ($taskIds as $tid) {
-                $done = $d > 1 ? fake()->boolean(85) : fake()->boolean(50);
-                ProtocolTaskCompletion::create([
-                    'task_id' => $tid, 'horse_id' => $horse->id, 'date' => $date,
-                    'done' => $done, 'done_at' => $done ? now()->subDays($d) : null,
-                ]);
-            }
-        }
     }
 
     private function seedObservations(Horse $horse, User $author): void

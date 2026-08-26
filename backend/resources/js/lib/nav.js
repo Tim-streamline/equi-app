@@ -6,7 +6,6 @@ import {
     BookOpen,
     FolderTree,
     CalendarHeart,
-    Sparkles,
     ScanLine,
     Package,
     FlaskConical,
@@ -23,6 +22,8 @@ import {
     ScrollText,
     Settings,
     SlidersHorizontal,
+    ListChecks,
+    Settings2,
 } from '@lucide/svelte';
 
 /**
@@ -51,7 +52,6 @@ export const navSections = [
         items: [
             { label: 'Library', href: '/admin/library', icon: BookOpen },
             { label: 'Categories', href: '/admin/library-categories', icon: FolderTree },
-            { label: 'Focus topics', href: '/admin/focus-topics', icon: Sparkles },
             { label: 'Seasonal tips', href: '/admin/seasonal-tips', icon: CalendarHeart },
             { label: 'Nova chat', href: '/admin/nova', icon: Bot },
         ],
@@ -88,7 +88,9 @@ export const navSections = [
             { label: 'Notifications', href: '/admin/notifications', icon: Bell },
             { label: 'Sync health', href: '/admin/sync-health', icon: RadioTower },
             { label: 'Audit log', href: '/admin/audit-log', icon: ScrollText, roles: ['admin'] },
-            { label: 'Protocol Templates', href: '/admin/protocol-settings', icon: SlidersHorizontal, roles: ['admin'] },
+            { label: 'Intakevragen', href: '/admin/intake-questionnaire', icon: ListChecks, roles: ['admin'] },
+            { label: 'Protocol Templates', href: '/admin/protocol-settings', match: '/admin/protocol-settings', icon: SlidersHorizontal, roles: ['admin'] },
+            { label: 'Protocol Settings', href: '/admin/protocol-settings/advice', icon: Settings2, roles: ['admin'] },
             { label: 'Settings', href: '/admin/settings', icon: Settings, roles: ['admin'] },
         ],
     },

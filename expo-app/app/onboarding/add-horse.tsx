@@ -36,7 +36,7 @@ export default function AddHorseScreen() {
       stable: stall,
       status: 'active',
     });
-    router.push('/onboarding/focus');
+    router.push('/onboarding/connect');
   };
 
   return (
@@ -44,8 +44,8 @@ export default function AddHorseScreen() {
       <SubHeader title="Nieuw paard" onBack={() => router.back()} />
       <ScrollView contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 140 }}>
         <View className="mb-5">
-          <Eyebrow className="mb-1.5">Stap 1 van 3</Eyebrow>
-          <ProgressBar value={33} />
+          <Eyebrow className="mb-1.5">Stap 1 van 2</Eyebrow>
+          <ProgressBar value={50} />
         </View>
         <Text className="font-bold text-ink mb-2" style={{ fontSize: 24, lineHeight: 30 }}>
           Vertel me over je paard.

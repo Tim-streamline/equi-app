@@ -9,7 +9,7 @@ import { ChevronLeft, Check, Send, AlertTriangle } from 'lucide-react-native';
 
 import { Button } from '@/components/ui/Button';
 import { IconButton } from '@/components/ui/IconButton';
-import { INTAKE_SCHEMA } from '@/lib/intake/schema';
+import { useIntakeSchema } from '@/lib/intake/schema-provider';
 import {
   countFlags,
   hasCriticalAnswers,
@@ -21,15 +21,16 @@ import { useIntake } from '@/lib/intake/store';
 export default function IntakeSubmit() {
   const insets = useSafeAreaInsets();
   const { state, submit } = useIntake();
-  const flags = countFlags(state.answers);
-  const critical = hasCriticalAnswers(state.answers);
+  const { schema, noneOptions } = useIntakeSchema();
+  const flags = countFlags(state.answers, schema, noneOptions);
+  const critical = hasCriticalAnswers(state.answers, schema);
 
   // Per section, the still-missing required questions (by their visible label),
   // so we can both list them inline and surface them in the "you can't send
   // yet" notification when someone taps VERSTUREN too early.
-  const missingBySection = INTAKE_SCHEMA.map((s) => {
+  const missingBySection = schema.map((s) => {
     const a = state.answers[s.id] ?? {};
-    const fields = missingRequired(s, a, state.answers);
+    const fields = missingRequired(s, a, state.answers, noneOptions);
     const empty = Object.keys(a).length === 0;
     return { section: s, fields, incomplete: empty || fields.length > 0 };
   }).filter((m) => m.incomplete);
@@ -129,10 +130,10 @@ export default function IntakeSubmit() {
           )}
 
           <View className="mb-4 overflow-hidden rounded-2xl border border-ink-8 bg-white">
-            {INTAKE_SCHEMA.map((s, i) => {
+            {schema.map((s, i) => {
               const a = state.answers[s.id] ?? {};
-              const done = isSectionComplete(s, a, state.answers) && Object.keys(a).length > 0;
-              const missing = missingRequired(s, a, state.answers).length;
+              const done = isSectionComplete(s, a, state.answers, noneOptions) && Object.keys(a).length > 0;
+              const missing = missingRequired(s, a, state.answers, noneOptions).length;
               return (
                 <Pressable
                   key={s.id}
@@ -141,7 +142,7 @@ export default function IntakeSubmit() {
                   }
                   className="flex-row items-center gap-3 px-3.5 py-3"
                   style={{
-                    borderBottomWidth: i < INTAKE_SCHEMA.length - 1 ? 1 : 0,
+                    borderBottomWidth: i < schema.length - 1 ? 1 : 0,
                     borderBottomColor: 'rgba(27,42,42,0.08)',
                   }}
                 >

@@ -1,0 +1,506 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="" />
+<link href="https://fonts.googleapis.com/css2?family=Source+Sans+3:ital,wght@0,400;0,500;0,600;0,700;1,400;1,600&display=swap" rel="stylesheet" />
+<style>
+  html, body { margin: 0; padding: 0; background: #FBF8F3; font-family: 'Source Sans 3', system-ui, sans-serif; color: #1B2A2A; -webkit-font-smoothing: antialiased; }
+  a { color: #127A79; text-decoration: none; }
+  a:hover { color: #108A82; }
+  * { box-sizing: border-box; }
+</style>
+</helmet>
+
+<div style="min-height: 100vh; background: #FBF8F3; position: relative;">
+
+  <div style="height: 72px; background: #FFFFFF; border-bottom: 1px solid rgba(27,42,42,0.1); display: flex; align-items: center; padding: 0 32px; position: sticky; top: 0; z-index: 5;">
+    <div style="display: flex; align-items: center; gap: 10px; flex: 1;">
+      <div style="width: 32px; height: 32px; border-radius: 9px; background: #18BAB0; display: grid; place-items: center; color: white; font-weight: 700; font-size: 13px;">EA</div>
+      <div>
+        <div style="font-family: 'Source Sans 3'; font-weight: 700; font-size: 15px; color: #127A79;">Protocolbeheer</div>
+        <div style="font-size: 11px; color: rgba(27,42,42,0.5);">Curatie voor Plus-klanten</div>
+      </div>
+    </div>
+    <button onClick="{{ openOverview }}" style="padding: 11px 18px; border-radius: 999px; border: 1px solid rgba(27,42,42,0.16); background: transparent; color: #1B2A2A; font-family: inherit; font-weight: 600; font-size: 13.5px; cursor: pointer; white-space: nowrap; margin-right: 10px;">{{ overviewButtonLabel }}</button>
+    <button style="padding: 11px 20px; border-radius: 999px; border: 0; background: #18BAB0; color: white; font-family: inherit; font-weight: 600; font-size: 13.5px; cursor: pointer; white-space: nowrap;" style-hover="background: #108A82;">Publiceer naar klant</button>
+  </div>
+
+  <div style="max-width: 1180px; margin: 0 auto; padding: 32px; display: flex; gap: 28px; align-items: flex-start;">
+
+    <div style="width: 300px; flex-shrink: 0; display: flex; flex-direction: column; gap: 16px; position: sticky; top: 96px;">
+      <div style="background: #FFFFFF; border: 1px solid rgba(27,42,42,0.1); border-radius: 20px; padding: 20px;">
+        <div style="font-size: 11px; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase; color: #108A82; margin-bottom: 10px;">Uit de intake</div>
+        <div style="font-weight: 700; font-size: 16px;">{{ horseName }}</div>
+        <div style="font-size: 12.5px; color: rgba(27,42,42,0.55); margin-top: 2px;">Fries Tinker mix ruin · 10 jaar · 550 kg</div>
+        <div style="font-size: 13px; line-height: 1.55; color: rgba(27,42,42,0.7); margin-top: 12px; padding-top: 12px; border-top: 1px solid rgba(27,42,42,0.08);">"Overgewicht, opgeblazen buik en mestwater. Hoest bij aandraven, milde CPL met jeuk."</div>
+      </div>
+
+      <div style="background: #0D5C5B; border-radius: 20px; padding: 20px; color: #FBF8F3;">
+        <div style="font-size: 11px; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase; color: #99E8DF; margin-bottom: 10px;">Waarschijnlijkheidsconclusie</div>
+        <textarea value="{{ conclusionSummary }}" onChange="{{ onConclusionSummary }}" rows="3" style="width: 100%; background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.2); border-radius: 10px; padding: 8px 10px; font-family: inherit; font-size: 13.5px; line-height: 1.5; color: #FBF8F3; resize: vertical;"></textarea>
+        <div style="display: flex; flex-direction: column; gap: 6px; margin-top: 14px; padding-top: 14px; border-top: 1px solid rgba(255,255,255,0.15);">
+          <sc-for list="{{ conclusionTakeawayItems }}" as="tw" hint-placeholder-count="3">
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <span style="color: #99E8DF; flex-shrink: 0;">✔</span>
+              <input value="{{ tw.value }}" onChange="{{ tw.onChange }}" style="flex: 1; background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.2); border-radius: 8px; padding: 6px 9px; font-family: inherit; font-size: 12.5px; color: #FBF8F3;" />
+              <button onClick="{{ tw.remove }}" style="width: 20px; height: 20px; border-radius: 999px; border: 0; background: rgba(255,255,255,0.12); color: #FBF8F3; font-size: 11px; line-height: 1; cursor: pointer; display: grid; place-items: center; padding: 0; flex-shrink: 0;">×</button>
+            </div>
+          </sc-for>
+        </div>
+        <button onClick="{{ addTakeaway }}" style="margin-top: 8px; background: transparent; border: 0; padding: 0; font-family: inherit; font-size: 12px; font-weight: 600; color: #99E8DF; cursor: pointer;">+ Take-away toevoegen</button>
+      </div>
+
+      <div style="background: #FFFFFF; border: 1px solid rgba(27,42,42,0.1); border-radius: 20px; padding: 20px;">
+        <div style="font-size: 11px; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase; color: #108A82; margin-bottom: 10px;">Gedetecteerde thema's</div>
+        <div style="display: flex; flex-wrap: wrap; gap: 6px;">
+          <sc-for list="{{ horseTagChips }}" as="t" hint-placeholder-count="6">
+            <span style="display: inline-flex; align-items: center; gap: 5px; font-size: 11.5px; font-weight: 700; letter-spacing: 0.04em; padding: 5px 8px 5px 11px; border-radius: 999px; background: #EAFBF9; color: #0E6F69;">
+              {{ t.label }}
+              <button onClick="{{ t.remove }}" style="width: 14px; height: 14px; border-radius: 999px; border: 0; background: rgba(14,111,105,0.18); color: #0E6F69; font-size: 10px; line-height: 1; cursor: pointer; display: grid; place-items: center; padding: 0;">×</button>
+            </span>
+          </sc-for>
+        </div>
+        <div style="display: flex; gap: 6px; margin-top: 10px;">
+          <input value="{{ newTag }}" onChange="{{ onNewTag }}" onKeyDown="{{ onNewTagKey }}" placeholder="Nieuw thema toevoegen" style="flex: 1; border: 1px solid rgba(27,42,42,0.15); border-radius: 999px; padding: 7px 12px; font-family: inherit; font-size: 12.5px;" />
+          <button onClick="{{ addTag }}" style="padding: 7px 14px; border-radius: 999px; border: 0; background: #18BAB0; color: white; font-family: inherit; font-weight: 600; font-size: 12.5px; cursor: pointer; white-space: nowrap;">Toevoegen</button>
+        </div>
+        <div style="font-size: 12px; line-height: 1.5; color: rgba(27,42,42,0.5); margin-top: 12px;">Deze thema's bepalen welke tips uit de bibliotheek worden voorgesteld.</div>
+      </div>
+
+    </div>
+
+    <div style="flex: 1; display: flex; flex-direction: column; gap: 22px; min-width: 0;">
+
+      <div>
+        <div style="font-size: 11px; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase; color: rgba(27,42,42,0.45); margin-bottom: 8px;">Onderdeel</div>
+        <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+          <sc-for list="{{ tabs }}" as="tb" hint-placeholder-count="4">
+            <button onClick="{{ tb.select }}" style="padding: 10px 16px; border-radius: 999px; border: 1.5px solid {{ tb.border }}; background: {{ tb.bg }}; color: {{ tb.textColor }}; font-family: inherit; font-weight: 600; font-size: 13.5px; cursor: pointer; white-space: nowrap;">{{ tb.label }}</button>
+          </sc-for>
+        </div>
+      </div>
+
+      <sc-if value="{{ isKruiden }}" hint-placeholder-val="{{ true }}">
+        <div>
+          <div style="font-size: 11px; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase; color: rgba(27,42,42,0.45); margin-bottom: 8px;">Fase van het protocol</div>
+          <div style="display: flex; gap: 8px;">
+            <sc-for list="{{ phases }}" as="ph" hint-placeholder-count="3">
+              <button onClick="{{ ph.select }}" style="flex: 1; text-align: left; padding: 12px 16px; border-radius: 14px; border: 1.5px solid {{ ph.border }}; background: {{ ph.bg }}; cursor: pointer; font-family: inherit;">
+                <div style="display: flex; align-items: center; gap: 6px;">
+                  <div style="font-weight: 700; font-size: 14px; color: {{ ph.textColor }};">{{ ph.label }}</div>
+                  <sc-if value="{{ ph.locked }}" hint-placeholder-val="{{ false }}">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="rgba(27,42,42,0.4)" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>
+                  </sc-if>
+                </div>
+                <div style="font-size: 11.5px; color: {{ ph.subColor }}; margin-top: 2px;">{{ ph.sub }}</div>
+              </button>
+            </sc-for>
+          </div>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{ showLockedNotice }}" hint-placeholder-val="{{ false }}">
+        <div style="background: #FDF4E4; border: 1px solid rgba(217,164,65,0.4); border-radius: 18px; padding: 14px 18px; display: flex; align-items: center; justify-content: space-between; gap: 14px; flex-wrap: wrap;">
+          <div style="display: flex; gap: 10px; align-items: flex-start;">
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#B5842B" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink: 0; margin-top: 1px;"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>
+            <div>
+              <div style="font-weight: 700; font-size: 13.5px; color: #7A5A16;">Nog niet zichtbaar voor de klant</div>
+              <div style="font-size: 12.5px; line-height: 1.5; color: rgba(27,42,42,0.65); margin-top: 2px;">Je kunt deze fase nu al klaarzetten. Ze krijgt deze pas te zien zodra de week 5-update binnen is (of jij hem eerder publiceert) — dan ook met een pushmelding om te bestellen.</div>
+            </div>
+          </div>
+          <button onClick="{{ unlockPhase3 }}" style="padding: 9px 16px; border-radius: 999px; border: 1px solid rgba(217,164,65,0.5); background: transparent; color: #7A5A16; font-family: inherit; font-weight: 600; font-size: 12.5px; cursor: pointer; white-space: nowrap;">Publiceer deze fase nu al</button>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{ true }}" hint-placeholder-val="{{ true }}">
+
+        <div style="display: flex; gap: 10px; align-items: center;">
+          <div style="flex: 1; display: flex; align-items: center; gap: 10px; background: #FFFFFF; border: 1px solid rgba(27,42,42,0.14); border-radius: 999px; padding: 11px 16px;">
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="rgba(27,42,42,0.4)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+            <input value="{{ query }}" onChange="{{ onQuery }}" placeholder="Zoek op naam of thema, bv. darmgezondheid" style="flex: 1; border: 0; outline: none; font-family: inherit; font-size: 13.5px; background: transparent;" />
+          </div>
+        </div>
+
+        <sc-for list="{{ activeSections }}" as="sec" hint-placeholder-count="1">
+          <div style="background: #FFFFFF; border: 1px solid rgba(27,42,42,0.1); border-radius: 20px; overflow: hidden;">
+            <div style="display: flex; align-items: center; justify-content: space-between; padding: 16px 20px; border-bottom: 1px solid rgba(27,42,42,0.08);">
+              <div>
+                <div style="font-weight: 700; font-size: 15.5px;">{{ sec.title }}</div>
+                <sc-if value="{{ sec.subtitle }}" hint-placeholder-val="{{ false }}">
+                  <div style="font-size: 11.5px; color: rgba(27,42,42,0.5); margin-top: 1px;">{{ sec.subtitle }}</div>
+                </sc-if>
+              </div>
+              <span style="font-size: 11.5px; font-weight: 600; color: rgba(27,42,42,0.5);">{{ sec.includedCount }} van {{ sec.total }} actief</span>
+            </div>
+
+            <div style="display: flex; flex-direction: column;">
+              <sc-for list="{{ sec.matched }}" as="it" hint-placeholder-count="3">
+                <div style="display: flex; align-items: flex-start; gap: 14px; padding: 14px 20px; border-bottom: 1px solid rgba(27,42,42,0.06);">
+                  <button onClick="{{ it.toggle }}" style="width: 40px; height: 23px; border-radius: 999px; border: 0; flex-shrink: 0; margin-top: 2px; cursor: pointer; position: relative; background: {{ it.trackColor }}; transition: background 0.15s;">
+                    <span style="position: absolute; top: 2.5px; left: {{ it.knobLeft }}; width: 18px; height: 18px; border-radius: 999px; background: white; transition: left 0.15s; box-shadow: 0 1px 3px rgba(0,0,0,0.25);"></span>
+                  </button>
+                  <div style="flex: 1; min-width: 0;">
+                    <div style="display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap;">
+                      <span style="font-weight: 600; font-size: 14.5px; color: {{ it.textColor }};">{{ it.name }}</span>
+                      <span style="font-size: 10px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; padding: 2px 8px; border-radius: 999px; background: #EAFBF9; color: #0E6F69;">Voorgesteld</span>
+                    </div>
+                    <sc-if value="{{ it.isNote }}" hint-placeholder-val="{{ false }}">
+                      <textarea value="{{ it.value }}" onChange="{{ it.onChange }}" rows="2" style="width: 100%; margin-top: 8px; border: 1px solid rgba(27,42,42,0.15); border-radius: 10px; padding: 8px 11px; font-family: inherit; font-size: 13px; line-height: 1.45; resize: vertical;"></textarea>
+                    </sc-if>
+                    <sc-if value="{{ it.isDose }}" hint-placeholder-val="{{ true }}">
+                      <div style="font-size: 12.5px; color: rgba(27,42,42,0.55); margin-top: 3px;">{{ it.dose }}</div>
+                    </sc-if>
+                    <div style="display: flex; flex-wrap: wrap; gap: 5px; margin-top: 6px;">
+                      <sc-for list="{{ it.tagChips }}" as="tag" hint-placeholder-count="2">
+                        <span style="font-size: 10.5px; padding: 2px 8px; border-radius: 999px; background: {{ tag.bg }}; color: {{ tag.color }};">{{ tag.label }}</span>
+                      </sc-for>
+                    </div>
+                    <sc-if value="{{ it.hasLink }}" hint-placeholder-val="{{ false }}">
+                      <a href="{{ it.link }}" target="_blank" rel="noopener" style="font-size: 12.5px; font-weight: 600; color: #127A79; margin-top: 6px; display: inline-block;">{{ it.linkLabel }} »</a>
+                    </sc-if>
+                  </div>
+                </div>
+              </sc-for>
+
+              <sc-if value="{{ sec.hasUnmatched }}" hint-placeholder-val="{{ false }}">
+                <button onClick="{{ sec.toggleExpand }}" style="text-align: left; width: 100%; background: transparent; border: 0; padding: 11px 20px; font-family: inherit; font-size: 12.5px; font-weight: 600; color: #108A82; cursor: pointer; display: flex; align-items: center; gap: 6px;">
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" style="transform: {{ sec.chevronRotate }};"><path d="m9 18 6-6-6-6"/></svg>
+                  {{ sec.expandLabel }}
+                </button>
+
+                <sc-if value="{{ sec.expanded }}" hint-placeholder-val="{{ false }}">
+                  <sc-for list="{{ sec.unmatched }}" as="it" hint-placeholder-count="2">
+                    <div style="display: flex; align-items: flex-start; gap: 14px; padding: 14px 20px; border-top: 1px solid rgba(27,42,42,0.06); opacity: {{ it.rowOpacity }};">
+                      <button onClick="{{ it.toggle }}" style="width: 40px; height: 23px; border-radius: 999px; border: 0; flex-shrink: 0; margin-top: 2px; cursor: pointer; position: relative; background: {{ it.trackColor }}; transition: background 0.15s;">
+                        <span style="position: absolute; top: 2.5px; left: {{ it.knobLeft }}; width: 18px; height: 18px; border-radius: 999px; background: white; transition: left 0.15s; box-shadow: 0 1px 3px rgba(0,0,0,0.25);"></span>
+                      </button>
+                      <div style="flex: 1; min-width: 0;">
+                        <span style="font-weight: 600; font-size: 14.5px; color: {{ it.textColor }};">{{ it.name }}</span>
+                        <sc-if value="{{ it.isNote }}" hint-placeholder-val="{{ false }}">
+                          <textarea value="{{ it.value }}" onChange="{{ it.onChange }}" rows="2" style="width: 100%; margin-top: 8px; border: 1px solid rgba(27,42,42,0.15); border-radius: 10px; padding: 8px 11px; font-family: inherit; font-size: 13px; line-height: 1.45; resize: vertical;"></textarea>
+                        </sc-if>
+                        <sc-if value="{{ it.isDose }}" hint-placeholder-val="{{ true }}">
+                          <div style="font-size: 12.5px; color: rgba(27,42,42,0.55); margin-top: 3px;">{{ it.dose }}</div>
+                        </sc-if>
+                        <div style="display: flex; flex-wrap: wrap; gap: 5px; margin-top: 6px;">
+                          <sc-for list="{{ it.tagChips }}" as="tag" hint-placeholder-count="2">
+                            <span style="font-size: 10.5px; padding: 2px 8px; border-radius: 999px; background: {{ tag.bg }}; color: {{ tag.color }};">{{ tag.label }}</span>
+                          </sc-for>
+                        </div>
+                      </div>
+                    </div>
+                  </sc-for>
+                </sc-if>
+              </sc-if>
+
+              <sc-for list="{{ sec.custom }}" as="it" hint-placeholder-count="0">
+                <div style="padding: 14px 20px; border-top: 1px solid rgba(27,42,42,0.06); background: #FBF8F3;">
+                  <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px;">
+                    <input value="{{ it.name }}" onChange="{{ it.onName }}" placeholder="Naam" style="flex: 1; border: 1px solid rgba(27,42,42,0.15); border-radius: 10px; padding: 8px 11px; font-family: inherit; font-weight: 600; font-size: 13.5px;" />
+                    <button onClick="{{ it.remove }}" style="font-size: 12px; font-weight: 600; color: rgba(27,42,42,0.4); background: transparent; border: 0; cursor: pointer; white-space: nowrap;">Verwijderen</button>
+                  </div>
+                  <input value="{{ it.text }}" onChange="{{ it.onText }}" placeholder="Dosering of omschrijving" style="width: 100%; margin-top: 8px; border: 1px solid rgba(27,42,42,0.15); border-radius: 10px; padding: 9px 12px; font-family: inherit; font-size: 13px;" />
+                </div>
+              </sc-for>
+
+              <button onClick="{{ sec.addCustom }}" style="text-align: left; padding: 13px 20px; background: transparent; border: 0; font-family: inherit; font-size: 13px; font-weight: 600; color: #108A82; cursor: pointer;">+ Voeg item toe</button>
+            </div>
+          </div>
+        </sc-for>
+
+      </sc-if>
+
+    </div>
+  </div>
+
+  <sc-if value="{{ overviewOpen }}" hint-placeholder-val="{{ false }}">
+    <div onClick="{{ closeOverview }}" style="position: fixed; inset: 0; background: rgba(11,74,73,0.42); z-index: 20; display: flex; justify-content: flex-end;">
+      <div onClick="{{ stop }}" style="width: 420px; max-width: 90vw; height: 100%; background: #FBF8F3; padding: 24px; overflow-y: auto; box-shadow: -12px 0 40px rgba(0,0,0,0.15);">
+        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px;">
+          <div style="font-family: 'Source Sans 3'; font-weight: 700; font-size: 19px;">Overzicht · {{ phaseLabel }}</div>
+          <button onClick="{{ closeOverview }}" style="width: 32px; height: 32px; border-radius: 999px; border: 0; background: rgba(27,42,42,0.08); cursor: pointer; display: grid; place-items: center;">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#1B2A2A" stroke-width="2.4" stroke-linecap="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+          </button>
+        </div>
+        <div style="font-size: 13px; line-height: 1.5; color: rgba(27,42,42,0.6); margin-bottom: 16px;">Alles wat {{ horseName }} in deze fase krijgt te zien, ter controle voor je publiceert.</div>
+        <sc-for list="{{ overviewGroups }}" as="g" hint-placeholder-count="3">
+          <div style="margin-bottom: 18px;">
+            <div style="font-size: 11px; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; color: #108A82; margin-bottom: 8px;">{{ g.title }}</div>
+            <div style="display: flex; flex-direction: column; gap: 6px;">
+              <sc-for list="{{ g.items }}" as="it" hint-placeholder-count="3">
+                <div style="display: flex; align-items: center; justify-content: space-between; gap: 10px; background: #FFFFFF; border: 1px solid rgba(27,42,42,0.1); border-radius: 12px; padding: 10px 13px;">
+                  <span style="font-weight: 600; font-size: 13.5px;">{{ it.name }}</span>
+                  <span style="font-size: 12px; color: #127A79; font-weight: 600; white-space: nowrap; max-width: 200px; overflow: hidden; text-overflow: ellipsis;">{{ it.detail }}</span>
+                </div>
+              </sc-for>
+            </div>
+          </div>
+        </sc-for>
+      </div>
+    </div>
+  </sc-if>
+
+</div>
+
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{}">
+class Component extends DCLogic {
+  state = { included: {}, notes: {}, expanded: {}, query: '', phase: 1, activeCat: 'Kruiden & supplementen', unlockedPhase3: false, customItems: {}, overviewOpen: false, nextCustomId: 1,
+    horseTags: ['darmgezondheid', 'overgewicht', 'jeuk', 'pezen', 'stress'], newTag: '',
+    conclusionSummary: 'Het klachtenbeeld wijst het sterkst op een verstoorde darmflora in combinatie met overgewicht. Jeuk en de lichte hoest lijken hiervan het gevolg, niet de kern.',
+    conclusionTakeaways: [
+      'Fase 1-2 richten op darmherstel en gewichtsafname',
+      'Jeuk en luchtwegen apart monitoren, waarschijnlijk secundair',
+      'Pezen en stress meenemen in management, niet als hoofdspoor',
+    ] };
+
+  library() {
+    return [
+      { id: 'psyllium', cat: 'Kruiden & supplementen', name: 'Psylliumzaad', dose: '175 g · 2× daags · 6 weken', tags: ['darmgezondheid', 'overgewicht'], phases: [1] },
+      { id: 'heemst', cat: 'Kruiden & supplementen', name: 'Heemstwortel', dose: '20 g · 6 weken', tags: ['darmgezondheid'], phases: [1] },
+      { id: 'kamille', cat: 'Kruiden & supplementen', name: 'Kamille', dose: '25 g · 6 weken', tags: ['darmgezondheid', 'stress'], phases: [1] },
+      { id: 'msm', cat: 'Kruiden & supplementen', name: 'MSM (zwavel)', dose: 'Dosering leverancier · 8 weken', tags: ['pezen'], phases: [1, 2] },
+      { id: 'zink', cat: 'Kruiden & supplementen', name: 'Zink', dose: '40 g · 8 weken', tags: ['jeuk', 'pezen'], phases: [1, 2] },
+      { id: 'lapacho', cat: 'Kruiden & supplementen', name: 'Lapachoschors', dose: '20 g · 6 weken', tags: ['darmgezondheid'], phases: [2] },
+      { id: 'weegbree', cat: 'Kruiden & supplementen', name: 'Smalle weegbree', dose: '25 g · 6 weken', tags: ['darmgezondheid'], phases: [2] },
+      { id: 'brandnetel', cat: 'Kruiden & supplementen', name: 'Brandnetel', dose: '25 g · 6 weken', tags: ['jeuk', 'overgewicht'], phases: [2] },
+      { id: 'boswellia', cat: 'Kruiden & supplementen', name: 'Boswellia Serrata', dose: '6 g per dag', tags: ['maagklachten'], phases: [1] },
+      { id: 'gastercare', cat: 'Kruiden & supplementen', name: 'GasterCare forte', dose: '2-3× daags · 3 maanden', tags: ['maagklachten'], phases: [1, 2, 3] },
+      { id: 'lapachovervolg', cat: 'Kruiden & supplementen', name: 'Lapachoschors, onderhoud', dose: '10 g · 4 weken', tags: ['darmgezondheid'], phases: [3] },
+      { id: 'ruwvoerbasis', cat: 'Voeding', name: 'Ruwvoer als basis', dose: 'Laat het rantsoen hoofdzakelijk bestaan uit onverpakt hooi (uit touwtjes). Geef 2 tot 3 kg hooi per 100 kg (gewenst) lichaamsgewicht en periodes zonder ruwvoer >2u (inclusief de nacht).', tags: ['overgewicht', 'basisvoeding'], phases: [1, 2, 3] },
+      { id: 'graszaad', cat: 'Voeding', name: 'Graszaadhooi beperken', dose: 'Laat graszaadhooi maximaal een derde van het totale ruwvoerrantsoen vormen, omdat het eenzijdiger is dan passend weidehooi. Ga er niet automatisch van uit dat graszaadhooi suikerarm is: laat ook dit analyseren en beoordeel het binnen het volledige rantsoen.', tags: ['graszaadhooi'], phases: [1, 2, 3] },
+      { id: 'voordroog', cat: 'Voeding', name: 'Stoppen met voordroog', dose: 'Vervang voordroog zo snel mogelijk door onverpakt schimmelvrij hooi. Voordroog wordt geconserveerd door fermentatie en bevat melkzuurbacteriën en melkzuren die de zuurgraad en bacteriële balans in de darmen kunnen verstoren. Droger voordroog kan daarnaast ongemerkt meer schimmels, gisten en ongewenste bacteriën bevatten.', tags: ['basisvoeding'], phases: [1, 2, 3] },
+      { id: 'water', cat: 'Voeding', name: 'Waterkwaliteit controleren', dose: 'Laat de waterkwaliteit regelmatig onderzoeken wanneer het paard regenwater, slootwater of grondwater drinkt. Dit water kan bacteriën, algen, zware metalen, landbouwstoffen of een ongunstige mineralensamenstelling bevatten, ook wanneer het helder oogt en normaal ruikt. Bekijk voor meer uitleg de gratis video over waterkwaliteit in de bibliotheek.', tags: ['basisvoeding'], phases: [1, 2, 3] },
+      { id: 'zuivere-balancer', cat: 'Voeding', name: 'Zuivere balancer geven', dose: 'Vul het ruwvoer dagelijks aan met een meukvrije balancer met anorganische mineralen. Geef de dosering die past bij het lichaamsgewicht en het gekozen product. Bekijk voor meer uitleg de video "wat dan wel" in de bibliotheek.', tags: ['basisvoeding'], phases: [1, 2, 3] },
+      { id: 'bijvoeding-slobber', cat: 'Voeding', name: 'Geef enkel zuivere bijvoeding', dose: 'Gebruik alleen zoveel als nodig is om het protocol te laten eten, maximaal 60 tot 80 gram per 100 kg lichaamsgewicht per dag. Week het tot een slobber en bekijk de video \'Wat geef je dan wél?\' voor geschikte opties. Nieuwe voeding opbouwen gedurende 7-10 dagen.', tags: ['basisvoeding'], phases: [1, 2, 3] },
+      { id: 'stop-huidige-bijvoeding', cat: 'Voeding', name: 'Stoppen met huidige bijvoeding', dose: 'Afbouwen gedurende 7-10 dagen.', tags: ['basisvoeding'], phases: [1, 2, 3] },
+      { id: 'gewichtsverlies-gebitsproblemen', cat: 'Voeding', name: 'Bij gewichtsverlies of gebitsproblemen', dose: 'Kan je paard onvoldoende hooi eten of valt het af, dan kan geweekte, vezelrijke bijvoeding in een grotere hoeveelheid nodig zijn als aanvulling op of vervanging van ruwvoer. Bekijk hiervoor de video "Wat voer je bij gewichtsverlies of gebitsproblemen?"', tags: ['gewichtsverlies'], phases: [1, 2, 3] },
+      { id: 'geen-suikers', cat: 'Voeding', name: 'Geen fruit, wortels of snoepjes', dose: 'Vervang door rozenbottel, hennep bite of komkommer', tags: ['overgewicht', 'darmgezondheid'], phases: [1, 2, 3] },
+      { id: 'vers-groen', cat: 'Voeding', name: 'Vers groen ter vrije selectie', dose: 'Wilgentakken, kleefkruid, weegbree, paardenbloem, brandnetel', tags: ['stress', 'jeuk'], phases: [1, 2, 3] },
+      { id: 'slowfeeders', cat: 'Voeding', name: 'Slowfeeders met kleine mazen', dose: '3x3 cm, verlengt de eettijd · geleidelijk opbouwen als paard het niet gewend is, stress te allen tijde voorkomen', tags: ['darmgezondheid', 'overgewicht'], phases: [1, 2, 3] },
+      { id: 'voerwissel-geleidelijk', cat: 'Voeding', name: 'Voerwissels geleidelijk doorvoeren', dose: 'Oud en nieuw voer mengen over 7 tot 10 dagen', tags: ['darmgezondheid'], phases: [1, 2, 3] },
+      { id: 'geen-gehakseld', cat: 'Voeding', name: 'Geen gehakseld ruwvoer (fibermix)', dose: 'Te kort om te kauwen, verstoort de dikke darm', tags: ['darmgezondheid'], phases: [1, 2, 3] },
+      { id: 'zoutsteen', cat: 'Voeding', name: 'Zoutsteen ter vrije beschikking', dose: 'Bied een zoutsteen zonder melasse en organisch selenium aan, bijvoorbeeld een Himalaya-zoutsteen of PN-steen. Controleer altijd de samenstelling: ook andere zoutstenen kunnen geschikt zijn. De steen is bedoeld om af en toe aan te likken en hoort niet in korte tijd volledig te worden opgegeten.', tags: ['basisvoeding'], phases: [1, 2, 3] },
+      { id: 'vrije-beweging', cat: 'Beweging', name: 'Dagelijkse vrije beweging', tags: ['darmgezondheid', 'overgewicht', 'pezen', 'stress'], phases: [1, 2, 3], isNote: true,
+        note: 'Geef het paard minimaal 16 uur per dag, maar bij voorkeur 24/7, de ruimte om vrij te bewegen. Verspreid ruwvoer, water, schuil- en rustplekken over het terrein om natuurlijke beweging te stimuleren en zo de darmwerking, doorbloeding, stofwisseling en lichamelijke ontspanning te ondersteunen.' },
+      { id: 'regelmatige-arbeid', cat: 'Beweging', name: 'Regelmatige arbeid', tags: ['overgewicht', 'pezen'], phases: [1, 2, 3], isNote: true,
+        note: 'Zorg, wanneer de fysieke toestand dit toelaat, minimaal drie keer per week voor voldoende beweging om licht te zweten. Bouw de belasting geleidelijk op en wissel training af met rustige beweging en hersteldagen.' },
+      { id: 'bewegen-zonder-doel', cat: 'Beweging', name: 'Bewegen zonder trainingsdoel', tags: ['stress'], phases: [1, 2, 3], isNote: true,
+        note: 'Maak regelmatig samen een wandeling of laat het paard op eigen tempo bewegen, zonder prestatiedoel. Dit biedt beweging zonder extra mentale of lichamelijke druk.' },
+      { id: 'bewegingsproblemen', cat: 'Beweging', name: 'Extra aandacht bij bewegingsproblemen', tags: ['pezen', 'stress', 'hoefbevangenheid'], phases: [1, 2, 3], isNote: true,
+        note: 'Onderzoek pijn of lichamelijke beperkingen wanneer het paard weinig beweegt, struikelt, stijf loopt of arbeid vermijdt. Bij acute pijn of hoefbevangenheid mag beweging niet worden geforceerd en wordt arbeid pas hervat zodra het paard stabiel en comfortabel beweegt.' },
+      { id: 'weidebeleid', cat: 'Management', name: 'Weidebeleid', tags: ['overgewicht', 'darmgezondheid'], phases: [1, 2, 3], isNote: true,
+        note: 'Kort, jong gras bevat relatief veel pectine en fructaan en kan de darmflora verstoren. Laat het gras daarom niet korter dan 6 cm afgrazen en bouw de weidegang in het voorjaar geleidelijk op en in het najaar rustig weer af.' },
+      { id: 'hersenwerk', cat: 'Beweging', name: 'Vrij spel en hersenwerk', tags: ['stress'], phases: [1, 2, 3], isNote: true,
+        note: 'Bied regelmatig speelse activiteiten aan, zoals obstakels, zeiltjes, ballen, een snuffelmat of eenvoudige denkspellen. Geef het paard de ruimte om zelf te onderzoeken en initiatief te nemen, zonder prestatiedruk of vast trainingsdoel.' },
+      { id: 'graasmasker', cat: 'Management', name: 'Geen weidegang tijdens protocol', tags: ['overgewicht', 'darmgezondheid'], phases: [1, 2, 3], isNote: true,
+        note: 'Laat het paard tijdens het protocol niet op de weide. Zo voorkom je dat wisselende hoeveelheden suiker, fructaan en pectine uit gras de darmflora en stofwisseling blijven belasten en het herstel verstoren.' },
+      { id: 'longeren-beperken', cat: 'Beweging', name: 'Longeren en volte beperken', tags: ['pezen'], phases: [1, 2, 3], isNote: true,
+        note: 'Bij pees- of gewrichtsklachten geen korte volte, overleg met revalidatieplan.' },
+      { id: 'kudde', cat: 'Management', name: 'Voerplekken', tags: ['stress', 'darmgezondheid'], phases: [1, 2, 3], isNote: true,
+        note: 'Creëer 2x zoveel eetplaatsen als er paarden zijn. Verdeel het ruwvoer over meerdere, van elkaar gescheiden voerstations en maak binnen ieder station meerdere eetplaatsen. Zo kunnen de paarden in elkaars nabijheid eten, terwijl ze voldoende ruimte hebben om uit te wijken en voerconcurrentie afneemt.' },
+      { id: 'hoeven', cat: 'Management', name: 'Hoefverzorging', tags: ['hoefbevangenheid', 'pezen'], phases: [1, 2, 3], isNote: true,
+        note: 'Laat de hoeven iedere 3-4 weken goed bekappen. Extra aandacht is nodig bij peesproblemen, struikelen, brokkelige hoeven, gevoelig lopen, staakgedrag of hoefbevangenheid.' },
+      { id: 'gebitscontrole', cat: 'Management', name: 'Gebitscontrole', tags: ['darmgezondheid', 'overgewicht'], phases: [1, 2, 3], isNote: true,
+        note: 'Laat het gebit minimaal één keer per jaar controleren, zodat scherpe randen, haken en ongelijkmatige slijtage tijdig worden ontdekt. Laat eerder controleren bij proppen maken, langzaam of eenzijdig kauwen, voer laten vallen, vermageren, slechte adem of onverteerde vezels in de mest.' },
+      { id: 'fysiek-behandelingen', cat: 'Management', name: 'Fysieke behandelingen', tags: ['stress', 'pezen'], phases: [1, 2, 3], isNote: true,
+        note: 'Reeks fysieke behandelingen inplannen met ca. 4 weken interval. Ongemak veroorzaakt meer spanning en compensatie, waardoor het lichaam opnieuw wordt overbelast. Door ook het lichamelijke deel aan te pakken, help je deze vicieuze cirkel te doorbreken.' },
+      { id: 'mestonderzoek', cat: 'Management', name: 'Mestonderzoek', tags: ['darmgezondheid', 'jeuk', 'overgewicht', 'pezen'], phases: [1, 2, 3], isNote: true,
+        note: 'Laat periodiek mestonderzoek uitvoeren, zeker bij aanhoudende veranderingen in mestconsistentie, mestwater, gewichtsverlies, een doffe vacht, terugkerende buikklachten of zand eten. Houd er rekening mee dat een mestonderzoek niet alle parasieten of maag-darmproblemen uitsluit. Bij blijvende klachten is herhaald mestonderzoek of aanvullend onderzoek via de dierenarts nodig.' },
+      { id: 'bloedonderzoek-ir', cat: 'Management', name: 'Bloedonderzoek bij vermoeden IR', tags: ['overgewicht', 'hoefbevangenheid'], phases: [1, 2, 3], isNote: true,
+        note: 'Vraag de DA om een volledig EMS-profiel met minimaal glucose en insuline. Voor een basale meting hoeft het paard niet nuchter te zijn: gewoon hooi voeren, maar gedurende 12u geen gras, krachtvoer, snacks of ander suikerrijk voer. Laat glucose bepalen uit een natriumfluoridebuis en insuline uit een apart serum- of plasmamonster dat volgens de instructies van het laboratorium snel wordt verwerkt; referentiewaarden verschillen per lab en analysemethode. Test bij voorkeur buiten een acute pijn-, ziekte- of stresssituatie en bespreek bij een normale basale uitslag maar blijvende verdenking een dynamische test, omdat één normale rustwaarde insulinedysregulatie niet uitsluit.' },
+      { id: 'urineonderzoek-kpu', cat: 'Management', name: 'Urineonderzoek bij vermoeden KPU', tags: ['overgewicht', 'jeuk', 'luchtwegklachten', 'pezen'], phases: [1, 2, 3], isNote: true,
+        note: 'Bij aanhoudende / terugkerende klachten die onvoldoende verbeteren ondanks passend ruwvoer, management en een gerichte aanpak van de darmgezondheid, zoals mestveranderingen, huidklachten, overgevoeligheid, spierproblemen of verminderde belastbaarheid.',
+        link: 'https://purehorse.nl/product/kpu-test/r/s6rvi/', linkLabel: 'KPU-test bestellen' },
+    ];
+  }
+
+  tagPalette(tag) {
+    const map = { darmgezondheid: '#EAFBF9', overgewicht: '#FDF4E4', jeuk: '#FBEAF0', pezen: '#EAF0FB', stress: '#F1EAFB', maagklachten: '#FDEDE7', graszaadhooi: '#EAFBF9', voordroog: '#F4EFE7', basisvoeding: '#EAFBF9', hoefbevangenheid: '#FDEDE7', vachtwissel: '#F4EFE7', luchtwegklachten: '#EAF0FB', gewichtsverlies: '#FDF4E4' };
+    return map[tag] || '#F4EFE7';
+  }
+  tagTextColor(tag) {
+    const map = { darmgezondheid: '#0E6F69', overgewicht: '#7A5A16', jeuk: '#A03D63', pezen: '#33538F', stress: '#5B3FA0', maagklachten: '#A8442F', graszaadhooi: '#0E6F69', voordroog: '#6B5A3D', basisvoeding: '#0E6F69', hoefbevangenheid: '#A8442F', vachtwissel: '#6B5A3D', luchtwegklachten: '#33538F', gewichtsverlies: '#7A5A16' };
+    return map[tag] || '#5A5A5A';
+  }
+
+  isIncluded(it, matched) {
+    if (this.state.included.hasOwnProperty(it.id)) return this.state.included[it.id];
+    return matched;
+  }
+
+  decorate(it, matched) {
+    const on = this.isIncluded(it, matched);
+    const noteValue = this.state.notes.hasOwnProperty(it.id) ? this.state.notes[it.id] : (it.note || '');
+    return {
+      name: it.name, dose: it.dose || '',
+      isNote: !!it.isNote, isDose: !it.isNote,
+      value: noteValue,
+      onChange: (e) => { const v = e.target.value; this.setState((s) => ({ notes: { ...s.notes, [it.id]: v } })); },
+      textColor: on ? '#1B2A2A' : 'rgba(27,42,42,0.45)',
+      trackColor: on ? '#18BAB0' : 'rgba(27,42,42,0.18)',
+      knobLeft: on ? '19px' : '2px',
+      rowOpacity: on ? 1 : 0.75,
+      tagChips: it.tags.map((t) => ({ label: t, bg: this.tagPalette(t), color: this.tagTextColor(t) })),
+      toggle: () => this.setState((s) => ({ included: { ...s.included, [it.id]: !on } })),
+      hasLink: !!it.link, link: it.link || '', linkLabel: it.linkLabel || 'Bekijk',
+    };
+  }
+
+  addCustomItem(cat) {
+    this.setState((s) => {
+      const list = s.customItems[cat] || [];
+      return { customItems: { ...s.customItems, [cat]: [...list, { id: s.nextCustomId, name: '', text: '' }] }, nextCustomId: s.nextCustomId + 1 };
+    });
+  }
+
+  decorateCustom(cat, item) {
+    return {
+      name: item.name, text: item.text,
+      onName: (e) => this.setState((s) => ({ customItems: { ...s.customItems, [cat]: s.customItems[cat].map((x) => x.id === item.id ? { ...x, name: e.target.value } : x) } })),
+      onText: (e) => this.setState((s) => ({ customItems: { ...s.customItems, [cat]: s.customItems[cat].map((x) => x.id === item.id ? { ...x, text: e.target.value } : x) } })),
+      remove: () => this.setState((s) => ({ customItems: { ...s.customItems, [cat]: s.customItems[cat].filter((x) => x.id !== item.id) } })),
+    };
+  }
+
+  decorateTakeaway(idx) {
+    return {
+      value: this.state.conclusionTakeaways[idx],
+      onChange: (e) => { const v = e.target.value; this.setState((s) => { const arr = [...s.conclusionTakeaways]; arr[idx] = v; return { conclusionTakeaways: arr }; }); },
+      remove: () => this.setState((s) => ({ conclusionTakeaways: s.conclusionTakeaways.filter((_, i) => i !== idx) })),
+    };
+  }
+
+  addTag() {
+    const v = this.state.newTag.trim().toLowerCase();
+    if (!v || this.state.horseTags.includes(v)) { this.setState({ newTag: '' }); return; }
+    this.setState((s) => ({ horseTags: [...s.horseTags, v], newTag: '' }));
+  }
+
+  renderVals() {
+    const horseTags = this.state.horseTags;
+    const q = this.state.query.trim().toLowerCase();
+    const phase = this.state.phase;
+    const phase3Unlocked = this.state.unlockedPhase3;
+
+    const phaseDefs = [
+      { id: 1, label: 'Fase 1', sub: 'Week 1-2 · opstart', locked: false },
+      { id: 2, label: 'Fase 2', sub: 'Week 3-6 · darmgezondheid', locked: false },
+      { id: 3, label: 'Fase 3', sub: phase3Unlocked ? 'Week 7-9 · afbouw' : 'Week 7-9 · nog niet gepubliceerd', locked: !phase3Unlocked },
+    ];
+    const phases = phaseDefs.map((p) => {
+      const active = p.id === phase;
+      return {
+        label: p.label, sub: p.sub, locked: p.locked,
+        border: active ? '#18BAB0' : 'rgba(27,42,42,0.12)',
+        bg: active ? '#EAFBF9' : (p.locked ? '#F4EFE7' : '#FFFFFF'),
+        textColor: active ? '#0E6F69' : (p.locked ? 'rgba(27,42,42,0.45)' : '#1B2A2A'),
+        subColor: active ? '#108A82' : 'rgba(27,42,42,0.5)',
+        select: () => this.setState({ phase: p.id }),
+      };
+    });
+    const phaseLabel = phaseDefs.find((p) => p.id === phase).label;
+    const showLockedNotice = phase === 3 && !phase3Unlocked;
+
+    const cats = ['Kruiden & supplementen', 'Voeding', 'Management', 'Beweging'];
+    const activeCat = this.state.activeCat;
+    const tabs = cats.map((cat) => {
+      const active = cat === activeCat;
+      return {
+        label: cat,
+        border: active ? '#18BAB0' : 'rgba(27,42,42,0.14)',
+        bg: active ? '#0D5C5B' : '#FFFFFF',
+        textColor: active ? '#FBF8F3' : '#1B2A2A',
+        select: () => this.setState({ activeCat: cat }),
+      };
+    });
+    const isKruiden = activeCat === 'Kruiden & supplementen';
+
+    let sections = [];
+    let totalCount = 0, includedCount = 0, matchedIncludedCount = 0;
+
+    {
+      const all = this.library().filter((it) => it.cat === 'Kruiden & supplementen' ? it.phases.includes(phase) : true)
+        .filter((it) => !q || it.name.toLowerCase().includes(q) || it.tags.some((t) => t.includes(q)));
+
+      sections = [activeCat].map((cat) => {
+        const items = all.filter((i) => i.cat === cat);
+        const matched = items.filter((i) => i.tags.some((t) => horseTags.includes(t)));
+        const unmatched = items.filter((i) => !i.tags.some((t) => horseTags.includes(t)));
+        const expanded = !!this.state.expanded[cat];
+        const custom = (this.state.customItems[cat] || []).map((c) => this.decorateCustom(cat, c));
+        const includedCountSec = items.filter((i) => this.isIncluded(i, i.tags.some((t) => horseTags.includes(t)))).length + custom.length;
+        return {
+          title: cat,
+          subtitle: cat === 'Management' ? 'Blijft gelijk gedurende het hele traject, aan- of uitschuiven per paard'
+            : cat === 'Voeding' ? 'Blijft gelijk gedurende het hele traject'
+            : '',
+          total: items.length + custom.length, includedCount: includedCountSec,
+          matched: matched.map((i) => this.decorate(i, true)),
+          unmatched: unmatched.map((i) => this.decorate(i, false)),
+          hasUnmatched: unmatched.length > 0,
+          expanded,
+          expandLabel: expanded ? 'Verberg niet-gematchte opties' : `+${unmatched.length} niet-gematchte opties tonen`,
+          chevronRotate: expanded ? 'rotate(90deg)' : 'rotate(0deg)',
+          toggleExpand: () => this.setState((s) => ({ expanded: { ...s.expanded, [cat]: !expanded } })),
+          custom,
+          addCustom: () => this.addCustomItem(cat),
+        };
+      });
+
+      const includedFlags = all.map((i) => this.isIncluded(i, i.tags.some((t) => horseTags.includes(t))));
+      const customTotal = cats.reduce((n, c) => n + (this.state.customItems[c] || []).length, 0);
+      totalCount = all.length + customTotal;
+      includedCount = includedFlags.filter(Boolean).length + customTotal;
+      matchedIncludedCount = all.filter((i, idx) => i.tags.some((t) => horseTags.includes(t)) && includedFlags[idx]).length + customTotal;
+    }
+
+    const allForOverview = this.library().filter((it) => it.phases.includes(phase));
+    const overviewGroups = cats.map((cat) => ({
+      title: cat,
+      items: allForOverview.filter((i) => i.cat === cat && this.isIncluded(i, i.tags.some((t) => horseTags.includes(t))))
+        .map((i) => ({ name: i.name, detail: i.isNote ? (this.state.notes[i.id] || i.note) : i.dose }))
+        .concat((this.state.customItems[cat] || []).map((c) => ({ name: c.name || 'Eigen item', detail: c.text || '' }))),
+    }));
+
+    return {
+      horseName: 'Boaz',
+      horseTags,
+      horseTagChips: horseTags.map((t) => ({ label: t, remove: () => this.setState((s) => ({ horseTags: s.horseTags.filter((x) => x !== t) })) })),
+      newTag: this.state.newTag,
+      onNewTag: (e) => this.setState({ newTag: e.target.value }),
+      onNewTagKey: (e) => { if (e.key === 'Enter') this.addTag(); },
+      addTag: () => this.addTag(),
+      query: this.state.query,
+      onQuery: (e) => this.setState({ query: e.target.value }),
+      tabs, isKruiden,
+      phases, phaseLabel, showLockedNotice,
+      activeSections: sections,
+      unlockPhase3: () => this.setState({ unlockedPhase3: true }),
+      sections,
+      totalCount, includedCount, matchedIncludedCount,
+      manualIncludedCount: includedCount - matchedIncludedCount,
+      overviewOpen: this.state.overviewOpen,
+      overviewButtonLabel: `Overzicht (${includedCount}/${totalCount} tips)`,
+      openOverview: () => this.setState({ overviewOpen: true }),
+      closeOverview: () => this.setState({ overviewOpen: false }),
+      stop: (e) => e.stopPropagation(),
+      overviewGroups,
+      conclusionSummary: this.state.conclusionSummary,
+      onConclusionSummary: (e) => this.setState({ conclusionSummary: e.target.value }),
+      conclusionTakeawayItems: this.state.conclusionTakeaways.map((_, idx) => this.decorateTakeaway(idx)),
+      addTakeaway: () => this.setState((s) => ({ conclusionTakeaways: [...s.conclusionTakeaways, ''] })),
+    };
+  }
+}
+</script>
+</body>
+</html>

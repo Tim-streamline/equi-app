@@ -37,6 +37,13 @@ class SaveProtocolRequest extends FormRequest
             'advice.*.title' => ['required', 'string', 'max:255'],
             'advice.*.body' => ['required', 'string', 'max:10000'],
 
+            'voeding_advies_ids' => ['present', 'array', 'max:100'],
+            'voeding_advies_ids.*' => ['required', 'uuid', 'distinct', 'exists:voeding_adviezen,id'],
+            'management_advies_ids' => ['present', 'array', 'max:100'],
+            'management_advies_ids.*' => ['required', 'uuid', 'distinct', 'exists:management_adviezen,id'],
+            'beweging_advies_ids' => ['present', 'array', 'max:100'],
+            'beweging_advies_ids.*' => ['required', 'uuid', 'distinct', 'exists:beweging_adviezen,id'],
+
             'phases' => ['present', 'array'],
             'phases.*.id' => ['nullable', 'uuid'],
             'phases.*.client_key' => ['required', 'string', 'max:100', 'distinct'],
@@ -52,15 +59,6 @@ class SaveProtocolRequest extends FormRequest
             'phases.*.supplements.*.week_numbers' => ['present', 'array', 'max:104'],
             'phases.*.supplements.*.week_numbers.*' => ['required', 'integer', 'min:1', 'max:104'],
 
-            'tasks' => ['present', 'array', 'max:200'],
-            'tasks.*.id' => ['nullable', 'uuid'],
-            'tasks.*.phase_key' => ['nullable', 'string', 'max:100'],
-            'tasks.*.label' => ['required', 'string', 'max:255'],
-            'tasks.*.meta' => ['nullable', 'string', 'max:255'],
-            'tasks.*.kind' => ['required', 'in:feeding,observation,care,other'],
-            'tasks.*.active_from' => ['nullable', 'date'],
-            'tasks.*.active_until' => ['nullable', 'date'],
-            'tasks.*.reference_item_id' => ['nullable', 'uuid', 'exists:library_items,id'],
         ];
     }
 
