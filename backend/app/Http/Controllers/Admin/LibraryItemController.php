@@ -118,6 +118,7 @@ class LibraryItemController extends Controller
             'duration_label' => ['nullable', 'string', 'max:255'],
             'author_therapist_id' => ['nullable', 'exists:therapists,id'],
             'published_at' => ['nullable', 'date'],
+            'credit_cost' => ['sometimes', 'integer', 'min:0', 'max:10000'],
             'is_plus' => ['boolean'],
             'is_featured' => ['boolean'],
             'order' => ['nullable', 'integer', 'min:0'],

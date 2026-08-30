@@ -21,7 +21,7 @@ import {
 // Reuse a single token across rapid uploads. PowerSync re-calls
 // fetchCredentials when its internal token expires, so this just avoids
 // thrashing /api/auth/login on bursty writes.
-type CachedToken = { token: string; expiresAt: number };
+type CachedToken = { token: string; expiresAt: number; userId: string };
 let cachedToken: CachedToken | null = null;
 
 async function mintToken(): Promise<{ token: string; endpoint: string; expiresIn: number } | null> {
@@ -34,6 +34,7 @@ async function mintToken(): Promise<{ token: string; endpoint: string; expiresIn
     console.log('[connector] mintToken: got token, endpoint =', res.endpoint);
     cachedToken = {
       token: res.token,
+      userId: creds.userId,
       expiresAt: Date.now() + res.expires_in * 1000,
     };
     return { token: res.token, endpoint: res.endpoint, expiresIn: res.expires_in };
@@ -44,8 +45,10 @@ async function mintToken(): Promise<{ token: string; endpoint: string; expiresIn
   }
 }
 
-async function getOrMintToken(): Promise<string | null> {
-  if (cachedToken && cachedToken.expiresAt > Date.now() + 30_000) {
+export async function getOrMintToken(): Promise<string | null> {
+  const creds = await loadCredentials();
+  if (!creds) return null;
+  if (cachedToken && cachedToken.userId === creds.userId && cachedToken.expiresAt > Date.now() + 30_000) {
     return cachedToken.token;
   }
   const minted = await mintToken();

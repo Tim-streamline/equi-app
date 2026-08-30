@@ -50,6 +50,7 @@ class SeasonalTipController extends Controller
     private function validateData(Request $request): array
     {
         return $request->validate([
+            'title' => ['nullable', 'string', 'max:255'],
             'month' => ['required', 'string', 'max:16'],
             'month_order' => ['required', 'integer', 'min:1', 'max:12'],
             'body' => ['required', 'string'],

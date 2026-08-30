@@ -1,7 +1,7 @@
 import { View, Text, ViewProps } from 'react-native';
 import { ReactNode } from 'react';
 
-type ChipVariant = 'default' | 'outline' | 'warn' | 'danger' | 'success' | 'tag' | 'deep';
+type ChipVariant = 'default' | 'outline' | 'warn' | 'danger' | 'success' | 'tag' | 'deep' | 'filterActive';
 
 type Props = {
   label?: string;
@@ -19,6 +19,7 @@ const styles: Record<ChipVariant, { box: string; text: string }> = {
   success: { box: 'bg-[#D2EEDF]',         text: 'text-[#1A6B49]' },
   tag:     { box: 'bg-white/90',          text: 'text-teal-700' },
   deep:    { box: 'bg-teal-700',          text: 'text-white' },
+  filterActive: { box: 'bg-teal-700',     text: 'text-canvas' },
 };
 
 export function Chip({ label, variant = 'default', className = '', textClassName = '', children }: Props) {

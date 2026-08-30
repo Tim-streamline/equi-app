@@ -21,6 +21,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
     'author_therapist_id',
     'views_label',
     'published_at',
+    'credit_cost',
     'is_plus',
     'is_featured',
     'order',

@@ -7,6 +7,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\SaveProtocolRequest;
 use App\Models\BewegingAdvies;
 use App\Models\Horse;
+use App\Models\LibraryItem;
 use App\Models\ManagementAdvies;
 use App\Models\Protocol;
 use App\Models\ProtocolAdvice;
@@ -19,6 +20,7 @@ use App\Models\Supplement;
 use App\Models\Therapist;
 use App\Models\VoedingAdvies;
 use App\Support\AuditLogger;
+use App\Support\ProtocolNutrition;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Arr;
@@ -83,6 +85,7 @@ class ProtocolController extends Controller
 
         return Inertia::render('Protocols/Edit', [
             'protocol' => $protocol,
+            'weeklyUpdates' => DB::table('protocol_weekly_updates')->where('protocol_id', $protocol->id)->orderByDesc('week_number')->get(),
             ...$this->editorOptions($protocol->horse_id),
         ]);
     }
@@ -138,6 +141,12 @@ class ProtocolController extends Controller
     {
         return [
             'selectedHorseId' => $selectedHorseId ?: null,
+            'libraryItems' => LibraryItem::query()->whereNotNull('published_at')->orderBy('title')->get(['id', 'title']),
+            'intakeFeeds' => Horse::query()->where('status', 'active')->get()->mapWithKeys(function ($horse) {
+                $nutrition = app(ProtocolNutrition::class);
+
+                return [$horse->id => $nutrition->forProtocol(new Protocol, $nutrition->answers($horse))['feeds']];
+            }),
             'horses' => Horse::query()
                 ->where('status', 'active')
                 ->with('owner:id,name,email')
@@ -189,6 +198,7 @@ class ProtocolController extends Controller
             'title',
             'started_at',
             'status',
+            'customer_settings',
         ]);
         $attributes['published_at'] = $data['published'] ? now() : null;
 

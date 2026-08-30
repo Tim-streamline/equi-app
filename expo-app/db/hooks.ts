@@ -17,6 +17,7 @@ import {
   type ProtocolSupplementIntakeRow,
 } from '@/lib/protocol-plan';
 import { groupProtocolAdvice } from '@/lib/protocol-advice';
+import type { LibraryItemCategoryLink } from '@/lib/library-filter';
 
 // RFC4122 v4 UUID — Postgres `uuid` columns reject anything else.
 const newId = (): string =>
@@ -75,13 +76,13 @@ export function useCurrentUserId(): string {
 }
 
 export function useCurrentHorseId(): string {
-  // Derive: first active horse owned by the current user.
   const uid = useCurrentUserId();
+  const { selectedHorseId } = useDb();
   const rows = useCamelQuery(
-    `SELECT id FROM horses WHERE owner_id = ? AND status = 'active' ORDER BY created_at LIMIT 1`,
+    `SELECT id FROM horses WHERE owner_id = ? AND status = 'active' ORDER BY created_at`,
     [uid],
   );
-  return (rows[0]?.id as string) || IDS.horse;
+  return rows.find((horse) => horse.id === selectedHorseId)?.id ?? rows[0]?.id ?? '';
 }
 
 export function useCurrentUser(): Indexed {
@@ -325,6 +326,16 @@ export function useLibraryArticleSections(itemId: string) {
 export function useLibraryCategories() {
   return sorted(useCamelQuery(`SELECT * FROM library_categories`));
 }
+export function useLibraryItemCategories(): LibraryItemCategoryLink[] {
+  const rows = useCamelQuery(`SELECT * FROM library_item_categories`);
+  return useMemo(
+    () => rows.map((row) => ({
+      itemId: row.itemId as string,
+      categoryId: row.categoryId as string,
+    })),
+    [rows],
+  );
+}
 export function useActiveSeasonalTip() {
   const rows = useCamelQuery(`SELECT * FROM seasonal_tips WHERE active = 1 LIMIT 1`);
   return rows[0];
@@ -459,6 +470,17 @@ export function useStoreMutations() {
           `UPDATE users SET onboarded_at = ? WHERE id = ?`,
           [new Date().toISOString(), userId],
         );
+      },
+      async ensureChatSession(userId: string, horseId: string): Promise<string> {
+        const existing = await powersync.getOptional<{ id: string }>(
+          `SELECT id FROM chat_sessions WHERE user_id = ? AND horse_id = ? ORDER BY started_at DESC LIMIT 1`,
+          [userId, horseId],
+        );
+        if (existing) return existing.id;
+        const id = newId();
+        await powersync.execute(`INSERT INTO chat_sessions (id, user_id, horse_id, started_at) VALUES (?, ?, ?, ?)`,
+          [id, userId, horseId, new Date().toISOString()]);
+        return id;
       },
       async addChatMessage(sessionId: string, role: 'user' | 'assistant', body: string) {
         const id = newId();

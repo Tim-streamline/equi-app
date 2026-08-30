@@ -50,6 +50,7 @@
         duration_label: item?.duration_label ?? '',
         author_therapist_id: item?.author_therapist_id ?? '',
         published_at: item?.published_at ? item.published_at.slice(0, 10) : '',
+        credit_cost: item?.credit_cost ?? 0,
         is_plus: item?.is_plus ?? false,
         is_featured: item?.is_featured ?? false,
         order: item?.order ?? 0,
@@ -105,6 +106,7 @@
             <Card>
                 <CardHeader><CardTitle>Publishing</CardTitle></CardHeader>
                 <CardContent class="space-y-4">
+                    <Field label="Credits (0 = gratis)" error={$form.errors.credit_cost}><Input type="number" min="0" bind:value={$form.credit_cost} /></Field>
                     <Field label="Publish date" hint="Blank = draft" error={$form.errors.published_at}><Input type="date" bind:value={$form.published_at} /></Field>
                     <Field label="Author" error={$form.errors.author_therapist_id}>
                         <Select bind:value={$form.author_therapist_id} placeholder="None"

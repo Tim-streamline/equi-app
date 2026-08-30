@@ -40,6 +40,9 @@
         managementAdviezen,
         bewegingAdviezen,
         selectedHorseId = null,
+        intakeFeeds = {},
+        weeklyUpdates = [],
+        libraryItems = [],
     } = $props();
 
     const initialProtocol = untrack(() => protocol);
@@ -194,6 +197,16 @@
         started_at: initialProtocol?.started_at?.slice(0, 10) ?? '',
         status: initialProtocol?.status ?? 'paused',
         published: Boolean(initialProtocol?.published_at),
+        customer_settings: {
+            hay_library_item_id: initialProtocol?.customer_settings?.hay_library_item_id ?? '',
+            water_library_item_id: initialProtocol?.customer_settings?.water_library_item_id ?? '',
+            target_weight_kg: initialProtocol?.customer_settings?.target_weight_kg ?? '',
+            sugar: initialProtocol?.customer_settings?.sugar ?? '<7%',
+            protein: initialProtocol?.customer_settings?.protein ?? '6–9%',
+            weekly_update_day: initialProtocol?.customer_settings?.weekly_update_day ?? 7,
+            feed_overrides: initialProtocol?.customer_settings?.feed_overrides ?? [],
+            management: initialProtocol?.customer_settings?.management ?? [],
+        },
         analysis: { cause: initialProtocol?.analysis?.cause ?? '' },
         advice: (initialProtocol?.analysis?.advice ?? []).map((row) => ({
             id: row.id ?? null,
@@ -206,6 +219,26 @@
         beweging_advies_ids: (initialProtocol?.beweging_adviezen ?? []).map((row) => row.beweging_advies_id),
         phases: initialPhases,
     });
+
+    function feedSetting(feed) {
+        return $form.customer_settings.feed_overrides.find((row) => row.id === feed.id) ?? feed;
+    }
+    function updateFeed(feed, key, value) {
+        const rows = $form.customer_settings.feed_overrides;
+        const current = rows.find((row) => row.id === feed.id) ?? { id: feed.id, status: feed.status, note: '' };
+        $form.customer_settings.feed_overrides = [...rows.filter((row) => row.id !== feed.id), { ...current, [key]: value }];
+    }
+    function managementSetting(advice) {
+        return $form.customer_settings.management.find((row) => row.id === advice.id) ?? {
+            id: advice.id,
+            category: /mestonderzoek|bloed|urine|onderzoek|monitor/i.test(advice.title) ? 'monitoring' : /hoef|gebit|tand|behandel|verzorg/i.test(advice.title) ? 'care' : 'environment',
+            action: 'do', instruction: advice.description, note: '', frequency: '', url: '', cta_label: '',
+        };
+    }
+    function updateManagement(advice, key, value) {
+        const rows = $form.customer_settings.management;
+        $form.customer_settings.management = [...rows.filter((row) => row.id !== advice.id), { ...managementSetting(advice), [key]: value }];
+    }
 
     let workingTemplate = $state(initialTemplate);
     let activeSection = $state(isNew ? 'basis' : 'planning');
@@ -909,6 +942,29 @@
                                 </div>
                             </div>
 
+                            {#if activeSection === 'voeding'}
+                                <div class="space-y-5 border-b p-6">
+                                    <h3 class="font-bold">Ruwvoer voor dit paard</h3>
+                                    <div class="grid gap-4 md:grid-cols-3">
+                                        <Field label="Streefgewicht (kg)" error={$form.errors['customer_settings.target_weight_kg']}><Input type="number" min="1" max="2000" bind:value={$form.customer_settings.target_weight_kg} /></Field>
+                                        <Field label="Suiker"><Input bind:value={$form.customer_settings.sugar} /></Field>
+                                        <Field label="Eiwit"><Input bind:value={$form.customer_settings.protein} /></Field>
+                                    </div>
+                                    <p class="text-xs text-muted-foreground">De backend berekent 2–3 kg ruwvoer per 100 kg streefgewicht. Zonder streefgewicht verschijnt geen hoeveelheid.</p>
+                                    <div class="grid gap-4 md:grid-cols-2">
+                                        <Field label="Hooianalyse in de bibliotheek"><Select bind:value={$form.customer_settings.hay_library_item_id} placeholder="Automatisch zoeken" options={libraryItems.map((item) => ({ value: item.id, label: item.title }))} /></Field>
+                                        <Field label="Wateranalyse in de bibliotheek"><Select bind:value={$form.customer_settings.water_library_item_id} placeholder="Automatisch zoeken" options={libraryItems.map((item) => ({ value: item.id, label: item.title }))} /></Field>
+                                    </div>
+                                    <h3 class="font-bold">Bijvoeding uit de intake</h3>
+                                    {#each intakeFeeds[$form.horse_id] ?? [] as feed (feed.id)}
+                                        <div class="space-y-2 rounded-xl border p-4">
+                                            <div class="font-semibold">{feed.name} · {feed.dosage}</div>
+                                            <select class="rounded border p-2" value={feedSetting(feed).status} onchange={(e) => updateFeed(feed, 'status', e.currentTarget.value)} aria-label={`Beoordeling ${feed.name}`}><option value="continue">Doorgaan</option><option value="stop">Stoppen</option></select>
+                                            <Textarea value={feedSetting(feed).note ?? ''} oninput={(e) => updateFeed(feed, 'note', e.currentTarget.value)} placeholder="Persoonlijke toelichting" />
+                                        </div>
+                                    {:else}<p class="text-sm text-muted-foreground">Geen bijvoeding ingevuld in een verzonden intake.</p>{/each}
+                                </div>
+                            {/if}
                             <div class="divide-y divide-[#1B2A2A]/10">
                                 {#each activeAdviceCategory.items as advice (advice.id)}
                                     {@const selected = isProtocolAdviceSelected(activeAdviceCategory, advice.id)}
@@ -933,6 +989,17 @@
                                             <Check class="size-3.5" />
                                         </span>
                                     </label>
+                                    {#if selected && activeSection === 'management'}
+                                        <div class="grid gap-3 bg-[#FBF8F3] px-7 py-4 md:grid-cols-2">
+                                            <Field label="Categorie"><select class="w-full rounded border p-2" value={managementSetting(advice).category} onchange={(e) => updateManagement(advice, 'category', e.currentTarget.value)}><option value="environment">Weide & leefomgeving</option><option value="care">Verzorging & lichamelijke ondersteuning</option><option value="monitoring">Onderzoek & monitoring</option></select></Field>
+                                            <Field label="Actie"><select class="w-full rounded border p-2" value={managementSetting(advice).action} onchange={(e) => updateManagement(advice, 'action', e.currentTarget.value)}><option value="do">Doen (vinkje)</option><option value="avoid">Vermijden / stoppen (kruis)</option></select></Field>
+                                            <Field label="Instructie"><Textarea value={managementSetting(advice).instruction} oninput={(e) => updateManagement(advice, 'instruction', e.currentTarget.value)} /></Field>
+                                            <Field label="Persoonlijke toelichting"><Textarea value={managementSetting(advice).note} oninput={(e) => updateManagement(advice, 'note', e.currentTarget.value)} /></Field>
+                                            <Field label="Frequentie"><Input value={managementSetting(advice).frequency} oninput={(e) => updateManagement(advice, 'frequency', e.currentTarget.value)} /></Field>
+                                            <Field label="Link (https://)"><Input value={managementSetting(advice).url} oninput={(e) => updateManagement(advice, 'url', e.currentTarget.value)} /></Field>
+                                            <Field label="Tekst bij link"><Input value={managementSetting(advice).cta_label} oninput={(e) => updateManagement(advice, 'cta_label', e.currentTarget.value)} /></Field>
+                                        </div>
+                                    {/if}
                                 {:else}
                                     <div class="px-6 py-12 text-center">
                                         <p class="font-bold">Geen {activeAdviceCategory.label.toLowerCase()}adviezen beschikbaar</p>
@@ -955,11 +1022,15 @@
                                 <h2 class="mt-1 text-xl font-bold">Analyse & advies</h2>
                                 <p class="mt-1 text-sm text-[#1B2A2A]/50">Deze inhoud hoort bij het hele paardprotocol en staat los van de geselecteerde fase.</p>
                             </div>
+                            {#if weeklyUpdates.length}
+                                <div class="mb-6 space-y-3"><h3 class="font-bold">Weekupdates van de eigenaar</h3>{#each weeklyUpdates as update (update.id)}<div class="rounded-xl bg-[#EAFBF9] p-4"><strong>Week {update.week_number}</strong><p class="mt-2 whitespace-pre-wrap text-sm">{update.note}</p></div>{/each}</div>
+                            {/if}
                             <div>
-                                <Field label="Waarschijnlijke oorzaak" error={$form.errors['analysis.cause']}>
+                                <Field label="Focuspunten vanuit de intake (klanttekst)" error={$form.errors['analysis.cause']}>
                                     <Textarea bind:value={$form.analysis.cause} rows="6" placeholder="Vat de analyse achter dit protocol samen…" />
                                 </Field>
                             </div>
+                            <div class="mt-5"><Field label="Weekupdate vanaf dag van de protocolweek (1–7)"><Input type="number" min="1" max="7" bind:value={$form.customer_settings.weekly_update_day} /></Field></div>
                             <div class="mt-7 border-t border-[#1B2A2A]/10 pt-6">
                                 <div class="mb-4 flex items-center justify-between gap-3">
                                     <div><h3 class="text-base font-bold">Adviezen</h3><p class="mt-0.5 text-xs text-[#1B2A2A]/45">Protocolbrede aanbevelingen voor de klant.</p></div>

@@ -10,6 +10,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 
 #[Fillable([
+    'customer_settings',
     'horse_id',
     'protocol_template_id',
     'protocol_template_name',
@@ -31,6 +32,7 @@ class Protocol extends Model
     protected function casts(): array
     {
         return [
+            'customer_settings' => 'array',
             'started_at' => 'date',
             'published_at' => 'datetime',
         ];

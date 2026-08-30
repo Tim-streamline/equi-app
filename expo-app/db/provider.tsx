@@ -54,6 +54,8 @@ type DbContextValue = {
   isConnected: boolean;
   syncStatus: SyncStatus;
   currentUserId: string | null;
+  selectedHorseId: string | null;
+  selectHorse: (id: string) => void;
   login: (email: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
 };
@@ -66,6 +68,7 @@ export function DbProvider({ children }: { children: ReactNode }) {
   const [syncStatus, setSyncStatus] = useState<SyncStatus>('idle');
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const connectedRef = useRef(false);
+  const [selectedHorseId, selectHorse] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -155,6 +158,7 @@ export function DbProvider({ children }: { children: ReactNode }) {
     await clearCredentials();
     setIsLoggedIn(false);
     setCurrentUserId(null);
+    selectHorse(null);
   }, [powersync]);
 
   const value = useMemo<DbContextValue | null>(() => {
@@ -165,10 +169,12 @@ export function DbProvider({ children }: { children: ReactNode }) {
       isConnected: syncStatus === 'connected',
       syncStatus,
       currentUserId,
+      selectedHorseId,
+      selectHorse,
       login,
       logout,
     };
-  }, [powersync, isLoggedIn, syncStatus, currentUserId, login, logout]);
+  }, [powersync, isLoggedIn, syncStatus, currentUserId, selectedHorseId, login, logout]);
 
   if (!powersync || !value) {
     return (

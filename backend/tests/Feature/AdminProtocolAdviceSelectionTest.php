@@ -182,6 +182,30 @@ class AdminProtocolAdviceSelectionTest extends TestCase
             ->assertSessionHasErrors('voeding_advies_ids.0');
     }
 
+    public function test_therapist_can_save_customer_nutrition_and_management_overrides(): void
+    {
+        $payload = $this->payload();
+        $payload['customer_settings'] = [
+            'target_weight_kg' => 450, 'sugar' => '<6%', 'protein' => '6–8%', 'weekly_update_day' => 5,
+            'feed_overrides' => [['id' => hash('sha256', 'feed'), 'status' => 'continue', 'note' => 'Personal decision']],
+            'management' => [['id' => $this->managementAdvies->id, 'category' => 'care', 'action' => 'avoid', 'note' => 'For this horse', 'url' => 'https://example.com/advice']],
+        ];
+        $this->actingAs($this->admin, 'admin')->post('/admin/protocols', $payload)->assertSessionHasNoErrors();
+        $protocol = Protocol::where('horse_id', $this->horse->id)->firstOrFail();
+        $this->assertSame($payload['customer_settings'], $protocol->customer_settings);
+        $this->actingAs($this->admin, 'admin')->put('/admin/protocols/'.$protocol->id, $this->payload($protocol))->assertSessionHasNoErrors();
+        $this->assertSame($payload['customer_settings'], $protocol->fresh()->customer_settings);
+    }
+
+    public function test_invalid_customer_settings_cannot_be_published(): void
+    {
+        $payload = $this->payload();
+        $payload['customer_settings'] = ['target_weight_kg' => -10, 'weekly_update_day' => 8,
+            'management' => [['id' => $this->managementAdvies->id, 'category' => 'care', 'action' => 'do', 'url' => 'javascript:alert(1)']]];
+        $this->actingAs($this->admin, 'admin')->post('/admin/protocols', $payload)
+            ->assertSessionHasErrors(['customer_settings.target_weight_kg', 'customer_settings.weekly_update_day', 'customer_settings.management.0.url']);
+    }
+
     /** @return array<string, mixed> */
     private function payload(?Protocol $protocol = null): array
     {

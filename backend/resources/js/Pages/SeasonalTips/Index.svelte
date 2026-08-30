@@ -10,7 +10,7 @@
     let { tips, libraryItems } = $props();
     let open = $state(false);
     let editing = $state(null);
-    const form = useForm({ month: '', month_order: 1, body: '', cta_item_id: '', active: false, active_from: '', active_to: '' });
+    const form = useForm({ title: '', month: '', month_order: 1, body: '', cta_item_id: '', active: false, active_from: '', active_to: '' });
     function create() { editing = null; form.reset(); form.clearErrors(); open = true; }
     function edit(t) {
         editing = t;
@@ -54,6 +54,7 @@
                 <Field label="Month label" error={$form.errors.month}><Input bind:value={$form.month} placeholder="mei" /></Field>
                 <Field label="Month order (1-12)" error={$form.errors.month_order}><Input type="number" min="1" max="12" bind:value={$form.month_order} /></Field>
             </div>
+            <Field label="Title" error={$form.errors.title}><Input bind:value={$form.title} /></Field>
             <Field label="Body" error={$form.errors.body}><Textarea bind:value={$form.body} /></Field>
             <Field label="CTA library item" error={$form.errors.cta_item_id}>
                 <Select bind:value={$form.cta_item_id} placeholder="None" options={libraryItems.map((i) => ({ value: i.id, label: i.title }))} />

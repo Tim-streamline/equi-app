@@ -1,211 +1,315 @@
-import { View, Text, ScrollView, Pressable, Image } from 'react-native';
-import { router } from 'expo-router';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { Bell, ScanLine, BookOpen, ChevronRight, Sparkles, Play, Check } from 'lucide-react-native';
-import { AppHeader } from '@/components/ui/AppHeader';
-import { Coach } from '@/components/ui/Coach';
-import { Tile } from '@/components/ui/Tile';
-import { SectionTitle } from '@/components/ui/SectionTitle';
-import { Card } from '@/components/ui/Card';
-import { Bigchip } from '@/components/ui/Bigchip';
-import { ProgressRing } from '@/components/ui/ProgressRing';
-import { IconButton } from '@/components/ui/IconButton';
-import { useTabBarPadding } from '@/hooks/useTabBarPadding';
-import { IntakeEntryCard } from '@/components/intake/IntakeEntryCard';
+import { useState } from "react";
 import {
-  useActiveProtocolForHorse,
-  useActiveSeasonalTip,
-  useCurrentHorseId,
-  useCurrentUser,
-  useHorse,
-  useLibraryFeatured,
-  useProtocolPlan,
-  useSupplementIntakesForDate,
-  useStoreMutations,
-  useValue,
-} from '@/db/hooks';
-import { protocolSupplementRowsForDay } from '@/lib/protocol-plan';
+  View,
+  Text,
+  ScrollView,
+  Pressable,
+  Modal,
+  ActivityIndicator,
+  RefreshControl,
+} from "react-native";
+import { router } from "expo-router";
+import { SafeAreaView } from "react-native-safe-area-context";
+import {
+  BookOpen,
+  ChevronDown,
+  ChevronRight,
+  Sparkles,
+  Play,
+  Settings,
+} from "lucide-react-native";
+import { useTabBarPadding } from "@/hooks/useTabBarPadding";
+import { useHorseDashboard } from "@/hooks/useHorseDashboard";
+import { useHorse, useHorsesByOwner } from "@/db/hooks";
+import { useDb } from "@/db/provider";
+import { libraryPath, type HorseDashboard } from "@/lib/horse-dashboard";
+import { ConnectionStatus } from "@/components/ui/ConnectionStatus";
 
 export default function HomeScreen() {
-  const user = useCurrentUser();
+  const { data, error, refresh, loading } = useHorseDashboard();
   const horse = useHorse();
-  const seasonal = useActiveSeasonalTip();
-  const featured = useLibraryFeatured();
-  const protocol = useActiveProtocolForHorse();
-  const horseId = useCurrentHorseId();
-  const mutations = useStoreMutations();
-  const now = new Date();
-  const todayIso = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
-  const protocolPlan = useProtocolPlan(protocol?.id ?? '');
-  const supplementIntakes = useSupplementIntakesForDate(todayIso);
-  const supplements = protocolSupplementRowsForDay(
-    protocolPlan,
-    Number(protocol?.currentWeek ?? 0),
-    supplementIntakes,
-  );
-  const done = supplements.filter((supplement) => supplement.done).length;
+  const horses = useHorsesByOwner().filter((item) => item.status === "active");
+  const { selectHorse } = useDb();
+  const [pickerOpen, setPickerOpen] = useState(false);
   const padBottom = useTabBarPadding();
-  // Open the protocol tab on its calendar sub-tab; the unique token forces the
-  // sub-tab effect to re-fire on every tap, and the calendar remounts on today.
-  const openCalendar = () =>
-    router.push({
-      pathname: '/(tabs)/(pager)/protocol',
-      params: { tab: 'kalender', t: String(Date.now()) },
-    } as any);
-
+  const [refreshing, setRefreshing] = useState(false);
+  const seasonal = data?.seasonalTip;
+  const openLibrary = () => router.push("/(tabs)/(pager)/library");
+  const seasonalCard = seasonal && (
+    <Pressable
+      accessibilityRole="link"
+      onPress={() =>
+        seasonal.item
+          ? router.push(libraryPath(seasonal.item) as any)
+          : openLibrary()
+      }
+      className="mb-4 rounded-[22px] bg-[#127A79] p-5"
+    >
+      <Text className="mb-3 text-[10px] uppercase tracking-[1.5px] text-white/75">
+        Seizoenstip · {seasonal.month}
+      </Text>
+      {!!seasonal.title && (
+        <Text className="mb-2 font-semi text-[19px] leading-[25px] text-white">
+          {seasonal.title}
+        </Text>
+      )}
+      <Text className="text-[14px] leading-[21px] text-white/90">
+        {seasonal.body}
+      </Text>
+      <Text className="mt-4 font-semi text-[14px] text-white">
+        Lees Shelley&apos;s tip →
+      </Text>
+    </Pressable>
+  );
   return (
-    <View className="flex-1">
-      <SafeAreaView edges={['top']} style={{ flex: 1 }}>
-        <ScrollView contentContainerStyle={{ paddingBottom: padBottom }}>
-          <AppHeader
-            title={(user.name as string)?.split(' ')[0] ?? ''}
-            right={
-              <IconButton>
-                <Bell size={20} color="#1B2A2A" />
-              </IconButton>
-            }
+    <SafeAreaView edges={["top"]} className="flex-1 bg-canvas">
+      <ScrollView
+        contentContainerStyle={{
+          paddingHorizontal: 20,
+          paddingBottom: padBottom,
+        }}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={async () => {
+              setRefreshing(true);
+              await refresh();
+              setRefreshing(false);
+            }}
           />
-
-          {seasonal && (
-            <Coach tag={`Seizoenstip · ${seasonal.month}`}>{seasonal.body}</Coach>
-          )}
-
-          <IntakeEntryCard />
-
-          <View className="mb-3.5 flex-row gap-2.5 px-4">
-            <Tile
-              label="Scanner"
-              sub="Voer beoordelen"
-              icon={<ScanLine size={22} color="#127A79" />}
-              onPress={() => router.push('/(tabs)/scanner')}
-            />
-            <Tile
-              label="Bibliotheek"
-              sub="3 nieuwe items"
-              icon={<BookOpen size={22} color="#127A79" />}
-              onPress={() => router.push('/(tabs)/(pager)/library')}
-            />
+        }
+      >
+        <View className="mb-5 mt-2 flex-row items-center justify-between">
+          <Text className="font-semi text-[12px] tracking-[2px] text-mint-700">
+            EQUI·APP
+          </Text>
+          <View className="flex-row items-center gap-4">
+            <ConnectionStatus />
+            <Pressable
+              accessibilityLabel="Accountinstellingen"
+              accessibilityRole="button"
+              onPress={() => router.push("/(tabs)/(pager)/account")}
+            >
+              <Settings size={20} color="#466362" />
+            </Pressable>
           </View>
-
-          <SectionTitle action="Open kalender" onAction={openCalendar}>
-            Vandaag · {horse.name}
-          </SectionTitle>
-          <View className="px-4 mb-4">
-            <Card onPress={openCalendar}>
-              <View className="flex-row items-center justify-between">
-                <Text className="font-bold text-ink text-[15px]">Dagelijks protocol</Text>
-                <View className="flex-row items-center gap-2">
-                  <Text className="text-[12px] text-ink-50">
-                    {done} van {supplements.length} gedaan
-                  </Text>
-                  <ProgressRing value={supplements.length ? (done / supplements.length) * 100 : 0} size={28} stroke={3} />
-                </View>
-              </View>
-              <View className="gap-2 mt-2">
-                {supplements.map((supplement) => (
-                  <Pressable
-                    key={supplement.id}
-                    accessibilityRole="checkbox"
-                    accessibilityState={{ checked: supplement.done }}
-                    onPress={() => mutations.toggleSupplementIntake(
-                      supplement.id,
-                      supplement.dosage,
-                      todayIso,
-                      horseId,
-                    )}
-                    className="flex-row items-center gap-3 py-1"
-                    hitSlop={6}
-                  >
-                    <View
-                      className={`h-5 w-5 items-center justify-center rounded-full border-2 ${
-                        supplement.done ? 'border-mint-500 bg-mint-500' : 'border-ink-15 bg-white'
-                      }`}
-                    >
-                      {supplement.done && <Check size={12} color="#fff" strokeWidth={3} />}
-                    </View>
-                    <View className="flex-1">
-                      <Text
-                        className={`text-[14px] ${supplement.done ? 'text-ink-50 line-through' : 'text-ink'}`}
-                      >
-                        {supplement.title}
-                      </Text>
-                      <Text className="mt-0.5 text-[11px] text-ink-50">
-                        {supplement.dosage ?? 'Dosering niet ingesteld'}
-                      </Text>
-                    </View>
-                  </Pressable>
-                ))}
-              </View>
-            </Card>
-          </View>
-
-          {featured && (
-            <>
-              <SectionTitle action="Alles" onAction={() => router.push('/(tabs)/(pager)/library')}>
-                Voor jou geselecteerd
-              </SectionTitle>
-              <View className="px-4 mb-4">
-                <Card onPress={() => router.push({ pathname: '/(tabs)/library/video/[id]', params: { id: featured.id } } as any)}>
-                  <View
-                    className="overflow-hidden rounded-2xl"
-                    style={{ height: 140, backgroundColor: '#0D5C5B', position: 'relative' }}
-                  >
-                    <Image
-                      source={require('@/assets/images/logo-horse-white.png')}
-                      style={{ position: 'absolute', top: '50%', left: '50%', width: 90, height: 90, marginLeft: -45, marginTop: -45, opacity: 0.35, resizeMode: 'contain' }}
-                    />
-                    <View
-                      style={{
-                        position: 'absolute',
-                        top: '50%',
-                        left: '50%',
-                        width: 56,
-                        height: 56,
-                        marginLeft: -28,
-                        marginTop: -28,
-                        borderRadius: 28,
-                        backgroundColor: 'rgba(255,255,255,0.95)',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                      }}
-                    >
-                      <Play size={22} color="#0D5C5B" fill="#0D5C5B" />
-                    </View>
-                    <Text
-                      className="font-semi text-white"
-                      style={{ position: 'absolute', bottom: 10, right: 10, fontSize: 12 }}
-                    >
-                      {featured.durationLabel as string}
-                    </Text>
-                  </View>
-                  <Text className="mt-2 font-bold text-ink" style={{ fontSize: 16 }}>
-                    {featured.title as string}
-                  </Text>
-                  <Text className="mt-1 text-[13px] text-ink-50">{featured.description as string}</Text>
-                </Card>
-              </View>
-            </>
-          )}
-
-          <SectionTitle>Vraag Nova</SectionTitle>
-          <View className="px-4 pb-5">
-            <Bigchip
-              title="Stel een vraag aan Nova"
-              description={(useValue('novaSubtitle') as string) || ''}
-              icon={<Sparkles size={20} color="#127A79" />}
-              onPress={() => router.push('/nova-chat')}
-              trailing={<ChevronRight size={18} color="rgba(27,42,42,0.5)" />}
-            />
-          </View>
-
+        </View>
+        <View className="mb-5 flex-row items-center justify-between gap-3">
+          <Text className="flex-1 font-bold text-[25px] leading-[29px] text-ink">
+            {data?.greeting ?? "Welkom"}
+          </Text>
           <Pressable
-            onPress={() => router.push('/(tabs)/account/horse-profile' as any)}
-            className="mx-4 -mt-2 mb-4 self-start"
+            accessibilityRole="button"
+            accessibilityLabel="Wissel paard"
+            onPress={() => setPickerOpen(true)}
+            className="max-w-[45%] flex-row items-center gap-2 rounded-full bg-white px-3 py-2"
           >
-            <Text className="font-semi text-mint-700 text-[13px]">Bekijk {horse.name}&apos;s paardprofiel →</Text>
+            <View className="h-7 w-7 items-center justify-center rounded-full bg-mint-500">
+              <Text className="font-semi text-[12px] text-white">
+                {String(horse.name ?? "").charAt(0)}
+              </Text>
+            </View>
+            <Text
+              numberOfLines={1}
+              className="shrink font-semi text-[13px] text-ink"
+            >
+              {horse.name ?? "Kies paard"}
+            </Text>
+            <ChevronDown size={14} color="#536C6B" />
           </Pressable>
-        </ScrollView>
-      </SafeAreaView>
-    </View>
+        </View>
+        {!!error && (
+          <Pressable
+            onPress={() => void refresh()}
+            className="mb-4 rounded-xl bg-[#FFF3DF] p-3"
+          >
+            <Text className="text-[12px] text-[#7A5A16]">
+              {data ? "Laatst opgehaalde gegevens. " : ""}
+              {error} Tik om opnieuw te proberen.
+            </Text>
+          </Pressable>
+        )}
+        {loading && <ActivityIndicator color="#18BAB0" />}
+        {data && (
+          <>
+            {data.protocol && <ProtocolCard data={data} />}
+            {data.variant === "basic" && seasonalCard}
+            <Pressable
+              accessibilityRole="button"
+              onPress={() =>
+                router.push({
+                  pathname: "/nova-chat",
+                  params: {
+                    horseId: horse.id,
+                    protocolId: data.protocol?.id ?? "",
+                  },
+                })
+              }
+              className="mb-4 flex-row items-center gap-3 rounded-[22px] bg-white p-4"
+            >
+              <View className="h-11 w-11 items-center justify-center rounded-2xl bg-mint-50">
+                <Sparkles size={22} color="#127A79" />
+              </View>
+              <View className="flex-1">
+                <Text className="font-semi text-[17px] text-ink">
+                  Vraag het Shelby
+                </Text>
+                <Text className="mt-0.5 text-[12px] leading-[17px] text-ink-50">
+                  Je persoonlijke AI-assistent voor paardengezondheid
+                </Text>
+              </View>
+              <ChevronRight size={19} color="#127A79" />
+            </Pressable>
+            {data.variant === "plus" && seasonalCard}
+            <View className="mb-3 mt-2 flex-row items-center justify-between gap-2">
+              <Text className="flex-1 font-semi text-[10px] uppercase tracking-[1.2px] text-ink-70">
+                Ontdek in de bibliotheek
+              </Text>
+              {data.variant === "basic" && (
+                <Text className="rounded-full bg-mint-50 px-2.5 py-1 font-semi text-[11px] text-mint-700">
+                  {data.credits} credits
+                </Text>
+              )}
+            </View>
+            <View className="flex-row items-stretch gap-3">
+              {data.recommendations.map((item) => (
+                <Pressable
+                  key={item.id}
+                  accessibilityRole="link"
+                  onPress={() => router.push(libraryPath(item) as any)}
+                  className="flex-1 rounded-[20px] bg-white p-4"
+                >
+                  {item.format === "article" ? (
+                    <BookOpen size={19} color="#127A79" />
+                  ) : (
+                    <Play size={19} color="#127A79" />
+                  )}
+                  <Text className="mb-1 mt-3 font-semi text-[14px] leading-[19px] text-ink">
+                    {item.title}
+                  </Text>
+                  <Text numberOfLines={3} className="text-[11px] leading-[16px] text-ink-50">
+                    {data.variant === "basic"
+                      ? item.unlocked
+                        ? "Al ontgrendeld"
+                        : item.creditCost === 0
+                          ? "Gratis"
+                          : `${item.creditCost} ${item.creditCost === 1 ? "credit" : "credits"}`
+                      : (item.phaseContext ?? item.description)}
+                    {item.durationLabel ? ` · ${item.durationLabel}` : ""}
+                  </Text>
+                </Pressable>
+              ))}
+            </View>
+            <Pressable onPress={openLibrary} className="mb-5 mt-4 py-1">
+              <Text className="font-semi text-[14px] text-mint-700">
+                Bekijk de hele bibliotheek →
+              </Text>
+            </Pressable>
+            {data.showPlusUpsell && (
+              <Pressable
+                accessibilityRole="link"
+                onPress={() => router.push("/plus")}
+                className="rounded-[22px] bg-[#FFF0EC] p-5"
+              >
+                <Text className="font-semi text-[17px] leading-[23px] text-ink">
+                  Wil je jouw paard écht gericht ondersteunen?
+                </Text>
+                <Text className="mt-2 text-[14px] leading-[22px] text-ink-70">
+                  Ga voor Plus en ontvang een persoonlijk protocol op maat,
+                  afgestemd op jouw paard, zijn klachten en jullie doelen.
+                </Text>
+                <Text className="mt-3 font-semi text-[14px] text-mint-700">
+                  Ontdek Plus →
+                </Text>
+              </Pressable>
+            )}
+          </>
+        )}
+      </ScrollView>
+      <Modal
+        visible={pickerOpen}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setPickerOpen(false)}
+      >
+        <Pressable
+          onPress={() => setPickerOpen(false)}
+          className="flex-1 justify-end bg-black/30"
+        >
+          <Pressable
+            onPress={(e) => e.stopPropagation()}
+            className="max-h-[75%] rounded-t-[28px] bg-canvas p-5"
+          >
+            <Text className="mb-4 font-bold text-[20px] text-ink">
+              Kies je paard
+            </Text>
+            <ScrollView>
+              {horses.map((item) => (
+                <Pressable
+                  key={item.id}
+                  accessibilityRole="button"
+                  accessibilityState={{ selected: item.id === horse.id }}
+                  onPress={() => {
+                    selectHorse(item.id);
+                    setPickerOpen(false);
+                  }}
+                  className="mb-2 rounded-2xl bg-white p-4"
+                >
+                  <Text className="font-semi text-[16px] text-ink">
+                    {item.name}
+                  </Text>
+                </Pressable>
+              ))}
+            </ScrollView>
+            <SafeAreaView edges={["bottom"]}>
+              <Pressable
+                onPress={() => setPickerOpen(false)}
+                className="mt-2 rounded-full bg-mint-500 p-3"
+              >
+                <Text className="text-center font-bold text-white">
+                  Sluiten
+                </Text>
+              </Pressable>
+            </SafeAreaView>
+          </Pressable>
+        </Pressable>
+      </Modal>
+    </SafeAreaView>
+  );
+}
+
+function ProtocolCard({ data }: { data: HorseDashboard }) {
+  const protocol = data.protocol!;
+  return (
+    <Pressable
+      accessibilityRole="button"
+      onPress={() =>
+        router.push({
+          pathname: "/(tabs)/(pager)/protocol",
+          params: { tab: "vandaag", t: String(Date.now()) },
+        })
+      }
+      className="mb-4 rounded-[22px] bg-white p-5"
+    >
+      <Text className="text-[10px] uppercase tracking-[1.3px] text-ink-50">
+        {data.horse.name}&apos;s Plus-protocol
+      </Text>
+      <Text className="mt-3 font-bold text-[18px] text-ink">
+        {protocol.statusLabel}
+      </Text>
+      <Text className="mt-1 text-[13px] text-ink-50">
+        Dag {protocol.currentDay} · Week {protocol.currentWeek}
+        {protocol.phaseLabel ? ` · ${protocol.phaseLabel}` : ""}
+      </Text>
+      <View className="mt-4 h-1.5 overflow-hidden rounded-full bg-ink-8">
+        <View
+          className="h-full bg-mint-500"
+          style={{ width: `${protocol.progressPercent}%` }}
+        />
+      </View>
+      <Text className="mt-4 font-semi text-[14px] text-mint-700">
+        Ga verder met het protocol →
+      </Text>
+    </Pressable>
   );
 }

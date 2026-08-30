@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\HorseDashboardController;
 use App\Http\Controllers\PowerSyncAuthController;
 use App\Http\Controllers\SyncController;
 use App\Http\Middleware\AuthenticatePowerSyncJwt;
@@ -22,3 +23,8 @@ Route::post('/api/auth/login', [PowerSyncAuthController::class, 'login']);
 // PowerSync JWT signed by us.
 Route::middleware(AuthenticatePowerSyncJwt::class)
     ->post('/api/sync/upload', [SyncController::class, 'upload']);
+
+Route::middleware(AuthenticatePowerSyncJwt::class)->group(function () {
+    Route::get('/api/horses/{horse}/dashboard', [HorseDashboardController::class, 'show']);
+    Route::post('/api/horses/{horse}/weekly-update', [HorseDashboardController::class, 'weeklyUpdate']);
+});
