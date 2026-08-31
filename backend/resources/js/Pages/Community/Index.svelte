@@ -11,10 +11,11 @@
     let { posts, filters, openReports } = $props();
     let q = $state(filters.q ?? '');
     let status = $state(filters.status ?? '');
+    let expertQueue = $state(filters.expert_queue === '1');
     let timer;
     function apply() {
         clearTimeout(timer);
-        timer = setTimeout(() => router.get('/admin/community', { q, status }, { preserveState: true, replace: true }), 250);
+        timer = setTimeout(() => router.get('/admin/community', { q, status, expert_queue: expertQueue ? '1' : '' }, { preserveState: true, replace: true }), 250);
     }
 </script>
 
@@ -36,7 +37,7 @@
                     { value: '', label: 'All' }, { value: 'visible', label: 'Visible' }, { value: 'hidden', label: 'Hidden' },
                     { value: 'locked', label: 'Locked' }, { value: 'pinned', label: 'Pinned' }]} />
             </div>
-
+            <label class="mb-4 flex items-center gap-2 text-sm"><input type="checkbox" bind:checked={expertQueue} onchange={apply} /> Vraag Shelley · awaiting an expert reply</label>
             <div class="space-y-3">
                 {#each posts.data as p (p.id)}
                     <Link href={`/admin/community/post/${p.id}`} class="block rounded-lg border p-4 hover:bg-accent/40">

@@ -7,7 +7,7 @@ import { useState } from 'react';
 import {
   View, Text, Image, TextInput, ActivityIndicator, KeyboardAvoidingView, Platform, ScrollView,
 } from 'react-native';
-import { router } from 'expo-router';
+import { router, useLocalSearchParams } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { ArrowRight } from 'lucide-react-native';
@@ -18,6 +18,7 @@ const DEFAULT_EMAIL = 'marit@voorbeeld.nl';
 const DEFAULT_PASSWORD = 'password';
 
 export default function WelcomeScreen() {
+  const { communityPost } = useLocalSearchParams<{ communityPost?: string }>();
   const { login } = useDb();
   const [email, setEmail] = useState(DEFAULT_EMAIL);
   const [password, setPassword] = useState(DEFAULT_PASSWORD);
@@ -29,7 +30,9 @@ export default function WelcomeScreen() {
     setBusy(true);
     try {
       await login(email.trim(), password);
-      router.replace('/(tabs)/(pager)/home');
+      if (communityPost && /^[0-9a-f-]{36}$/i.test(communityPost)) {
+        router.replace({ pathname: '/(tabs)/community/thread/[id]', params: { id: communityPost } });
+      } else router.replace('/(tabs)/(pager)/home');
     } catch (err: any) {
       setError(err?.message ?? 'Login failed');
     } finally {

@@ -8,6 +8,11 @@ use Illuminate\Support\Facades\DB;
 class SyncAccessPolicy
 {
     private const READ_ONLY_TABLES = [
+        // Community mutations must use the entitlement- and moderation-aware API.
+        'community_posts',
+        'community_post_tags',
+        'community_replies',
+        'community_reactions',
         'account_settings',
         'community_categories',
         'community_tags',
@@ -59,10 +64,6 @@ class SyncAccessPolicy
             'scan_results' => $this->ownsScanResult($userId, $existing, $data),
             'scan_ingredients' => $this->ownsScanIngredient($userId, $existing, $data),
             'library_bookmarks', 'library_progress', 'notification_preferences' => $this->ownsUserRow($userId, $existing, $data),
-            'community_posts' => $this->ownsCommunityPost($userId, $existing, $data),
-            'community_post_tags' => $this->ownsCommunityPostTag($userId, $existing, $data),
-            'community_replies' => $this->ownsCommunityReply($userId, $existing, $data),
-            'community_reactions' => $this->ownsUserRow($userId, $existing, $data),
             'chat_sessions' => $this->ownsChatSession($userId, $existing, $data),
             'chat_messages' => $this->ownsChatMessage($userId, $existing, $data),
             'intake_bookings' => $this->ownsIntakeBooking($userId, $existing, $data),
@@ -168,32 +169,6 @@ class SyncAccessPolicy
     private function ownsUserRow(string $userId, ?object $existing, array $data): bool
     {
         return $this->value('user_id', $existing, $data) === $userId;
-    }
-
-    private function ownsCommunityPost(string $userId, ?object $existing, array $data): bool
-    {
-        return $this->value('author_user_id', $existing, $data) === $userId;
-    }
-
-    private function ownsCommunityPostTag(string $userId, ?object $existing, array $data): bool
-    {
-        $postId = $this->value('post_id', $existing, $data);
-        if (! is_string($postId)) {
-            return false;
-        }
-
-        return DB::table('community_posts')
-            ->where('id', $postId)
-            ->where('author_user_id', $userId)
-            ->exists();
-    }
-
-    private function ownsCommunityReply(string $userId, ?object $existing, array $data): bool
-    {
-        $therapistId = $this->value('author_therapist_id', $existing, $data);
-
-        return $therapistId === null
-            && $this->value('author_user_id', $existing, $data) === $userId;
     }
 
     private function ownsChatSession(string $userId, ?object $existing, array $data): bool

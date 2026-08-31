@@ -3,12 +3,14 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Attributes\Fillable;
-use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\MorphMany;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 
 #[Fillable([
     'author_user_id',
@@ -24,10 +26,12 @@ use Illuminate\Database\Eloquent\Relations\MorphMany;
     'order',
     'moderation_status',
     'reviewed_at',
+    'edited_at',
 ])]
 class CommunityPost extends Model
 {
     use HasUuids;
+
     protected function casts(): array
     {
         return [
@@ -35,12 +39,23 @@ class CommunityPost extends Model
             'likes_count' => 'integer',
             'replies_count' => 'integer',
             'reviewed_at' => 'datetime',
+            'edited_at' => 'datetime',
         ];
     }
 
     public function author(): BelongsTo
     {
         return $this->belongsTo(User::class, 'author_user_id');
+    }
+
+    protected static function booted(): void
+    {
+        static::deleting(function (self $post) {
+            $paths = DB::table('community_media')->where('post_id', $post->id)->pluck('path')->all();
+            CommunityReaction::where(fn ($q) => $q->where('target_type', 'post')->where('target_id', $post->id))
+                ->orWhere(fn ($q) => $q->where('target_type', 'reply')->whereIn('target_id', $post->replies()->select('id')))->delete();
+            DB::afterCommit(fn () => Storage::disk('local')->delete($paths));
+        });
     }
 
     public function category(): BelongsTo

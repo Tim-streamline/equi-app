@@ -2,7 +2,8 @@
 # Schema: https://unpkg.com/@powersync/service-sync-rules@latest/schema/sync_rules.json
 #
 # The mobile client authenticates with a JWT whose `sub` is the Laravel user
-# UUID. Reference/catalog/community content is public to signed-in clients.
+# UUID. Reference/catalog content is public to signed-in clients.
+# Community posts, replies, reactions and private attachments use HTTP only.
 # User, horse, protocol, scan, billing, settings, chat, and intake rows are
 # scoped to the current user or to horses visible through ownership/sharing.
 
@@ -28,13 +29,10 @@ streams:
             - SELECT * FROM library_item_categories
             - SELECT * FROM seasonal_tips
 
-            # community is intentionally public inside the signed-in app
+            # Catalog only. Community content is fetched through the authenticated
+            # API so hidden/muted content and private media are not cached globally.
             - SELECT * FROM community_categories
             - SELECT * FROM community_tags
-            - SELECT * FROM community_posts
-            - SELECT * FROM community_post_tags
-            - SELECT * FROM community_replies
-            - SELECT * FROM community_reactions
 
             # billing catalog
             - SELECT * FROM plans

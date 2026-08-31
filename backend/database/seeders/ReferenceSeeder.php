@@ -44,7 +44,6 @@ class ReferenceSeeder extends Seeder
     {
         $cats = [
             ['slug' => 'alles', 'label' => 'Alles', 'is_default' => true],
-            ['slug' => 'mijn-focus', 'label' => 'Mijn focus'],
             ['slug' => 'vraag-shelley', 'label' => 'Vraag Shelley'],
             ['slug' => 'reviews', 'label' => 'Reviews'],
             ['slug' => 'diensten', 'label' => 'Diensten'],

@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\CommunityController;
 use App\Http\Controllers\HorseDashboardController;
 use App\Http\Controllers\PowerSyncAuthController;
 use App\Http\Controllers\SyncController;
@@ -27,4 +28,23 @@ Route::middleware(AuthenticatePowerSyncJwt::class)
 Route::middleware(AuthenticatePowerSyncJwt::class)->group(function () {
     Route::get('/api/horses/{horse}/dashboard', [HorseDashboardController::class, 'show']);
     Route::post('/api/horses/{horse}/weekly-update', [HorseDashboardController::class, 'weeklyUpdate']);
+});
+
+Route::middleware(AuthenticatePowerSyncJwt::class)->prefix('api/community')->controller(CommunityController::class)->group(function () {
+    Route::get('/', 'index');
+    Route::get('/posts/{post}', 'show')->whereUuid('post');
+    Route::get('/media/{media}', 'media')->whereUuid('media');
+    Route::get('/mutes', 'mutes');
+    Route::middleware('throttle:community-write')->group(function () {
+        Route::post('/posts', 'store');
+        Route::patch('/posts/{post}', 'update')->whereUuid('post');
+        Route::delete('/posts/{post}', 'destroy')->whereUuid('post');
+        Route::post('/posts/{post}/replies', 'replyStore')->whereUuid('post');
+        Route::patch('/replies/{reply}', 'replyUpdate')->whereUuid('reply');
+        Route::delete('/replies/{reply}', 'replyDestroy')->whereUuid('reply');
+        Route::match(['put', 'delete'], '/posts/{post}/bookmark', 'bookmark')->whereUuid('post');
+        Route::match(['put', 'delete'], '/{type}/{id}/like', 'like')->whereUuid('id');
+        Route::post('/{type}/{id}/report', 'report')->whereUuid('id');
+        Route::match(['put', 'delete'], '/mutes/{type}/{id}', 'mute')->whereUuid('id');
+    });
 });

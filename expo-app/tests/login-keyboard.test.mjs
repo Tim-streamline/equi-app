@@ -10,7 +10,7 @@ const { outputText } = ts.transpileModule(source, {
 
 // Inspect the rendered layout contract without loading native modules in Node.
 // Actual keyboard visibility is verified separately on Android.
-function renderLogin(platform) {
+function renderLogin(platform, params = {}, replace = () => {}) {
   const jsx = (type, props) => ({ type, props });
   const modules = {
     'react/jsx-runtime': { jsx, jsxs: jsx },
@@ -22,7 +22,7 @@ function renderLogin(platform) {
       ].map((name) => [name, name])),
       Platform: { OS: platform },
     },
-    'expo-router': { router: {} },
+    'expo-router': { router: { replace }, useLocalSearchParams: () => params },
     'react-native-safe-area-context': { SafeAreaView: 'SafeAreaView' },
     'expo-status-bar': { StatusBar: 'StatusBar' },
     'lucide-react-native': { ArrowRight: 'ArrowRight' },
@@ -37,6 +37,14 @@ function renderLogin(platform) {
   }, exports);
   return exports.default();
 }
+
+test('signing in from a shared Community discussion returns to that discussion', async () => {
+  const id = 'c6812914-557c-4ee0-abd6-25827b3dc83e';
+  let destination;
+  const login = renderLogin('android', { communityPost: id }, route => { destination = route; });
+  await find(login, 'Button').props.onPress();
+  assert.deepEqual(destination, { pathname: '/(tabs)/community/thread/[id]', params: { id } });
+});
 
 function find(node, type, matches = () => true) {
   if (!node || typeof node !== 'object') return undefined;

@@ -19,7 +19,7 @@ export default function PagerLayout() {
         <MaterialTopTabs.Screen name="home" />
         <MaterialTopTabs.Screen name="protocol" />
         <MaterialTopTabs.Screen name="library" />
-        <MaterialTopTabs.Screen name="account" />
+        <MaterialTopTabs.Screen name="community" />
       </MaterialTopTabs>
     </View>
   );

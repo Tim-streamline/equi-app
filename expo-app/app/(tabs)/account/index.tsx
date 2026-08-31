@@ -20,6 +20,7 @@ import {
   usePlan,
 } from '@/db/hooks';
 import { useDb } from '@/db/provider';
+import { SubHeader } from '@/components/ui/SubHeader';
 
 const SETTINGS_ICONS: Record<string, any> = {
   bell: Bell,
@@ -77,6 +78,7 @@ export default function AccountScreen() {
   return (
     <View className="flex-1">
       <SafeAreaView edges={['top']} style={{ flex: 1 }}>
+        <SubHeader title="Account" onBack={() => router.canGoBack() ? router.back() : router.replace('/(tabs)/(pager)/home')} />
         <ScrollView contentContainerStyle={{ paddingBottom: padBottom }}>
           <View className="px-4 mb-4 mt-2">
             <Card onPress={() => router.push('/(tabs)/account/my-horses')}>

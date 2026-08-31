@@ -1,7 +1,7 @@
 import { View, Text } from 'react-native';
 import { ReactNode } from 'react';
 import { router } from 'expo-router';
-import { Settings } from 'lucide-react-native';
+import { UserRound } from 'lucide-react-native';
 import { IconButton } from './IconButton';
 import { ConnectionStatus } from './ConnectionStatus';
 
@@ -19,8 +19,8 @@ export function AppHeader({ title, right }: Props) {
       <View className="flex-row items-center gap-2">
         <ConnectionStatus />
         {right}
-        <IconButton size={38} onPress={() => router.navigate('/(tabs)/(pager)/account')}>
-          <Settings size={20} color="#1B2A2A" />
+        <IconButton size={38} accessibilityLabel="Account openen" onPress={() => router.navigate('/(tabs)/account')}>
+          <UserRound size={20} color="#1B2A2A" />
         </IconButton>
       </View>
     </View>

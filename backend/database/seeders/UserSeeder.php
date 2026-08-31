@@ -65,7 +65,7 @@ class UserSeeder extends Seeder
 
         foreach ([
             ['bell', 'Meldingen', '3 reminders aan', ''],
-            ['messageCircle', 'Community', 'Vraag & deel met paardenmensen', '/(tabs)/account/community'],
+            ['messageCircle', 'Community', 'Vraag & deel met paardenmensen', '/(tabs)/(pager)/community'],
             ['download', 'Exporteer mijn data', 'CSV of PDF dagboek', ''],
             ['settings', 'Voorkeuren', 'Eenheden, taal', ''],
             ['heart', 'Steun De Paardentherapeut', '', ''],

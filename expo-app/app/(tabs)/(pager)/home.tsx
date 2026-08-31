@@ -16,7 +16,7 @@ import {
   ChevronRight,
   Sparkles,
   Play,
-  Settings,
+  UserRound,
 } from "lucide-react-native";
 import { useTabBarPadding } from "@/hooks/useTabBarPadding";
 import { useHorseDashboard } from "@/hooks/useHorseDashboard";
@@ -86,11 +86,11 @@ export default function HomeScreen() {
           <View className="flex-row items-center gap-4">
             <ConnectionStatus />
             <Pressable
-              accessibilityLabel="Accountinstellingen"
               accessibilityRole="button"
-              onPress={() => router.push("/(tabs)/(pager)/account")}
+              onPress={() => router.push("/(tabs)/account")}
+              accessibilityLabel="Account openen"
             >
-              <Settings size={20} color="#466362" />
+              <UserRound size={20} color="#466362" />
             </Pressable>
           </View>
         </View>

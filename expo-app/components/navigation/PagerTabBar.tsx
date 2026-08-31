@@ -2,7 +2,7 @@ import { Pressable, Text, View, Platform } from 'react-native';
 import { router } from 'expo-router';
 import { BlurView } from 'expo-blur';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Home, ClipboardList, ScanLine, BookOpen, User } from 'lucide-react-native';
+import { Home, ClipboardList, ScanLine, BookOpen, MessageCircle } from 'lucide-react-native';
 import type { MaterialTopTabBarProps } from '@react-navigation/material-top-tabs';
 import { ComponentType, ReactNode } from 'react';
 
@@ -12,14 +12,14 @@ const ICONS: Record<string, IconCmp> = {
   home: Home,
   protocol: ClipboardList,
   library: BookOpen,
-  account: User,
+  community: MessageCircle,
 };
 
 const LABELS: Record<string, string> = {
   home: 'Home',
   protocol: 'Protocol',
   library: 'Bibliotheek',
-  account: 'Account',
+  community: 'Community',
 };
 
 const ACTIVE = '#127A79';

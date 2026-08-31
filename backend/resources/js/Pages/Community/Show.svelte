@@ -9,7 +9,7 @@
     import { formatDate } from '$lib/utils.js';
     import { ArrowLeft, EyeOff, Eye, Lock, Pin, Trash2, RefreshCw, Sparkles } from '@lucide/svelte';
 
-    let { post, reports, therapists } = $props();
+    let { post, reports, therapists, media = [] } = $props();
 
     function moderatePost(status) { router.post(`/admin/community/post/${post.id}/moderate`, { status }); }
     function deletePost() { if (confirm('Delete this post and all replies?')) router.delete(`/admin/community/post/${post.id}`); }
@@ -60,6 +60,15 @@
                 <Badge variant={statusVariant(post.moderation_status)}>{post.moderation_status}</Badge>
             </div>
             <p class="whitespace-pre-wrap text-sm">{post.body}</p>
+            <div class="mt-3 grid gap-3 sm:grid-cols-2">
+                {#each media as attachment (attachment.id)}
+                    {#if attachment.mime_type.startsWith('video/')}
+                        <video controls preload="metadata" class="max-h-80 rounded-lg" src={`/admin/community/media/${attachment.id}`}><track kind="captions" /></video>
+                    {:else}
+                        <img class="max-h-80 rounded-lg object-contain" src={`/admin/community/media/${attachment.id}`} alt="Community attachment" />
+                    {/if}
+                {/each}
+            </div>
             <div class="mt-4 flex flex-wrap gap-2">
                 <Button size="sm" variant="outline" onclick={() => moderatePost('visible')}><Eye class="size-4" /> Show</Button>
                 <Button size="sm" variant="outline" onclick={() => moderatePost('hidden')}><EyeOff class="size-4" /> Hide</Button>

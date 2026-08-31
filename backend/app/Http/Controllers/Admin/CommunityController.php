@@ -8,9 +8,11 @@ use App\Models\CommunityReply;
 use App\Models\ModerationReport;
 use App\Models\Therapist;
 use App\Support\AuditLogger;
+use App\Support\CommunityAccess;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -49,6 +51,7 @@ class CommunityController extends Controller
 
         return Inertia::render('Community/Show', [
             'post' => $post,
+            'media' => DB::table('community_media')->where('post_id', $post->id)->orderBy('order')->get(['id', 'mime_type']),
             'reports' => ModerationReport::where('subject_id', $post->id)->orWhereIn(
                 'subject_id', $post->replies->pluck('id')
             )->with('reporter:id,name')->latest()->get(),
@@ -68,8 +71,11 @@ class CommunityController extends Controller
 
     public function destroyPost(CommunityPost $post): RedirectResponse
     {
-        AuditLogger::deleted($post);
-        $post->delete();
+        DB::transaction(function () use ($post) {
+            $post = CommunityPost::whereKey($post->id)->lockForUpdate()->firstOrFail();
+            AuditLogger::deleted($post);
+            $post->delete();
+        });
 
         return redirect()->route('admin.community.index')->with('success', 'Post deleted.');
     }
@@ -79,6 +85,7 @@ class CommunityController extends Controller
         $status = $request->validate(['status' => ['required', 'in:visible,hidden']])['status'];
         $before = $reply->only('moderation_status');
         $reply->update(['moderation_status' => $status, 'reviewed_at' => Carbon::now()]);
+        $this->recountPost($reply->post_id);
         AuditLogger::updated($reply, $before);
 
         return back()->with('success', "Reply marked {$status}.");
@@ -131,10 +138,6 @@ class CommunityController extends Controller
         if (! $post) {
             return;
         }
-        $post->update([
-            'replies_count' => $post->replies()->count(),
-            'likes_count' => $post->reactions()->count(),
-            'has_expert_reply' => $post->replies()->where('author_is_expert', true)->exists(),
-        ]);
+        CommunityAccess::recount($post);
     }
 }

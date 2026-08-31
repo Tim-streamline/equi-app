@@ -341,32 +341,6 @@ export function useActiveSeasonalTip() {
   return rows[0];
 }
 
-// ---------------------------------------------------------------- community
-export function useCommunityPosts() {
-  return sorted(useCamelQuery(`SELECT * FROM community_posts`));
-}
-export function useCommunityPost(id: string): Indexed {
-  const rows = useCamelQuery(`SELECT * FROM community_posts WHERE id = ?`, [id]);
-  return { ...(rows[0] ?? {}), id } as Indexed;
-}
-export function useCommunityReplies(postId: string) {
-  return sorted(useCamelQuery(`SELECT * FROM community_replies WHERE post_id = ?`, [postId]));
-}
-export function useCommunityCategories() {
-  return sorted(useCamelQuery(`SELECT * FROM community_categories`));
-}
-export function useCommunityPostTags(postId: string) {
-  return sorted(
-    useCamelQuery(
-      `SELECT pt.*, t.label
-       FROM community_post_tags pt
-       LEFT JOIN community_tags t ON t.id = pt.tag_id
-       WHERE pt.post_id = ?`,
-      [postId],
-    ),
-  );
-}
-
 // ---------------------------------------------------------------- subscription
 export function useActiveSubscription() {
   const uid = useCurrentUserId();
@@ -544,33 +518,6 @@ export function useStoreMutations() {
             [id, ...inputVals],
           );
         }
-      },
-      async addPostReply(
-        postId: string,
-        body: string,
-        authorUserId: string,
-        authorName: string,
-        authorInitial: string,
-      ) {
-        const id = newId();
-        const orderRow = await powersync.getOptional<{ c: number }>(
-          `SELECT COUNT(*) AS c FROM community_replies WHERE post_id = ?`,
-          [postId],
-        );
-        const order = orderRow?.c ?? 0;
-        await powersync.execute(
-          `INSERT INTO community_replies
-           (id, post_id, author_user_id, author_name, author_initial,
-            author_avatar_color, author_is_expert, body, created_at,
-            when_label, likes_count, replies_count, "order")
-           VALUES (?, ?, ?, ?, ?, '#5FD7CB', 0, ?, ?, 'zojuist', 0, 0, ?)`,
-          [id, postId, authorUserId, authorName, authorInitial, body, new Date().toISOString(), order],
-        );
-        // Bump repliesCount on the parent post.
-        await powersync.execute(
-          `UPDATE community_posts SET replies_count = COALESCE(replies_count, 0) + 1 WHERE id = ?`,
-          [postId],
-        );
       },
     }),
     [powersync],

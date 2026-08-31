@@ -3,8 +3,8 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Attributes\Fillable;
-use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\MorphMany;
 
@@ -23,10 +23,13 @@ use Illuminate\Database\Eloquent\Relations\MorphMany;
     'order',
     'moderation_status',
     'reviewed_at',
+    'parent_reply_id',
+    'edited_at',
 ])]
 class CommunityReply extends Model
 {
     use HasUuids;
+
     protected function casts(): array
     {
         return [
@@ -34,12 +37,18 @@ class CommunityReply extends Model
             'likes_count' => 'integer',
             'replies_count' => 'integer',
             'reviewed_at' => 'datetime',
+            'edited_at' => 'datetime',
         ];
     }
 
     public function post(): BelongsTo
     {
         return $this->belongsTo(CommunityPost::class, 'post_id');
+    }
+
+    protected static function booted(): void
+    {
+        static::deleting(fn (self $reply) => $reply->reactions()->delete());
     }
 
     public function authorUser(): BelongsTo

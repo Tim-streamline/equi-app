@@ -102,6 +102,7 @@ Route::middleware('auth:admin')->group(function () {
 
     // ---- Community moderation -------------------------------------------
     Route::middleware('admin.role:moderator,therapist_admin')->group(function () {
+        Route::get('community/media/{media}', [App\Http\Controllers\CommunityController::class, 'adminMedia'])->whereUuid('media')->name('community.media');
         Route::controller(CommunityController::class)->prefix('community')->as('community.')->group(function () {
             Route::get('/', 'index')->name('index');
             Route::get('post/{post}', 'show')->name('show');
