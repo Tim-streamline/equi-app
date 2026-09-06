@@ -3,16 +3,22 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Attributes\Fillable;
-use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
-#[Fillable(['protocol_id', 'cause'])]
+#[Fillable(['protocol_id', 'cause', 'summary', 'focus_points', 'observations'])]
 class ProtocolAnalysis extends Model
 {
     use HasUuids;
+
     protected $table = 'protocol_analyses';
+
+    protected function casts(): array
+    {
+        return ['focus_points' => 'array', 'observations' => 'array'];
+    }
 
     public function protocol(): BelongsTo
     {

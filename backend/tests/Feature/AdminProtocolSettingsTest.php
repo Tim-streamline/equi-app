@@ -146,21 +146,106 @@ class AdminProtocolSettingsTest extends TestCase
         $this->assertDatabaseMissing('protocol_template_phases', ['id' => $phase->id]);
     }
 
-    public function test_phase_start_delay_must_be_a_positive_number_of_weeks_when_enabled(): void
+    public function test_phase_start_delay_can_be_zero_for_parallel_phases(): void
     {
-        $template = ProtocolTemplate::query()->create(['name' => 'Delayed phase validation']);
+        $template = ProtocolTemplate::query()->create(['name' => 'Parallel phases']);
 
         $this->actingAs($this->admin, 'admin')
             ->post('/admin/protocol-settings/phases', [
                 'protocol_template_id' => $template->id,
-                'name' => 'Delayed phase',
+                'name' => 'Mineralen aanvullen',
                 'description' => null,
                 'required' => false,
                 'start_after_previous_phase_weeks' => 0,
             ])
-            ->assertSessionHasErrors('start_after_previous_phase_weeks');
+            ->assertSessionHasNoErrors();
 
-        $this->assertDatabaseMissing('protocol_template_phases', ['name' => 'Delayed phase']);
+        $this->assertDatabaseHas('protocol_template_phases', [
+            'protocol_template_id' => $template->id,
+            'name' => 'Mineralen aanvullen',
+            'start_after_previous_phase_weeks' => 0,
+        ]);
+    }
+
+    public function test_admin_can_duplicate_a_phase_with_its_weeks_supplements_and_schedule(): void
+    {
+        $template = ProtocolTemplate::query()->create(['name' => 'Duplicate phase']);
+        $template->phases()->create([
+            'order' => 1,
+            'name' => 'Preparation',
+            'required' => true,
+        ]);
+        $source = $template->phases()->create([
+            'order' => 2,
+            'name' => 'Recovery',
+            'description' => 'Support recovery.',
+            'required' => false,
+            'start_after_previous_phase_weeks' => 2,
+        ]);
+        $after = $template->phases()->create([
+            'order' => 3,
+            'name' => 'Maintenance',
+            'required' => false,
+        ]);
+        $weeks = collect(range(1, 3))->map(
+            fn (int $number) => $source->weeks()->create(['number' => $number]),
+        );
+        $psyllium = $source->supplements()->create([
+            'name' => 'Psyllium',
+            'description' => 'Supports digestion.',
+            'instructions' => 'Mix with water.',
+            'supplement_type' => SupplementType::Herb,
+            'dosis_type' => SupplementDoseType::Fixed,
+            'dosis' => 20,
+            'unit' => SupplementDoseUnit::Gram,
+            'add_by_default' => true,
+            'max_aantal_in_fase' => 2,
+            'min_aantal_per_week' => 5,
+            'rust_periode_in_weken' => 1,
+        ]);
+        $zinc = $source->supplements()->create([
+            'name' => 'Zinc',
+            'supplement_type' => SupplementType::Mineral,
+            'add_by_default' => false,
+        ]);
+        $psyllium->weeks()->attach([$weeks[0]->id, $weeks[2]->id]);
+        $zinc->weeks()->attach($weeks[1]->id);
+
+        $this->actingAs($this->admin, 'admin')
+            ->post("/admin/protocol-settings/phases/{$source->id}/duplicate")
+            ->assertSessionHasNoErrors()
+            ->assertSessionHas('success', 'Fase gedupliceerd.');
+
+        $phases = $template->phases()->with(['weeks', 'supplements.weeks'])->get();
+        $copy = $phases->firstWhere('name', 'Recovery (kopie)');
+
+        $this->assertNotNull($copy);
+        $this->assertSame([$source->id, $copy->id, $after->id], $phases->slice(1)->pluck('id')->all());
+        $this->assertSame([1, 2, 3, 4], $phases->pluck('order')->all());
+        $this->assertSame('Support recovery.', $copy->description);
+        $this->assertFalse($copy->required);
+        $this->assertSame(2, $copy->start_after_previous_phase_weeks);
+        $this->assertSame([1, 2, 3], $copy->weeks->pluck('number')->all());
+        $this->assertEmpty($copy->weeks->pluck('id')->intersect($weeks->pluck('id')));
+
+        $copiedPsyllium = $copy->supplements->firstWhere('name', 'Psyllium');
+        $copiedZinc = $copy->supplements->firstWhere('name', 'Zinc');
+        $this->assertNotNull($copiedPsyllium);
+        $this->assertNotNull($copiedZinc);
+        $this->assertNotSame($psyllium->id, $copiedPsyllium->id);
+        $this->assertSame('Mix with water.', $copiedPsyllium->instructions);
+        $this->assertSame(SupplementDoseType::Fixed, $copiedPsyllium->dosis_type);
+        $this->assertSame(SupplementDoseUnit::Gram, $copiedPsyllium->unit);
+        $this->assertTrue($copiedPsyllium->add_by_default);
+        $this->assertSame([1, 3], $copiedPsyllium->weeks->pluck('number')->all());
+        $this->assertSame([2], $copiedZinc->weeks->pluck('number')->all());
+        $this->assertSame([1, 2, 3], $source->weeks()->pluck('number')->all());
+        $this->assertSame([1, 3], $psyllium->weeks()->pluck('number')->all());
+        $this->assertDatabaseHas('audit_logs', [
+            'action' => 'created',
+            'target_type' => 'ProtocolTemplatePhase',
+            'target_id' => $copy->id,
+        ]);
     }
 
     public function test_admin_can_configure_the_fixed_phase_order(): void
@@ -408,6 +493,38 @@ class AdminProtocolSettingsTest extends TestCase
             ->assertSessionHasNoErrors();
 
         $this->assertSame(SupplementDoseUnit::Tablespoon, $supplement->fresh()->unit);
+    }
+
+    public function test_supplement_supports_drop_pill_and_capsule_units(): void
+    {
+        $template = ProtocolTemplate::query()->create(['name' => 'Drop and pill dosage']);
+        $phase = $template->phases()->create([
+            'order' => 1,
+            'name' => 'Phase',
+            'required' => true,
+        ]);
+
+        foreach ([
+            'druppels' => SupplementDoseUnit::Drops,
+            'pillen' => SupplementDoseUnit::Pills,
+            'capsules' => SupplementDoseUnit::Capsules,
+        ] as $unit => $expectedUnit) {
+            $this->actingAs($this->admin, 'admin')
+                ->post('/admin/protocol-settings/supplements', [
+                    'protocol_template_phase_id' => $phase->id,
+                    'name' => ucfirst($unit),
+                    'supplement_type' => 'supplement',
+                    'dosis_type' => 'vast',
+                    'dosis' => 2,
+                    'unit' => $unit,
+                ])
+                ->assertSessionHasNoErrors();
+
+            $this->assertSame(
+                $expectedUnit,
+                Supplement::query()->where('name', ucfirst($unit))->sole()->unit,
+            );
+        }
     }
 
     public function test_admin_can_toggle_a_supplement_for_a_week_in_the_same_phase(): void

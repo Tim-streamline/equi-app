@@ -2,7 +2,9 @@
 
 namespace Database\Seeders;
 
+use App\Models\BewegingAdvies;
 use App\Models\Horse;
+use App\Models\ManagementAdvies;
 use App\Models\Protocol;
 use App\Models\ProtocolAdvice;
 use App\Models\ProtocolAnalysis;
@@ -11,6 +13,7 @@ use App\Models\ProtocolPhaseWeek;
 use App\Models\ProtocolTemplate;
 use App\Models\Therapist;
 use App\Models\User;
+use App\Models\VoedingAdvies;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\DB;
 
@@ -137,5 +140,29 @@ class ProtocolSeeder extends Seeder
             );
         }
 
+        $this->syncAdviceCatalog($protocol, 'voedingAdviezen', VoedingAdvies::query()->orderBy('title')->get(), 'voeding_advies_id');
+        $this->syncAdviceCatalog($protocol, 'managementAdviezen', ManagementAdvies::query()->orderBy('title')->get(), 'management_advies_id');
+        $this->syncAdviceCatalog($protocol, 'bewegingAdviezen', BewegingAdvies::query()->orderBy('title')->get(), 'beweging_advies_id');
+    }
+
+    private function syncAdviceCatalog(Protocol $protocol, string $relation, iterable $sources, string $sourceForeignKey): void
+    {
+        $snapshotIds = [];
+
+        foreach ($sources as $source) {
+            $snapshot = $protocol->{$relation}()->updateOrCreate(
+                [$sourceForeignKey => $source->id],
+                [
+                    'title' => $source->title,
+                    'description' => $source->description,
+                    'layout' => $source->layout,
+                ],
+            );
+            $snapshotIds[] = $snapshot->id;
+        }
+
+        $protocol->{$relation}()
+            ->when($snapshotIds, fn ($query) => $query->whereNotIn('id', $snapshotIds))
+            ->delete();
     }
 }

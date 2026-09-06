@@ -260,7 +260,7 @@ class ProtocolController extends Controller
         }
 
         $protocol->phases()->whereNotIn('id', $phaseIds)->delete();
-        $this->syncAnalysis($protocol, $data['analysis']['cause'] ?? null, $data['advice']);
+        $this->syncAnalysis($protocol, $data['analysis'] ?? [], $data['advice']);
         $this->syncAdviceSelections($protocol, $data['voeding_advies_ids'], 'voedingAdviezen', VoedingAdvies::class, 'voeding_advies_id');
         $this->syncAdviceSelections($protocol, $data['management_advies_ids'], 'managementAdviezen', ManagementAdvies::class, 'management_advies_id');
         $this->syncAdviceSelections($protocol, $data['beweging_advies_ids'], 'bewegingAdviezen', BewegingAdvies::class, 'beweging_advies_id');
@@ -420,19 +420,24 @@ class ProtocolController extends Controller
     }
 
     /** @param array<int, array<string, mixed>> $adviceRows */
-    private function syncAnalysis(Protocol $protocol, mixed $cause, array $adviceRows): void
+    private function syncAnalysis(Protocol $protocol, array $content, array $adviceRows): void
     {
-        $cause = trim((string) ($cause ?? ''));
+        $cause = trim((string) ($content['cause'] ?? ''));
         $analysis = $protocol->analysis()->first();
+        // Older clients may omit the new fields; do not erase previously authored content.
+        $summary = array_key_exists('summary', $content) ? $content['summary'] : $analysis?->summary;
+        $focus = $content['focus_points'] ?? $analysis?->focus_points ?? [];
+        $observations = $content['observations'] ?? $analysis?->observations ?? [];
 
-        if ($cause === '' && $adviceRows === []) {
+        if ($cause === '' && $adviceRows === [] && blank($summary) && $focus === [] && $observations === []) {
             $analysis?->delete();
 
             return;
         }
 
         $analysis ??= new ProtocolAnalysis(['protocol_id' => $protocol->id]);
-        $analysis->fill(['protocol_id' => $protocol->id, 'cause' => $cause])->save();
+        $analysis->fill(['protocol_id' => $protocol->id, 'cause' => $cause, 'summary' => $summary,
+            'focus_points' => $focus, 'observations' => $observations])->save();
         $adviceIds = [];
 
         foreach ($adviceRows as $order => $adviceData) {

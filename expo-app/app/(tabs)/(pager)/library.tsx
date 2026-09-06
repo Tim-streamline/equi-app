@@ -12,7 +12,11 @@ import {
   useLibraryItems,
   useValue,
 } from '@/db/hooks';
-import { filterLibraryItems } from '@/lib/library-filter';
+import {
+  ALL_LIBRARY_FILTER_ID,
+  filterLibraryItems,
+  toggleLibraryCategory,
+} from '@/lib/library-filter';
 
 export default function LibraryScreen() {
   const padBottom = useTabBarPadding();
@@ -20,37 +24,24 @@ export default function LibraryScreen() {
   const list = useLibraryItems();
   const itemCategories = useLibraryItemCategories();
   const placeholder = useValue('librarySearchPlaceholder') as string;
-  const [activeCategoryIdsOverride, setActiveCategoryIdsOverride] = useState<string[] | null>(null);
+  const [activeCategoryIds, setActiveCategoryIds] = useState<string[]>([]);
   const { q, t } = useLocalSearchParams<{ q?: string; t?: string }>();
   const [searchQuery, setSearchQuery] = useState('');
   useEffect(() => {
     if (typeof q === 'string') {
       setSearchQuery(q);
-      setActiveCategoryIdsOverride([]);
+      setActiveCategoryIds([]);
     }
   }, [q, t]);
-  const defaultCategoryIds = useMemo(
-    () => categories
-      .filter((category) => category.isDefault)
-      .map((category) => category.id as string),
-    [categories],
-  );
-  const activeCategoryIds = activeCategoryIdsOverride ?? defaultCategoryIds;
   const filteredList = useMemo(
     () => filterLibraryItems(list, itemCategories, activeCategoryIds, searchQuery),
     [list, itemCategories, activeCategoryIds, searchQuery],
   );
 
   const toggleCategory = (categoryId: string) => {
-    setActiveCategoryIdsOverride((current) => {
-      const next = new Set(current ?? defaultCategoryIds);
-      if (next.has(categoryId)) {
-        next.delete(categoryId);
-      } else {
-        next.add(categoryId);
-      }
-      return [...next];
-    });
+    setActiveCategoryIds((current) =>
+      toggleLibraryCategory(current, categoryId),
+    );
   };
 
   return (
@@ -76,6 +67,17 @@ export default function LibraryScreen() {
             showsHorizontalScrollIndicator={false}
             contentContainerStyle={{ paddingHorizontal: 16, gap: 8, paddingBottom: 14 }}
           >
+            <Pressable
+              onPress={() => toggleCategory(ALL_LIBRARY_FILTER_ID)}
+              accessibilityRole="button"
+              accessibilityLabel="Alles"
+              accessibilityState={{ selected: activeCategoryIds.length === 0 }}
+            >
+              <Chip
+                label="Alles"
+                variant={activeCategoryIds.length === 0 ? 'filterActive' : 'outline'}
+              />
+            </Pressable>
             {categories.map((c: any) => (
               <Pressable
                 key={c.id}

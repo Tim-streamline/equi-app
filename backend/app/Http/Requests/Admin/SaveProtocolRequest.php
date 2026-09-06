@@ -5,6 +5,7 @@ namespace App\Http\Requests\Admin;
 use App\Models\ProtocolPhaseSupplement;
 use App\Models\ProtocolTemplatePhase;
 use App\Models\Supplement;
+use App\Rules\ShortProtocolText;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Validator;
 
@@ -16,7 +17,7 @@ class SaveProtocolRequest extends FormRequest
     }
 
     /**
-     * @return array<string, array<int, string>>
+     * @return array<string, array<int, string|ShortProtocolText>>
      */
     public function rules(): array
     {
@@ -54,6 +55,13 @@ class SaveProtocolRequest extends FormRequest
 
             'analysis' => ['nullable', 'array'],
             'analysis.cause' => ['nullable', 'string', 'max:10000'],
+            'analysis.summary' => ['nullable', 'string', 'max:600', new ShortProtocolText(4)],
+            'analysis.focus_points' => ['sometimes', 'array', 'max:4'],
+            'analysis.focus_points.*' => ['array:title,body'],
+            'analysis.focus_points.*.title' => ['required', 'string', 'max:48', 'not_regex:/^(voeding|management|training|beweging|verzorging|zorg|nutrition|movement)$/iu'],
+            'analysis.focus_points.*.body' => ['required', 'string', 'max:160', new ShortProtocolText(1)],
+            'analysis.observations' => ['sometimes', 'array', 'max:4'],
+            'analysis.observations.*' => ['required', 'string', 'max:160', new ShortProtocolText(1)],
             'advice' => ['present', 'array', 'max:20'],
             'advice.*.id' => ['nullable', 'uuid'],
             'advice.*.icon_key' => ['required', 'in:leaf,run,horse'],
@@ -72,7 +80,7 @@ class SaveProtocolRequest extends FormRequest
             'phases.*.client_key' => ['required', 'string', 'max:100', 'distinct'],
             'phases.*.protocol_template_phase_id' => ['required', 'uuid', 'distinct', 'exists:protocol_template_phases,id'],
             'phases.*.week_count' => ['required', 'integer', 'min:0', 'max:104'],
-            'phases.*.start_after_previous_phase_weeks' => ['nullable', 'integer', 'min:1', 'max:104'],
+            'phases.*.start_after_previous_phase_weeks' => ['nullable', 'integer', 'min:0', 'max:104'],
             'phases.*.supplements' => ['present', 'array', 'max:100'],
             'phases.*.supplements.*.id' => ['nullable', 'uuid'],
             'phases.*.supplements.*.supplement_id' => ['nullable', 'uuid', 'distinct:strict', 'exists:supplements,id'],
@@ -85,12 +93,40 @@ class SaveProtocolRequest extends FormRequest
         ];
     }
 
+    public function messages(): array
+    {
+        return [
+            'analysis.focus_points.*.title.not_regex' => 'Kies een inhoudelijk focuspunt, geen algemene adviescategorie.',
+            'analysis.summary.max' => 'Houd de persoonlijke analyse kort: maximaal 600 tekens.',
+            'analysis.focus_points.max' => 'Gebruik maximaal 4 focuspunten.',
+            'analysis.focus_points.*.title.max' => 'Gebruik een korte titel van maximaal 48 tekens.',
+            'analysis.focus_points.*.body.max' => 'Gebruik één korte doelzin van maximaal 160 tekens.',
+            'analysis.observations.max' => 'Gebruik maximaal 4 observatiepunten.',
+            'analysis.observations.*.max' => 'Gebruik één korte observatiezin van maximaal 160 tekens.',
+        ];
+    }
+
     /**
      * @return array<int, callable(Validator): void>
      */
     public function after(): array
     {
         return [function (Validator $validator): void {
+            $hasCompactAnalysis = filled($this->input('analysis.summary'))
+                || filled($this->input('analysis.focus_points'))
+                || filled($this->input('analysis.observations'));
+            if ($this->boolean('published') && $hasCompactAnalysis) {
+                if (! filled($this->input('analysis.summary'))) {
+                    $validator->errors()->add('analysis.summary', 'Vul een korte persoonlijke analyse in voordat je publiceert.');
+                }
+                $focus = $this->input('analysis.focus_points', []);
+                if (! is_array($focus) || count($focus) < 3) {
+                    $validator->errors()->add('analysis.focus_points', 'Vul 3 tot 4 inhoudelijke focuspunten in voordat je publiceert.');
+                }
+                if (! filled($this->input('analysis.observations'))) {
+                    $validator->errors()->add('analysis.observations', 'Vul minimaal één observatiepunt in voordat je publiceert.');
+                }
+            }
             $protocolTemplateId = $this->input('protocol_template_id');
             $selectedPhaseIds = collect($this->input('phases', []))
                 ->pluck('protocol_template_phase_id')

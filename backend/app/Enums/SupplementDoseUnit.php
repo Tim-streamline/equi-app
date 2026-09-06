@@ -8,4 +8,7 @@ enum SupplementDoseUnit: string
     case Milliliter = 'ml';
     case Teaspoon = 'theelepel';
     case Tablespoon = 'eetlepel';
+    case Drops = 'druppels';
+    case Pills = 'pillen';
+    case Capsules = 'capsules';
 }

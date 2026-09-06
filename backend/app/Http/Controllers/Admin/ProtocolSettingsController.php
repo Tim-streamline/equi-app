@@ -15,6 +15,7 @@ use App\Support\AuditLogger;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -118,6 +119,58 @@ class ProtocolSettingsController extends Controller
         });
 
         return back()->with('success', 'Phase updated.');
+    }
+
+    public function duplicatePhase(ProtocolTemplatePhase $protocolTemplatePhase): RedirectResponse
+    {
+        DB::transaction(function () use ($protocolTemplatePhase): void {
+            ProtocolTemplate::query()
+                ->whereKey($protocolTemplatePhase->protocol_template_id)
+                ->lockForUpdate()
+                ->firstOrFail();
+
+            $source = ProtocolTemplatePhase::query()
+                ->with(['weeks', 'supplements.weeks'])
+                ->lockForUpdate()
+                ->findOrFail($protocolTemplatePhase->id);
+
+            ProtocolTemplatePhase::query()
+                ->where('protocol_template_id', $source->protocol_template_id)
+                ->where('order', '>', $source->order)
+                ->orderByDesc('order')
+                ->get()
+                ->each(fn (ProtocolTemplatePhase $phase) => $phase->increment('order'));
+
+            $copy = ProtocolTemplatePhase::query()->create([
+                'protocol_template_id' => $source->protocol_template_id,
+                'order' => $source->order + 1,
+                'name' => $this->duplicatePhaseName($source),
+                'description' => $source->description,
+                'required' => $source->required,
+                'start_after_previous_phase_weeks' => $source->start_after_previous_phase_weeks,
+            ]);
+
+            $weekCopies = [];
+            foreach ($source->weeks as $week) {
+                $weekCopies[$week->id] = $copy->weeks()->create(['number' => $week->number]);
+            }
+
+            foreach ($source->supplements as $supplement) {
+                $supplementCopy = $supplement->replicate();
+                $supplementCopy->protocol_template_phase_id = $copy->id;
+                $supplementCopy->save();
+
+                $supplementCopy->weeks()->attach(
+                    $supplement->weeks
+                        ->map(fn (ProtocolTemplatePhaseWeek $week) => $weekCopies[$week->id]->id)
+                        ->all(),
+                );
+            }
+
+            AuditLogger::created($copy);
+        });
+
+        return back()->with('success', 'Fase gedupliceerd.');
     }
 
     public function destroyPhase(ProtocolTemplatePhase $protocolTemplatePhase): RedirectResponse
@@ -295,7 +348,7 @@ class ProtocolSettingsController extends Controller
             'name' => ['required', 'string', 'max:255'],
             'description' => ['nullable', 'string', 'max:10000'],
             'required' => ['required', 'boolean'],
-            'start_after_previous_phase_weeks' => ['nullable', 'integer', 'min:1', 'max:104'],
+            'start_after_previous_phase_weeks' => ['nullable', 'integer', 'min:0', 'max:104'],
         ]);
     }
 
@@ -350,6 +403,22 @@ class ProtocolSettingsController extends Controller
             ->orderBy('order')
             ->get()
             ->each(fn (ProtocolTemplatePhase $phase, int $index) => $phase->update(['order' => $index + 1]));
+    }
+
+    private function duplicatePhaseName(ProtocolTemplatePhase $phase): string
+    {
+        $copyNumber = 1;
+
+        do {
+            $suffix = $copyNumber === 1 ? ' (kopie)' : " (kopie {$copyNumber})";
+            $name = Str::limit($phase->name, 255 - mb_strlen($suffix), '').$suffix;
+            $copyNumber++;
+        } while (ProtocolTemplatePhase::query()
+            ->where('protocol_template_id', $phase->protocol_template_id)
+            ->where('name', $name)
+            ->exists());
+
+        return $name;
     }
 
     private function ensureSupplementAndWeekSharePhase(

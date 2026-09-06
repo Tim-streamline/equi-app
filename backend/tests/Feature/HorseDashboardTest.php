@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Http\Middleware\AuthenticatePowerSyncJwt;
+use App\Models\BewegingAdvies;
 use App\Models\Horse;
 use App\Models\IntakeResponse;
 use App\Models\LibraryItem;
@@ -130,15 +131,85 @@ class HorseDashboardTest extends TestCase
         $source = ManagementAdvies::create(['title' => 'Gebitscontrole', 'description' => 'Instructie']);
         $this->protocol->managementAdviezen()->create(['management_advies_id' => $source->id, 'title' => $source->title, 'description' => $source->description]);
         $this->protocol->update(['customer_settings' => ['management' => [['id' => $source->id, 'category' => 'care', 'action' => 'avoid', 'note' => 'Persoonlijk', 'frequency' => 'Jaarlijks']]]]);
-        $analysis = $this->protocol->analysis()->create(['cause' => 'Personal explanation']);
-        foreach (range(1, 7) as $i) {
-            $analysis->advice()->create(['title' => 'Priority '.$i, 'body' => 'Explanation', 'icon_key' => 'leaf', 'order' => $i]);
-        }
+        $this->protocol->analysis()->create([
+            'cause' => 'Original internal notes must not be used as a customer summary.',
+            'summary' => 'Personal explanation',
+            'focus_points' => collect(range(1, 4))->map(fn ($i) => ['title' => 'Personal focus '.$i, 'body' => 'Personal goal.'])->all(),
+            'observations' => ['Personal observation.'],
+        ]);
         $this->getJson('/api/horses/'.$this->horse->id.'/dashboard')->assertOk()
             ->assertJsonCount(1, 'protocol.management')->assertJsonPath('protocol.management.0.id', 'care')
             ->assertJsonPath('protocol.management.0.items.0.action', 'avoid')->assertJsonPath('protocol.management.0.items.0.note', 'Persoonlijk')
-            ->assertJsonPath('protocol.analysis.summary', 'Personal explanation')->assertJsonCount(5, 'protocol.analysis.priorities')
+            ->assertJsonPath('protocol.analysis.summary', 'Personal explanation')->assertJsonCount(4, 'protocol.analysis.priorities')
+            ->assertJsonPath('protocol.analysis.priorities.3.title', 'Personal focus 4')
+            ->assertJsonPath('protocol.analysis.observations.0', 'Personal observation.')
             ->assertJsonMissingPath('protocol.analysis.priorities.0.icon_key');
+    }
+
+    public function test_legacy_analysis_is_not_automatically_rewritten_or_presented_as_compact_analysis(): void
+    {
+        $analysis = $this->protocol->analysis()->create(['cause' => 'Legacy long analysis.']);
+        $analysis->advice()->create(['title' => 'Voeding', 'body' => 'Legacy advice.', 'icon_key' => 'leaf', 'order' => 0]);
+        $this->getJson('/api/horses/'.$this->horse->id.'/dashboard')->assertOk()->assertJsonPath('protocol.analysis', null);
+        $this->assertSame('Legacy long analysis.', $analysis->fresh()->cause);
+        $this->assertSame(1, $analysis->advice()->count());
+    }
+
+    public function test_care_sources_only_include_selected_advice_from_this_horses_current_publication(): void
+    {
+        $environment = ManagementAdvies::create(['title' => 'Voerplekken', 'description' => 'Verdeel de voerplekken.']);
+        $physical = ManagementAdvies::create(['title' => 'Hoefverzorging', 'description' => 'Persoonlijke hoefverzorging.']);
+        $research = ManagementAdvies::create(['title' => 'Mestonderzoek', 'description' => 'Laat mest onderzoeken.']);
+        foreach ([$environment, $physical, $research] as $source) {
+            $this->protocol->managementAdviezen()->create(['management_advies_id' => $source->id, 'title' => $source->title, 'description' => $source->description]);
+        }
+        $movement = BewegingAdvies::create(['title' => 'Rustig stappen', 'description' => 'Tweemaal per dag 10 minuten. Niet draven tijdens herstel.']);
+        $selectedMovement = $this->protocol->bewegingAdviezen()->create(['beweging_advies_id' => $movement->id, 'title' => $movement->title, 'description' => $movement->description]);
+        $unused = ManagementAdvies::create(['title' => 'Niet geselecteerd', 'description' => 'Alleen in de catalogus.']);
+        BewegingAdvies::create(['title' => 'Niet geselecteerde beweging', 'description' => 'Alleen in de catalogus.']);
+        $this->protocol->update(['customer_settings' => ['management' => [
+            ['id' => $unused->id, 'category' => 'care', 'action' => 'do', 'instruction' => 'Achtergebleven instelling voor uitgeschakeld advies.'],
+            ['id' => $environment->id, 'category' => 'environment', 'action' => 'avoid', 'instruction' => 'Geen voerplekken op het gras.', 'note' => 'Tot de evaluatie.', 'frequency' => 'Tijdens dit protocol'],
+        ]]]);
+
+        $otherHorse = Horse::create(['owner_id' => $this->owner->id, 'name' => 'Tweede paard', 'status' => 'active']);
+        foreach ([
+            ['horse_id' => $otherHorse->id],
+            ['published_at' => null],
+            ['published_at' => now()->addDay()],
+            ['published_at' => now()->subDays(2)],
+            ['status' => 'paused'],
+        ] as $attributes) {
+            $excluded = $this->protocol->replicate()->fill($attributes);
+            $excluded->save();
+            $excluded->managementAdviezen()->create(['management_advies_id' => $unused->id, 'title' => 'Advies buiten actief protocol', 'description' => 'Mag niet in Zorg verschijnen.']);
+            $excluded->bewegingAdviezen()->create(['beweging_advies_id' => $movement->id, 'title' => 'Beweging buiten actief protocol', 'description' => 'Mag niet in Zorg verschijnen.']);
+        }
+
+        $response = $this->getJson('/api/horses/'.$this->horse->id.'/dashboard')->assertOk()
+            ->assertJsonPath('protocol.id', $this->protocol->id)
+            ->assertJsonCount(3, 'protocol.management')
+            ->assertJsonPath('protocol.management.0.id', 'environment')
+            ->assertJsonCount(1, 'protocol.management.0.items')
+            ->assertJsonPath('protocol.management.0.items.0.description', 'Geen voerplekken op het gras.')
+            ->assertJsonPath('protocol.management.0.items.0.action', 'avoid')
+            ->assertJsonPath('protocol.management.0.items.0.note', 'Tot de evaluatie.')
+            ->assertJsonPath('protocol.management.0.items.0.frequency', 'Tijdens dit protocol')
+            ->assertJsonPath('protocol.management.1.id', 'care')
+            ->assertJsonPath('protocol.management.1.items.0.title', 'Hoefverzorging')
+            ->assertJsonPath('protocol.management.2.id', 'monitoring')
+            ->assertJsonPath('protocol.management.2.items.0.title', 'Mestonderzoek')
+            ->assertJsonCount(1, 'protocol.movement')
+            ->assertJsonPath('protocol.movement.0.description', $movement->description);
+        $response->assertJsonMissing(['title' => 'Niet geselecteerd'])
+            ->assertJsonMissing(['title' => 'Advies buiten actief protocol'])
+            ->assertJsonMissing(['title' => 'Beweging buiten actief protocol']);
+
+        // Removing a selection must immediately remove it from the next dashboard response.
+        $selectedMovement->delete();
+        $this->protocol->managementAdviezen()->delete();
+        $this->getJson('/api/horses/'.$this->horse->id.'/dashboard')->assertOk()
+            ->assertJsonCount(0, 'protocol.management')->assertJsonCount(0, 'protocol.movement');
     }
 
     public function test_home_uses_current_account_credits_unlocks_season_and_subscription(): void
@@ -180,6 +251,23 @@ class HorseDashboardTest extends TestCase
         $this->getJson('/api/horses/'.$this->horse->id.'/dashboard?timezone=not-a-zone')->assertUnprocessable();
         $this->app->bind(AuthenticatePowerSyncJwt::class, fn () => new AuthenticatePowerSyncJwt);
         $this->getJson('/api/horses/'.$this->horse->id.'/dashboard')->assertUnauthorized();
+    }
+
+    public function test_seasonal_tip_exposes_stable_identity_managed_title_intro_and_content_link(): void
+    {
+        $item = LibraryItem::create(['slug' => 'season-tip-article', 'title' => 'Gekoppeld artikel', 'format' => 'article', 'published_at' => now()->subDay()]);
+        $tip = SeasonalTip::create(['title' => 'Persoonlijke seizoenstip', 'month' => 'nazomer', 'month_order' => 8,
+            'body' => str_repeat('Praktische introductie uit het beheer. ', 12), 'active' => true, 'cta_item_id' => $item->id]);
+        $response = $this->getJson('/api/horses/'.$this->horse->id.'/dashboard')->assertOk()
+            ->assertJsonPath('seasonalTip.id', $tip->id)
+            ->assertJsonPath('seasonalTip.title', $tip->title)
+            ->assertJsonPath('seasonalTip.month', 'nazomer')
+            ->assertJsonPath('seasonalTip.item.id', $item->id);
+        $this->assertLessThanOrEqual(183, mb_strlen($response->json('seasonalTip.intro')));
+        $this->assertStringStartsWith('Praktische introductie uit het beheer.', $response->json('seasonalTip.intro'));
+        $tip->update(['title' => 'Bewerkte titel']);
+        $this->getJson('/api/horses/'.$this->horse->id.'/dashboard')->assertOk()
+            ->assertJsonPath('seasonalTip.id', $tip->id)->assertJsonPath('seasonalTip.title', 'Bewerkte titel');
     }
 
     public function test_dated_seasonal_content_takes_precedence_over_the_monthly_fallback(): void

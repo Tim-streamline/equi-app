@@ -6,7 +6,6 @@ import {
   Pressable,
   Modal,
   ActivityIndicator,
-  Linking,
   TextInput,
   Alert,
   KeyboardAvoidingView,
@@ -23,9 +22,6 @@ import {
   ShoppingBag,
   TriangleAlert,
   Leaf,
-  PawPrint,
-  HeartPulse,
-  Microscope,
 } from "lucide-react-native";
 import { Button } from "@/components/ui/Button";
 import { Avatar } from "@/components/ui/Avatar";
@@ -50,30 +46,17 @@ import {
   type LibraryRecommendation,
 } from "@/lib/horse-dashboard";
 
-type Tab =
-  | "vandaag"
-  | "kalender"
-  | "voeding"
-  | "management"
-  | "beweging"
-  | "analyse";
-const TABS: { key: Tab; label: string }[] = [
-  { key: "vandaag", label: "Vandaag" },
-  { key: "kalender", label: "Kalender" },
-  { key: "voeding", label: "Voeding" },
-  { key: "management", label: "Management" },
-  { key: "beweging", label: "Beweging" },
-  { key: "analyse", label: "Analyse" },
-];
-const isTab = (value: unknown): value is Tab =>
-  TABS.some((tab) => tab.key === value);
+import { ProtocolAnalysis } from "@/components/protocol/ProtocolAnalysis";
+import { CareAdvice } from "@/components/protocol/CareAdvice";
+import { ProtocolTabs } from "@/components/protocol/ProtocolTabs";
+import { protocolTab, type ProtocolTab } from "@/lib/protocol-tabs";
 
 export default function ProtocolListScreen() {
   const { tab: tabParam, t: nonce } = useLocalSearchParams<{
     tab?: string;
     t?: string;
   }>();
-  const [tab, setTab] = useState<Tab>(isTab(tabParam) ? tabParam : "vandaag");
+  const [tab, setTab] = useState<ProtocolTab>(protocolTab(tabParam) ?? "vandaag");
   const [month, setMonth] = useState<string>();
   const { data, error, refresh, horseId } = useHorseDashboard(month);
   const user = useCurrentUser();
@@ -83,7 +66,8 @@ export default function ProtocolListScreen() {
   const [weeklyOpen, setWeeklyOpen] = useState(false);
   const padBottom = useTabBarPadding();
   useEffect(() => {
-    if (isTab(tabParam)) setTab(tabParam);
+    const requestedTab = protocolTab(tabParam);
+    if (requestedTab) setTab(requestedTab);
   }, [tabParam, nonce]);
   useEffect(() => {
     setPhase(null);
@@ -99,11 +83,9 @@ export default function ProtocolListScreen() {
         ? protocol?.calendar.label
         : tab === "voeding"
           ? "Basisvoeding"
-          : tab === "management"
-            ? "Managementadvies"
-            : tab === "beweging"
-              ? "Bewegingsadvies"
-              : "Analyse";
+          : tab === "zorg"
+            ? "Zorgadviezen"
+            : "Analyse";
 
   return (
     <SafeAreaView edges={["top"]} className="flex-1 bg-canvas">
@@ -164,32 +146,7 @@ export default function ProtocolListScreen() {
       )}
       {protocol && (
         <>
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            className="max-h-[46px] border-b border-ink-8"
-            contentContainerStyle={{ paddingHorizontal: 20, gap: 24 }}
-          >
-            {TABS.map((item) => (
-              <Pressable
-                key={item.key}
-                accessibilityRole="tab"
-                accessibilityState={{ selected: tab === item.key }}
-                onPress={() => setTab(item.key)}
-                className="justify-center border-b-2 pb-[11px] pt-1"
-                style={{
-                  borderBottomColor:
-                    tab === item.key ? "#18BAB0" : "transparent",
-                }}
-              >
-                <Text
-                  className={`font-semi text-[13.5px] ${tab === item.key ? "text-mint-700" : "text-ink-70"}`}
-                >
-                  {item.label}
-                </Text>
-              </Pressable>
-            ))}
-          </ScrollView>
+          <ProtocolTabs selected={tab} onSelect={setTab} />
           <ScrollView
             key={`${horseId}:${tab}`}
             contentContainerStyle={{
@@ -220,50 +177,8 @@ export default function ProtocolListScreen() {
                 hasPlus={data.hasPlus}
               />
             )}
-            {tab === "management" && <Management protocol={protocol} />}
-            {tab === "beweging" && (
-              <View className="gap-3">
-                {protocol.movement.map((item) => (
-                  <Card key={item.id}>
-                    <Text className="font-bold text-[16px] text-ink">
-                      {item.title}
-                    </Text>
-                    <Text className="mt-2 text-[13px] leading-[20px] text-ink-50">
-                      {item.description}
-                    </Text>
-                  </Card>
-                ))}
-              </View>
-            )}
-            {tab === "analyse" && protocol.analysis && (
-              <>
-                {!!protocol.analysis.summary && (
-                  <View className="mb-5 rounded-[22px] bg-mint-50 p-5">
-                    <Label>Focuspunten vanuit de intake</Label>
-                    <Text className="mt-2 text-[14px] leading-[23px] text-ink">
-                      {protocol.analysis.summary}
-                    </Text>
-                  </View>
-                )}
-                {protocol.analysis.priorities.length > 0 && (
-                  <>
-                    <Label>Waar we aan gaan werken</Label>
-                    <View className="mt-3 gap-3">
-                      {protocol.analysis.priorities.map((item) => (
-                        <Card key={item.id}>
-                          <Text className="font-semi text-[15px] text-ink">
-                            {item.title}
-                          </Text>
-                          <Text className="mt-1 text-[13px] leading-[20px] text-ink-50">
-                            {item.body}
-                          </Text>
-                        </Card>
-                      ))}
-                    </View>
-                  </>
-                )}
-              </>
-            )}
+            {tab === "zorg" && <CareAdvice protocol={protocol} />}
+            {tab === "analyse" && <ProtocolAnalysis analysis={protocol.analysis} />}
           </ScrollView>
           <Sheet
             visible={orders !== null}
@@ -796,81 +711,6 @@ function Nutrition({
     </View>
   );
 }
-function Management({ protocol }: { protocol: DashboardProtocol }) {
-  return (
-    <View className="gap-4">
-      {protocol.management.map((group) => {
-        const Icon =
-          group.id === "environment"
-            ? PawPrint
-            : group.id === "care"
-              ? HeartPulse
-              : Microscope;
-        return (
-          <Card key={group.id}>
-            <View className="mb-4 flex-row items-center gap-3">
-              <View className="h-9 w-9 items-center justify-center rounded-xl bg-mint-50">
-                <Icon size={19} color="#127A79" />
-              </View>
-              <Text className="flex-1 font-bold text-[15px] text-ink">
-                {group.title}
-              </Text>
-            </View>
-            <View className="gap-4">
-              {group.items.map((item) => (
-                <View key={item.id} className="flex-row items-start gap-2">
-                  {item.action === "avoid" ? (
-                    <X size={16} color="#CB655D" />
-                  ) : (
-                    <Check size={16} color="#18BAB0" />
-                  )}
-                  <View className="flex-1">
-                    <Text className="font-semi text-[14px] text-ink">
-                      {item.title}
-                    </Text>
-                    {!!item.description && (
-                      <Text className="mt-1 text-[13px] leading-[20px] text-ink-70">
-                        {item.description}
-                      </Text>
-                    )}
-                    {!!item.frequency && (
-                      <Text className="mt-1 text-[12px] text-ink-50">
-                        {item.frequency}
-                      </Text>
-                    )}
-                    {!!item.note && (
-                      <View className="mt-2 rounded-xl bg-[#FBF4E8] p-3">
-                        <Text className="text-[12px] leading-[19px] text-[#7A6344]">
-                          {item.note}
-                        </Text>
-                      </View>
-                    )}
-                    {!!item.url && (
-                      <Pressable
-                        accessibilityRole="link"
-                        onPress={() => {
-                          if (/^https?:\/\//i.test(item.url!))
-                            void Linking.openURL(item.url!).catch(() =>
-                              Alert.alert("Link niet beschikbaar"),
-                            );
-                        }}
-                      >
-                        <Text className="mt-2 font-semi text-[12px] text-mint-700">
-                          {item.ctaLabel || "Meer informatie"} →
-                        </Text>
-                      </Pressable>
-                    )}
-                  </View>
-                </View>
-              ))}
-            </View>
-          </Card>
-        );
-      })}
-    </View>
-  );
-}
-
 function Sheet({
   visible,
   title,

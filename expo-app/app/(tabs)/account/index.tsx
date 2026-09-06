@@ -44,6 +44,11 @@ export default function AccountScreen() {
   const subscription = useActiveSubscription();
   const plan = usePlan(subscription?.planId ?? 'plan-plus');
   const settings = useAccountSettings();
+  const preferencesRoute = '/(tabs)/account/preferences';
+  const preferenceEntry = settings.find((item) => item.title === 'Voorkeuren' || item.route === preferencesRoute);
+  const accountRows = preferenceEntry
+    ? settings.map((item) => item.id === preferenceEntry.id ? { ...item, route: preferencesRoute } : item)
+    : [...settings, { id: 'preferences', iconKey: 'settings', title: 'Voorkeuren', subtitle: '', route: preferencesRoute }];
   const { logout } = useDb();
   const [loggingOut, setLoggingOut] = useState(false);
 
@@ -162,11 +167,13 @@ export default function AccountScreen() {
 
           <SectionTitle>Algemeen</SectionTitle>
           <View className="px-4">
-            {settings.map((r) => {
+            {accountRows.map((r) => {
               const Icon = SETTINGS_ICONS[r.iconKey as string] ?? Settings;
               return (
                 <Pressable
                   key={r.id}
+                  accessibilityRole="button"
+                  accessibilityLabel={r.title as string}
                   onPress={() => r.route && router.push(r.route as any)}
                   className="flex-row items-center justify-between border-b border-ink-8 py-3"
                 >

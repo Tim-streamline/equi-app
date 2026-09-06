@@ -7,6 +7,7 @@ import {
   Modal,
   ActivityIndicator,
   RefreshControl,
+  Alert,
 } from "react-native";
 import { router } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -23,6 +24,9 @@ import { useHorseDashboard } from "@/hooks/useHorseDashboard";
 import { useHorse, useHorsesByOwner } from "@/db/hooks";
 import { useDb } from "@/db/provider";
 import { libraryPath, type HorseDashboard } from "@/lib/horse-dashboard";
+import { SeasonalTipCard } from "@/components/home/SeasonalTipCard";
+import { useHomePreferences } from "@/hooks/useHomePreferences";
+import { seasonalTipVisible } from "@/lib/home-preferences";
 import { ConnectionStatus } from "@/components/ui/ConnectionStatus";
 
 export default function HomeScreen() {
@@ -34,32 +38,17 @@ export default function HomeScreen() {
   const padBottom = useTabBarPadding();
   const [refreshing, setRefreshing] = useState(false);
   const seasonal = data?.seasonalTip;
+  const { preferences, ready: preferencesReady, saving, save } = useHomePreferences();
   const openLibrary = () => router.push("/(tabs)/(pager)/library");
-  const seasonalCard = seasonal && (
-    <Pressable
-      accessibilityRole="link"
-      onPress={() =>
-        seasonal.item
-          ? router.push(libraryPath(seasonal.item) as any)
-          : openLibrary()
-      }
-      className="mb-4 rounded-[22px] bg-[#127A79] p-5"
-    >
-      <Text className="mb-3 text-[10px] uppercase tracking-[1.5px] text-white/75">
-        Seizoenstip · {seasonal.month}
-      </Text>
-      {!!seasonal.title && (
-        <Text className="mb-2 font-semi text-[19px] leading-[25px] text-white">
-          {seasonal.title}
-        </Text>
+  const seasonalCard = preferencesReady && seasonal && seasonalTipVisible(seasonal, preferences) && (
+    <SeasonalTipCard
+      tip={seasonal}
+      dismissing={saving}
+      onOpen={() => seasonal.item ? router.push(libraryPath(seasonal.item) as any) : openLibrary()}
+      onDismiss={() => void save({ type: "dismiss", tipId: seasonal.id }).catch(() =>
+        Alert.alert("Seizoenstip niet verborgen", "Probeer het opnieuw."),
       )}
-      <Text className="text-[14px] leading-[21px] text-white/90">
-        {seasonal.body}
-      </Text>
-      <Text className="mt-4 font-semi text-[14px] text-white">
-        Lees Shelley&apos;s tip →
-      </Text>
-    </Pressable>
+    />
   );
   return (
     <SafeAreaView edges={["top"]} className="flex-1 bg-canvas">
@@ -118,6 +107,7 @@ export default function HomeScreen() {
             <ChevronDown size={14} color="#536C6B" />
           </Pressable>
         </View>
+        {seasonalCard}
         {!!error && (
           <Pressable
             onPress={() => void refresh()}
@@ -133,7 +123,6 @@ export default function HomeScreen() {
         {data && (
           <>
             {data.protocol && <ProtocolCard data={data} />}
-            {data.variant === "basic" && seasonalCard}
             <Pressable
               accessibilityRole="button"
               onPress={() =>
@@ -160,7 +149,6 @@ export default function HomeScreen() {
               </View>
               <ChevronRight size={19} color="#127A79" />
             </Pressable>
-            {data.variant === "plus" && seasonalCard}
             <View className="mb-3 mt-2 flex-row items-center justify-between gap-2">
               <Text className="flex-1 font-semi text-[10px] uppercase tracking-[1.2px] text-ink-70">
                 Ontdek in de bibliotheek

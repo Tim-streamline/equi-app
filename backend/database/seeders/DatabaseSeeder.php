@@ -19,6 +19,9 @@ class DatabaseSeeder extends Seeder
             LibrarySeeder::class,           // ~50 items + chapters/sections, seasonal tips
             UserSeeder::class,              // 25 users + subs/payments/settings
             HorseSeeder::class,             // horses + observations + timeline + shares
+            VoedingAdviesSeeder::class,      // design-backed nutrition advice catalog
+            ManagementAdviesSeeder::class,   // design-backed management advice catalog
+            BewegingAdviesSeeder::class,     // design-backed movement advice catalog
             ProtocolSeeder::class,          // anchor user's protocol + phases
             ScanSeeder::class,              // scans per user + ingredient breakdown
             CommunitySeeder::class,         // posts + replies + reactions

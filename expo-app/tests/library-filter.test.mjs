@@ -2,7 +2,11 @@ import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import test from 'node:test';
 
-import { filterLibraryItems } from '../lib/library-filter.ts';
+import {
+  ALL_LIBRARY_FILTER_ID,
+  filterLibraryItems,
+  toggleLibraryCategory,
+} from '../lib/library-filter.ts';
 
 const items = [
   {
@@ -43,6 +47,17 @@ test('shows every library item when no categories are active', () => {
   );
 });
 
+test('Alles clears every category and a category selection switches Alles off', () => {
+  assert.equal(ALL_LIBRARY_FILTER_ID, 'all');
+  assert.deepEqual(
+    toggleLibraryCategory(['aanbevolen', 'kruiden'], ALL_LIBRARY_FILTER_ID),
+    [],
+  );
+  assert.deepEqual(toggleLibraryCategory([], 'hoeven'), ['hoeven']);
+  assert.deepEqual(toggleLibraryCategory(['hoeven'], 'kruiden'), ['hoeven', 'kruiden']);
+  assert.deepEqual(toggleLibraryCategory(['hoeven'], 'hoeven'), []);
+});
+
 test('searches titles and descriptions case-insensitively', () => {
   assert.deepEqual(
     filterLibraryItems(items, itemCategories, [], 'PAARD').map((item) => item.id),
@@ -76,6 +91,11 @@ test('the Library screen wires search and category controls to the filtered list
   );
 
   assert.match(source, /onChangeText=\{setSearchQuery\}/);
+  assert.match(source, /useState<string\[]>\(\[\]\)/);
+  assert.doesNotMatch(source, /category\.isDefault/);
+  assert.match(source, /label="Alles"/);
+  assert.ok(source.indexOf('label="Alles"') < source.indexOf('categories.map'));
+  assert.match(source, /selected:\s*activeCategoryIds\.length === 0/);
   assert.match(source, /onPress=\{\(\) => toggleCategory\(c\.id\)\}/);
   assert.match(
     source,

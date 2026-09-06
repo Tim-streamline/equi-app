@@ -80,6 +80,7 @@ class SyncController extends Controller
         'subscriptions' => Models\Subscription::class,
         'payments' => Models\Payment::class,
         'notification_preferences' => Models\NotificationPreference::class,
+        'user_home_preferences' => Models\UserHomePreference::class,
         'account_settings' => Models\AccountSetting::class,
         'data_exports' => Models\DataExport::class,
         'chat_sessions' => Models\ChatSession::class,
@@ -118,6 +119,9 @@ class SyncController extends Controller
                     continue;
                 }
                 $policy->authorize($userId, $op);
+                if ($op['type'] === 'user_home_preferences') {
+                    $op['data'] = $this->homePreferenceData($op['data'] ?? []);
+                }
                 $this->applyOp($modelClass, $op);
                 $applied++;
             }
@@ -132,6 +136,23 @@ class SyncController extends Controller
             'skipped' => count($skipped),
             'user_id' => $userId,
         ]);
+    }
+
+    private function homePreferenceData(array $data): array
+    {
+        // PowerSync uploads SQLite JSON columns as strings; Eloquent expects
+        // decoded values for its array cast, otherwise they get encoded twice.
+        if (isset($data['dismissed_tip_ids']) && is_string($data['dismissed_tip_ids'])) {
+            validator(['ids' => $data['dismissed_tip_ids']], ['ids' => ['json']])->validate();
+            $data['dismissed_tip_ids'] = json_decode($data['dismissed_tip_ids'], true);
+        }
+
+        return validator(['data' => $data], [
+            'data' => ['array:seasonal_tips_enabled,dismissed_tip_ids'],
+            'data.seasonal_tips_enabled' => ['sometimes', 'boolean'],
+            'data.dismissed_tip_ids' => ['sometimes', 'array', 'max:10000'],
+            'data.dismissed_tip_ids.*' => ['uuid', 'distinct'],
+        ])->validate()['data'];
     }
 
     /**

@@ -207,7 +207,12 @@
             feed_overrides: initialProtocol?.customer_settings?.feed_overrides ?? [],
             management: initialProtocol?.customer_settings?.management ?? [],
         },
-        analysis: { cause: initialProtocol?.analysis?.cause ?? '' },
+        analysis: {
+            cause: initialProtocol?.analysis?.cause ?? '',
+            summary: initialProtocol?.analysis?.summary ?? '',
+            focus_points: initialProtocol?.analysis?.focus_points ?? [],
+            observations: initialProtocol?.analysis?.observations ?? [],
+        },
         advice: (initialProtocol?.analysis?.advice ?? []).map((row) => ({
             id: row.id ?? null,
             icon_key: row.icon_key ?? 'leaf',
@@ -258,7 +263,7 @@
         { id: 'voeding', label: 'Voeding', icon: Leaf, formKey: 'voeding_advies_ids' },
         { id: 'management', label: 'Management', icon: Settings2, formKey: 'management_advies_ids' },
         { id: 'beweging', label: 'Beweging', icon: Dumbbell, formKey: 'beweging_advies_ids' },
-        { id: 'content', label: 'Analyse & advies', icon: FileText },
+        { id: 'content', label: 'Analyse', icon: FileText },
         { id: 'preview', label: 'Klantweergave', icon: Eye },
     ];
     const horseOptions = $derived(horses.map((horse) => ({
@@ -277,11 +282,6 @@
         { value: 'paused', label: 'Gepauzeerd' },
         { value: 'active', label: 'Actief' },
         { value: 'completed', label: 'Afgerond' },
-    ];
-    const adviceIconOptions = [
-        { value: 'leaf', label: 'Voeding' },
-        { value: 'run', label: 'Beweging' },
-        { value: 'horse', label: 'Verzorging' },
     ];
     const selectedHorse = $derived(horses.find((horse) => horse.id === $form.horse_id));
     const activePhaseIndex = $derived($form.phases.findIndex((phase) => phase.client_key === activePhaseKey));
@@ -331,7 +331,7 @@
             description: 'Selecteer adviezen over training, opbouw en bewegingsvrijheid.',
             items: adviceCatalogWithSnapshots(bewegingAdviezen, initialProtocol?.beweging_adviezen, 'beweging_advies_id'),
             next: 'content',
-            nextLabel: 'Analyse & advies',
+            nextLabel: 'Analyse',
         },
     ]);
     const activeAdviceCategory = $derived(adviceCategories.find((category) => category.id === activeSection) ?? null);
@@ -485,7 +485,8 @@
 
     function normalizeActivePhaseStartDelay() {
         if (activePhaseIndex < 0) return;
-        const weeks = Math.max(1, Math.min(104, Number($form.phases[activePhaseIndex].start_after_previous_phase_weeks || 1)));
+        const enteredValue = $form.phases[activePhaseIndex].start_after_previous_phase_weeks;
+        const weeks = Math.max(0, Math.min(104, Number(enteredValue === '' ? 1 : enteredValue ?? 1)));
 
         $form.phases = $form.phases.map((phase, index) => index === activePhaseIndex
             ? { ...phase, start_after_previous_phase_weeks: weeks }
@@ -561,12 +562,14 @@
         return null;
     }
 
-    function addAdvice() {
-        $form.advice = [...$form.advice, { id: null, icon_key: 'leaf', title: '', body: '' }];
+    function addFocusPoint() {
+        if ($form.analysis.focus_points.length >= 4) return;
+        $form.analysis.focus_points = [...$form.analysis.focus_points, { title: '', body: '' }];
     }
 
-    function removeAdvice(index) {
-        $form.advice = $form.advice.filter((_, adviceIndex) => adviceIndex !== index);
+    function addObservation() {
+        if ($form.analysis.observations.length >= 4) return;
+        $form.analysis.observations = [...$form.analysis.observations, ''];
     }
 
     function isProtocolAdviceSelected(category, adviceId) {
@@ -816,7 +819,7 @@
                                                         ><span class={`absolute top-[2.5px] size-[18px] rounded-full bg-white shadow-sm transition-transform ${activePhase.start_after_previous_phase_weeks !== null ? 'translate-x-[19px]' : 'translate-x-[2px]'}`}></span></span>
                                                         <span>
                                                             <span class="block text-sm font-bold">Afwijkende start</span>
-                                                            <span class="mt-0.5 block text-xs leading-5 text-[#1B2A2A]/45">Ingeschakeld start deze fase zodra het ingestelde aantal weken van de vorige fase compleet is. Uitgeschakeld start de fase na de volledige vorige fase.</span>
+                                                            <span class="mt-0.5 block text-xs leading-5 text-[#1B2A2A]/45">Ingeschakeld start deze fase zodra het ingestelde aantal weken van de vorige fase compleet is. Gebruik 0 om tegelijk met de vorige fase te starten.</span>
                                                         </span>
                                                     </button>
                                                     {#if activePhase.start_after_previous_phase_weeks !== null}
@@ -824,7 +827,7 @@
                                                             <Field label="Start na aantal complete weken vorige fase" error={errorFor(`phases.${activePhaseIndex}.start_after_previous_phase_weeks`)}>
                                                                 <Input
                                                                     type="number"
-                                                                    min="1"
+                                                                    min="0"
                                                                     max="104"
                                                                     bind:value={$form.phases[activePhaseIndex].start_after_previous_phase_weeks}
                                                                     onchange={normalizeActivePhaseStartDelay}
@@ -991,8 +994,8 @@
                                     </label>
                                     {#if selected && activeSection === 'management'}
                                         <div class="grid gap-3 bg-[#FBF8F3] px-7 py-4 md:grid-cols-2">
-                                            <Field label="Categorie"><select class="w-full rounded border p-2" value={managementSetting(advice).category} onchange={(e) => updateManagement(advice, 'category', e.currentTarget.value)}><option value="environment">Weide & leefomgeving</option><option value="care">Verzorging & lichamelijke ondersteuning</option><option value="monitoring">Onderzoek & monitoring</option></select></Field>
-                                            <Field label="Actie"><select class="w-full rounded border p-2" value={managementSetting(advice).action} onchange={(e) => updateManagement(advice, 'action', e.currentTarget.value)}><option value="do">Doen (vinkje)</option><option value="avoid">Vermijden / stoppen (kruis)</option></select></Field>
+                                            <Field label="Categorie"><select class="w-full rounded border p-2" value={managementSetting(advice).category} onchange={(e) => updateManagement(advice, 'category', e.currentTarget.value)}><option value="environment">Leefomgeving & weide</option><option value="care">Lichamelijke zorg</option><option value="monitoring">Onderzoek</option></select></Field>
+                                            <Field label="Actie"><select class="w-full rounded border p-2" value={managementSetting(advice).action} onchange={(e) => updateManagement(advice, 'action', e.currentTarget.value)}><option value="do">Aanbevolen</option><option value="avoid">Vermijden / stoppen</option></select></Field>
                                             <Field label="Instructie"><Textarea value={managementSetting(advice).instruction} oninput={(e) => updateManagement(advice, 'instruction', e.currentTarget.value)} /></Field>
                                             <Field label="Persoonlijke toelichting"><Textarea value={managementSetting(advice).note} oninput={(e) => updateManagement(advice, 'note', e.currentTarget.value)} /></Field>
                                             <Field label="Frequentie"><Input value={managementSetting(advice).frequency} oninput={(e) => updateManagement(advice, 'frequency', e.currentTarget.value)} /></Field>
@@ -1019,36 +1022,60 @@
                         <section class="rounded-[22px] border border-[#1B2A2A]/10 bg-white p-5 md:p-7">
                             <div class="mb-7 max-w-xl">
                                 <div class="text-[10px] font-bold uppercase tracking-[0.14em] text-[#108A82]">Stap 6</div>
-                                <h2 class="mt-1 text-xl font-bold">Analyse & advies</h2>
+                                <h2 class="mt-1 text-xl font-bold">Analyse</h2>
                                 <p class="mt-1 text-sm text-[#1B2A2A]/50">Deze inhoud hoort bij het hele paardprotocol en staat los van de geselecteerde fase.</p>
                             </div>
                             {#if weeklyUpdates.length}
                                 <div class="mb-6 space-y-3"><h3 class="font-bold">Weekupdates van de eigenaar</h3>{#each weeklyUpdates as update (update.id)}<div class="rounded-xl bg-[#EAFBF9] p-4"><strong>Week {update.week_number}</strong><p class="mt-2 whitespace-pre-wrap text-sm">{update.note}</p></div>{/each}</div>
                             {/if}
-                            <div>
-                                <Field label="Focuspunten vanuit de intake (klanttekst)" error={$form.errors['analysis.cause']}>
-                                    <Textarea bind:value={$form.analysis.cause} rows="6" placeholder="Vat de analyse achter dit protocol samen…" />
+                            <div class="rounded-2xl bg-[#EAFBF9] p-5">
+                                <Field label="Persoonlijke analyse" error={$form.errors['analysis.summary']} hint="Maximaal 4 korte zinnen (600 tekens). Benoem opvallende intakesignalen, mogelijke samenhang en de gekozen focus. Formuleer voorzichtig; vermijd onbewezen oorzaak-gevolgclaims.">
+                                    <Textarea aria-label="Persoonlijke analyse" bind:value={$form.analysis.summary} rows="4" maxlength="600" />
                                 </Field>
+                                <p class="mt-2 text-right text-xs text-[#1B2A2A]/50">{$form.analysis.summary.length}/600</p>
                             </div>
-                            <div class="mt-5"><Field label="Weekupdate vanaf dag van de protocolweek (1–7)"><Input type="number" min="1" max="7" bind:value={$form.customer_settings.weekly_update_day} /></Field></div>
-                            <div class="mt-7 border-t border-[#1B2A2A]/10 pt-6">
+                            <div class="mt-7">
                                 <div class="mb-4 flex items-center justify-between gap-3">
-                                    <div><h3 class="text-base font-bold">Adviezen</h3><p class="mt-0.5 text-xs text-[#1B2A2A]/45">Protocolbrede aanbevelingen voor de klant.</p></div>
-                                    <Button type="button" variant="outline" class="rounded-full" onclick={addAdvice}><Plus class="size-4" /> Advies</Button>
+                                    <div><h3 class="text-base font-bold">Focus van het protocol</h3><p class="mt-0.5 text-xs text-[#1B2A2A]/60">3–4 inhoudelijke focuspunten, elk met één korte doelzin. Geen algemene categorieën zoals Voeding, Management of Training.</p></div>
+                                    <Button type="button" variant="outline" class="shrink-0 rounded-full" onclick={addFocusPoint} disabled={$form.analysis.focus_points.length >= 4}><Plus class="size-4" /> Focuspunt</Button>
                                 </div>
+                                {#if $form.errors['analysis.focus_points']}<p class="mb-3 text-sm text-destructive">{$form.errors['analysis.focus_points']}</p>{/if}
                                 <div class="space-y-4">
-                                    {#each $form.advice as advice, adviceIndex (advice.id ?? adviceIndex)}
-                                        <div class="border-b border-[#1B2A2A]/10 pb-4 last:border-0">
-                                            <div class="grid gap-3 md:grid-cols-[160px_minmax(0,1fr)_40px]">
-                                                <Field label="Categorie" error={errorFor(`advice.${adviceIndex}.icon_key`)}><Select bind:value={$form.advice[adviceIndex].icon_key} options={adviceIconOptions} /></Field>
-                                                <Field label="Titel" error={errorFor(`advice.${adviceIndex}.title`)}><Input bind:value={$form.advice[adviceIndex].title} /></Field>
-                                                <div class="pt-[26px]"><Button type="button" variant="ghost" size="icon" onclick={() => removeAdvice(adviceIndex)} aria-label="Advies verwijderen"><Trash2 class="size-4 text-destructive" /></Button></div>
+                                    {#each $form.analysis.focus_points as point, index (index)}
+                                        <div class="rounded-xl border border-[#1B2A2A]/10 p-4">
+                                            <div class="flex items-start gap-3">
+                                                <div class="flex-1"><Field label="Inhoudelijk focuspunt" error={errorFor(`analysis.focus_points.${index}.title`)}><Input aria-label={`Focuspunt ${index + 1}`} bind:value={$form.analysis.focus_points[index].title} maxlength="48" /></Field></div>
+                                                <Button type="button" variant="ghost" size="icon" class="mt-6" onclick={() => ($form.analysis.focus_points = $form.analysis.focus_points.filter((_, i) => i !== index))} aria-label={`Focuspunt ${index + 1} verwijderen`}><Trash2 class="size-4 text-destructive" /></Button>
                                             </div>
-                                            <div class="mt-3"><Field label="Advies" error={errorFor(`advice.${adviceIndex}.body`)}><Textarea bind:value={$form.advice[adviceIndex].body} /></Field></div>
+                                            <div class="mt-3"><Field label="Doel in één korte zin" error={errorFor(`analysis.focus_points.${index}.body`)} hint={`${point.body.length}/160 tekens`}><Textarea aria-label={`Doel ${index + 1}`} bind:value={$form.analysis.focus_points[index].body} rows="2" maxlength="160" /></Field></div>
                                         </div>
-                                    {:else}<button type="button" onclick={addAdvice} class="w-full rounded-xl border border-dashed border-[#1B2A2A]/15 px-4 py-8 text-sm text-[#1B2A2A]/45">Voeg het eerste advies toe</button>{/each}
+                                    {/each}
                                 </div>
                             </div>
+                            <div class="mt-8">
+                                <div class="mb-4 flex items-center justify-between gap-3">
+                                    <div><h3 class="text-base font-bold">Waar letten we op?</h3><p class="mt-0.5 text-xs text-[#1B2A2A]/60">1–4 concrete observatiepunten voor de evaluatie. Beschrijf per punt in één korte zin waaraan je merkt of het de goede kant op gaat.</p></div>
+                                    <Button type="button" variant="outline" class="shrink-0 rounded-full" onclick={addObservation} disabled={$form.analysis.observations.length >= 4}><Plus class="size-4" /> Observatie</Button>
+                                </div>
+                                {#if $form.errors['analysis.observations']}<p class="mb-3 text-sm text-destructive">{$form.errors['analysis.observations']}</p>{/if}
+                                <div class="space-y-3">
+                                    {#each $form.analysis.observations as observation, index (index)}
+                                        <div class="flex items-start gap-3">
+                                            <div class="flex-1"><Field label={`Observatiepunt ${index + 1}`} error={errorFor(`analysis.observations.${index}`)} hint={`${observation.length}/160 tekens`}><Textarea aria-label={`Observatiepunt ${index + 1}`} bind:value={$form.analysis.observations[index]} rows="2" maxlength="160" /></Field></div>
+                                            <Button type="button" variant="ghost" size="icon" class="mt-6" onclick={() => ($form.analysis.observations = $form.analysis.observations.filter((_, i) => i !== index))} aria-label={`Observatiepunt ${index + 1} verwijderen`}><Trash2 class="size-4 text-destructive" /></Button>
+                                        </div>
+                                    {/each}
+                                </div>
+                            </div>
+                            {#if $form.analysis.cause || $form.advice.length}
+                                <details class="mt-8 border-t border-[#1B2A2A]/10 pt-5">
+                                    <summary class="cursor-pointer text-sm font-semibold">Eerdere analyse en adviezen (naslag)</summary>
+                                    <p class="mt-2 text-xs text-[#1B2A2A]/60">Deze inhoud blijft bewaard. Vul hierboven de compacte klantweergave in; de app gebruikt deze eerdere tekst niet automatisch.</p>
+                                    <p class="mt-3 whitespace-pre-wrap text-sm">{$form.analysis.cause}</p>
+                                    {#each $form.advice as advice}<div class="mt-3 text-sm"><strong>{advice.title}</strong><p class="whitespace-pre-wrap">{advice.body}</p></div>{/each}
+                                </details>
+                            {/if}
+                            <div class="mt-7 border-t border-[#1B2A2A]/10 pt-5"><Field label="Weekupdate vanaf dag van de protocolweek (1–7)"><Input type="number" min="1" max="7" bind:value={$form.customer_settings.weekly_update_day} /></Field></div>
                         </section>
                     {:else if activeSection === 'preview'}
                         <section class="overflow-hidden rounded-[22px] border border-[#1B2A2A]/10 bg-white">
@@ -1064,8 +1091,10 @@
                                 </div>
                             </div>
                             <div class="space-y-8 px-6 py-7 md:px-8">
-                                {#if $form.analysis.cause}
-                                    <section><div class="text-[10px] font-bold uppercase tracking-[0.12em] text-[#108A82]">Analyse</div><p class="mt-2 max-w-2xl text-sm leading-6">{$form.analysis.cause}</p></section>
+                                {#if $form.analysis.summary}
+                                    <section class="rounded-2xl bg-[#EAFBF9] p-4"><h3 class="text-xs font-bold uppercase tracking-wider text-[#0E6F69]">Persoonlijke analyse</h3><p class="mt-2 text-sm leading-5">{$form.analysis.summary}</p></section>
+                                    <section><h3 class="text-xs font-bold uppercase tracking-wider text-[#1B2A2A]/70">Focus van het protocol</h3><div class="mt-3 space-y-3">{#each $form.analysis.focus_points as point}<div class="rounded-xl border border-[#1B2A2A]/10 bg-white p-4"><strong>{point.title}</strong><p class="mt-1 text-sm">{point.body}</p></div>{/each}</div></section>
+                                    <section><h3 class="text-xs font-bold uppercase tracking-wider text-[#1B2A2A]/70">Waar letten we op?</h3><ul class="mt-3 list-disc space-y-2 pl-4 text-sm">{#each $form.analysis.observations as observation}<li>{observation}</li>{/each}</ul></section>
                                 {/if}
                                 <section>
                                     <div class="text-[10px] font-bold uppercase tracking-[0.12em] text-[#108A82]">Planning</div>
@@ -1104,9 +1133,7 @@
                                         </div>
                                     </section>
                                 {/if}
-                                {#if $form.advice.length}
-                                    <section><div class="text-[10px] font-bold uppercase tracking-[0.12em] text-[#108A82]">Advies</div><div class="mt-3 grid gap-3 md:grid-cols-2">{#each $form.advice as advice (advice.id ?? advice.title)}<div class="rounded-xl bg-[#FBF8F3] p-4"><div class="font-bold">{advice.title}</div><p class="mt-1 text-sm leading-5 text-[#1B2A2A]/60">{advice.body}</p></div>{/each}</div></section>
-                                {/if}
+
                             </div>
                             <div class="flex flex-wrap items-center justify-between gap-3 border-t border-[#1B2A2A]/10 bg-[#FBF8F3] px-6 py-4 md:px-8">
                                 <p class="text-xs text-[#1B2A2A]/50">{$form.published ? 'Dit protocol is zichtbaar voor de klant.' : 'Dit protocol is nog een concept.'}</p>

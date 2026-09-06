@@ -77,6 +77,7 @@ streams:
                     SELECT id FROM subscriptions WHERE user_id = auth.user_id()
                 )
             - SELECT * FROM notification_preferences WHERE user_id = auth.user_id()
+            - SELECT * FROM user_home_preferences WHERE id = auth.user_id()
             - SELECT * FROM account_settings WHERE user_id = auth.user_id()
             - SELECT * FROM data_exports WHERE user_id = auth.user_id()
             - SELECT * FROM chat_sessions WHERE user_id = auth.user_id()

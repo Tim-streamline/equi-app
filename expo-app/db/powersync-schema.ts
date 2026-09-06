@@ -147,6 +147,9 @@ const protocol_phase_supplement_weeks = new Table({
 const protocol_analyses = new Table({
   protocol_id: column.text,
   cause: column.text,
+  summary: column.text,
+  focus_points: column.text,
+  observations: column.text,
 });
 
 const protocol_advice = new Table({
@@ -429,6 +432,11 @@ const notification_preferences = new Table({
   push_token: column.text,
 });
 
+const user_home_preferences = new Table({
+  seasonal_tips_enabled: column.integer,
+  dismissed_tip_ids: column.text,
+});
+
 const account_settings = new Table({
   user_id: column.text,
   icon_key: column.text,
@@ -594,6 +602,7 @@ export const AppSchema = new Schema({
   subscriptions,
   payments,
   notification_preferences,
+  user_home_preferences,
   account_settings,
   data_exports,
   chat_sessions,

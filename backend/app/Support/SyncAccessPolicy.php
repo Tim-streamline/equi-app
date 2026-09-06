@@ -55,6 +55,7 @@ class SyncAccessPolicy
 
         $existing = $this->row($table, $id);
         $allowed = match ($table) {
+            'user_home_preferences' => $this->ownsSelfRow($userId, $id, $op),
             'users' => $this->ownsSelfRow($userId, $id, $op),
             'horses' => $this->ownsHorseRow($userId, $existing, $data),
             'horse_shares' => $this->ownsHorseByRowHorseId($userId, $existing, $data),

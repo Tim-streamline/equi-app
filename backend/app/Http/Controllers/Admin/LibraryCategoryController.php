@@ -27,7 +27,7 @@ class LibraryCategoryController extends Controller
         $cat = LibraryCategory::create($data);
         AuditLogger::created($cat);
 
-        return back()->with('success', 'Category added.');
+        return back()->with('success', 'Categorie toegevoegd.');
     }
 
     public function update(Request $request, LibraryCategory $libraryCategory): RedirectResponse
@@ -37,7 +37,7 @@ class LibraryCategoryController extends Controller
         $libraryCategory->update($data);
         AuditLogger::updated($libraryCategory, $before);
 
-        return back()->with('success', 'Category updated.');
+        return back()->with('success', 'Categorie bijgewerkt.');
     }
 
     public function destroy(LibraryCategory $libraryCategory): RedirectResponse
@@ -45,7 +45,7 @@ class LibraryCategoryController extends Controller
         AuditLogger::deleted($libraryCategory);
         $libraryCategory->delete();
 
-        return back()->with('success', 'Category removed.');
+        return back()->with('success', 'Categorie verwijderd.');
     }
 
     private function validateData(Request $request, ?string $id = null): array

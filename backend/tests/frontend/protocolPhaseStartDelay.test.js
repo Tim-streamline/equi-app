@@ -16,12 +16,14 @@ test('template phases expose an optional completed-weeks setting', () => {
     assert.match(templateSource, /start_after_previous_phase_weeks/);
     assert.match(templateSource, /Afwijkende start/);
     assert.match(templateSource, /Start na aantal complete weken vorige fase/);
+    assert.match(templateSource, /type="number" min="0" max="104"/);
 });
 
 test('protocol phase instances copy and expose the delayed-start setting', () => {
     assert.match(protocolSource, /start_after_previous_phase_weeks:\s*definition\.start_after_previous_phase_weeks/);
     assert.match(protocolSource, /Afwijkende start/);
     assert.match(protocolSource, /Start na aantal complete weken vorige fase/);
+    assert.match(protocolSource, /type="number"\s+min="0"\s+max="104"/);
 });
 
 test('a configured phase starts after completed weeks within the previous phase', () => {
@@ -37,4 +39,19 @@ test('a configured phase starts after completed weeks within the previous phase'
         { start: 5, end: 6 },
     ]);
     assert.equal(totalProtocolWeeks(phases), 6);
+});
+
+test('a zero-week offset starts a phase together with the previous phase', () => {
+    const phases = [
+        { week_count: 2, start_after_previous_phase_weeks: null },
+        { week_count: 2, start_after_previous_phase_weeks: 0 },
+        { week_count: 2, start_after_previous_phase_weeks: null },
+    ];
+
+    assert.deepEqual(protocolPhaseRanges(phases), [
+        { start: 1, end: 2 },
+        { start: 1, end: 2 },
+        { start: 3, end: 4 },
+    ]);
+    assert.equal(totalProtocolWeeks(phases), 4);
 });

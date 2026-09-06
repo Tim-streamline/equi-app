@@ -99,6 +99,7 @@ export type DashboardProtocol = {
   analysis: {
     summary: string;
     priorities: { id: string; title: string; body: string }[];
+    observations: string[];
   } | null;
 };
 export type HorseDashboard = {
@@ -118,6 +119,8 @@ export type HorseDashboard = {
     benefits: string[];
   } | null;
   seasonalTip: {
+    id: string;
+    intro?: string;
     month: string;
     title?: string;
     body: string;

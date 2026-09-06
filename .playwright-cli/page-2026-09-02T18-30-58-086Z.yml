@@ -1,0 +1,100 @@
+- generic [ref=e27]:
+  - complementary [ref=e28]:
+    - generic [ref=e32]:
+      - generic [ref=e33]: EquiNova
+      - generic [ref=e34]: Admin console
+    - navigation [ref=e35]:
+      - link "Dashboard" [ref=e37] [cursor=pointer]:
+        - /url: http://127.0.0.1:81/admin
+      - generic [ref=e40]:
+        - generic [ref=e41]: Support
+        - link "Users" [ref=e42] [cursor=pointer]:
+          - /url: http://127.0.0.1:81/admin/users
+        - link "Horses" [ref=e45] [cursor=pointer]:
+          - /url: http://127.0.0.1:81/admin/horses
+        - link "Intake bookings" [ref=e48] [cursor=pointer]:
+          - /url: http://127.0.0.1:81/admin/bookings
+        - link "Protocols" [ref=e51] [cursor=pointer]:
+          - /url: http://127.0.0.1:81/admin/protocols
+      - generic [ref=e54]:
+        - generic [ref=e55]: Content
+        - link "Library" [ref=e56] [cursor=pointer]:
+          - /url: http://127.0.0.1:81/admin/library
+        - link "Categories" [ref=e59] [cursor=pointer]:
+          - /url: http://127.0.0.1:81/admin/library-categories
+        - link "Seasonal tips" [ref=e62] [cursor=pointer]:
+          - /url: http://127.0.0.1:81/admin/seasonal-tips
+        - link "Nova chat" [ref=e65] [cursor=pointer]:
+          - /url: http://127.0.0.1:81/admin/nova
+      - generic [ref=e68]:
+        - generic [ref=e69]: Scanner
+        - link "Scan results" [ref=e70] [cursor=pointer]:
+          - /url: http://127.0.0.1:81/admin/scans
+        - link "Products" [ref=e73] [cursor=pointer]:
+          - /url: http://127.0.0.1:81/admin/products
+        - link "Ingredients" [ref=e76] [cursor=pointer]:
+          - /url: http://127.0.0.1:81/admin/ingredients
+      - generic [ref=e79]:
+        - generic [ref=e80]: Operations
+        - link "Data exports" [ref=e81] [cursor=pointer]:
+          - /url: http://127.0.0.1:81/admin/exports
+        - link "Notifications" [ref=e84] [cursor=pointer]:
+          - /url: http://127.0.0.1:81/admin/notifications
+        - link "Sync health" [ref=e87] [cursor=pointer]:
+          - /url: http://127.0.0.1:81/admin/sync-health
+    - generic [ref=e91]:
+      - generic [ref=e92]: QC
+      - generic [ref=e93]:
+        - generic [ref=e94]: QA Library category
+        - generic [ref=e95]: content editor
+      - button "Log out" [ref=e96]
+  - generic [ref=e98]:
+    - banner [ref=e99]:
+      - heading "Library-categorieën" [level=1] [ref=e100]
+    - main [ref=e101]:
+      - generic [ref=e102]:
+        - generic [ref=e103]:
+          - heading "Library-categorieën" [level=2] [ref=e104]
+          - paragraph [ref=e105]: Beheer de filters voor de contentbibliotheek
+        - button "Nieuwe bibliotheekcategorie toevoegen" [ref=e107] [cursor=pointer]: Nieuwe categorie
+      - table [ref=e112]:
+        - rowgroup [ref=e113]:
+          - row [ref=e114]:
+            - columnheader "Naam" [ref=e115]
+            - columnheader "Slug" [ref=e116]
+            - columnheader "Items" [ref=e117]
+            - columnheader "Standaard" [ref=e118]
+            - columnheader [ref=e119]
+        - rowgroup [ref=e120]:
+          - row [ref=e121]:
+            - cell "Voeding" [ref=e122]
+            - cell "voeding" [ref=e123]
+            - cell "1" [ref=e124]
+            - cell [ref=e126]
+            - cell [ref=e127]:
+              - button "Voeding aanpassen" [ref=e128] [cursor=pointer]
+              - button "Voeding verwijderen" [ref=e130] [cursor=pointer]
+          - row [ref=e132]:
+            - cell "Kruiden" [ref=e133]
+            - cell "kruiden" [ref=e134]
+            - cell "0" [ref=e135]
+            - cell [ref=e137]
+            - cell [ref=e138]:
+              - button "Kruiden aanpassen" [ref=e139] [cursor=pointer]
+              - button "Kruiden verwijderen" [ref=e141] [cursor=pointer]
+          - row [ref=e143]:
+            - cell "Gedrag" [ref=e144]
+            - cell "gedrag" [ref=e145]
+            - cell "0" [ref=e146]
+            - cell [ref=e148]
+            - cell [ref=e149]:
+              - button "Gedrag aanpassen" [ref=e150] [cursor=pointer]
+              - button "Gedrag verwijderen" [ref=e152] [cursor=pointer]
+          - row [ref=e154]:
+            - cell "Hoeven" [ref=e155]
+            - cell "hoeven" [ref=e156]
+            - cell "0" [ref=e157]
+            - cell [ref=e159]
+            - cell [ref=e160]:
+              - button "Hoeven aanpassen" [ref=e161] [cursor=pointer]
+              - button "Hoeven verwijderen" [ref=e163] [cursor=pointer]

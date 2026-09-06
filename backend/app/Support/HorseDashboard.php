@@ -82,7 +82,7 @@ class HorseDashboard
             'plusOffer' => $plusPlan ? ['name' => $plusPlan->name, 'description' => $plusPlan->description,
                 'priceLabel' => ($plusPlan->currency === 'EUR' ? '€' : $plusPlan->currency).' '.number_format($plusPlan->price_cents / 100, 2, ',', '.'),
                 'priceSuffix' => $plusPlan->price_suffix, 'benefits' => $plusPlan->benefits->pluck('label')->all()] : null,
-            'seasonalTip' => $tip ? ['month' => $tip->month, 'title' => $tip->title ?: $tipItem?->title, 'body' => $tip->body, 'item' => $tipItem ? $itemData($tipItem) : null] : null,
+            'seasonalTip' => $tip ? ['id' => $tip->id, 'intro' => Str::limit(trim(preg_replace('/\s+/u', ' ', strip_tags($tip->body))), 180), 'month' => $tip->month, 'title' => $tip->title ?: $tipItem?->title, 'body' => $tip->body, 'item' => $tipItem ? $itemData($tipItem) : null] : null,
             'recommendations' => $recommendations, 'protocol' => $data,
         ];
     }
@@ -173,8 +173,12 @@ class HorseDashboard
             'nutrition' => $this->nutrition->forProtocol($protocol, $answers),
             'management' => $this->management($protocol),
             'movement' => $protocol->bewegingAdviezen->map(fn ($a) => ['id' => $a->id, 'title' => $a->title, 'description' => $a->description])->all(),
-            'analysis' => $protocol->analysis ? ['summary' => $protocol->analysis->cause,
-                'priorities' => $protocol->analysis->advice->take(5)->map(fn ($a) => ['id' => $a->id, 'title' => $a->title, 'body' => $a->body])->values()->all()] : null,
+            'analysis' => filled($protocol->analysis?->summary) ? [
+                'summary' => $protocol->analysis->summary,
+                'priorities' => collect($protocol->analysis->focus_points ?? [])->take(4)
+                    ->map(fn ($point, $index) => ['id' => 'focus-'.$index, 'title' => $point['title'], 'body' => $point['body']])->values()->all(),
+                'observations' => $protocol->analysis->observations ?? [],
+            ] : null,
         ];
     }
 

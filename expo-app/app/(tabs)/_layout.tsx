@@ -10,6 +10,7 @@ export default function TabsLayout() {
       <Stack.Screen name="library/video/[id]" />
       <Stack.Screen name="account/horse-profile" />
       <Stack.Screen name="account/index" />
+      <Stack.Screen name="account/preferences" />
       <Stack.Screen name="community" />
       <Stack.Screen name="account/my-horses" />
       <Stack.Screen name="account/subscription" />

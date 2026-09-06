@@ -9,6 +9,24 @@ export type LibraryItemCategoryLink = {
   categoryId: string;
 };
 
+export const ALL_LIBRARY_FILTER_ID = 'all';
+
+export function toggleLibraryCategory(
+  activeCategoryIds: readonly string[],
+  categoryId: string,
+): string[] {
+  if (categoryId === ALL_LIBRARY_FILTER_ID) return [];
+
+  const next = new Set(activeCategoryIds);
+  if (next.has(categoryId)) {
+    next.delete(categoryId);
+  } else {
+    next.add(categoryId);
+  }
+
+  return [...next];
+}
+
 function normalizeSearchText(value: string): string {
   return value
     .normalize('NFD')

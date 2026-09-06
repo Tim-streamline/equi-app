@@ -5,7 +5,7 @@
     import Field from '$lib/components/Field.svelte';
     import { router, useForm } from '@inertiajs/svelte';
     import { Badge, Button, Input, Select, Textarea } from '$lib/components/ui';
-    import { ArrowDown, ArrowUp, CalendarDays, Check, Layers3, Pencil, Plus, Trash2, X } from '@lucide/svelte';
+    import { ArrowDown, ArrowUp, CalendarDays, Check, Copy, Layers3, Pencil, Plus, Trash2, X } from '@lucide/svelte';
     import { fade } from 'svelte/transition';
 
     let { protocolTemplates } = $props();
@@ -21,6 +21,7 @@
     let pendingDeletion = $state(null);
     let deletionProcessing = $state(false);
     let phaseOrderBusy = $state(false);
+    let duplicatingPhaseId = $state(null);
     let phaseStartDelayEnabled = $state(false);
     let planningCellsBusy = $state([]);
 
@@ -177,6 +178,16 @@
         });
     }
 
+    function duplicatePhase(phase) {
+        if (duplicatingPhaseId !== null) return;
+
+        duplicatingPhaseId = phase.id;
+        router.post(`/admin/protocol-settings/phases/${phase.id}/duplicate`, {}, {
+            preserveScroll: true,
+            onFinish: () => (duplicatingPhaseId = null),
+        });
+    }
+
     function addWeek(phase) {
         router.post(`/admin/protocol-settings/phases/${phase.id}/weeks`, {}, { preserveScroll: true });
     }
@@ -315,6 +326,9 @@
         { value: 'ml', label: 'ml' },
         { value: 'theelepel', label: 'Theelepel' },
         { value: 'eetlepel', label: 'Eetlepel' },
+        { value: 'druppels', label: 'Druppels' },
+        { value: 'pillen', label: 'Pillen' },
+        { value: 'capsules', label: 'Capsules' },
     ];
     const supplementTypeLabel = (value) => supplementTypeOptions.find((type) => type.value === value)?.label ?? value;
     const supplementDose = (supplement) => {
@@ -441,6 +455,16 @@
                                                     </Button>
                                                     <Button size="icon" variant="ghost" onclick={() => editPhase(phase)} aria-label={`Edit ${phase.name}`} title="Edit phase">
                                                         <Pencil class="size-4" />
+                                                    </Button>
+                                                    <Button
+                                                        size="icon"
+                                                        variant="ghost"
+                                                        onclick={() => duplicatePhase(phase)}
+                                                        disabled={duplicatingPhaseId !== null}
+                                                        aria-label={`Dupliceer ${phase.name}`}
+                                                        title="Fase dupliceren"
+                                                    >
+                                                        <Copy class="size-4" />
                                                     </Button>
                                                     <Button size="icon" variant="ghost" onclick={() => removePhase(phase)} aria-label={`Remove ${phase.name}`} title="Remove phase">
                                                         <Trash2 class="size-4 text-destructive" />
@@ -662,13 +686,13 @@
                         />
                         <span>
                             <span class="block text-sm font-semibold">Afwijkende start</span>
-                            <span class="mt-0.5 block text-xs leading-5 text-muted-foreground">Laat deze fase starten zodra het ingestelde aantal weken van de vorige fase compleet is. Uitgeschakeld betekent starten na de volledige vorige fase.</span>
+                            <span class="mt-0.5 block text-xs leading-5 text-muted-foreground">Laat deze fase starten zodra het ingestelde aantal weken van de vorige fase compleet is. Gebruik 0 om tegelijk met de vorige fase te starten.</span>
                         </span>
                     </label>
                     {#if phaseStartDelayEnabled}
                         <div class="w-full shrink-0 sm:w-48">
                             <Field label="Start na aantal complete weken vorige fase" error={$phaseForm.errors.start_after_previous_phase_weeks}>
-                                <Input type="number" min="1" max="104" bind:value={$phaseForm.start_after_previous_phase_weeks} />
+                                <Input type="number" min="0" max="104" bind:value={$phaseForm.start_after_previous_phase_weeks} />
                             </Field>
                         </div>
                     {/if}

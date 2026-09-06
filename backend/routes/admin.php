@@ -175,6 +175,7 @@ Route::middleware('auth:admin')->group(function () {
             Route::put('templates/{protocolTemplate}', 'updateTemplate')->name('templates.update');
             Route::delete('templates/{protocolTemplate}', 'destroyTemplate')->name('templates.destroy');
             Route::post('phases', 'storePhase')->name('phases.store');
+            Route::post('phases/{protocolTemplatePhase}/duplicate', 'duplicatePhase')->name('phases.duplicate');
             Route::put('phases/{protocolTemplatePhase}', 'updatePhase')->name('phases.update');
             Route::patch('phases/{protocolTemplatePhase}/order', 'movePhase')->name('phases.order');
             Route::delete('phases/{protocolTemplatePhase}', 'destroyPhase')->name('phases.destroy');

@@ -297,6 +297,26 @@ class AdminProtocolManagementTest extends TestCase
         $this->assertSame(5, $protocol->refresh()->total_weeks);
     }
 
+    public function test_phase_with_zero_start_delay_starts_together_with_previous_phase(): void
+    {
+        $this->phaseDefinitions[1]->update(['start_after_previous_phase_weeks' => 0]);
+        $payload = $this->payload();
+        unset($payload['phases'][1]['start_after_previous_phase_weeks']);
+
+        $this->actingAs($this->admin, 'admin')
+            ->post('/admin/protocols', $payload)
+            ->assertSessionHasNoErrors();
+
+        $protocol = Protocol::query()->where('title', 'Boaz recovery protocol')->firstOrFail();
+        $phases = $protocol->phases()->with('weeks')->get();
+
+        $this->assertSame(0, $phases[1]->start_after_previous_phase_weeks);
+        $this->assertSame([1, 2, 3, 4], $phases[0]->weeks->pluck('protocol_week_number')->all());
+        $this->assertSame([1, 2], $phases[1]->weeks->pluck('protocol_week_number')->all());
+        $this->assertSame([3, 4], $phases[2]->weeks->pluck('protocol_week_number')->all());
+        $this->assertSame(4, $protocol->refresh()->total_weeks);
+    }
+
     public function test_admin_can_edit_nested_protocol_content(): void
     {
         $this->actingAs($this->admin, 'admin')->post('/admin/protocols', $this->payload());
@@ -593,6 +613,85 @@ class AdminProtocolManagementTest extends TestCase
                 ->where('protocol.phases.0.title', 'Configured phase 1')
                 ->where('protocol.phases.0.description', 'Description 1')
                 ->where('protocol.phases.0.required', true));
+    }
+
+    public function test_compact_analysis_round_trips_without_replacing_the_original_notes(): void
+    {
+        $payload = $this->payload();
+        $payload['published'] = true;
+        $payload['analysis'] += [
+            'summary' => 'De intake noemt wisselende signalen. Een samenhang is mogelijk, maar nog niet vastgesteld. Daarom kiezen we deze focus.',
+            'focus_points' => [
+                ['title' => 'Persoonlijk aandachtspunt', 'body' => 'Het individueel afgesproken doel ondersteunen.'],
+                ['title' => 'Tweede aandachtspunt', 'body' => 'Werken aan het tweede afgesproken doel.'],
+                ['title' => 'Derde aandachtspunt', 'body' => 'Het derde afgesproken doel ondersteunen.'],
+            ],
+            'observations' => ['Vergelijk de afgesproken signalen bij de evaluatie.'],
+        ];
+        $this->actingAs($this->admin, 'admin')->post('/admin/protocols', $payload)->assertSessionHasNoErrors();
+        $protocol = Protocol::where('title', $payload['title'])->firstOrFail();
+        $this->assertSame($payload['analysis']['summary'], $protocol->analysis->summary);
+        $this->assertSame($payload['analysis']['focus_points'], $protocol->analysis->focus_points);
+        $this->assertSame($payload['analysis']['observations'], $protocol->analysis->observations);
+        $this->assertSame('Restore the gut first.', $protocol->analysis->cause);
+        $this->actingAs($this->admin, 'admin')->get('/admin/protocols/'.$protocol->id.'/edit')
+            ->assertInertia(fn (Assert $page) => $page
+                ->where('protocol.analysis.summary', $payload['analysis']['summary'])
+                ->where('protocol.analysis.focus_points', $payload['analysis']['focus_points'])
+                ->where('protocol.analysis.observations', $payload['analysis']['observations']));
+
+        foreach ($protocol->phases as $index => $phase) {
+            $payload['phases'][$index]['id'] = $phase->id;
+            foreach ($payload['phases'][$index]['supplements'] as $supplementIndex => $supplement) {
+                $payload['phases'][$index]['supplements'][$supplementIndex]['id'] = $phase->supplements
+                    ->firstWhere('supplement_id', $supplement['supplement_id'])?->id;
+            }
+        }
+        foreach ($protocol->analysis->advice as $index => $advice) {
+            $payload['advice'][$index]['id'] = $advice->id;
+        }
+
+        $payload['analysis']['summary'] = 'Bijgestelde, genuanceerde samenvatting.';
+        $payload['analysis']['focus_points'][0]['body'] = 'Het bijgestelde doel volgen.';
+        $payload['analysis']['observations'] = ['Bespreek de bijgestelde observatie.'];
+        $this->actingAs($this->admin, 'admin')->put('/admin/protocols/'.$protocol->id, $payload)->assertRedirect()->assertSessionHasNoErrors();
+        $this->assertSame($payload['analysis']['summary'], $protocol->fresh()->analysis->summary);
+        $this->assertSame($payload['analysis']['focus_points'], $protocol->fresh()->analysis->focus_points);
+        $this->assertSame($payload['analysis']['observations'], $protocol->fresh()->analysis->observations);
+
+        // An older form must not erase new content just because it omits these fields.
+        $payload['analysis'] = ['cause' => 'Retained earlier notes.'];
+        $this->actingAs($this->admin, 'admin')->put('/admin/protocols/'.$protocol->id, $payload)->assertRedirect()->assertSessionHasNoErrors();
+        $this->assertSame('Bijgestelde, genuanceerde samenvatting.', $protocol->fresh()->analysis->summary);
+
+        $payload['analysis'] += ['summary' => null, 'focus_points' => [], 'observations' => []];
+        $this->actingAs($this->admin, 'admin')->put('/admin/protocols/'.$protocol->id, $payload)->assertRedirect()->assertSessionHasNoErrors();
+        $this->assertNull($protocol->fresh()->analysis->summary);
+        $this->assertSame([], $protocol->fresh()->analysis->focus_points);
+        $this->assertSame([], $protocol->fresh()->analysis->observations);
+        $this->assertSame('Retained earlier notes.', $protocol->fresh()->analysis->cause);
+    }
+
+    public function test_compact_analysis_rejects_long_text_generic_categories_and_too_many_focus_points(): void
+    {
+        $payload = $this->payload();
+        $payload['analysis'] += [
+            'summary' => 'Eerste zin. Tweede zin. Derde zin. Vierde zin. Vijfde zin.',
+            'focus_points' => array_fill(0, 5, ['title' => 'Management', 'body' => 'Eerste doel. Tweede doel.']),
+            'observations' => [str_repeat('x', 161)],
+        ];
+        $this->actingAs($this->admin, 'admin')->post('/admin/protocols', $payload)
+            ->assertSessionHasErrors(['analysis.summary', 'analysis.focus_points', 'analysis.focus_points.0.title', 'analysis.focus_points.0.body', 'analysis.observations.0']);
+        $this->assertDatabaseMissing('protocols', ['title' => $payload['title']]);
+    }
+
+    public function test_publishing_compact_analysis_requires_three_focus_points_and_observations(): void
+    {
+        $payload = $this->payload();
+        $payload['published'] = true;
+        $payload['analysis'] += ['summary' => 'Een korte persoonlijke samenvatting.', 'focus_points' => [], 'observations' => []];
+        $this->actingAs($this->admin, 'admin')->post('/admin/protocols', $payload)
+            ->assertSessionHasErrors(['analysis.focus_points', 'analysis.observations']);
     }
 
     /**
