@@ -22,9 +22,10 @@ use Inertia\Response;
 
 class ProtocolSettingsController extends Controller
 {
-    public function index(): Response
+    public function index(Request $request): Response
     {
         return Inertia::render('ProtocolSettings/Index', [
+            'selectedTemplateId' => $request->query('template'),
             'protocolTemplates' => ProtocolTemplate::query()
                 ->with([
                     'phases' => fn ($query) => $query->orderBy('order'),
@@ -66,6 +67,34 @@ class ProtocolSettingsController extends Controller
         $protocolTemplate->delete();
 
         return back()->with('success', 'Protocol template removed.');
+    }
+
+    public function duplicateTemplate(ProtocolTemplate $protocolTemplate): RedirectResponse
+    {
+        $copy = DB::transaction(function () use ($protocolTemplate): ProtocolTemplate {
+            $source = ProtocolTemplate::query()
+                ->with(['phases.weeks', 'phases.supplements.weeks'])
+                ->lockForUpdate()
+                ->findOrFail($protocolTemplate->id);
+
+            $copyNumber = 1;
+            do {
+                $suffix = $copyNumber === 1 ? ' (kopie)' : " (kopie {$copyNumber})";
+                $name = mb_substr($source->name, 0, 255 - mb_strlen($suffix)).$suffix;
+                $copyNumber++;
+            } while (ProtocolTemplate::query()->where('name', $name)->exists());
+
+            $copy = ProtocolTemplate::query()->create(['name' => $name]);
+            foreach ($source->phases as $phase) {
+                $this->copyPhase($phase, ['protocol_template_id' => $copy->id]);
+            }
+            AuditLogger::created($copy, "Gekopieerd van protocol template {$source->id}.");
+
+            return $copy;
+        });
+
+        return to_route('admin.protocol-settings.index', ['template' => $copy->id])
+            ->with('success', 'Protocol template gekopieerd.');
     }
 
     public function storePhase(Request $request): RedirectResponse
@@ -141,31 +170,10 @@ class ProtocolSettingsController extends Controller
                 ->get()
                 ->each(fn (ProtocolTemplatePhase $phase) => $phase->increment('order'));
 
-            $copy = ProtocolTemplatePhase::query()->create([
-                'protocol_template_id' => $source->protocol_template_id,
+            $copy = $this->copyPhase($source, [
                 'order' => $source->order + 1,
                 'name' => $this->duplicatePhaseName($source),
-                'description' => $source->description,
-                'required' => $source->required,
-                'start_after_previous_phase_weeks' => $source->start_after_previous_phase_weeks,
             ]);
-
-            $weekCopies = [];
-            foreach ($source->weeks as $week) {
-                $weekCopies[$week->id] = $copy->weeks()->create(['number' => $week->number]);
-            }
-
-            foreach ($source->supplements as $supplement) {
-                $supplementCopy = $supplement->replicate();
-                $supplementCopy->protocol_template_phase_id = $copy->id;
-                $supplementCopy->save();
-
-                $supplementCopy->weeks()->attach(
-                    $supplement->weeks
-                        ->map(fn (ProtocolTemplatePhaseWeek $week) => $weekCopies[$week->id]->id)
-                        ->all(),
-                );
-            }
 
             AuditLogger::created($copy);
         });
@@ -403,6 +411,32 @@ class ProtocolSettingsController extends Controller
             ->orderBy('order')
             ->get()
             ->each(fn (ProtocolTemplatePhase $phase, int $index) => $phase->update(['order' => $index + 1]));
+    }
+
+    /** Copy the phase definition and remap its schedule to independent week records. */
+    private function copyPhase(ProtocolTemplatePhase $source, array $overrides): ProtocolTemplatePhase
+    {
+        $copy = $source->replicate()->unsetRelations();
+        $copy->fill($overrides);
+        $copy->save();
+
+        $weekCopies = [];
+        foreach ($source->weeks as $week) {
+            $weekCopies[$week->id] = $copy->weeks()->create(['number' => $week->number]);
+        }
+
+        foreach ($source->supplements as $supplement) {
+            $supplementCopy = $supplement->replicate()->unsetRelations();
+            $supplementCopy->protocol_template_phase_id = $copy->id;
+            $supplementCopy->save();
+            $supplementCopy->weeks()->attach(
+                $supplement->weeks
+                    ->map(fn (ProtocolTemplatePhaseWeek $week) => $weekCopies[$week->id]->id)
+                    ->all(),
+            );
+        }
+
+        return $copy;
     }
 
     private function duplicatePhaseName(ProtocolTemplatePhase $phase): string

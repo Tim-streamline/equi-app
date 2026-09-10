@@ -65,7 +65,7 @@ export default function IntakeSent() {
           <Text
             className="mb-7 max-w-[280px] text-center text-[14px] leading-[20px] text-ink-70"
           >
-            Binnen 3 werkdagen krijg je een notificatie zodra het eerste protocol klaar staat
+            Binnen 5 werkdagen krijg je een notificatie zodra het eerste protocol klaar staat
             in de app.
           </Text>
 
@@ -77,13 +77,13 @@ export default function IntakeSent() {
               state="now"
             />
             <TimelineStep
-              when="binnen 3 werkdagen"
+              when="binnen 5 werkdagen"
               what="Eerste protocol staat klaar in de app"
               state="todo"
             />
             <TimelineStep
               when="vanaf publicatie"
-              what="Dagelijks plan loopt — Shelley volgt mee"
+              what="Dagelijks plan loopt. Shelley volgt mee"
               state="todo"
             />
           </View>

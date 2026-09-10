@@ -7,8 +7,8 @@
         templateDosage,
     } from '$lib/protocolDosage.js';
     import { protocolPhaseRanges, totalProtocolWeeks } from '$lib/protocolPhasePlanning.js';
-    import { Link, useForm } from '@inertiajs/svelte';
-    import { onMount, untrack } from 'svelte';
+    import { Link, router, useForm } from '@inertiajs/svelte';
+    import { onMount, tick, untrack } from 'svelte';
     import { Button, Input, Select, Textarea } from '$lib/components/ui';
     import {
         ArrowLeft,
@@ -50,6 +50,8 @@
     const initialHorses = untrack(() => horses);
     const initialSelectedHorseId = untrack(() => selectedHorseId);
     const isNew = !initialProtocol;
+    let pendingSave = $state(false);
+    let saveError = $state('');
     let nextClientKey = 0;
     const makeClientKey = () => `phase-${Date.now()}-${nextClientKey++}`;
 
@@ -272,7 +274,7 @@
     })));
     const therapistOptions = $derived(therapists.map((therapist) => ({
         value: therapist.id,
-        label: `${therapist.name}${therapist.title ? ` · ${therapist.title}` : ''}`,
+        label: `${therapist.name}${therapist.title ? ` · ${therapist.title}` : ''}${therapist.archived_at ? ' (gearchiveerd)' : ''}`,
     })));
     const protocolTemplateOptions = $derived(protocolTemplates.map((protocolTemplate) => ({
         value: protocolTemplate.id,
@@ -348,7 +350,24 @@
         };
         window.addEventListener('beforeunload', warnBeforeUnload);
 
-        return () => window.removeEventListener('beforeunload', warnBeforeUnload);
+        const removeInvalid = router.on('invalid', (event) => {
+            if (!pendingSave) return;
+            event.preventDefault();
+            saveError = 'Opslaan is niet bevestigd door de server. Je invoer staat nog in dit formulier. Probeer opnieuw.';
+            revealSaveErrors();
+        });
+        const removeException = router.on('exception', (event) => {
+            if (!pendingSave) return;
+            event.preventDefault();
+            saveError = 'Geen verbinding met de server. Opslaan is niet bevestigd. Je invoer staat nog in dit formulier. Probeer opnieuw.';
+            revealSaveErrors();
+        });
+
+        return () => {
+            window.removeEventListener('beforeunload', warnBeforeUnload);
+            removeInvalid();
+            removeException();
+        };
     });
 
     function calculateCurrentWeek(startDate, status, storedCurrentWeek, weeks) {
@@ -587,15 +606,46 @@
         return category.items.filter((advice) => isProtocolAdviceSelected(category, advice.id));
     }
 
-    function save(published = $form.published) {
-        $form.published = published;
-        if (isNew) $form.post('/admin/protocols');
-        else $form.put(`/admin/protocols/${protocol.id}`);
+    function save(published = false) {
+        if (pendingSave || $form.processing) return;
+        pendingSave = true;
+        saveError = '';
+        // Refresh the editor and database IDs on success, but retain input on errors.
+        // Publication is part of the same atomic save, never an optimistic UI change.
+        const options = {
+            preserveState: 'errors',
+            preserveScroll: true,
+            onError: revealSaveErrors,
+            onFinish: () => { pendingSave = false; },
+        };
+        $form.transform((data) => ({ ...data, published }));
+        if (isNew) $form.post('/admin/protocols', options);
+        else $form.put(`/admin/protocols/${protocol.id}`, options);
     }
 
     function submit(event) {
         event.preventDefault();
         save();
+    }
+
+    async function revealSaveErrors() {
+        await tick();
+        document.getElementById('protocol-save-errors')?.scrollIntoView({ block: 'center' });
+    }
+
+    function errorLocation(path) {
+        const [section, index, part, selectionIndex] = path.split('.');
+        if (section === 'phases') {
+            const phase = $form.phases[Number(index)];
+            const supplement = part === 'supplements' ? phase?.supplements[Number(selectionIndex)] : null;
+            return [phase?.title || 'Planning', supplement?.name].filter(Boolean).join(' · ');
+        }
+        return ({
+            horse_id: 'Paard', protocol_template_id: 'Protocoltemplate', title: 'Protocolnaam',
+            therapist_id: 'Behandelaar', started_at: 'Startdatum', status: 'Levenscyclus',
+            analysis: 'Analyse', advice: 'Adviezen', customer_settings: 'Klantweergave',
+            voeding_advies_ids: 'Voeding', management_advies_ids: 'Management', beweging_advies_ids: 'Beweging',
+        })[section] || '';
     }
 
     function errorFor(path) {
@@ -609,7 +659,8 @@
 
 <AdminLayout title={isNew ? 'Nieuw protocol' : 'Protocol bewerken'}>
     <div class="-mx-4 -my-6 min-h-[calc(100vh-4rem)] bg-[#FBF8F3] text-[#1B2A2A] lg:-mx-8">
-        <form onsubmit={submit}>
+        <form onsubmit={submit} novalidate>
+            <fieldset disabled={pendingSave} class="min-w-0 border-0 p-0">
             <header class="sticky top-16 z-20 border-b border-[#1B2A2A]/10 bg-white/95 backdrop-blur">
                 <div class="flex min-h-16 flex-wrap items-center gap-3 px-4 py-3 lg:px-8">
                     <Link href="/admin/protocols" class="inline-flex items-center gap-1.5 text-sm font-semibold text-[#127A79] hover:text-[#0D5C5B]">
@@ -634,11 +685,10 @@
                     <Button type="submit" variant="outline" class="rounded-full" disabled={$form.processing}>
                         <Save class="size-4" /> Opslaan
                     </Button>
-                    {#if !$form.published}
-                        <Button type="button" class="rounded-full bg-[#18BAB0] px-5 hover:bg-[#108A82]" onclick={() => save(true)} disabled={$form.processing}>
-                            <Send class="size-4" /> Publiceren
-                        </Button>
-                    {:else}
+                    <Button type="button" class="rounded-full bg-[#18BAB0] px-5 hover:bg-[#108A82]" onclick={() => save(true)} disabled={$form.processing}>
+                        <Send class="size-4" /> Publiceren
+                    </Button>
+                    {#if $form.published}
                         <Button type="button" variant="outline" class="rounded-full" onclick={() => save(false)} disabled={$form.processing}>
                             Depubliceren
                         </Button>
@@ -664,10 +714,20 @@
                 </nav>
             </header>
 
-            {#if Object.keys($form.errors).length}
+            {#if saveError || Object.keys($form.errors).length}
                 <div class="mx-auto mt-5 max-w-[1180px] px-4 lg:px-8">
-                    <div class="flex items-start gap-3 rounded-2xl border border-destructive/25 bg-destructive/8 px-4 py-3 text-sm text-destructive">
-                        <CircleAlert class="mt-0.5 size-4 shrink-0" /> Controleer de gemarkeerde velden voordat je verdergaat.
+                    <div id="protocol-save-errors" role="alert" class="flex items-start gap-3 rounded-2xl border border-destructive/25 bg-destructive/8 px-4 py-3 text-sm text-destructive">
+                        <CircleAlert class="mt-0.5 size-4 shrink-0" />
+                        <div>
+                            <p class="font-semibold">{saveError || 'Opslaan is niet gelukt. Controleer de volgende meldingen:'}</p>
+                            {#if Object.keys($form.errors).length}
+                                <ul class="mt-2 list-disc space-y-1 pl-5">
+                                    {#each Object.entries($form.errors) as [field, message]}
+                                        <li>{#if errorLocation(field)}<strong>{errorLocation(field)}: </strong>{/if}{message}</li>
+                                    {/each}
+                                </ul>
+                            {/if}
+                        </div>
                     </div>
                 </div>
             {/if}
@@ -1143,6 +1203,7 @@
                     {/if}
                 </main>
             </div>
+            </fieldset>
         </form>
 
         {#if overviewOpen}

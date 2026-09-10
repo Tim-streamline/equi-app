@@ -1,4 +1,5 @@
 <script>
+    import LibraryThumbnail from '$lib/components/LibraryThumbnail.svelte';
     import AdminLayout from '../../Layouts/AdminLayout.svelte';
     import PageHeader from '$lib/components/PageHeader.svelte';
     import Pagination from '$lib/components/Pagination.svelte';
@@ -23,7 +24,7 @@
 </script>
 
 <AdminLayout title="Library">
-    <PageHeader title="Library CMS" description="Articles, videos, courses and programs">
+    <PageHeader title="Library CMS" description="Articles, videos, audio, podcasts, courses and programs">
         {#snippet actions()}<Button href="/admin/library/create"><Plus class="size-4" /> New item</Button>{/snippet}
     </PageHeader>
 
@@ -42,7 +43,7 @@
                 </div>
                 <Select class="w-40" bind:value={format} onchange={apply} options={[
                     { value: '', label: 'All formats' }, { value: 'article', label: 'Article' },
-                    { value: 'video', label: 'Video' }, { value: 'course', label: 'Course' }, { value: 'program', label: 'Program' },
+                    { value: 'video', label: 'Video' }, { value: 'audio', label: 'Audio' }, { value: 'podcast', label: 'Podcast' }, { value: 'course', label: 'Course' }, { value: 'program', label: 'Program' },
                 ]} />
                 <Select class="w-40" bind:value={gate} onchange={apply} options={[
                     { value: '', label: 'All' }, { value: 'featured', label: 'Featured' },
@@ -63,7 +64,7 @@
                 <TableBody>
                     {#each items.data as i (i.id)}
                         <TableRow>
-                            <TableCell><Link href={`/admin/library/${i.id}/edit`} class="font-medium hover:text-primary">{i.title}</Link></TableCell>
+                            <TableCell><Link href={`/admin/library/${i.id}/edit`} class="flex items-center gap-3 font-medium hover:text-primary"><LibraryThumbnail src={i.hero_image_url} format={i.format} class="w-20 shrink-0" />{i.title}</Link></TableCell>
                             <TableCell><Badge variant="secondary">{i.format}</Badge></TableCell>
                             <TableCell class="text-muted-foreground">{i.author ?? '—'}</TableCell>
                             <TableCell>

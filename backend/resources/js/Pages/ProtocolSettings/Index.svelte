@@ -7,10 +7,11 @@
     import { Badge, Button, Input, Select, Textarea } from '$lib/components/ui';
     import { ArrowDown, ArrowUp, CalendarDays, Check, Copy, Layers3, Pencil, Plus, Trash2, X } from '@lucide/svelte';
     import { fade } from 'svelte/transition';
+    import { untrack } from 'svelte';
 
-    let { protocolTemplates } = $props();
+    let { protocolTemplates, selectedTemplateId: initialTemplateId = null } = $props();
 
-    let selectedTemplateId = $state('');
+    let selectedTemplateId = $state(untrack(() => initialTemplateId) ?? '');
     let templateModalOpen = $state(false);
     let phaseModalOpen = $state(false);
     let supplementModalOpen = $state(false);
@@ -22,6 +23,7 @@
     let deletionProcessing = $state(false);
     let phaseOrderBusy = $state(false);
     let duplicatingPhaseId = $state(null);
+    let duplicatingTemplateId = $state(null);
     let phaseStartDelayEnabled = $state(false);
     let planningCellsBusy = $state([]);
 
@@ -90,6 +92,19 @@
         } else {
             $templateForm.post('/admin/protocol-settings/templates', options);
         }
+    }
+
+    function duplicateTemplate(template) {
+        if (duplicatingTemplateId !== null) return;
+
+        duplicatingTemplateId = template.id;
+        router.post(`/admin/protocol-settings/templates/${template.id}/duplicate`, {}, {
+            preserveScroll: true,
+            onSuccess: (page) => {
+                selectedTemplateId = page.props.selectedTemplateId ?? template.id;
+            },
+            onFinish: () => (duplicatingTemplateId = null),
+        });
     }
 
     function removeTemplate(template) {
@@ -387,9 +402,17 @@
                                 <h3 class="mt-1 text-xl font-bold tracking-tight">{selectedTemplate.name}</h3>
                                 <p class="mt-1 text-sm text-muted-foreground">{selectedTemplate.phases.length} configured {selectedTemplate.phases.length === 1 ? 'phase' : 'phases'}</p>
                             </div>
-                            <div class="flex items-center gap-2">
+                            <div class="flex flex-wrap items-center gap-2">
                                 <Button variant="outline" size="sm" onclick={() => editTemplate(selectedTemplate)}>
                                     <Pencil class="size-4" /> Edit template
+                                </Button>
+                                <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onclick={() => duplicateTemplate(selectedTemplate)}
+                                    disabled={duplicatingTemplateId !== null}
+                                >
+                                    <Copy class="size-4" /> {duplicatingTemplateId === selectedTemplate.id ? 'Kopiëren...' : 'Template kopiëren'}
                                 </Button>
                                 <Button variant="ghost" size="icon" onclick={() => removeTemplate(selectedTemplate)} aria-label="Remove protocol template" title="Remove protocol template">
                                     <Trash2 class="size-4 text-destructive" />

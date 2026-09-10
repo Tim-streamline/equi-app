@@ -60,6 +60,8 @@ Route::middleware('auth:admin')->group(function () {
     });
 
     Route::controller(HorseController::class)->prefix('horses')->as('horses.')->group(function () {
+        Route::get('{horse}/deletion-preview', 'deletionPreview')->name('deletion-preview');
+        Route::delete('{horse}', 'destroy')->name('destroy');
         Route::get('/', 'index')->name('index');
         Route::get('{horse}', 'show')->name('show');
         Route::put('{horse}', 'update')->name('update');
@@ -69,6 +71,8 @@ Route::middleware('auth:admin')->group(function () {
     });
 
     // ---- Therapists ------------------------------------------------------
+    Route::post('therapists/{therapist}/archive', [TherapistController::class, 'archive'])->name('therapists.archive')->middleware('admin.role:admin,therapist_admin');
+    Route::post('therapists/{therapist}/restore', [TherapistController::class, 'restore'])->name('therapists.restore')->middleware('admin.role:admin,therapist_admin');
     Route::resource('therapists', TherapistController::class)
         ->except(['create', 'show'])
         ->middleware('admin.role:admin,therapist_admin');
@@ -123,6 +127,7 @@ Route::middleware('auth:admin')->group(function () {
     Route::controller(IntakeBookingController::class)->prefix('bookings')->as('bookings.')->group(function () {
         Route::get('/', 'index')->name('index');
         Route::get('{booking}', 'show')->name('show');
+        Route::delete('{booking}', 'destroy')->name('destroy');
         Route::post('{booking}/status', 'updateStatus')->name('status');
         Route::put('{booking}', 'update')->name('update');
     });
@@ -172,6 +177,7 @@ Route::middleware('auth:admin')->group(function () {
         Route::controller(ProtocolSettingsController::class)->prefix('protocol-settings')->as('protocol-settings.')->group(function () {
             Route::get('/', 'index')->name('index');
             Route::post('templates', 'storeTemplate')->name('templates.store');
+            Route::post('templates/{protocolTemplate}/duplicate', 'duplicateTemplate')->name('templates.duplicate');
             Route::put('templates/{protocolTemplate}', 'updateTemplate')->name('templates.update');
             Route::delete('templates/{protocolTemplate}', 'destroyTemplate')->name('templates.destroy');
             Route::post('phases', 'storePhase')->name('phases.store');

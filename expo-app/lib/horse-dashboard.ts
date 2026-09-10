@@ -4,6 +4,7 @@ export type LibraryRecommendation = {
   format: string;
   description?: string;
   durationLabel?: string;
+  heroImageUrl?: string | null;
   creditCost: number;
   unlocked: boolean;
   phaseContext?: string;

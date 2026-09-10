@@ -27,6 +27,7 @@ use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
 use Inertia\Response;
+use Throwable;
 
 class ProtocolController extends Controller
 {
@@ -67,13 +68,19 @@ class ProtocolController extends Controller
         $protocolTemplate = ProtocolTemplate::query()->findOrFail($request->validated('protocol_template_id'));
         $data = $this->withRequiredPhases($request->validated());
 
-        $protocol = DB::transaction(function () use ($data, $protocolTemplate) {
-            $protocol = Protocol::query()->create($this->protocolAttributes($data, $protocolTemplate));
-            $this->syncStructure($protocol, $data);
-            AuditLogger::created($protocol);
+        try {
+            $protocol = DB::transaction(function () use ($data, $protocolTemplate) {
+                $protocol = Protocol::query()->create($this->protocolAttributes($data, $protocolTemplate));
+                $this->syncStructure($protocol, $data);
+                AuditLogger::created($protocol);
 
-            return $protocol;
-        });
+                return $protocol;
+            });
+        } catch (Throwable $exception) {
+            report($exception);
+
+            return back()->withErrors(['save' => 'Het protocol kon niet worden opgeslagen. Er zijn geen wijzigingen bewaard. Probeer opnieuw.']);
+        }
 
         return to_route('admin.protocols.edit', $protocol)
             ->with('success', 'Protocol aangemaakt.');
@@ -86,7 +93,7 @@ class ProtocolController extends Controller
         return Inertia::render('Protocols/Edit', [
             'protocol' => $protocol,
             'weeklyUpdates' => DB::table('protocol_weekly_updates')->where('protocol_id', $protocol->id)->orderByDesc('week_number')->get(),
-            ...$this->editorOptions($protocol->horse_id),
+            ...$this->editorOptions($protocol->horse_id, $protocol->therapist_id),
         ]);
     }
 
@@ -94,16 +101,22 @@ class ProtocolController extends Controller
     {
         $data = $request->validated();
 
-        DB::transaction(function () use ($data, $protocol) {
-            $attributes = $this->protocolAttributes($data);
-            if ($data['published'] && $protocol->published_at) {
-                $attributes['published_at'] = $protocol->published_at;
-            }
-            $before = $protocol->only(array_keys($attributes));
-            $protocol->update($attributes);
-            $this->syncStructure($protocol, $data);
-            AuditLogger::updated($protocol, $before);
-        });
+        try {
+            DB::transaction(function () use ($data, $protocol) {
+                $attributes = $this->protocolAttributes($data);
+                if ($data['published'] && $protocol->published_at) {
+                    $attributes['published_at'] = $protocol->published_at;
+                }
+                $before = $protocol->only(array_keys($attributes));
+                $protocol->update($attributes);
+                $this->syncStructure($protocol, $data);
+                AuditLogger::updated($protocol, $before);
+            });
+        } catch (Throwable $exception) {
+            report($exception);
+
+            return back()->withErrors(['save' => 'Het protocol kon niet worden opgeslagen. Er zijn geen wijzigingen bewaard. Probeer opnieuw.']);
+        }
 
         return to_route('admin.protocols.edit', $protocol)
             ->with('success', 'Protocol opgeslagen.');
@@ -137,7 +150,7 @@ class ProtocolController extends Controller
     }
 
     /** @return array<string, mixed> */
-    private function editorOptions(?string $selectedHorseId = null): array
+    private function editorOptions(?string $selectedHorseId = null, ?string $currentTherapistId = null): array
     {
         return [
             'selectedHorseId' => $selectedHorseId ?: null,
@@ -152,9 +165,9 @@ class ProtocolController extends Controller
                 ->with('owner:id,name,email')
                 ->orderBy('name')
                 ->get(['id', 'owner_id', 'name', 'breed', 'age', 'sex', 'weight_kg', 'status']),
-            'therapists' => Therapist::query()
+            'therapists' => Therapist::availableFor($currentTherapistId)
                 ->orderBy('name')
-                ->get(['id', 'name', 'title']),
+                ->get(['id', 'name', 'title', 'archived_at']),
             'voedingAdviezen' => VoedingAdvies::query()->orderBy('title')->get(),
             'managementAdviezen' => ManagementAdvies::query()->orderBy('title')->get(),
             'bewegingAdviezen' => BewegingAdvies::query()->orderBy('title')->get(),

@@ -1,3 +1,4 @@
+import { LibraryThumbnail } from "@/components/library/LibraryThumbnail";
 import { useState } from "react";
 import {
   View,
@@ -12,11 +13,9 @@ import {
 import { router } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
 import {
-  BookOpen,
   ChevronDown,
   ChevronRight,
   Sparkles,
-  Play,
   UserRound,
 } from "lucide-react-native";
 import { useTabBarPadding } from "@/hooks/useTabBarPadding";
@@ -167,11 +166,7 @@ export default function HomeScreen() {
                   onPress={() => router.push(libraryPath(item) as any)}
                   className="flex-1 rounded-[20px] bg-white p-4"
                 >
-                  {item.format === "article" ? (
-                    <BookOpen size={19} color="#127A79" />
-                  ) : (
-                    <Play size={19} color="#127A79" />
-                  )}
+                  <LibraryThumbnail uri={item.heroImageUrl} format={item.format} />
                   <Text className="mb-1 mt-3 font-semi text-[14px] leading-[19px] text-ink">
                     {item.title}
                   </Text>

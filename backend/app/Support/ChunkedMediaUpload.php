@@ -215,6 +215,11 @@ class ChunkedMediaUpload
         $mime = (new \finfo(FILEINFO_MIME_TYPE))->file($source) ?: 'application/octet-stream';
         $type = $this->detectType($mime);
 
+        // JFIF is JPEG; use .jpg so public storage serves the image consistently.
+        if ($mime === 'image/jpeg' && $extension === 'jfif') {
+            $extension = 'jpg';
+        }
+
         if (! $type || ! in_array($extension, config("media.extensions.{$type}"), true)) {
             throw ValidationException::withMessages(['file' => 'The assembled file type is not supported.']);
         }
@@ -253,6 +258,8 @@ class ChunkedMediaUpload
             File::delete($destination);
             throw $exception;
         }
+
+        app(\App\Support\LibraryThumbnail::class)->generate($asset);
 
         AuditLogger::log('created', $asset, after: $asset->getAttributes(), label: $asset->original_name);
 

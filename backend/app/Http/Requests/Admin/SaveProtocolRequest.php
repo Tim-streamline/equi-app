@@ -5,6 +5,7 @@ namespace App\Http\Requests\Admin;
 use App\Models\ProtocolPhaseSupplement;
 use App\Models\ProtocolTemplatePhase;
 use App\Models\Supplement;
+use App\Models\Therapist;
 use App\Rules\ShortProtocolText;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Validator;
@@ -24,7 +25,7 @@ class SaveProtocolRequest extends FormRequest
         return [
             'horse_id' => ['required', 'uuid', 'exists:horses,id'],
             'protocol_template_id' => ['required', 'uuid', 'exists:protocol_templates,id'],
-            'therapist_id' => ['nullable', 'uuid', 'exists:therapists,id'],
+            'therapist_id' => ['nullable', 'uuid', Therapist::assignmentRule($this->route('protocol')?->therapist_id)],
             'title' => ['required', 'string', 'max:255'],
             'started_at' => ['nullable', 'date'],
             'status' => ['required', 'in:active,paused,completed'],

@@ -114,7 +114,7 @@ class HorseSeeder extends Seeder
 
         $timeline = [
             ['vandaag', 'Brandnetel toegevoegd aan protocol (mei-seizoenstip)', true, 'protocol_change'],
-            ['3 dagen geleden', 'Foto van mest geüpload — Score B+', false, 'observation'],
+            ['3 dagen geleden', 'Foto van mest geüpload - Score B+', false, 'observation'],
             ['2 weken geleden', 'Intake met Shelley · jeukklachten + spijsvertering', false, 'intake'],
             ['3 weken geleden', 'Nova toegevoegd aan EquiNova', false, 'horse_added'],
         ];
@@ -261,7 +261,7 @@ class HorseSeeder extends Seeder
             $state = $currentWeek > $weekEnd ? 'done' : ($currentWeek >= $weekCursor ? 'active' : 'upcoming');
             $phase = ProtocolPhase::create([
                 'protocol_id' => $protocol->id, 'protocol_template_phase_id' => $phaseDefinitions[$i]->id, 'order' => $i,
-                'title' => 'Fase '.($i + 1).' — '.fake()->randomElement(['Darmen', 'Lever', 'Huid', 'Hoeven']),
+                'title' => 'Fase '.($i + 1).' - '.fake()->randomElement(['Darmen', 'Lever', 'Huid', 'Hoeven']),
                 'description' => $phaseDefinitions[$i]->description,
                 'required' => $phaseDefinitions[$i]->required,
                 'state' => $state,

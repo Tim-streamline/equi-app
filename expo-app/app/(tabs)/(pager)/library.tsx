@@ -1,8 +1,9 @@
 import { useEffect, useMemo, useState } from 'react';
-import { View, Text, ScrollView, Pressable, TextInput, Image } from 'react-native';
+import { View, Text, ScrollView, Pressable, TextInput } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Search } from 'lucide-react-native';
+import { LibraryThumbnail } from '@/components/library/LibraryThumbnail';
 import { SectionTitle } from '@/components/ui/SectionTitle';
 import { Chip } from '@/components/ui/Chip';
 import { useTabBarPadding } from '@/hooks/useTabBarPadding';
@@ -94,7 +95,7 @@ export default function LibraryScreen() {
           </ScrollView>
 
           <SectionTitle>Voor jou · op basis van protocol</SectionTitle>
-          <View className="px-4 gap-2">
+          <View className="flex-row flex-wrap justify-between gap-y-3 px-4">
             {filteredList.map((a: any) => (
               <Pressable
                 key={a.id}
@@ -104,18 +105,11 @@ export default function LibraryScreen() {
                     params: { id: a.id },
                   } as any)
                 }
-                className="flex-row gap-3 rounded-2xl border border-ink-8 bg-white p-2.5"
+                style={{ width: '48.5%' }}
+                className="overflow-hidden rounded-2xl border border-ink-8 bg-white p-2"
               >
-                <View
-                  className="overflow-hidden rounded-xl"
-                  style={{ width: 64, height: 64, backgroundColor: '#0D5C5B', alignItems: 'center', justifyContent: 'center' }}
-                >
-                  <Image
-                    source={require('@/assets/images/logo-horse-white.png')}
-                    style={{ width: 42, height: 42, opacity: 0.5, resizeMode: 'contain' }}
-                  />
-                </View>
-                <View className="flex-1 justify-center">
+                <LibraryThumbnail uri={a.heroImageUrl} format={a.format} />
+                <View className="px-1 pb-1 pt-2">
                   <Text className="font-semi text-ink text-[14px]" numberOfLines={2}>
                     {a.title}
                   </Text>

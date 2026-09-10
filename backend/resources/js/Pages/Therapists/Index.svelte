@@ -1,28 +1,65 @@
 <script>
     import AdminLayout from '../../Layouts/AdminLayout.svelte';
     import PageHeader from '$lib/components/PageHeader.svelte';
+    import { onMount } from 'svelte';
+    import ArchiveConfirmation from '$lib/components/ArchiveConfirmation.svelte';
     import Modal from '$lib/components/Modal.svelte';
     import Field from '$lib/components/Field.svelte';
     import { router, useForm } from '@inertiajs/svelte';
     import { Card, CardContent, Button, Input, Textarea, Badge } from '$lib/components/ui';
-    import { Plus, Pencil, Trash2, BadgeCheck } from '@lucide/svelte';
+    import { Plus, Pencil, Archive, RotateCcw, BadgeCheck } from '@lucide/svelte';
 
-    let { therapists } = $props();
+    let { therapists, archived = false, counts } = $props();
 
     let open = $state(false);
     let editing = $state(null);
-    const form = useForm({ name: '', title: '', bio: '', avatar_url: '', avatar_initial: '', avatar_color: '', verified: false });
+    const emptyTherapist = () => ({ name: '', title: '', bio: '', avatar_url: '', avatar_initial: '', avatar_color: '', verified: false });
+    const form = useForm(emptyTherapist());
+    const archiveForm = useForm({});
+    let archiveOpen = $state(false);
+    let archiveTarget = $state(null);
+    let restoring = $state(false);
+    let archivePending = $state(false);
+
+    function confirmArchive(therapist, restore = false) {
+        archiveTarget = therapist;
+        restoring = restore;
+        $archiveForm.clearErrors();
+        archiveOpen = true;
+    }
+    function archive() {
+        if (archivePending || !archiveTarget) return;
+        archivePending = true;
+        $archiveForm.post(`/admin/therapists/${archiveTarget.id}/${restoring ? 'restore' : 'archive'}`, {
+            preserveScroll: true,
+            onSuccess: () => (archiveOpen = false),
+            onFinish: () => (archivePending = false),
+        });
+    }
+    onMount(() => {
+        const handleFailure = (event) => {
+            if (!archivePending) return;
+            event.preventDefault();
+            $archiveForm.setError('archive', 'De actie kon niet worden bevestigd. Controleer de verbinding en probeer opnieuw.');
+            archivePending = false;
+        };
+        const removeInvalid = router.on('invalid', handleFailure);
+        const removeException = router.on('exception', handleFailure);
+        return () => { removeInvalid(); removeException(); };
+    });
 
     function create() {
         editing = null;
-        form.reset();
-        form.clearErrors();
+        $form.defaults(emptyTherapist());
+        $form.reset();
+        $form.clearErrors();
         open = true;
     }
     function edit(t) {
         editing = t;
-        form.defaults({ ...t });
-        form.reset();
+        $form.defaults(Object.fromEntries(Object.keys(emptyTherapist()).map((key) => [key, t[key] ?? emptyTherapist()[key]])));
+        $form.clearErrors();
+        $form.reset();
         open = true;
     }
     function submit(e) {
@@ -31,16 +68,18 @@
         if (editing) $form.put(`/admin/therapists/${editing.id}`, opts);
         else $form.post('/admin/therapists', opts);
     }
-    function remove(t) {
-        if (confirm(`Remove ${t.name}?`)) router.delete(`/admin/therapists/${t.id}`);
-    }
 </script>
 
 <AdminLayout title="Therapists">
-    <PageHeader title="Therapists & experts" description="Authors of protocols, content and expert replies">
+    <PageHeader title="Therapists & Authors" description="Authors of protocols, content and expert replies">
         {#snippet actions()}<Button onclick={create}><Plus class="size-4" /> New therapist</Button>{/snippet}
     </PageHeader>
 
+    <div class="mb-5 flex gap-2" aria-label="Archief filter">
+        <Button variant={archived ? 'outline' : 'default'} onclick={() => router.get('/admin/therapists')}>Actief ({counts.active})</Button>
+        <Button variant={archived ? 'default' : 'outline'} onclick={() => router.get('/admin/therapists', { archived: 1 })}>Gearchiveerd ({counts.archived})</Button>
+    </div>
+    {#if !archiveOpen && $archiveForm.errors.archive}<p role="alert" class="mb-4 text-sm text-destructive">{$archiveForm.errors.archive}</p>{/if}
     <div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
         {#each therapists as t (t.id)}
             <Card>
@@ -60,17 +99,27 @@
                     {#if t.bio}<p class="mt-3 line-clamp-2 text-sm text-muted-foreground">{t.bio}</p>{/if}
                     <div class="mt-3 flex flex-wrap gap-2 text-xs">
                         <Badge variant="muted">{t.active_protocols} active protocols</Badge>
-                        <Badge variant="muted">{t.library_items} articles</Badge>
+                        <Badge variant="muted">{t.library_items} contentitems</Badge>
+                        {#if t.archived_at}<Badge variant="secondary">Gearchiveerd</Badge>{/if}
                         <Badge variant="muted">{t.bookings_pending} bookings</Badge>
                     </div>
                     <div class="mt-4 flex gap-2">
                         <Button size="sm" variant="outline" onclick={() => edit(t)}><Pencil class="size-4" /> Edit</Button>
-                        <Button size="sm" variant="ghost" onclick={() => remove(t)}><Trash2 class="size-4 text-destructive" /></Button>
+                        {#if t.archived_at}
+                            <Button size="sm" variant="outline" aria-label={`Herstellen ${t.name}`} onclick={() => confirmArchive(t, true)}><RotateCcw class="size-4" /> Herstellen</Button>
+                        {:else}
+                            <Button size="sm" variant="outline" aria-label={`Archiveren ${t.name}`} onclick={() => confirmArchive(t)}><Archive class="size-4" /> Archiveren</Button>
+                        {/if}
                     </div>
                 </CardContent>
             </Card>
+        {:else}
+            <p class="py-8 text-sm text-muted-foreground">{archived ? 'Geen gearchiveerde therapists of authors.' : 'Geen actieve therapists of authors.'}</p>
         {/each}
     </div>
+
+    <ArchiveConfirmation bind:open={archiveOpen} {restoring} name={archiveTarget?.name ?? ''}
+        busy={archivePending} error={$archiveForm.errors.archive ?? ''} onconfirm={archive} />
 
     <Modal bind:open title={editing ? 'Edit therapist' : 'New therapist'}>
         <form id="t-form" onsubmit={submit} class="space-y-4">

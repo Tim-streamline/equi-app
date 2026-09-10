@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Models\AdminUser;
+use App\Models\AuditLog;
 use App\Models\Horse;
 use App\Models\Protocol;
 use App\Models\ProtocolTemplate;
@@ -12,6 +13,7 @@ use App\Models\SupplementWeek;
 use App\Models\Therapist;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 use Inertia\Testing\AssertableInertia as Assert;
 use Tests\TestCase;
@@ -692,6 +694,99 @@ class AdminProtocolManagementTest extends TestCase
         $payload['analysis'] += ['summary' => 'Een korte persoonlijke samenvatting.', 'focus_points' => [], 'observations' => []];
         $this->actingAs($this->admin, 'admin')->post('/admin/protocols', $payload)
             ->assertSessionHasErrors(['analysis.focus_points', 'analysis.observations']);
+    }
+
+    public function test_failed_new_save_rolls_back_every_table_and_returns_a_clear_error(): void
+    {
+        AuditLog::creating(function (): void {
+            throw new \RuntimeException('Simulated failure after saving the complete protocol');
+        });
+
+        try {
+            $this->actingAs($this->admin, 'admin')->from('/admin/protocols/create')
+                ->post('/admin/protocols', [...$this->payload(), 'published' => true])
+                ->assertRedirect('/admin/protocols/create')->assertSessionHasErrors('save');
+        } finally {
+            AuditLog::flushEventListeners();
+        }
+
+        foreach (['protocols', 'protocol_phases', 'protocol_phase_weeks', 'protocol_phase_supplements', 'protocol_phase_supplement_weeks', 'protocol_analyses', 'protocol_advice', 'audit_logs'] as $table) {
+            $this->assertDatabaseCount($table, 0);
+        }
+    }
+
+    public function test_failed_update_preserves_the_complete_published_protocol(): void
+    {
+        $this->actingAs($this->admin, 'admin')->post('/admin/protocols', [...$this->payload(), 'published' => true])
+            ->assertSessionHasNoErrors();
+        $protocol = Protocol::query()->firstOrFail();
+        $payload = $this->storedPayload($protocol);
+        $tables = ['protocols', 'protocol_phases', 'protocol_phase_weeks', 'protocol_phase_supplements', 'protocol_phase_supplement_weeks', 'protocol_analyses', 'protocol_advice', 'audit_logs'];
+        $before = collect($tables)->mapWithKeys(fn ($table) => [$table => DB::table($table)->orderBy('id')->get()->toJson()]);
+        $payload['title'] = 'Must roll back';
+        $payload['published'] = false;
+        $payload['phases'][0]['week_count'] = 5;
+        $payload['phases'][0]['supplements'][0]['dosage'] = 'Changed dosage';
+        AuditLog::creating(function (): void {
+            throw new \RuntimeException('Simulated failure after saving the complete protocol');
+        });
+
+        try {
+            $this->from(route('admin.protocols.edit', $protocol))->put('/admin/protocols/'.$protocol->id, $payload)
+                ->assertRedirect(route('admin.protocols.edit', $protocol))->assertSessionHasErrors('save');
+        } finally {
+            AuditLog::flushEventListeners();
+        }
+
+        foreach ($tables as $table) {
+            $this->assertSame($before[$table], DB::table($table)->orderBy('id')->get()->toJson(), $table);
+        }
+    }
+
+    public function test_new_and_existing_protocol_save_publish_and_reopen_with_current_content(): void
+    {
+        $this->actingAs($this->admin, 'admin')->post('/admin/protocols', $this->payload())->assertSessionHasNoErrors();
+        $protocol = Protocol::query()->firstOrFail();
+        $this->assertNull($protocol->published_at);
+
+        foreach ([true, false, true, true] as $index => $published) {
+            $payload = $this->storedPayload($protocol);
+            $payload['published'] = $published;
+            $payload['title'] = "Saved revision {$index}";
+            $payload['analysis']['cause'] = "Analysis revision {$index}";
+            $payload['phases'][0]['supplements'][0]['dosage'] = "Dose {$index}";
+            $payload['phases'][0]['week_count'] = 5 + $index;
+            $payload['customer_settings'] = ['target_weight_kg' => 510 + $index];
+            $this->put('/admin/protocols/'.$protocol->id, $payload)->assertSessionHasNoErrors()->assertRedirect();
+            $protocol->refresh();
+            $this->assertSame($published, $protocol->published_at !== null);
+            $this->get(route('admin.protocols.edit', $protocol))->assertInertia(fn (Assert $page) => $page
+                ->where('protocol.id', $protocol->id)
+                ->where('protocol.title', "Saved revision {$index}")
+                ->where('protocol.analysis.cause', "Analysis revision {$index}")
+                ->where('protocol.phases.0.supplements.0.dosage', "Dose {$index}")
+                ->has('protocol.phases.0.weeks', 5 + $index)
+                ->where('protocol.customer_settings.target_weight_kg', 510 + $index));
+            $this->assertDatabaseCount('protocols', 1);
+            $this->assertDatabaseCount('protocol_phases', 3);
+        }
+    }
+
+    private function storedPayload(Protocol $protocol): array
+    {
+        $protocol->load('phases.supplements', 'analysis.advice');
+        $payload = $this->payload();
+        foreach ($protocol->phases as $index => $phase) {
+            $payload['phases'][$index]['id'] = $phase->id;
+            foreach ($phase->supplements as $selectionIndex => $selection) {
+                $payload['phases'][$index]['supplements'][$selectionIndex]['id'] = $selection->id;
+            }
+        }
+        foreach ($protocol->analysis->advice as $index => $advice) {
+            $payload['advice'][$index]['id'] = $advice->id;
+        }
+
+        return $payload;
     }
 
     /**

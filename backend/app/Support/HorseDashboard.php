@@ -29,7 +29,7 @@ class HorseDashboard
         $items = LibraryItem::query()->whereNotNull('published_at')->where('published_at', '<=', $now)->with('categories')->get();
         $unlocked = DB::table('library_unlocks')->where('user_id', $user->id)->pluck('item_id')->all();
         $itemData = fn ($item) => [
-            'id' => $item->id, 'title' => $item->title, 'format' => $item->format,
+            'id' => $item->id, 'title' => $item->title, 'format' => $item->format, 'heroImageUrl' => $item->hero_image_url,
             'description' => Str::limit(strip_tags($item->description ?? ''), 100), 'durationLabel' => $item->duration_label,
             'creditCost' => (int) $item->credit_cost, 'unlocked' => in_array($item->id, $unlocked, true),
         ];

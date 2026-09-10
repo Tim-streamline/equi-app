@@ -1,11 +1,12 @@
 <script>
+    import LibraryThumbnail from './LibraryThumbnail.svelte';
     import { onMount } from 'svelte';
     import { create } from 'filepond';
     import 'filepond/dist/filepond.min.css';
     import { Button } from '$lib/components/ui';
     import { Image, Film, Music, Trash2, Plus } from '@lucide/svelte';
 
-    let { libraryItemId = null, initial = [], oninsert } = $props();
+    let { libraryItemId = null, initial = [], oninsert, onuploaded, onremoved, busy = $bindable(false) } = $props();
 
     let media = $state([]);
     let error = $state('');
@@ -21,7 +22,7 @@
 
     function uploadRules() {
         return [
-            { prefix: 'image/', extensions: ['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg'], label: 'Images', maxBytes: 10 * megabyte, maxLabel: '10 MB' },
+            { prefix: 'image/', extensions: ['jpg', 'jpeg', 'jfif', 'png', 'gif', 'webp', 'svg'], label: 'Images', maxBytes: 10 * megabyte, maxLabel: '10 MB' },
             { prefix: 'audio/', extensions: ['mp3', 'wav', 'ogg', 'm4a', 'aac'], label: 'Audio files', maxBytes: 30 * megabyte, maxLabel: '30 MB' },
             { prefix: 'video/', extensions: ['mp4', 'webm', 'mov', 'm4v'], label: 'Videos', maxBytes: configuredVideoLimit(), maxLabel: humanSize(configuredVideoLimit()) },
         ];
@@ -76,6 +77,7 @@
 
             const { asset } = await response.json();
             media = [asset, ...media];
+            onuploaded?.(asset);
             // FilePond normally calls `revert` when a completed chunked upload
             // is removed from its queue. Mark this transfer as accepted first
             // so clearing the queue does not delete the permanent media asset.
@@ -145,6 +147,7 @@
                 },
                 revert: revertUpload,
             },
+            onupdatefiles: (files) => { busy = files.length > 0; },
             onprocessfile: (processError, file) => {
                 if (processError) {
                     error = processError.body || processError.main || 'Upload failed.';
@@ -163,7 +166,10 @@
             method: 'DELETE',
             headers: { 'X-CSRF-TOKEN': csrf(), Accept: 'application/json' },
         });
-        if (response.ok) media = media.filter((item) => item.id !== asset.id);
+        if (response.ok) {
+            media = media.filter((item) => item.id !== asset.id);
+            onremoved?.(asset);
+        } else error = serverError(await response.text());
     }
 </script>
 
@@ -180,9 +186,11 @@
             {#each media as asset (asset.id)}
                 {@const Icon = icons[asset.type]}
                 <div class="group relative overflow-hidden rounded-md border">
-                    <div class="flex h-24 items-center justify-center bg-muted">
+                    <div class="flex aspect-[4/3] items-center justify-center bg-muted">
                         {#if asset.type === 'image'}
                             <img src={asset.url} alt={asset.original_name} class="h-full w-full object-cover" />
+                        {:else if asset.type === 'video'}
+                            <LibraryThumbnail src={asset.thumbnail_url} format="video" class="w-full rounded-none" />
                         {:else}
                             <Icon class="size-8 text-muted-foreground" />
                         {/if}

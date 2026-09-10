@@ -16,6 +16,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
     'description',
     'body',
     'hero_image_url',
+    'thumbnail_mode',
     'duration_label',
     'duration_sec',
     'author_therapist_id',
@@ -29,6 +30,8 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 class LibraryItem extends Model
 {
     use HasUuids;
+
+    protected $attributes = ['thumbnail_mode' => 'auto'];
 
     protected function casts(): array
     {

@@ -10,7 +10,7 @@ class ProductSeeder extends Seeder
     public function run(): void
     {
         $catalog = [
-            ['Pavo', 'Pavo Care 4 Life — supplement', 'supplement'],
+            ['Pavo', 'Pavo Care 4 Life - supplement', 'supplement'],
             ['Pavo', 'Pavo SpeediBeet', 'feed'],
             ['Pavo', 'Pavo Slobber Mash', 'feed'],
             ['Pavo', 'Pavo Vital', 'supplement'],

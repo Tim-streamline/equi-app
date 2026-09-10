@@ -7,7 +7,7 @@ export const APP_STRINGS: Record<string, string | number | boolean> = {
   schemaVersion: 1,
   currentMonthLabel: 'Mei 2026',
   currentMonthDay: 10,
-  todayLabel: 'Vandaag — 10 mei',
+  todayLabel: 'Vandaag · 10 mei',
   detailTodayLabel: 'Vandaag · 16 mei',
   scannerHintText: 'Richt de camera op een verpakking, ingrediëntenlijst of voederzak.',
   novaIntroText: 'Hi Marit! Wat speelt er bij Nova?',

@@ -38,7 +38,7 @@ export default function ConnectScreen() {
             Plan een gratis intake met {(therapist.name as string) ?? 'Shelley'}.
           </Text>
           <Text className="text-white/85" style={{ fontSize: 14, lineHeight: 22 }}>
-            {intake?.durationMinutes ?? 30} minuten — we bekijken samen of mijn aanpak past bij jou en je paard. Zonder verplichting.
+            {intake?.durationMinutes ?? 30} minuten. We bekijken samen of mijn aanpak past bij jou en je paard. Zonder verplichting.
           </Text>
         </View>
 
@@ -58,7 +58,7 @@ export default function ConnectScreen() {
       </ScrollView>
       <StickyCTA>
         <Button title="Plan intake & ga naar EquiNova" variant="deep" onPress={finish} />
-        <Button title="Sla over — ik kijk eerst rond" variant="ghost" onPress={finish} />
+        <Button title="Sla over, ik kijk eerst rond" variant="ghost" onPress={finish} />
       </StickyCTA>
     </View>
   );

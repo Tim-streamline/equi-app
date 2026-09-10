@@ -6,7 +6,7 @@ import { View, Text, ScrollView, Image, Pressable } from 'react-native';
 import { router } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
-import { X, ClipboardList, Camera, Heart, ArrowRight } from 'lucide-react-native';
+import { X, ArrowRight } from 'lucide-react-native';
 
 import { Button } from '@/components/ui/Button';
 import { IconButton } from '@/components/ui/IconButton';
@@ -17,6 +17,7 @@ export default function IntakeWelcome() {
   const user = useCurrentUser();
   const horse = useHorse();
   const { schema, disclaimerLong } = useIntakeSchema();
+  const disclaimerBody = disclaimerLong.replace(/^\s*Belangrijk vooraf:\s*/i, '');
   const firstName = ((user.name as string) ?? 'er').split(' ')[0];
   const horseName = (horse.name as string) ?? 'je paard';
 
@@ -44,13 +45,13 @@ export default function IntakeWelcome() {
             className="mb-2 font-semi-italic text-mint-200"
             style={{ fontSize: 13, letterSpacing: 0.3 }}
           >
-            Hi {firstName} — leuk dat je er bent.
+            Hi {firstName}, leuk dat je er bent.
           </Text>
           <Text className="mb-3.5 font-bold text-white" style={{ fontSize: 30, lineHeight: 34 }}>
             Vertel me over <Text className="text-mint-300">{horseName}</Text>.
           </Text>
           <Text className="mb-4 text-[14px] leading-[22px] text-white/80">
-            {Math.max(0, schema.length - 1)} korte secties. Tussentijds opslaan kan altijd; je hoeft
+            De intake bevat {Math.max(0, schema.length - 1)} korte secties. Tussentijds opslaan kan altijd; je hoeft
             het niet in één keer af te ronden.
           </Text>
           <View className="mb-6 rounded-2xl bg-mint-500/20 p-4">
@@ -61,39 +62,15 @@ export default function IntakeWelcome() {
             </Text>
           </View>
 
-          <View className="gap-3.5 mb-8">
-            {[
-              {
-                Icon: ClipboardList,
-                t: 'Open vragen — ik lees ze persoonlijk terug',
-                d: 'Hoe meer detail, hoe beter het advies.',
-              },
-              {
-                Icon: Camera,
-                t: 'Foto’s helpen mij meekijken',
-                d: 'Huid, hoeven, mest — ik vraag het op zijn tijd.',
-              },
-              {
-                Icon: Heart,
-                t: 'Binnen 3 werkdagen jouw protocol',
-                d: 'Ik bouw het zelf op basis van wat jij vertelt.',
-              },
-            ].map(({ Icon, t, d }) => (
-              <View key={t} className="flex-row gap-3">
-                <View className="h-8 w-8 items-center justify-center rounded-lg bg-mint-500/20">
-                  <Icon size={16} color="#5FD7CB" />
-                </View>
-                <View className="flex-1">
-                  <Text className="font-bold text-[13.5px] leading-[18px] text-white">{t}</Text>
-                  <Text className="mt-0.5 text-[12px] leading-[16px] text-white/60">{d}</Text>
-                </View>
-              </View>
-            ))}
-          </View>
-
           <View className="rounded-2xl bg-white/10 p-4">
+            <Text className="mb-3 font-bold text-[12.5px] leading-[19px] text-white/80">
+              Belangrijk vooraf
+            </Text>
+            <Text className="mb-3 text-[12.5px] leading-[19px] text-white/80">
+              Binnen 5 werkdagen ontvang je jouw protocol.
+            </Text>
             <Text className="text-[12.5px] leading-[19px] text-white/80">
-              {disclaimerLong}
+              {disclaimerBody}
             </Text>
           </View>
         </ScrollView>

@@ -122,6 +122,13 @@ class SyncController extends Controller
                 if ($op['type'] === 'user_home_preferences') {
                     $op['data'] = $this->homePreferenceData($op['data'] ?? []);
                 }
+                if ($op['op'] !== 'DELETE' && in_array($op['type'], ['intake_bookings', 'horse_shares'], true)
+                    && array_key_exists('therapist_id', $op['data'] ?? [])) {
+                    $currentTherapist = $modelClass::find($op['id'])?->therapist_id;
+                    validator($op['data'], ['therapist_id' => ['nullable', Models\Therapist::assignmentRule($currentTherapist)]], [
+                        'therapist_id.exists' => 'Deze therapist is gearchiveerd of niet beschikbaar voor nieuwe koppelingen.',
+                    ])->validate();
+                }
                 $this->applyOp($modelClass, $op);
                 $applied++;
             }

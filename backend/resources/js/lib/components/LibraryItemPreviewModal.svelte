@@ -1,6 +1,7 @@
 <script>
+    import LibraryThumbnail from './LibraryThumbnail.svelte';
     import { onDestroy } from 'svelte';
-    import { BookOpen, Clock3, Play, X } from '@lucide/svelte';
+    import { Clock3, X } from '@lucide/svelte';
 
     let {
         open = false,
@@ -22,6 +23,8 @@
     const formatLabels = {
         article: 'Article',
         video: 'Video',
+        audio: 'Audio / podcast',
+        podcast: 'Podcast',
         course: 'Course',
         program: 'Program',
     };
@@ -184,23 +187,9 @@
 
         <div class="overflow-y-auto bg-muted/45 p-4 sm:p-7">
             <article class="mx-auto max-w-2xl overflow-hidden rounded-[1.25rem] bg-background shadow-sm ring-1 ring-black/5">
-                <div class="relative flex min-h-56 items-center justify-center overflow-hidden bg-[#0d5c5b] sm:min-h-64">
-                    {#if safeHero}
-                        <img src={safeHero} alt="" class="absolute inset-0 size-full object-cover" />
-                        <div class="absolute inset-0 bg-black/20"></div>
-                    {:else}
-                        <div class="absolute -right-16 -top-24 size-72 rounded-full border border-white/10"></div>
-                        <div class="absolute -bottom-24 -left-14 size-64 rounded-full border border-white/10"></div>
-                        {#if format === 'video'}
-                            <div class="flex size-16 items-center justify-center rounded-full bg-white text-[#0d5c5b] shadow-lg"><Play class="ml-1 size-7" /></div>
-                        {:else}
-                            <BookOpen class="size-14 text-white/85" strokeWidth={1.5} />
-                        {/if}
-                    {/if}
-
-                    <div class="absolute left-4 top-4 rounded-full bg-white/92 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.14em] text-[#0d5c5b] shadow-sm">
-                        {formatLabels[format] ?? format}
-                    </div>
+                <div class="relative">
+                    <LibraryThumbnail src={safeHero} {format} class="rounded-none" />
+                    <div class="absolute left-4 top-4 rounded-full bg-white/90 px-3 py-1 text-xs font-semibold text-[#0d5c5b]">{formatLabels[format] ?? format}</div>
                 </div>
 
                 <div class="px-6 py-7 sm:px-10 sm:py-9">
@@ -234,7 +223,7 @@
                                     <figure class="my-6 overflow-hidden rounded-xl bg-muted"><img src={block.url} alt={block.alt} class="max-h-[32rem] w-full object-cover" /></figure>
                                 {:else if block.type === 'video' && block.url}
                                     {#if VideoJsPlayer}
-                                        <VideoJsPlayer src={block.url} class="my-6 aspect-video w-full rounded-xl" />
+                                        <VideoJsPlayer src={block.url} poster={safeHero} class="my-6 aspect-video w-full rounded-xl" />
                                     {:else}
                                         <div class="my-6 aspect-video w-full animate-pulse rounded-xl bg-black/80"></div>
                                     {/if}

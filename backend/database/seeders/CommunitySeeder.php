@@ -32,7 +32,7 @@ class CommunitySeeder extends Seeder
             $tags, true,
         );
         $this->createReply($anchor, null, $shelley, 'Hi! Als voeding al klopt is brandnetel zeker te proberen. Belangrijk: vers, niet gedroogd. Bouw op in 5 dagen. Stuur me eens een foto van zijn manen via de app, dan kijk ik mee.', 24, 4);
-        $this->createReply($anchor, $users->random(), null, "Bij mijn merrie ook geholpen. Goed om Shelley's stappenplan te volgen — niet zelf experimenteren.", 5, 0);
+        $this->createReply($anchor, $users->random(), null, "Bij mijn merrie ook geholpen. Goed om Shelley's stappenplan te volgen - niet zelf experimenteren.", 5, 0);
 
         // Now fill up to ~80 posts.
         for ($i = 0; $i < 80; $i++) {

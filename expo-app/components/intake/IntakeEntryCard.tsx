@@ -33,10 +33,10 @@ export function IntakeEntryCard({ variant = 'banner' }: Props) {
   const { done, total, pct } = intakeProgress(state.answers, schema, noneOptions);
   const hasStarted = Object.keys(state.answers).length > 0;
 
-  const headline = hasStarted ? 'Ga verder met je intake' : 'Start jouw protocol-intake';
+  const headline = hasStarted ? 'Ga verder met je intake' : 'Start jouw protocol intake';
   const sub = hasStarted
     ? `${done} van ${total} secties klaar, verder waar je gebleven was.`
-    : `${total - 1} korte secties, samen ongeveer 30 minuten. Shelley bouwt jouw protocol op basis hiervan.`;
+    : `${total - 1} korte secties, samen ongeveer 60 minuten. Op basis van deze informatie wordt jouw protocol gemaakt.`;
   const ctaLabel = hasStarted ? 'Verder' : 'Beginnen';
 
   const onPress = () => {
@@ -59,7 +59,7 @@ export function IntakeEntryCard({ variant = 'banner' }: Props) {
             className="font-bold uppercase text-mint-200"
             style={{ fontSize: 10.5, letterSpacing: 1.6 }}
           >
-            Protocol-intake
+            PROTOCOL INTAKE
           </Text>
           <Text className="mt-1 font-bold text-white" style={{ fontSize: 17, lineHeight: 22 }}>
             {headline}

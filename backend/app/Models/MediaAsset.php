@@ -10,7 +10,7 @@ use Illuminate\Support\Facades\Storage;
 
 #[Fillable([
     'library_item_id', 'uploaded_by', 'type', 'disk', 'path', 'url',
-    'original_name', 'mime_type', 'size_bytes', 'width', 'height',
+    'original_name', 'mime_type', 'size_bytes', 'thumbnail_path', 'thumbnail_url', 'width', 'height',
 ])]
 class MediaAsset extends Model
 {
@@ -33,6 +33,7 @@ class MediaAsset extends Model
     /** Remove the backing file from disk; called before the row is deleted. */
     public function deleteFile(): void
     {
-        Storage::disk($this->disk)->delete($this->path);
+        Storage::disk($this->disk)->delete(array_filter([$this->path, $this->thumbnail_path]));
+        LibraryItem::where('hero_image_url', $this->thumbnail_url ?: $this->url)->update(['hero_image_url' => null]);
     }
 }

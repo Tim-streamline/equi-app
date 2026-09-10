@@ -30,7 +30,9 @@ class MediaAssetController extends Controller
     public function store(Request $request): JsonResponse
     {
         $request->validate([
-            'file' => ['required', 'file'],
+            'file' => $request->input('purpose') === 'thumbnail'
+                ? ['required', 'image', 'mimes:jpg,jpeg,png,webp,gif', 'max:10240']
+                : ['required', 'file'],
             'library_item_id' => ['nullable', 'exists:library_items,id'],
         ]);
 
@@ -45,6 +47,9 @@ class MediaAssetController extends Controller
         ]);
 
         $ext = $file->getClientOriginalExtension() ?: $file->guessExtension();
+        if ($file->getMimeType() === 'image/jpeg' && strtolower($ext) === 'jfif') {
+            $ext = 'jpg';
+        }
         $path = $file->storeAs('library/'.$type, Str::uuid().'.'.$ext, 'public');
 
         [$width, $height] = $this->dimensions($type, Storage::disk('public')->path($path));
@@ -62,6 +67,8 @@ class MediaAssetController extends Controller
             'width' => $width,
             'height' => $height,
         ]);
+
+        app(\App\Support\LibraryThumbnail::class)->generate($asset);
 
         AuditLogger::log('created', $asset, after: $asset->getAttributes(), label: $asset->original_name);
 

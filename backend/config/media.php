@@ -1,6 +1,7 @@
 <?php
 
 return [
+    'ffmpeg_binary' => env('FFMPEG_BINARY', 'ffmpeg'),
     /*
     | FilePond sends each request as a small chunk, keeping uploads below the
     | web-server and PHP request limits without buffering the complete video.

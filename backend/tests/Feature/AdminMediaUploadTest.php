@@ -50,6 +50,24 @@ class AdminMediaUploadTest extends TestCase
         ]);
     }
 
+    public function test_direct_jfif_upload_is_stored_with_a_jpeg_extension(): void
+    {
+        Storage::fake('public');
+        $admin = AdminUser::create([
+            'name' => 'Content Editor', 'email' => 'jfif@example.test',
+            'password' => 'password', 'role' => 'content_editor', 'active' => true,
+        ]);
+        $jpeg = UploadedFile::fake()->image('photo.jpg', 32, 24);
+        $file = new UploadedFile($jpeg->getPathname(), 'photo.jfif', 'image/jpeg', null, true);
+
+        $response = $this->actingAs($admin, 'admin')->postJson('/admin/library/media', ['file' => $file])
+            ->assertOk()->assertJsonPath('asset.mime_type', 'image/jpeg')
+            ->assertJsonPath('asset.original_name', 'photo.jfif');
+
+        $this->assertStringEndsWith('.jpg', $response->json('asset.path'));
+        Storage::disk('public')->assertExists($response->json('asset.path'));
+    }
+
     public function test_video_larger_than_the_documented_limit_is_rejected(): void
     {
         Storage::fake('public');

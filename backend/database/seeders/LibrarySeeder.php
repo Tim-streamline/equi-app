@@ -22,10 +22,10 @@ class LibrarySeeder extends Seeder
         $brandnetel = LibraryItem::create([
             'slug' => 'brandnetel',
             'format' => 'video',
-            'title' => 'Brandnetel — 5 minuten over de juiste dosering',
+            'title' => 'Brandnetel - 5 minuten over de juiste dosering',
             'description' => 'Hoeveel, hoe vaak en wat juist te vermijden.',
-            'duration_label' => '5 min · Video',
-            'duration_sec' => 324,
+            'duration_label' => '5 min',
+            'duration_sec' => 300,
             'author_therapist_id' => $shelley->id,
             'views_label' => '1.2k gezien',
             'published_at' => now()->subDays(20),
@@ -35,25 +35,25 @@ class LibrarySeeder extends Seeder
         ]);
         $this->seedChapters($brandnetel, [
             ['Wanneer brandnetel plukken', '0:00', 0],
-            ['Verse vs. gedroogde — wat werkt', '1:14', 74],
+            ['Verse vs. gedroogde - wat werkt', '1:14', 74],
             ['Doseren in vijf dagen', '2:32', 152],
             ['Wanneer niet te geven', '4:10', 250],
         ]);
         $this->seedSections($brandnetel, [
-            ['', 'Brandnetel is in mei en juni op zijn krachtigst. De jonge blaadjes bevatten silicium, ijzer en een mild ontstekingsremmende werking — perfect bij voorjaars-jeuk en milde manenklachten.'],
+            ['', 'Brandnetel is in mei en juni op zijn krachtigst. De jonge blaadjes bevatten silicium, ijzer en een mild ontstekingsremmende werking - perfect bij voorjaars-jeuk en milde manenklachten.'],
             ['Hoeveel?', 'Begin met één eetlepel vers per dag, door het ruwvoer. Bouw in vijf dagen op naar 2–3 eetlepels, afhankelijk van het gewicht.'],
-            ['Niet doen.', 'Geen gedroogde brandnetel zonder broeien — dit verstoort de werking. En niet langer dan zes weken aan een stuk: bouw daarna af.'],
+            ['Niet doen.', 'Geen gedroogde brandnetel zonder broeien - dit verstoort de werking. En niet langer dan zes weken aan een stuk: bouw daarna af.'],
         ]);
         $brandnetel->categories()->attach([$categoriesBySlug['kruiden'], $categoriesBySlug['aanbevolen']]);
 
         $knownTitles = [
             ['lijnzaad', 'article', 'Lijnzaad: doseren in 7 dagen', '8 min · Artikel', ['voeding', 'aanbevolen']],
-            ['mest-score', 'video', 'Lees de mest van je paard', '6 min · Video', ['aanbevolen']],
-            ['darmen-cursus', 'course', 'Darmen Cursus — Hoofdstuk 3 · 4 lessen', '42 min · Video', ['cursussen', 'darmen']],
+            ['mest-score', 'video', 'Lees de mest van je paard', '6 min', ['aanbevolen']],
+            ['darmen-cursus', 'course', 'Darmen Cursus - Hoofdstuk 3 · 4 lessen', '42 min · Video', ['cursussen', 'darmen']],
             ['locatie', 'program', 'In balans bij locatiewissel', '4 weken · Programma', ['aanbevolen']],
-            ['hoefb', 'article', 'Hoefbevangenheid — de eerste signalen', '7 min · Artikel', ['hoeven']],
-            ['zomereczeem', 'article', 'Zomereczeem — preventief beleid', '9 min · Artikel', ['jeuk']],
-            ['krachtvoer', 'article', 'Krachtvoer zonder granen — waarom?', '6 min · Artikel', ['voeding']],
+            ['hoefb', 'article', 'Hoefbevangenheid - de eerste signalen', '7 min · Artikel', ['hoeven']],
+            ['zomereczeem', 'article', 'Zomereczeem - preventief beleid', '9 min · Artikel', ['jeuk']],
+            ['krachtvoer', 'article', 'Krachtvoer zonder granen - waarom?', '6 min · Artikel', ['voeding']],
             ['mariadistel', 'article', 'Mariadistel voor de lever', '5 min · Artikel', ['kruiden']],
         ];
         foreach ($knownTitles as $i => [$slug, $format, $title, $duration, $catSlugs]) {
@@ -103,7 +103,7 @@ class LibrarySeeder extends Seeder
                 'format' => $format,
                 'title' => ucfirst(fake()->words(fake()->numberBetween(4, 8), true)),
                 'description' => fake()->sentence(10),
-                'duration_label' => $minutes . ' min · ' . ucfirst($format),
+                'duration_label' => $format === 'video' ? $minutes . ' min' : $minutes . ' min · ' . ucfirst($format),
                 'duration_sec' => $minutes * 60,
                 'author_therapist_id' => fake()->randomElement($therapistIds),
                 'views_label' => fake()->numberBetween(10, 8000) . ' gezien',

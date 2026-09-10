@@ -81,9 +81,9 @@ class ProtocolSeeder extends Seeder
         );
 
         $phases = [
-            ['Fase 1 — Darmen', 'active', 1, 4, 'Actief · wk 1–4'],
-            ['Fase 2 — Lever en nieren', 'upcoming', 5, 6, 'Vanaf wk 5'],
-            ['Fase 3 — Huid', 'upcoming', 7, 8, 'Vanaf wk 7'],
+            ['Fase 1 - Darmen', 'active', 1, 4, 'Actief · wk 1–4'],
+            ['Fase 2 - Lever en nieren', 'upcoming', 5, 6, 'Vanaf wk 5'],
+            ['Fase 3 - Huid', 'upcoming', 7, 8, 'Vanaf wk 7'],
         ];
         $activePhase = null;
         $phaseIds = [];

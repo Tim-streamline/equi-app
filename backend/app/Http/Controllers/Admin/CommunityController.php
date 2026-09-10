@@ -55,7 +55,7 @@ class CommunityController extends Controller
             'reports' => ModerationReport::where('subject_id', $post->id)->orWhereIn(
                 'subject_id', $post->replies->pluck('id')
             )->with('reporter:id,name')->latest()->get(),
-            'therapists' => Therapist::orderBy('name')->get(['id', 'name', 'avatar_initial', 'avatar_color']),
+            'therapists' => Therapist::active()->orderBy('name')->get(['id', 'name', 'avatar_initial', 'avatar_color']),
         ]);
     }
 
@@ -103,7 +103,7 @@ class CommunityController extends Controller
     public function expertReply(Request $request, CommunityPost $post): RedirectResponse
     {
         $data = $request->validate([
-            'therapist_id' => ['required', 'exists:therapists,id'],
+            'therapist_id' => ['required', Therapist::assignmentRule()],
             'body' => ['required', 'string'],
         ]);
         $therapist = Therapist::find($data['therapist_id']);

@@ -5,7 +5,9 @@ namespace Tests\Feature;
 use App\Models\AdminUser;
 use App\Models\LibraryItem;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Testing\TestResponse;
 use Inertia\Testing\AssertableInertia as Assert;
 use Tests\TestCase;
 
@@ -87,6 +89,37 @@ class ChunkedMediaUploadTest extends TestCase
                 ->has('item.media', 1)
                 ->where('item.media.0.id', $assetResponse->json('asset.id'))
             );
+    }
+
+    public function test_jfif_images_are_accepted_and_served_as_jpeg(): void
+    {
+        $contents = UploadedFile::fake()->image('photo.jpg', 32, 24)->get();
+        config()->set('media.chunk_size', strlen($contents));
+        $upload = $this->startUpload(strlen($contents));
+
+        $this->patchChunk($upload, 0, strlen($contents), 'photo.JFIF', $contents)->assertNoContent();
+        $asset = $this->getJson("/admin/library/media/chunks/{$upload}/asset")
+            ->assertOk()
+            ->assertJsonPath('asset.type', 'image')
+            ->assertJsonPath('asset.mime_type', 'image/jpeg')
+            ->assertJsonPath('asset.original_name', 'photo.JFIF')
+            ->assertJsonPath('asset.width', 32)
+            ->assertJsonPath('asset.height', 24)
+            ->json('asset');
+
+        $this->assertStringEndsWith('.jpg', $asset['path']);
+        $this->assertSame($contents, Storage::disk('public')->get($asset['path']));
+        $this->assertDatabaseHas('media_assets', ['id' => $asset['id'], 'mime_type' => 'image/jpeg']);
+    }
+
+    public function test_a_non_image_disguised_as_jfif_is_rejected(): void
+    {
+        $contents = 'This is not an image.';
+        $upload = $this->startUpload(strlen($contents));
+
+        $this->patchChunk($upload, 0, strlen($contents), 'photo.jfif', $contents)
+            ->assertUnprocessable()->assertJsonValidationErrors('file');
+        $this->assertDatabaseCount('media_assets', 0);
     }
 
     public function test_an_offset_mismatch_returns_the_current_server_offset(): void
@@ -174,7 +207,7 @@ class ChunkedMediaUploadTest extends TestCase
             ->getContent();
     }
 
-    private function patchChunk(string $upload, int $offset, int $length, string $name, string $contents): \Illuminate\Testing\TestResponse
+    private function patchChunk(string $upload, int $offset, int $length, string $name, string $contents): TestResponse
     {
         return $this->call(
             'PATCH',

@@ -1,21 +1,15 @@
 <script>
     import AdminLayout from '../../Layouts/AdminLayout.svelte';
+    import HorseActions from '$lib/components/HorseActions.svelte';
     import PageHeader from '$lib/components/PageHeader.svelte';
-    import { Link, router } from '@inertiajs/svelte';
-    import { Card, CardHeader, CardTitle, CardContent, Button, Badge } from '$lib/components/ui';
+    import { Link } from '@inertiajs/svelte';
+    import { Card, CardHeader, CardTitle, CardContent, Badge } from '$lib/components/ui';
     import { formatDate } from '$lib/utils.js';
     import { statusVariant } from '$lib/badges.js';
-    import { ArrowLeft, Archive, RotateCcw } from '@lucide/svelte';
+    import { ArrowLeft } from '@lucide/svelte';
 
     let { horse } = $props();
 
-    function archive() {
-        const note = prompt('Reason for archiving (optional):') ?? '';
-        router.post(`/admin/horses/${horse.id}/archive`, { note });
-    }
-    function restore() {
-        router.post(`/admin/horses/${horse.id}/restore`);
-    }
 </script>
 
 <AdminLayout title="Horse detail">
@@ -24,11 +18,7 @@
     </Link>
     <PageHeader title={horse.name} description={`${horse.breed ?? 'Unknown breed'} · owned by ${horse.owner?.name ?? '—'}`}>
         {#snippet actions()}
-            {#if horse.status === 'archived'}
-                <Button onclick={restore}><RotateCcw class="size-4" /> Restore</Button>
-            {:else}
-                <Button variant="destructive" onclick={archive}><Archive class="size-4" /> Archive</Button>
-            {/if}
+            <HorseActions {horse} />
         {/snippet}
     </PageHeader>
 

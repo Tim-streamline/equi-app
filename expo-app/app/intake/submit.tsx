@@ -77,7 +77,7 @@ export default function IntakeSubmit() {
             <Text className="text-mint-700">Mooi werk.</Text>
           </Text>
           <Text className="mt-2 mb-5 text-[14px] leading-[20px] text-ink-70">
-            Ik (Shelley) lees jouw intake binnen 3 werkdagen helemaal door en stuur het eerste
+            Ik (Shelley) lees jouw intake binnen 5 werkdagen helemaal door en stuur het eerste
             protocol terug via de app. Je krijgt een notificatie.
           </Text>
 
@@ -85,7 +85,7 @@ export default function IntakeSubmit() {
             <View className="mb-4 flex-row gap-3 rounded-2xl bg-[#FBE9C6] p-3.5">
               <AlertTriangle size={18} color="#8C6420" />
               <Text className="flex-1 text-[13px] leading-[18px] text-[#5A4214]">
-                Een of meer antwoorden vragen extra aandacht. Geen probleem — ik kijk er bij
+                Een of meer antwoorden vragen extra aandacht. Geen probleem, ik kijk er bij
                 ontvangst persoonlijk naar voor we starten.
               </Text>
             </View>

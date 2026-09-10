@@ -1,5 +1,6 @@
 <script>
     import AdminLayout from '../../Layouts/AdminLayout.svelte';
+    import BookingDeleteAction from '$lib/components/BookingDeleteAction.svelte';
     import PageHeader from '$lib/components/PageHeader.svelte';
     import { Link, router } from '@inertiajs/svelte';
     import { Card, CardHeader, CardTitle, CardContent, Button, Badge } from '$lib/components/ui';
@@ -16,7 +17,7 @@
         <ArrowLeft class="size-4" /> Back
     </Link>
     <PageHeader title={`Intake · ${booking.therapist?.name}`} description={formatDateTime(booking.scheduled_at)}>
-        {#snippet actions()}<Badge variant={statusVariant(booking.status)}>{booking.status}</Badge>{/snippet}
+        {#snippet actions()}<Badge variant={statusVariant(booking.status)}>{booking.status}</Badge><BookingDeleteAction {booking} />{/snippet}
     </PageHeader>
 
     <div class="grid gap-4 lg:grid-cols-2">

@@ -1,9 +1,10 @@
 <script>
     import AdminLayout from '../../Layouts/AdminLayout.svelte';
+    import BookingDeleteAction from '$lib/components/BookingDeleteAction.svelte';
     import PageHeader from '$lib/components/PageHeader.svelte';
     import Pagination from '$lib/components/Pagination.svelte';
     import StatCard from '$lib/components/StatCard.svelte';
-    import { router } from '@inertiajs/svelte';
+    import { Link, router } from '@inertiajs/svelte';
     import { Card, CardContent, Select, Badge, Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '$lib/components/ui';
     import { formatDateTime } from '$lib/utils.js';
     import { statusVariant } from '$lib/badges.js';
@@ -37,19 +38,21 @@
                         <TableHead>Horse</TableHead>
                         <TableHead>Therapist</TableHead>
                         <TableHead>Status</TableHead>
+                        <TableHead>Acties</TableHead>
                     </TableRow>
                 </TableHeader>
                 <TableBody>
                     {#each bookings.data as b (b.id)}
-                        <TableRow class="cursor-pointer" onclick={() => router.visit(`/admin/bookings/${b.id}`)}>
-                            <TableCell class="whitespace-nowrap">{formatDateTime(b.scheduled_at)}</TableCell>
+                        <TableRow>
+                            <TableCell class="whitespace-nowrap"><Link href={`/admin/bookings/${b.id}`} class="font-medium hover:text-primary hover:underline">{formatDateTime(b.scheduled_at)}</Link></TableCell>
                             <TableCell>{b.user?.name}</TableCell>
                             <TableCell class="text-muted-foreground">{b.horse?.name ?? '—'}</TableCell>
                             <TableCell>{b.therapist?.name}</TableCell>
                             <TableCell><Badge variant={statusVariant(b.status)}>{b.status}</Badge></TableCell>
+                            <TableCell><BookingDeleteAction booking={b} /></TableCell>
                         </TableRow>
                     {:else}
-                        <TableRow><TableCell colspan="5" class="py-8 text-center text-muted-foreground">No bookings.</TableCell></TableRow>
+                        <TableRow><TableCell colspan="6" class="py-8 text-center text-muted-foreground">No bookings.</TableCell></TableRow>
                     {/each}
                 </TableBody>
             </Table>

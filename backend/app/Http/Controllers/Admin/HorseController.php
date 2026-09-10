@@ -6,20 +6,24 @@ use App\Http\Controllers\Controller;
 use App\Models\Horse;
 use App\Models\User;
 use App\Support\AuditLogger;
+use App\Support\HorseDeletion;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
 use Inertia\Response;
+use Throwable;
 
 class HorseController extends Controller
 {
     public function index(Request $request): Response
     {
+        $status = $request->input('status') === 'archived' ? 'archived' : 'active';
         $horses = Horse::query()
             ->when($request->string('q')->toString(), fn ($query, $q) => $query
                 ->where(fn ($w) => $w->where('name', 'ilike', "%{$q}%")->orWhere('breed', 'ilike', "%{$q}%")->orWhere('stable', 'ilike', "%{$q}%")))
-            ->when($request->string('status')->toString(), fn ($query, $s) => $query->where('status', $s))
+            ->where('status', $status)
             ->with('owner:id,name,email')
             ->withCount(['observations', 'scans', 'shares'])
             ->latest()
@@ -41,7 +45,7 @@ class HorseController extends Controller
 
         return Inertia::render('Horses/Index', [
             'horses' => $horses,
-            'filters' => $request->only('q', 'status'),
+            'filters' => ['q' => $request->input('q', ''), 'status' => $status],
         ]);
     }
 
@@ -80,24 +84,64 @@ class HorseController extends Controller
         return back()->with('success', 'Horse updated.');
     }
 
-    public function archive(Request $request, Horse $horse): RedirectResponse
+    public function archive(Horse $horse): RedirectResponse
     {
-        $horse->update([
-            'status' => 'archived',
-            'archived_at' => Carbon::now(),
-            'archived_note' => $request->input('note'),
-        ]);
-        AuditLogger::log('archive', $horse, reason: $request->input('note'));
-
-        return back()->with('success', 'Horse archived.');
+        return $this->setArchived($horse, true);
     }
 
     public function restore(Horse $horse): RedirectResponse
     {
-        $horse->update(['status' => 'active', 'archived_at' => null, 'archived_note' => null]);
-        AuditLogger::log('restore', $horse);
+        return $this->setArchived($horse, false);
+    }
 
-        return back()->with('success', 'Horse restored.');
+    private function setArchived(Horse $horse, bool $archived): RedirectResponse
+    {
+        try {
+            DB::transaction(function () use ($horse, $archived) {
+                $locked = Horse::query()->lockForUpdate()->findOrFail($horse->id);
+                $status = $archived ? 'archived' : 'active';
+                if ($locked->status === $status) {
+                    return;
+                }
+                $locked->update([
+                    'status' => $status,
+                    'archived_at' => $archived ? now() : null,
+                    'archived_note' => null,
+                ]);
+                AuditLogger::log($archived ? 'archive' : 'restore', $locked);
+            });
+        } catch (Throwable $exception) {
+            report($exception);
+
+            return back()->withErrors(['horse_action' => 'Het paard kon niet worden bijgewerkt. Probeer het opnieuw.']);
+        }
+
+        return back()->with('success', $archived ? 'Paard gearchiveerd.' : 'Paard hersteld.');
+    }
+
+    public function deletionPreview(Horse $horse, HorseDeletion $deletion): JsonResponse
+    {
+        try {
+            return response()->json($deletion->preview($horse));
+        } catch (Throwable $exception) {
+            report($exception);
+
+            return response()->json(['message' => 'De gekoppelde gegevens konden niet worden gecontroleerd. Probeer het opnieuw.'], 503);
+        }
+    }
+
+    public function destroy(Request $request, Horse $horse, HorseDeletion $deletion): RedirectResponse
+    {
+        $request->validate(['confirm_delete' => ['required', 'accepted']]);
+        try {
+            $deletion->delete($horse);
+        } catch (Throwable $exception) {
+            report($exception);
+
+            return back()->withErrors(['horse_action' => 'Het paard kon niet worden verwijderd. Er zijn geen gegevens verwijderd. Probeer het opnieuw.']);
+        }
+
+        return redirect()->route('admin.horses.index')->with('success', 'Paard definitief verwijderd.');
     }
 
     public function transfer(Request $request, Horse $horse): RedirectResponse

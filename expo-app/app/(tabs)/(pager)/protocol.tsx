@@ -1,3 +1,4 @@
+import { LibraryThumbnail } from "@/components/library/LibraryThumbnail";
 import { useEffect, useState, type ReactNode } from "react";
 import {
   View,
@@ -14,7 +15,6 @@ import {
 import { router, useLocalSearchParams } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
 import {
-  BookOpen,
   Check,
   X,
   ChevronLeft,
@@ -589,9 +589,7 @@ function LibraryLink({
       }
       className="flex-row items-center gap-3 rounded-[18px] border border-ink-8 bg-white p-4"
     >
-      <View className="h-9 w-9 items-center justify-center rounded-xl bg-mint-50">
-        <BookOpen size={18} color="#127A79" />
-      </View>
+      <LibraryThumbnail uri={item?.heroImageUrl} format={item?.format} style={{ width: 64 }} />
       <View className="flex-1">
         <Text className="font-semi text-[13px] text-ink">{title}</Text>
         <Text className="mt-1 text-[11px] leading-[16px] text-ink-50">

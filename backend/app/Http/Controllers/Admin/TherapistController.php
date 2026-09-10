@@ -7,14 +7,18 @@ use App\Models\Therapist;
 use App\Support\AuditLogger;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
 use Inertia\Response;
+use Throwable;
 
 class TherapistController extends Controller
 {
-    public function index(): Response
+    public function index(Request $request): Response
     {
+        $archived = $request->boolean('archived');
         $therapists = Therapist::query()
+            ->when($archived, fn ($q) => $q->whereNotNull('archived_at'), fn ($q) => $q->active())
             ->withCount(['protocols' => fn ($q) => $q->where('status', 'active')])
             ->withCount('authoredLibraryItems')
             ->orderBy('name')
@@ -26,7 +30,8 @@ class TherapistController extends Controller
                 'bookings_pending' => $t->intakeBookings()->where('status', 'pending')->count(),
             ]);
 
-        return Inertia::render('Therapists/Index', ['therapists' => $therapists]);
+        return Inertia::render('Therapists/Index', ['therapists' => $therapists, 'archived' => $archived,
+            'counts' => ['active' => Therapist::active()->count(), 'archived' => Therapist::whereNotNull('archived_at')->count()]]);
     }
 
     public function store(Request $request): RedirectResponse
@@ -47,12 +52,43 @@ class TherapistController extends Controller
         return back()->with('success', 'Therapist updated.');
     }
 
+    // Keep legacy DELETE clients safe: this route now archives, never deletes.
     public function destroy(Therapist $therapist): RedirectResponse
     {
-        AuditLogger::deleted($therapist);
-        $therapist->delete();
+        return $this->archive($therapist);
+    }
 
-        return back()->with('success', 'Therapist removed.');
+    public function archive(Therapist $therapist): RedirectResponse
+    {
+        return $this->setArchived($therapist, true);
+    }
+
+    public function restore(Therapist $therapist): RedirectResponse
+    {
+        return $this->setArchived($therapist, false);
+    }
+
+    private function setArchived(Therapist $therapist, bool $archive): RedirectResponse
+    {
+        try {
+            DB::transaction(function () use ($therapist, $archive) {
+                $record = Therapist::whereKey($therapist->id)->lockForUpdate()->firstOrFail();
+                if (($record->archived_at !== null) === $archive) {
+                    return;
+                }
+                $before = $record->only('archived_at');
+                $record->forceFill(['archived_at' => $archive ? now() : null])->save();
+                AuditLogger::log($archive ? 'archived' : 'restored', $record,
+                    before: $before, after: $record->only('archived_at'));
+            });
+        } catch (Throwable $exception) {
+            report($exception);
+
+            return back()->withErrors(['archive' => ($archive ? 'Archiveren' : 'Herstellen').
+                ' is niet gelukt. Er zijn geen wijzigingen bewaard. Probeer het opnieuw.']);
+        }
+
+        return back()->with('success', $archive ? 'Therapist / author gearchiveerd. Bestaande koppelingen zijn behouden.' : 'Therapist / author hersteld.');
     }
 
     private function validateData(Request $request): array

@@ -110,23 +110,23 @@ class ReferenceSeeder extends Seeder
     private function seedIngredients(): void
     {
         $ings = [
-            ['Lijnzaad', 'good', 'Goede bron van omega-3 — past in een holistisch voerplan.'],
+            ['Lijnzaad', 'good', 'Goede bron van omega-3 - past in een holistisch voerplan.'],
             ['Bierdrab', 'good', 'Natuurlijke B-vitaminen en aminozuren.'],
             ['Mout-extract', 'warn', 'Bevat suikers. Niet ideaal voor insuline-gevoelige paarden.'],
-            ['Vit. C (synth.)', 'warn', 'Synthetische toevoeging — overweeg natuurlijke bron.'],
-            ['Saccharose (E473)', 'danger', 'Toegevoegde suiker — vermijd bij metabole problemen.'],
+            ['Vit. C (synth.)', 'warn', 'Synthetische toevoeging - overweeg natuurlijke bron.'],
+            ['Saccharose (E473)', 'danger', 'Toegevoegde suiker - vermijd bij metabole problemen.'],
             ['Brandnetel', 'good', 'Mild ontstekingsremmend, rijk aan silicium en ijzer.'],
             ['Mariadistel', 'good', 'Ondersteunt lever en nieren.'],
             ['Spirulina', 'good', 'Eiwitten en sporenelementen.'],
             ['Chia-zaad', 'good', 'Omega-3 en vezels.'],
-            ['Tarwe (gemoffeld)', 'warn', 'Hoog in zetmeel — let op bij metabole problemen.'],
+            ['Tarwe (gemoffeld)', 'warn', 'Hoog in zetmeel - let op bij metabole problemen.'],
             ['Melasse', 'danger', 'Hoog suikergehalte.'],
             ['E-anti-oxidant (E321)', 'danger', 'Synthetische conserveermiddel.'],
             ['Sojameel', 'warn', 'Vaak GMO; allergeen voor sommige paarden.'],
             ['Luzerne', 'good', 'Eiwitrijk en smakelijk.'],
             ['Magnesium-oxide', 'good', 'Goed opneembaar mineraal.'],
             ['Selenium-gist', 'good', 'Beter opneembaar dan anorganisch selenium.'],
-            ['Vitamine E (natuurlijk)', 'good', 'Anti-oxidant — vooral nuttig bij weinig vers gras.'],
+            ['Vitamine E (natuurlijk)', 'good', 'Anti-oxidant - vooral nuttig bij weinig vers gras.'],
             ['IJzersulfaat', 'warn', 'Vaak overgedoseerd; voorzichtigheid geboden.'],
             ['Suikerbietpulp (ongemelasseerd)', 'good', 'Vezels zonder extra suiker.'],
             ['Maïs', 'warn', 'Hoog in zetmeel; kan darmflora verstoren.'],
@@ -135,11 +135,11 @@ class ReferenceSeeder extends Seeder
             ['Kurkuma', 'good', 'Anti-inflammatoire werking.'],
             ['Knoflook (gedroogd)', 'warn', 'Hoge dosering kan bloed beïnvloeden.'],
             ['Probiotica-mengsel', 'good', 'Ondersteunt darmflora.'],
-            ['Citroenzuur (E330)', 'warn', 'Conserveermiddel — kan maagslijmvlies prikkelen.'],
-            ['Natriumchloride', 'good', 'Zout — essentieel bij zweten.'],
+            ['Citroenzuur (E330)', 'warn', 'Conserveermiddel - kan maagslijmvlies prikkelen.'],
+            ['Natriumchloride', 'good', 'Zout - essentieel bij zweten.'],
             ['Kelp (zeewier)', 'good', 'Mineralen en jodium.'],
             ['Kunstmatige kleurstof (E124)', 'danger', 'Onnodige toevoeging.'],
-            ['Glucose-siroop', 'danger', 'Eenvoudige suiker — vermijd bij EMS/IR.'],
+            ['Glucose-siroop', 'danger', 'Eenvoudige suiker - vermijd bij EMS/IR.'],
         ];
         foreach ($ings as [$name, $tag, $desc]) {
             Ingredient::create(['name' => $name, 'default_tag' => $tag, 'description' => $desc]);
@@ -149,11 +149,11 @@ class ReferenceSeeder extends Seeder
     private function seedNovaReplies(): void
     {
         foreach ([
-            'Goede vraag! Bij dit type klachten zou ik beginnen met het versterken van de darmen — zie het brandnetel-artikel.',
+            'Goede vraag! Bij dit type klachten zou ik beginnen met het versterken van de darmen - zie het brandnetel-artikel.',
             'Let bij voorjaarsrui op de combinatie lijnzaad + brandnetel. Bouw langzaam op.',
-            'Vergeet niet dat huid en darmen samen werken — het is écht een holistisch verhaal.',
+            'Vergeet niet dat huid en darmen samen werken - het is écht een holistisch verhaal.',
             'Bij dit soort gedrag check ik altijd eerst de mest. Begin daar.',
-            'Vraag het ook even na bij Shelley — zij heeft hier veel ervaring mee.',
+            'Vraag het ook even na bij Shelley - zij heeft hier veel ervaring mee.',
             'Vermijd in deze fase plotselinge voerwijzigingen. Geleidelijk is altijd beter.',
             'Heb je al eens een mineralen-analyse laten doen? Soms ligt het daar.',
             'In mei en juni is brandnetel op zijn krachtigst. Pluk vers.',

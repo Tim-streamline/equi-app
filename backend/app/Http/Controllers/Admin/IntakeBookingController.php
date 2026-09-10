@@ -8,8 +8,10 @@ use App\Models\Therapist;
 use App\Support\AuditLogger;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
 use Inertia\Response;
+use Throwable;
 
 class IntakeBookingController extends Controller
 {
@@ -41,6 +43,25 @@ class IntakeBookingController extends Controller
         return Inertia::render('Bookings/Show', ['booking' => $booking]);
     }
 
+    public function destroy(Request $request, IntakeBooking $booking): RedirectResponse
+    {
+        $request->validate(['confirm_delete' => ['required', 'accepted']]);
+
+        try {
+            DB::transaction(function () use ($booking) {
+                $locked = IntakeBooking::query()->lockForUpdate()->findOrFail($booking->id);
+                $locked->delete();
+                AuditLogger::deleted($locked);
+            });
+        } catch (Throwable $exception) {
+            report($exception);
+
+            return back()->withErrors(['booking_delete' => 'De booking kon niet worden verwijderd. Er zijn geen gegevens verwijderd. Probeer het opnieuw.']);
+        }
+
+        return redirect()->route('admin.bookings.index')->with('success', 'Booking definitief verwijderd.');
+    }
+
     public function updateStatus(Request $request, IntakeBooking $booking): RedirectResponse
     {
         $status = $request->validate(['status' => ['required', 'in:pending,confirmed,done,cancelled']])['status'];
@@ -56,7 +77,7 @@ class IntakeBookingController extends Controller
         $data = $request->validate([
             'scheduled_at' => ['required', 'date'],
             'duration_minutes' => ['required', 'integer', 'min:5', 'max:240'],
-            'therapist_id' => ['required', 'exists:therapists,id'],
+            'therapist_id' => ['required', Therapist::assignmentRule($booking->therapist_id)],
             'notes' => ['nullable', 'string'],
         ]);
         $before = $booking->only(array_keys($data));

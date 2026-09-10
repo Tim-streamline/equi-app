@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Models\Horse;
 use App\Models\ProtocolTemplate;
+use App\Models\Therapist;
 use App\Models\User;
 use Firebase\JWT\JWT;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -199,6 +200,24 @@ class SyncControllerAuthorizationTest extends TestCase
             'id' => $otherHorse->id,
             'name' => 'Other Horse',
         ]);
+    }
+
+    public function test_new_bookings_cannot_use_archived_therapists_but_history_remains_editable(): void
+    {
+        $user = User::factory()->create();
+        $therapist = Therapist::create(['name' => 'Archived therapist']);
+        $therapist->forceFill(['archived_at' => now()])->save();
+        $id = (string) Str::uuid();
+        $operation = ['op' => 'PUT', 'type' => 'intake_bookings', 'id' => $id,
+            'data' => ['user_id' => $user->id, 'therapist_id' => $therapist->id, 'scheduled_at' => now()->toDateTimeString(), 'status' => 'pending']];
+        $this->postSyncAs($user, [$operation])->assertUnprocessable()->assertJsonValidationErrors('therapist_id');
+        $this->assertDatabaseMissing('intake_bookings', ['id' => $id]);
+        $therapist->forceFill(['archived_at' => null])->save();
+        $this->postSyncAs($user, [$operation])->assertOk();
+        $therapist->forceFill(['archived_at' => now()])->save();
+        $this->postSyncAs($user, [['op' => 'PATCH', 'type' => 'intake_bookings', 'id' => $id,
+            'data' => ['therapist_id' => $therapist->id, 'notes' => 'Historical booking']]])->assertOk();
+        $this->assertDatabaseHas('intake_bookings', ['id' => $id, 'therapist_id' => $therapist->id, 'notes' => 'Historical booking']);
     }
 
     private function postSyncAs(User $user, array $operations)

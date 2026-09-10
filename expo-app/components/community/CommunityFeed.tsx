@@ -24,7 +24,7 @@ export function CommunityFeed() {
         <View><Text className="font-semi text-[11px] tracking-[2px] text-mint-700">COMMUNITY</Text><Text className="mt-1 font-bold text-[28px] text-ink">Vraag & deel</Text></View>
         <Pressable accessibilityLabel="Gedempte auteurs" accessibilityRole="button" onPress={() => router.push('/(tabs)/community/mutes')} className="rounded-full bg-white p-3"><BellOff size={20} color="#127A79" /></Pressable>
       </View>
-      <Text className="mb-4 px-5 text-[13px] leading-5 text-ink-70">Samen leren over je paard. Shelley leest en reageert mee wanneer ze kan — een antwoord is niet gegarandeerd.</Text>
+      <Text className="mb-4 px-5 text-[13px] leading-5 text-ink-70">Samen leren over je paard. Shelley leest en reageert mee wanneer ze kan. Een antwoord is niet gegarandeerd.</Text>
       {!isLoggedIn ? <View className="px-5"><Action label="Aanmelden" onPress={() => router.push('/onboarding/welcome')} /></View> : <>
         {data && (data.canParticipate ? <Pressable accessibilityRole="button" accessibilityLabel="Nieuw bericht" onPress={() => router.push('/(tabs)/community/compose')} className="mx-5 mb-4 flex-row items-center gap-3 rounded-2xl border border-ink-8 bg-white p-4">
           <View className="rounded-full bg-mint-50 p-2"><Plus size={20} color="#127A79" /></View><Text className="flex-1 text-[14px] text-ink-50">Stel je vraag aan de community…</Text>
