@@ -5,6 +5,7 @@ import { Bookmark } from 'lucide-react-native';
 import { SubHeader } from '@/components/ui/SubHeader';
 import { IconButton } from '@/components/ui/IconButton';
 import { SectionTitle } from '@/components/ui/SectionTitle';
+import { MarkdownBody } from '@/components/library/MarkdownBody';
 import { useTabBarPadding } from '@/hooks/useTabBarPadding';
 import {
   useLibraryChapters,
@@ -18,6 +19,7 @@ export default function VideoScreen() {
   const chapters = useLibraryChapters(id ?? '');
   const therapist = useTherapist((item.authorTherapistId as string) || undefined);
   const padBottom = useTabBarPadding();
+  const body = (item.body as string) || '';
 
   return (
     <View className="flex-1 bg-canvas">
@@ -51,6 +53,12 @@ export default function VideoScreen() {
               ) : null}
             </View>
           </View>
+
+          {!!body && (
+            <View className="w-full px-5 pt-5">
+              <MarkdownBody markdown={body} />
+            </View>
+          )}
 
           {chapters.length > 0 && (
             <>
