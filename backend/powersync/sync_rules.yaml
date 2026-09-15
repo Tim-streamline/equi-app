@@ -141,6 +141,7 @@ streams:
                 )
 
             # Protocol data for visible horses.
+            # Phase content is served by the availability-filtered dashboard API only.
             - |
                 SELECT * FROM protocols
                 WHERE published_at IS NOT NULL
@@ -154,7 +155,7 @@ streams:
                        )
                 )
             - |
-                SELECT * FROM protocol_phases
+                SELECT id, protocol_id, "order", title, state, week_start, week_end, chip_label, required, start_after_previous_phase_weeks, created_at, updated_at FROM protocol_phases
                 WHERE protocol_id IN (
                     SELECT p.id FROM protocols p
                     JOIN horses h ON h.id = p.horse_id
@@ -170,35 +171,6 @@ streams:
                 SELECT * FROM protocol_phase_weeks
                 WHERE protocol_phase_id IN (
                     SELECT pp.id FROM protocol_phases pp
-                    JOIN protocols p ON p.id = pp.protocol_id
-                    JOIN horses h ON h.id = p.horse_id
-                    WHERE p.published_at IS NOT NULL
-                      AND (h.owner_id = auth.user_id()
-                       OR h.id IN (
-                            SELECT horse_id
-                            FROM horse_shares
-                            WHERE grantee_user_id = auth.user_id()
-                       ))
-                )
-            - |
-                SELECT * FROM protocol_phase_supplements
-                WHERE protocol_phase_id IN (
-                    SELECT pp.id FROM protocol_phases pp
-                    JOIN protocols p ON p.id = pp.protocol_id
-                    JOIN horses h ON h.id = p.horse_id
-                    WHERE p.published_at IS NOT NULL
-                      AND (h.owner_id = auth.user_id()
-                       OR h.id IN (
-                            SELECT horse_id
-                            FROM horse_shares
-                            WHERE grantee_user_id = auth.user_id()
-                       ))
-                )
-            - |
-                SELECT * FROM protocol_phase_supplement_weeks
-                WHERE protocol_phase_supplement_id IN (
-                    SELECT pps.id FROM protocol_phase_supplements pps
-                    JOIN protocol_phases pp ON pp.id = pps.protocol_phase_id
                     JOIN protocols p ON p.id = pp.protocol_id
                     JOIN horses h ON h.id = p.horse_id
                     WHERE p.published_at IS NOT NULL

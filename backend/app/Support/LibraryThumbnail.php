@@ -76,4 +76,21 @@ class LibraryThumbnail
             ? MediaAsset::where('type', 'video')->where('url', html_entity_decode($match[1]))->first()
             : $item->media()->where('type', 'video')->reorder()->oldest()->first();
     }
+
+    /** Posters belong to individual videos, independently of the item's cover. */
+    public function videoPosters(LibraryItem $item): array
+    {
+        preg_match_all('/<video\b[^>]*\bsrc=["\']([^"\']+)["\']/i', $item->body ?? '', $matches);
+        $urls = array_map(fn ($url) => html_entity_decode($url), $matches[1]);
+
+        // Older embedded uploads may not have a library_item_id yet.
+        $assets = MediaAsset::where('type', 'video')
+            ->where(fn ($query) => $query->where('library_item_id', $item->id)->orWhereIn('url', $urls))
+            ->get();
+        foreach ($assets as $asset) {
+            $this->generate($asset);
+        }
+
+        return $assets->whereNotNull('thumbnail_url')->pluck('thumbnail_url', 'url')->all();
+    }
 }

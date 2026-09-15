@@ -1,5 +1,6 @@
 <script>
     import LibraryThumbnail from './LibraryThumbnail.svelte';
+    import { csrfHeaders } from '$lib/csrf';
     import { onMount } from 'svelte';
     import { create } from 'filepond';
     import 'filepond/dist/filepond.min.css';
@@ -14,7 +15,6 @@
     let pond;
     const acceptedUploadIds = new Set();
 
-    const csrf = () => document.querySelector('meta[name="csrf-token"]')?.content ?? '';
     const configuredVideoLimit = () => Number(document.querySelector('meta[name="media-max-video-bytes"]')?.content) || 2 * 1024 * 1024 * 1024;
     const configuredChunkSize = () => Number(document.querySelector('meta[name="media-chunk-size"]')?.content) || 5 * 1024 * 1024;
     const icons = { image: Image, video: Film, audio: Music };
@@ -71,7 +71,7 @@
     async function completedUpload(file) {
         try {
             const response = await fetch(`/admin/library/media/chunks/${file.serverId}/asset`, {
-                headers: { 'X-CSRF-TOKEN': csrf(), Accept: 'application/json' },
+                headers: { ...csrfHeaders(), Accept: 'application/json' },
             });
             if (!response.ok) throw new Error(serverError(await response.text()));
 
@@ -100,7 +100,7 @@
             const response = await fetch('/admin/library/media/chunks', {
                 method: 'DELETE',
                 headers: {
-                    'X-CSRF-TOKEN': csrf(),
+                    ...csrfHeaders(),
                     Accept: 'application/json',
                     'Content-Type': 'text/plain',
                 },
@@ -116,12 +116,6 @@
 
     onMount(() => {
         media = [...initial];
-        const headers = {
-            'X-CSRF-TOKEN': csrf(),
-            Accept: 'application/json',
-            ...(libraryItemId ? { 'X-Library-Item-Id': libraryItemId } : {}),
-        };
-
         pond = create(input, {
             allowMultiple: true,
             instantUpload: true,
@@ -136,13 +130,27 @@
                 process: {
                     url: '/admin/library/media/chunks',
                     method: 'POST',
-                    headers,
+                    // FilePond's callback replaces its default headers, so
+                    // include Upload-Length explicitly (HEAD passes an ID).
+                    headers: (file) => ({
+                        ...csrfHeaders(),
+                        Accept: 'application/json',
+                        ...(typeof file === 'object' ? { 'Upload-Length': file.size } : {}),
+                        ...(libraryItemId ? { 'X-Library-Item-Id': libraryItemId } : {}),
+                    }),
                     onerror: serverError,
                 },
                 patch: {
                     url: '/admin/library/media/chunks/',
                     method: 'PATCH',
-                    headers: { 'X-CSRF-TOKEN': csrf(), Accept: 'application/json' },
+                    headers: (chunk) => ({
+                        ...csrfHeaders(),
+                        Accept: 'application/json',
+                        'Content-Type': 'application/offset+octet-stream',
+                        'Upload-Offset': chunk.offset,
+                        'Upload-Length': chunk.file.size,
+                        'Upload-Name': chunk.file.name,
+                    }),
                     onerror: serverError,
                 },
                 revert: revertUpload,
@@ -164,7 +172,7 @@
         if (!confirm(`Delete ${asset.original_name}? It will no longer load in any article that references it.`)) return;
         const response = await fetch(`/admin/library/media/${asset.id}`, {
             method: 'DELETE',
-            headers: { 'X-CSRF-TOKEN': csrf(), Accept: 'application/json' },
+            headers: { ...csrfHeaders(), Accept: 'application/json' },
         });
         if (response.ok) {
             media = media.filter((item) => item.id !== asset.id);

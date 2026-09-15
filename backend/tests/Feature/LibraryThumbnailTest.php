@@ -8,6 +8,7 @@ use App\Models\MediaAsset;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
+use Inertia\Testing\AssertableInertia as Assert;
 use Symfony\Component\Process\Process;
 use Tests\TestCase;
 
@@ -27,11 +28,11 @@ class LibraryThumbnailTest extends TestCase
         ]), 'admin');
     }
 
-    private function video(): UploadedFile
+    private function video(string $firstColor = 'red'): UploadedFile
     {
         $path = Storage::disk('local')->path('source.mp4');
         // Red first second, blue afterwards: a thumbnail must never pick blue.
-        (new Process(['ffmpeg', '-y', '-v', 'error', '-f', 'lavfi', '-i', 'color=red:s=160x90:d=1:r=10',
+        (new Process(['ffmpeg', '-y', '-v', 'error', '-f', 'lavfi', '-i', "color={$firstColor}:s=160x90:d=1:r=10",
             '-f', 'lavfi', '-i', 'color=blue:s=160x90:d=1:r=10', '-filter_complex', '[0:v][1:v]concat=n=2:v=1:a=0',
             '-c:v', 'libx264', '-pix_fmt', 'yuv420p', $path]))->mustRun();
 
@@ -131,5 +132,56 @@ class LibraryThumbnailTest extends TestCase
         $this->post('/admin/library', ['title' => 'Other', 'format' => 'article', 'media_ids' => [$asset['id']]])
             ->assertSessionHasErrors('media_ids.0');
         $this->assertNull(MediaAsset::findOrFail($asset['id'])->library_item_id);
+    }
+
+    public function test_editor_keeps_distinct_video_posters_after_save_reorder_and_reopen_without_changing_manual_cover(): void
+    {
+        $assets = [];
+        foreach (['red', 'green', 'yellow'] as $color) {
+            $assets[] = $this->postJson('/admin/library/media', ['file' => $this->video($color)])
+                ->assertOk()->json('asset');
+        }
+        $cover = 'https://example.test/manual-cover.jpg';
+        $body = collect($assets)->map(fn ($asset) => '<video src="'.$asset['url'].'"></video>')->implode("\n");
+        $this->post('/admin/library', [
+            'title' => 'Three lessons', 'format' => 'video', 'thumbnail_mode' => 'manual',
+            'hero_image_url' => $cover, 'body' => $body, 'media_ids' => array_column($assets, 'id'),
+        ])->assertSessionHasNoErrors()->assertRedirect();
+        $item = LibraryItem::where('title', 'Three lessons')->firstOrFail();
+        $posters = array_column($assets, 'thumbnail_url', 'url');
+        $this->assertCount(3, array_unique($posters));
+
+        // An older embedded upload has no item relationship or generated poster.
+        $legacy = MediaAsset::findOrFail($assets[1]['id']);
+        Storage::disk('public')->delete($legacy->thumbnail_path);
+        $legacy->update(['library_item_id' => null, 'thumbnail_path' => null, 'thumbnail_url' => null]);
+
+        $response = $this->get('/admin/library/'.$item->id.'/edit')->assertOk();
+        $legacy->refresh();
+        $this->assertNotNull($legacy->thumbnail_url);
+        $posters[$legacy->url] = $legacy->thumbnail_url;
+        $response->assertInertia(fn (Assert $page) => $page->component('Library/Edit')
+            ->where('videoPosters', fn ($value) => collect($value)->all() == $posters)
+            ->where('item.hero_image_url', $cover));
+
+        $pixels = [];
+        foreach ($assets as $asset) {
+            $asset = MediaAsset::findOrFail($asset['id']);
+            $image = imagecreatefromjpeg(Storage::disk('public')->path($asset->thumbnail_path));
+            $pixel = imagecolorsforindex($image, imagecolorat($image, 320, 240));
+            $this->assertLessThan(30, $pixel['blue'], 'Posters must come from the first second, before the blue frame.');
+            $pixels[] = $pixel;
+            imagedestroy($image);
+        }
+        $this->assertCount(3, array_unique(array_map('json_encode', $pixels)));
+
+        $this->put('/admin/library/'.$item->id, [
+            'title' => $item->title, 'format' => 'video', 'thumbnail_mode' => 'manual',
+            'hero_image_url' => $cover, 'body' => implode("\n", array_reverse(explode("\n", $body))),
+        ])->assertSessionHasNoErrors()->assertRedirect();
+        $this->get('/admin/library/'.$item->id.'/edit')->assertInertia(fn (Assert $page) => $page
+            ->where('videoPosters', fn ($value) => collect($value)->all() == $posters)
+            ->where('item.hero_image_url', $cover));
+        $this->assertSame($cover, $item->fresh()->hero_image_url);
     }
 }

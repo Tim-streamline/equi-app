@@ -97,24 +97,21 @@ class HorseDashboard
         $day = max(0, min($totalDays, $elapsed));
         $week = $day > 0 ? (int) ceil($day / 7) : 0;
         $running = $elapsed > 0 && $elapsed <= $totalDays;
-        $phases = $protocol->phases->map(function ($phase) use ($week, $elapsed, $totalDays) {
+        $phases = $protocol->phases->map(function ($phase) use ($protocol, $now) {
+            $availability = app(ProtocolPhaseAvailability::class)->forPhase($protocol, $phase, $now);
             $weeks = $phase->weeks->pluck('protocol_week_number', 'id');
-            $first = (int) ($weeks->min() ?? $phase->week_start ?? 0);
-            $last = (int) ($weeks->max() ?? $phase->week_end ?? 0);
-            $state = $first > 0 && $week >= $first && $week <= $last && $elapsed <= $totalDays ? 'active' : ($week > $last || $elapsed > $totalDays ? 'done' : 'upcoming');
-            $range = $first ? 'Week '.$first.($last > $first ? ' t/m '.$last : '') : 'Nog niet ingepland';
 
-            return [
-                'id' => $phase->id, 'title' => $phase->title, 'description' => $phase->description,
-                'weekStart' => $first, 'weekEnd' => $last, 'weekLabel' => $range, 'state' => $state,
-                'statusLabel' => $state === 'active' ? 'Actief · wk '.$first.'–'.$last : ($state === 'done' ? 'Afgerond' : ($first ? 'Vanaf wk '.$first : 'Nog niet ingepland')),
-                'supplements' => $phase->supplements->map(fn ($s) => [
+            return $availability + [
+                'id' => $phase->id, 'title' => $phase->title,
+                'description' => $availability['accessible'] ? $phase->description : null,
+                'contentAvailable' => $availability['accessible'],
+                'supplements' => $availability['accessible'] ? $phase->supplements->map(fn ($s) => [
                     'id' => $s->id, 'name' => $s->name, 'dosage' => $s->dosage,
                     'description' => $s->description, 'instructions' => $s->instructions,
                     'frequencyLabel' => $s->aantal_per_week ? $s->aantal_per_week.'× per week' : null,
                     'weekNumbers' => $s->weeks->map(fn ($link) => (int) $weeks->get($link->protocol_phase_week_id))->filter()->values()->all(),
                     'phaseTitle' => $phase->title,
-                ])->values()->all(),
+                ])->values()->all() : [],
             ];
         })->values()->all();
         $allSupplements = collect($phases)->flatMap(fn ($p) => $p['supplements']);
@@ -136,10 +133,10 @@ class HorseDashboard
             $notifications[] = ['id' => 'weekly-'.$week, 'type' => 'weekly_update', 'title' => 'Weekupdate invullen', 'body' => 'Hoe gaat het met '.$protocol->horse->name.' in week '.$week.'?', 'items' => []];
         }
         foreach ($phases as $phase) {
-            if ($running && $phase['weekStart'] === $week + 1) {
-                $notifications[] = ['id' => $phase['id'], 'type' => 'next_phase', 'title' => 'Let op: volgende week start een nieuwe fase',
-                    'body' => $phase['title'].' start in week '.$phase['weekStart'].'. Bekijk wat je nodig hebt.', 'phaseId' => $phase['id'],
-                    'items' => array_values(array_filter($phase['supplements'], fn ($s) => in_array($week + 1, $s['weekNumbers'], true))),
+            if ($phase['state'] === 'preview') {
+                $notifications[] = ['id' => $phase['id'], 'type' => 'next_phase', 'title' => 'Je volgende fase staat klaar 🌿',
+                    'body' => 'Over een week start '.$phase['title'].'. Bekijk alvast wat er verandert en welke kruiden of supplementen je nodig hebt.', 'phaseId' => $phase['id'],
+                    'items' => array_values(array_filter($phase['supplements'], fn ($s) => in_array($phase['weekStart'], $s['weekNumbers'], true))),
                     'orderItems' => array_values(array_filter($phase['supplements'], fn ($s) => count($s['weekNumbers']) > 0))];
             }
         }

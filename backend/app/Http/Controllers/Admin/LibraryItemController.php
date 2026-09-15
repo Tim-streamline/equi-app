@@ -67,6 +67,7 @@ class LibraryItemController extends Controller
             'item' => $library?->load('categories:id', 'media'),
             'videoDurationMinutes' => $library ? LibraryVideoDuration::minutes($library->duration_label, $library->duration_sec) : null,
             'automaticThumbnailUrl' => $library ? app(LibraryThumbnail::class)->sourceAsset($library)?->thumbnail_url : null,
+            'videoPosters' => $library ? app(LibraryThumbnail::class)->videoPosters($library) : (object) [],
             'categories' => LibraryCategory::orderBy('order')->get(['id', 'label']),
             'therapists' => Therapist::availableFor($library?->author_therapist_id)->orderBy('name')->get(['id', 'name', 'title', 'archived_at'])
                 ->map(fn (Therapist $therapist) => [

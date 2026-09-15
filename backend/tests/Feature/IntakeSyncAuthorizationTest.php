@@ -86,6 +86,41 @@ class IntakeSyncAuthorizationTest extends TestCase
         $this->assertDatabaseMissing('intake_responses', ['user_id' => $victim->id]);
     }
 
+    public function test_agriculture_answers_survive_authenticated_mobile_upload_and_reload(): void
+    {
+        $user = User::factory()->create();
+        $response = IntakeResponse::query()->create(['user_id' => $user->id, 'status' => 'draft']);
+        $answers = [
+            'landbouw-nabij' => 'Ja',
+            'landbouw-afstand' => 'Minder dan 50 meter',
+            'landbouw-gewas' => 'maïs',
+            'landbouw-bespoten' => 'Ja',
+            'landbouw-middelen' => ['Onkruidbestrijding / herbicide', 'Schimmelbestrijding / fungicide'],
+            'landbouw-frequentie' => 'Enkele keren per jaar',
+            'landbouw-nevel' => 'Beide',
+            'landbouw-water' => 'Weet ik niet',
+            'landbouw-klachten' => 'Ja',
+            'landbouw-klachten-toelichting' => 'Geïrriteerde ogen na werkzaamheden.',
+            'omgeving-overig' => 'Ook een boomgaard naast de weide.',
+        ];
+        $operations = [];
+        foreach ($answers as $field => $value) {
+            $operations[] = [
+                'op' => 'PUT', 'type' => 'intake_answers', 'id' => (string) Str::uuid(),
+                'data' => [
+                    'response_id' => $response->id, 'section_id' => 'huisvesting',
+                    'field_id' => $field, 'value' => json_encode($value, JSON_THROW_ON_ERROR),
+                ],
+            ];
+        }
+
+        $this->postSyncAs($user, $operations)->assertOk()->assertJsonPath('applied', 11);
+        $reloaded = $response->fresh()->answers->mapWithKeys(fn ($answer) => [
+            $answer->field_id => json_decode($answer->value, true, flags: JSON_THROW_ON_ERROR),
+        ])->all();
+        $this->assertEquals($answers, $reloaded);
+    }
+
     public function test_user_cannot_write_answer_on_another_users_response(): void
     {
         $owner = User::factory()->create();

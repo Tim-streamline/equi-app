@@ -17,6 +17,7 @@ import {
   SourceSans3_400Regular_Italic,
   SourceSans3_600SemiBold_Italic,
 } from '@expo-google-fonts/source-sans-3';
+import { ProtocolNotifications } from '@/components/notifications/ProtocolNotifications';
 import { DbProvider } from '@/db/provider';
 import { IntakeProvider } from '@/lib/intake/store';
 import { IntakeSchemaProvider } from '@/lib/intake/schema-provider';
@@ -49,6 +50,7 @@ export default function RootLayout() {
     <GestureHandlerRootView style={{ flex: 1, backgroundColor: '#FBF8F3' }}>
       <SafeAreaProvider>
         <DbProvider>
+          <ProtocolNotifications />
           <IntakeSchemaProvider>
             <IntakeProvider>
               <View style={{ flex: 1, backgroundColor: '#FBF8F3' }}>

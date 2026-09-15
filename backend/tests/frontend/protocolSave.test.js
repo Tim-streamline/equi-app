@@ -46,3 +46,9 @@ test('repeated clicks during a save cannot send a second request', () => {
     page.save(true);
     assert.equal(page.requests.length, 0);
 });
+
+test('analysis editor and preview no longer ask for protocol focus points', () => {
+    assert.doesNotMatch(source, /Focus van het protocol|addFocusPoint|analysis\.focus_points/);
+    assert.match(source, /aria-label="Persoonlijke analyse"/);
+    assert.match(source, /Waar letten we op\?/);
+});

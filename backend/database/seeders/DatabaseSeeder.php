@@ -22,6 +22,7 @@ class DatabaseSeeder extends Seeder
             VoedingAdviesSeeder::class,      // design-backed nutrition advice catalog
             ManagementAdviesSeeder::class,   // design-backed management advice catalog
             BewegingAdviesSeeder::class,     // design-backed movement advice catalog
+            ProtocolTemplateSeeder::class,  // full protocol templates from the saved local catalog
             ProtocolSeeder::class,          // anchor user's protocol + phases
             ScanSeeder::class,              // scans per user + ingredient breakdown
             CommunitySeeder::class,         // posts + replies + reactions

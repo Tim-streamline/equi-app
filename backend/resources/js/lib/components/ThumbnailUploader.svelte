@@ -1,5 +1,6 @@
 <script>
     import { onDestroy } from 'svelte';
+    import { csrfHeaders } from '$lib/csrf';
     import LibraryThumbnail from './LibraryThumbnail.svelte';
     let { value = $bindable(''), mode = $bindable('auto'), busy = $bindable(false), format = 'article', onuploaded, automaticUrl = '' } = $props();
     let localPreview = $state('');
@@ -26,7 +27,7 @@
             body.append('file', file);
             body.append('purpose', 'thumbnail');
             const response = await fetch('/admin/library/media', { method: 'POST', body, headers: {
-                Accept: 'application/json', 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content ?? '',
+                Accept: 'application/json', ...csrfHeaders(),
             }});
             const data = await response.json();
             if (!response.ok) throw new Error(data.errors?.file?.[0] || data.message || 'Upload mislukt.');

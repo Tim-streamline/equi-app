@@ -3,8 +3,8 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Attributes\Fillable;
-use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 #[Fillable([
@@ -14,10 +14,12 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
     'reminder_seasonal_tips',
     'active_reminders_count',
     'push_token',
+    'timezone',
 ])]
 class NotificationPreference extends Model
 {
     use HasUuids;
+
     protected function casts(): array
     {
         return [

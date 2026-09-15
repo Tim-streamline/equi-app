@@ -6,11 +6,11 @@ function source(path) {
     return readFileSync(new URL(path, import.meta.url), 'utf8');
 }
 
-test('admin navigation calls protocol settings Protocol Templates', () => {
+test('admin navigation distinguishes templates from advice settings', () => {
     const navigation = source('../../resources/js/lib/nav.js');
 
-    assert.match(navigation, /label: 'Protocol Templates'/);
-    assert.doesNotMatch(navigation, /label: 'Protocol Settings'/);
+    assert.match(navigation, /label: 'Protocol Templates', href: '\/admin\/protocol-settings'/);
+    assert.match(navigation, /label: 'Protocol Settings', href: '\/admin\/protocol-settings\/advice'/);
 });
 
 test('protocol configuration uses template terminology', () => {
@@ -40,5 +40,5 @@ test('protocol list and editor use protocol template labels', () => {
     assert.match(editor, /Field label="Protocol template"/);
     assert.match(editor, /Configureer ze in Protocol Templates\./);
     assert.doesNotMatch(list, /protocol type/i);
-    assert.doesNotMatch(editor, /Protocol Settings/);
+    assert.match(editor, /href="\/admin\/protocol-settings\/advice"[^>]*>Naar Protocol Settings<\/Button>/);
 });

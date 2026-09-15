@@ -71,10 +71,31 @@ class HorseDashboardTest extends TestCase
             ->assertOk()->assertJsonPath('protocol.currentWeek', 2)
             ->assertJsonPath('protocol.currentDay', 14)->assertJsonPath('protocol.progressPercent', 50)
             ->assertJsonPath('protocol.phases.0.state', 'active')
-            ->assertJsonPath('protocol.phases.1.state', 'upcoming')
+            ->assertJsonPath('protocol.phases.1.state', 'preview')
+            ->assertJsonPath('protocol.phases.1.accessible', true)
             ->assertJsonPath('protocol.notifications.1.type', 'next_phase')
             ->assertJsonPath('protocol.notifications.1.items.0.name', 'Herb 2')
             ->assertJsonPath('protocol.today.total', 1);
+    }
+
+    public function test_locked_phase_content_is_redacted_from_every_dashboard_list_until_exact_boundary(): void
+    {
+        $this->protocol->update(['published_at' => '2026-08-15 00:00:00']);
+        $this->travelTo(now()->setDate(2026, 8, 21)->setTime(23, 59, 59));
+        $url = '/api/horses/'.$this->horse->id.'/dashboard?timezone=UTC';
+        $this->getJson($url)->assertOk()
+            ->assertJsonPath('protocol.phases.1.state', 'locked')
+            ->assertJsonPath('protocol.phases.1.accessible', false)
+            ->assertJsonPath('protocol.phases.1.description', null)
+            ->assertJsonCount(0, 'protocol.phases.1.supplements')
+            ->assertJsonMissing(['name' => 'Herb 2']);
+        $this->travelTo(now()->setDate(2026, 8, 22)->setTime(0, 0));
+        $this->getJson($url)->assertOk()
+            ->assertJsonPath('protocol.phases.1.state', 'preview')
+            ->assertJsonPath('protocol.phases.1.statusLabel', 'Start volgende week')
+            ->assertJsonPath('protocol.phases.1.description', 'Personal phase purpose')
+            ->assertJsonPath('protocol.phases.1.supplements.0.dosage', '20 g')
+            ->assertJsonCount(2, 'protocol.orderItems');
     }
 
     public function test_other_owners_and_unpublished_protocols_are_not_exposed(): void
@@ -118,7 +139,7 @@ class HorseDashboardTest extends TestCase
 
     public function test_future_and_finished_protocols_do_not_offer_daily_actions_or_reminders(): void
     {
-        foreach (['2026-09-01' => 0, '2026-07-01' => 100] as $start => $progress) {
+        foreach (['2026-09-15' => 0, '2026-07-01' => 100] as $start => $progress) {
             $this->protocol->update(['started_at' => $start]);
             $this->getJson('/api/horses/'.$this->horse->id.'/dashboard')->assertOk()
                 ->assertJsonPath('protocol.progressPercent', $progress)

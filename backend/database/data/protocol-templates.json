@@ -1,0 +1,903 @@
+[
+    {
+        "name": "Darm protocol",
+        "phases": [
+            {
+                "order": 1,
+                "name": "Maagondersteuning",
+                "description": "Deze fase richt zich op het kalmeren en beschermen van het maagslijmvlies. Slijmstofrijke kruiden en zaden vormen een verzachtend laagje en ondersteunen het natuurlijke herstel, als basis voor de verdere darmrevalidatie.",
+                "required": false,
+                "start_after_previous_phase_weeks": null,
+                "weeks": [
+                    1,
+                    2,
+                    3,
+                    4,
+                    5,
+                    6,
+                    7,
+                    8
+                ],
+                "supplements": [
+                    {
+                        "name": "Gekookt (bio) lijnzaad",
+                        "description": "Ondersteunt en beschermt het maagslijmvlies.",
+                        "supplement_type": "kruid",
+                        "add_by_default": true,
+                        "max_aantal_in_fase": 56,
+                        "min_aantal_per_week": 5,
+                        "rust_periode_in_weken": 2,
+                        "dosis_type": "per_600_kg",
+                        "dosis": 100,
+                        "unit": "g",
+                        "instructions": "Kook met ruim water tot een slijmerige massa en laat afkoelen tot kamertemp. Geef de dosering bij voorkeur 2× daags. Bij 2× daags geef je dus tweemaal de volledige hoeveelheid. Steeds vers bereiden en max. 8–12u gekoeld bewaren.",
+                        "weeks": [
+                            1,
+                            2,
+                            3,
+                            4,
+                            5,
+                            6,
+                            7,
+                            8
+                        ]
+                    },
+                    {
+                        "name": "Heemstwortel",
+                        "description": "Vormt een beschermend slijmlaagje, verzacht irritatie in maag en darmen en helpt maagzuur en galzouten te neutraliseren.",
+                        "supplement_type": "kruid",
+                        "add_by_default": true,
+                        "max_aantal_in_fase": 42,
+                        "min_aantal_per_week": 4,
+                        "rust_periode_in_weken": 2,
+                        "dosis_type": "per_600_kg",
+                        "dosis": 15,
+                        "unit": "g",
+                        "instructions": "Laat samen met het kaasjeskruid 20–30 minuten trekken in circa 200 ml heet, niet-kokend water. Regelmatig roeren en alles door het voer mengen. Geef 1× of bij voorkeur 2× daags steeds de volledige berekende hoeveelheid.",
+                        "weeks": [
+                            1,
+                            2,
+                            3,
+                            4,
+                            5,
+                            6
+                        ]
+                    },
+                    {
+                        "name": "Kaasjeskruid bloemen (Malva Sylvestris)",
+                        "description": "Verzacht en ondersteunt de slijmvliezen van de spijsvertering.",
+                        "supplement_type": "kruid",
+                        "add_by_default": true,
+                        "max_aantal_in_fase": 42,
+                        "min_aantal_per_week": 4,
+                        "rust_periode_in_weken": 2,
+                        "dosis_type": "per_600_kg",
+                        "dosis": 15,
+                        "unit": "g",
+                        "instructions": "Laat de berekende hoeveelheid 20–30 minuten trekken in circa 200 ml heet, niet-kokend water. Regelmatig roeren en alles door het voer mengen. Geef de dosering bij voorkeur 2× daags. Bij 2× daags geef je dus tweemaal de volledige hoeveelheid.",
+                        "weeks": [
+                            1,
+                            2,
+                            3,
+                            4,
+                            5,
+                            6
+                        ]
+                    },
+                    {
+                        "name": "Psyliumzaad (bio)",
+                        "description": "Ondersteunt en beschermt het maagslijmvlies en heeft een stabiliserend effect op de bloedsuikerspiegel.",
+                        "supplement_type": "kruid",
+                        "add_by_default": false,
+                        "max_aantal_in_fase": 56,
+                        "min_aantal_per_week": 5,
+                        "rust_periode_in_weken": 2,
+                        "dosis_type": "per_600_kg",
+                        "dosis": 200,
+                        "unit": "g",
+                        "instructions": "De laatste 5-10 min laten mee weken in geweekte bijvoeding zodat slijmvorming geactiveerd wordt. Geef de dosering bij voorkeur 2× daags. Bij 2× daags geef je dus tweemaal de volledige hoeveelheid.",
+                        "weeks": [
+                            1,
+                            2,
+                            3,
+                            4,
+                            5,
+                            6,
+                            7,
+                            8
+                        ]
+                    }
+                ]
+            },
+            {
+                "order": 2,
+                "name": "Darm reset",
+                "description": "Voor paarden die langdurig gist of probiotica hebben gekregen. In deze 7-daagse voorfase wordt het darmmilieu voorbereid, zodat je daarna met de 6 weken darmrevalidatie kunt starten.",
+                "required": false,
+                "start_after_previous_phase_weeks": 2,
+                "weeks": [
+                    1
+                ],
+                "supplements": [
+                    {
+                        "name": "Silsterk",
+                        "description": "Combinatie van acaciahoning, citroenolie en tea-treeolie. De honing vormt een zachte drager; de essentiële oliën hebben bacterie- en schimmelremmende eigenschappen en ondersteunen zo tijdelijk de weerstand en het darmmilieu.",
+                        "supplement_type": "supplement",
+                        "add_by_default": true,
+                        "max_aantal_in_fase": 7,
+                        "min_aantal_per_week": 5,
+                        "rust_periode_in_weken": 4,
+                        "dosis_type": "per_600_kg",
+                        "dosis": 10,
+                        "unit": "druppels",
+                        "instructions": "Dag 1-2: halve dosering\nDag 3 t/m 7: aanbevolen dosering\n\n20 druppels is ongeveer 1 ml.",
+                        "weeks": [
+                            1
+                        ]
+                    }
+                ]
+            },
+            {
+                "order": 3,
+                "name": "Darmrevalidatie",
+                "description": "Deze darmfase richt zichhet stimuleren van de spijsvertering en het reguleren van de ontlasting. Tegelijkertijd wordt de geïrriteerde darmwand gekalmeerd en beschermd.",
+                "required": true,
+                "start_after_previous_phase_weeks": 2,
+                "weeks": [
+                    1,
+                    2,
+                    3,
+                    4,
+                    5,
+                    6
+                ],
+                "supplements": [
+                    {
+                        "name": "Lapachoschors",
+                        "description": "Antimicrobieel, ondersteunt gezonde darmflora.",
+                        "supplement_type": "kruid",
+                        "add_by_default": true,
+                        "max_aantal_in_fase": 42,
+                        "min_aantal_per_week": 4,
+                        "rust_periode_in_weken": 2,
+                        "dosis_type": "per_600_kg",
+                        "dosis": 20,
+                        "unit": "g",
+                        "instructions": "Door de geweekte bijvoeding mengen.",
+                        "weeks": [
+                            1,
+                            2,
+                            3,
+                            4,
+                            5,
+                            6
+                        ]
+                    },
+                    {
+                        "name": "Paardenbloemblad",
+                        "description": "Ondersteunt de spijsvertering en vochtafvoer en levert van nature veel kalium en bitterstoffen. Stimuleert daarnaast mild de lever-, gal- en nierfunctie.",
+                        "supplement_type": "kruid",
+                        "add_by_default": true,
+                        "max_aantal_in_fase": 42,
+                        "min_aantal_per_week": 4,
+                        "rust_periode_in_weken": 2,
+                        "dosis_type": "per_600_kg",
+                        "dosis": 50,
+                        "unit": "g",
+                        "instructions": "Door de geweekte bijvoeding mengen.",
+                        "weeks": [
+                            1,
+                            2,
+                            3,
+                            4,
+                            5,
+                            6
+                        ]
+                    },
+                    {
+                        "name": "Salie",
+                        "description": "Ontstekingswerend, infectiewerend en krampwerend. Windverdrijvend bij darmgistingen.",
+                        "supplement_type": "kruid",
+                        "add_by_default": true,
+                        "max_aantal_in_fase": 28,
+                        "min_aantal_per_week": 4,
+                        "rust_periode_in_weken": 2,
+                        "dosis_type": "per_600_kg",
+                        "dosis": 10,
+                        "unit": "g",
+                        "instructions": "Door de geweekte bijvoeding mengen. Nooit langer dan 4 weken achter elkaar geven! Verse salie kan als alternatief: ong. 1 vers blad per 100 kg lichaamsgewicht.",
+                        "weeks": [
+                            1,
+                            2,
+                            3,
+                            4
+                        ]
+                    },
+                    {
+                        "name": "Smalle weegbree",
+                        "description": "Kalmeert en beschermt de darmwand, ondersteunt het herstel van het slijmvlies en helpt de ontlasting reguleren. Werkt daarnaast verzachtend, samentrekkend en bacterieremmend.",
+                        "supplement_type": "kruid",
+                        "add_by_default": true,
+                        "max_aantal_in_fase": 42,
+                        "min_aantal_per_week": 4,
+                        "rust_periode_in_weken": 2,
+                        "dosis_type": "per_600_kg",
+                        "dosis": 50,
+                        "unit": "g",
+                        "instructions": "Door de geweekte bijvoeding mengen.",
+                        "weeks": [
+                            1,
+                            2,
+                            3,
+                            4,
+                            5,
+                            6
+                        ]
+                    }
+                ]
+            },
+            {
+                "order": 4,
+                "name": "Mineralen aanvullen",
+                "description": "Gedurende 8 weken worden zink en organische zwavel aangevuld ter ondersteuning van de darmwand, slijmvliezen, huid, vacht, hoeven en het herstelvermogen.",
+                "required": true,
+                "start_after_previous_phase_weeks": 0,
+                "weeks": [
+                    1,
+                    2,
+                    3,
+                    4,
+                    5,
+                    6,
+                    7,
+                    8
+                ],
+                "supplements": [
+                    {
+                        "name": "AGROBS Zink Puur",
+                        "description": "Organisch gebonden zink ter tijdelijke aanvulling. Ondersteunt de normale stofwisseling, weerstand, huid en hoeven.",
+                        "supplement_type": "supplement",
+                        "add_by_default": true,
+                        "max_aantal_in_fase": 56,
+                        "min_aantal_per_week": 4,
+                        "rust_periode_in_weken": 8,
+                        "dosis_type": "per_kg",
+                        "dosis": 0.05,
+                        "unit": "g",
+                        "instructions": "Door de geweekte bijvoeding mengen. \nNiet combineren met andere zinkhoudende supplementen.",
+                        "weeks": [
+                            1,
+                            2,
+                            3,
+                            4,
+                            5,
+                            6,
+                            7,
+                            8
+                        ]
+                    },
+                    {
+                        "name": "BePure MSM (organische zwavel)",
+                        "description": "Zuivere MSM zonder toevoegingen. Levert organisch gebonden zwavel als bouwstof voor onder andere darmwand, bindweefsel, huid, vacht en hoeven.",
+                        "supplement_type": "supplement",
+                        "add_by_default": true,
+                        "max_aantal_in_fase": null,
+                        "min_aantal_per_week": 4,
+                        "rust_periode_in_weken": 2,
+                        "dosis_type": "per_600_kg",
+                        "dosis": 15,
+                        "unit": "g",
+                        "instructions": "Door de geweekte bijvoeding mengen.",
+                        "weeks": [
+                            1,
+                            2,
+                            3,
+                            4,
+                            5,
+                            6,
+                            7,
+                            8
+                        ]
+                    }
+                ]
+            },
+            {
+                "order": 5,
+                "name": "Mineralen aanvullen – KPU",
+                "description": "Voor paarden met aangetoonde KPU. Tijdens de eerste 3 weken van de darmrevalidatie worden zink en MSM los aangevuld. Vanaf week 4 worden deze vervangen door HeparKPU forte.",
+                "required": false,
+                "start_after_previous_phase_weeks": 0,
+                "weeks": [
+                    1,
+                    2,
+                    3
+                ],
+                "supplements": [
+                    {
+                        "name": "AGROBS Zink Puur",
+                        "description": "Organisch gebonden zink ter tijdelijke aanvulling. Ondersteunt de normale stofwisseling, weerstand, huid en hoeven.",
+                        "supplement_type": "supplement",
+                        "add_by_default": true,
+                        "max_aantal_in_fase": 21,
+                        "min_aantal_per_week": 4,
+                        "rust_periode_in_weken": 8,
+                        "dosis_type": "per_kg",
+                        "dosis": 0.05,
+                        "unit": "g",
+                        "instructions": "Door de geweekte bijvoeding mengen. \nNiet combineren met andere zinkhoudende supplementen.",
+                        "weeks": [
+                            1,
+                            2,
+                            3
+                        ]
+                    },
+                    {
+                        "name": "BePure MSM (organische zwavel)",
+                        "description": "Zuivere MSM zonder toevoegingen. Levert organisch gebonden zwavel als bouwstof voor onder andere darmwand, bindweefsel, huid, vacht en hoeven.",
+                        "supplement_type": "supplement",
+                        "add_by_default": true,
+                        "max_aantal_in_fase": 21,
+                        "min_aantal_per_week": 4,
+                        "rust_periode_in_weken": 8,
+                        "dosis_type": "per_600_kg",
+                        "dosis": 15,
+                        "unit": "g",
+                        "instructions": "Door de geweekte bijvoeding mengen,",
+                        "weeks": [
+                            1,
+                            2,
+                            3
+                        ]
+                    }
+                ]
+            },
+            {
+                "order": 6,
+                "name": "Metabole ondersteuning - IR vermoedelijk",
+                "description": "Voor paarden met signalen die passen bij beginnende insulineresistentie, maar waarbij IR niet met bloedonderzoek is bevestigd. Deze fase ondersteunt de stofwisseling en vervangt verder onderzoek naar IR of EMS niet.",
+                "required": false,
+                "start_after_previous_phase_weeks": 3,
+                "weeks": [
+                    1,
+                    2,
+                    3,
+                    4,
+                    5,
+                    6,
+                    7,
+                    8
+                ],
+                "supplements": [
+                    {
+                        "name": "Schüsslerzout nr. 10 – Natrium sulfuricum",
+                        "description": "Wordt binnen de Schüsslertherapie ingezet ter ondersteuning van de lever-, vocht- en stofwisselingsprocessen.",
+                        "supplement_type": "supplement",
+                        "add_by_default": true,
+                        "max_aantal_in_fase": 56,
+                        "min_aantal_per_week": 4,
+                        "rust_periode_in_weken": 2,
+                        "dosis_type": "vast",
+                        "dosis": 3,
+                        "unit": "pillen",
+                        "instructions": "De tabletten bevatten een kleine hoeveelheid lactose als drager. Ten opzichte van het lichaamsgewicht en de totale dagelijkse hoeveelheid ruwvoer is dit nutritioneel en voor de suikerbelasting verwaarloosbaar, ook voor een paard met vermoedelijke IR.\n\nDe meeste paarden eten de tabletten probleemloos. Geef ze uit de hand of meng ze heel of verkruimeld door een klein beetje vochtig voer. Zo weet je zeker dat de volledige dosering wordt opgegeten. Alleen bij een bewezen overgevoeligheid voor melkbestanddelen kun je naar een lactosevrije variant zoeken.",
+                        "weeks": [
+                            1,
+                            2,
+                            3,
+                            4,
+                            5,
+                            6,
+                            7,
+                            8
+                        ]
+                    },
+                    {
+                        "name": "Schüsslerzout nr. 27 – Kalium bichromicum",
+                        "description": "Wordt binnen de Schüsslertherapie ingezet ter ondersteuning van de glucose- en insulinstofwisseling.",
+                        "supplement_type": "supplement",
+                        "add_by_default": true,
+                        "max_aantal_in_fase": 56,
+                        "min_aantal_per_week": 4,
+                        "rust_periode_in_weken": 2,
+                        "dosis_type": "per_600_kg",
+                        "dosis": 3,
+                        "unit": "pillen",
+                        "instructions": "De tabletten bevatten een kleine hoeveelheid lactose als drager. Ten opzichte van het lichaamsgewicht en de totale dagelijkse hoeveelheid ruwvoer is dit nutritioneel en voor de suikerbelasting verwaarloosbaar, ook voor een paard met vermoedelijke IR.\n\nDe meeste paarden eten de tabletten probleemloos. Geef ze uit de hand of meng ze heel of verkruimeld door een klein beetje vochtig voer. Zo weet je zeker dat de volledige dosering wordt opgegeten. Alleen bij een bewezen overgevoeligheid voor melkbestanddelen kun je naar een lactosevrije variant zoeken.",
+                        "weeks": [
+                            1,
+                            2,
+                            3,
+                            4,
+                            5,
+                            6,
+                            7,
+                            8
+                        ]
+                    }
+                ]
+            },
+            {
+                "order": 7,
+                "name": "Metabole ondersteuning - IR aangetoond",
+                "description": "Voor paarden waarbij insulineresistentie is aangetoond. Deze fase ondersteunt de natuurlijke suikerstofwisseling.",
+                "required": false,
+                "start_after_previous_phase_weeks": 3,
+                "weeks": [
+                    1,
+                    2,
+                    3,
+                    4,
+                    5,
+                    6,
+                    7,
+                    8,
+                    9,
+                    10,
+                    11,
+                    12
+                ],
+                "supplements": [
+                    {
+                        "name": "PankrEMS",
+                        "description": "Ondersteunt de suikerstofwisseling.",
+                        "supplement_type": "supplement",
+                        "add_by_default": true,
+                        "max_aantal_in_fase": null,
+                        "min_aantal_per_week": 4,
+                        "rust_periode_in_weken": 0,
+                        "dosis_type": "per_600_kg",
+                        "dosis": 20,
+                        "unit": "g",
+                        "instructions": "Bij voorkeur 2x daags de helft van de aanbevolen dosering door de bijvoeding mengen.\nAnders 1x daags de aanbevolen dosering door de bijvoeding mengen.",
+                        "weeks": [
+                            1,
+                            2,
+                            3,
+                            4,
+                            5,
+                            6,
+                            7,
+                            8,
+                            9,
+                            10,
+                            11,
+                            12
+                        ]
+                    }
+                ]
+            },
+            {
+                "order": 8,
+                "name": "Metabole ondersteuning - KPU aangetoond",
+                "description": "Voor paarden waarbij KPU is aangetoond. Deze langdurige fase ondersteunt het darmmilieu, de leverstofwisseling en de verhoogde behoefte aan bepaalde mineralen.",
+                "required": false,
+                "start_after_previous_phase_weeks": 3,
+                "weeks": [
+                    1,
+                    2,
+                    3,
+                    4,
+                    5,
+                    6,
+                    7,
+                    8,
+                    9,
+                    10,
+                    11,
+                    12
+                ],
+                "supplements": [
+                    {
+                        "name": "HeparKPU forte",
+                        "description": "Levert zink, organische zwavel en vitamine B6 en B12 en ondersteunt daarmee de darmflora en natuurlijke leverstofwisseling. De kruiden bieden aanvullende ondersteuning aan de spijsvertering.",
+                        "supplement_type": "supplement",
+                        "add_by_default": true,
+                        "max_aantal_in_fase": null,
+                        "min_aantal_per_week": 4,
+                        "rust_periode_in_weken": 0,
+                        "dosis_type": "per_600_kg",
+                        "dosis": 20,
+                        "unit": "g",
+                        "instructions": "Meng de berekende hoeveelheid eenmaal daags door de geweekte bijvoeding. Geef geen losse MSM, vitamine B6 of vitamine B12 naast dit product. Controleer bij langdurig gebruik regelmatig het volledige mineralenrantsoen, met name de totale hoeveelheid zink.",
+                        "weeks": [
+                            1,
+                            2,
+                            3,
+                            4,
+                            5,
+                            6,
+                            7,
+                            8,
+                            9,
+                            10,
+                            11,
+                            12
+                        ]
+                    }
+                ]
+            },
+            {
+                "order": 9,
+                "name": "Verdere darmondersteuning",
+                "description": "Deze vervolgfase richt zich op het verder kalmeren van de darmwand en het reguleren van de darmwerking. Boswellia, duizendblad en gember ondersteunen een gezonde ontstekingsreactie, spijsvertering, doorstroming en darmbeweging.",
+                "required": false,
+                "start_after_previous_phase_weeks": null,
+                "weeks": [
+                    1,
+                    2,
+                    3,
+                    4
+                ],
+                "supplements": [
+                    {
+                        "name": "Boswellia Serrata",
+                        "description": "Ondersteunt een gezonde ontstekingsreactie en helpt geïrriteerd weefsel en darmslijmvlies tot rust te brengen.",
+                        "supplement_type": "kruid",
+                        "add_by_default": true,
+                        "max_aantal_in_fase": 28,
+                        "min_aantal_per_week": 4,
+                        "rust_periode_in_weken": 2,
+                        "dosis_type": "per_600_kg",
+                        "dosis": 10,
+                        "unit": "g",
+                        "instructions": "Gebruik 100% pure Boswellia serrata-hars. Zowel poeder als kleine harskorrels zijn geschikt; poeder mengt gemakkelijker door het voer. De berekende dosering geldt voor pure hars, niet voor een geconcentreerd extract.",
+                        "weeks": [
+                            1,
+                            2,
+                            3,
+                            4
+                        ]
+                    },
+                    {
+                        "name": "Duizendblad",
+                        "description": "Zorgt voor een goede doorstroming/regulatie in de darmen.",
+                        "supplement_type": "kruid",
+                        "add_by_default": true,
+                        "max_aantal_in_fase": null,
+                        "min_aantal_per_week": 4,
+                        "rust_periode_in_weken": 2,
+                        "dosis_type": "per_600_kg",
+                        "dosis": 10,
+                        "unit": "g",
+                        "instructions": "Door de geweekte bijvoeding mengen.",
+                        "weeks": [
+                            1,
+                            2,
+                            3,
+                            4
+                        ]
+                    },
+                    {
+                        "name": "Gemberwortelpoeder",
+                        "description": "Verbetert de spijsvertering, is krampstillend en ontstekingswerend.",
+                        "supplement_type": "kruid",
+                        "add_by_default": true,
+                        "max_aantal_in_fase": 28,
+                        "min_aantal_per_week": 4,
+                        "rust_periode_in_weken": 2,
+                        "dosis_type": "per_600_kg",
+                        "dosis": 10,
+                        "unit": "g",
+                        "instructions": "Door de geweekte bijvoeding mengen.",
+                        "weeks": [
+                            1,
+                            2,
+                            3,
+                            4
+                        ]
+                    }
+                ]
+            },
+            {
+                "order": 10,
+                "name": "Extra ondersteuning bij mestwater",
+                "description": "Aardpeer levert inuline en andere fermenteerbare vezels die de samenstelling en activiteit van de darmflora kunnen beïnvloeden. Omdat dit per paard anders kan uitpakken is het belangrijk om de dosering langzaam op te bouwen en ZELF goed te monitoren of het mestwater afneemt zonder dat extra gasvorming, buikongemak of dunnere mest ontstaat.",
+                "required": false,
+                "start_after_previous_phase_weeks": 0,
+                "weeks": [
+                    1,
+                    2,
+                    3,
+                    4
+                ],
+                "supplements": [
+                    {
+                        "name": "Aardpeerpellets",
+                        "description": "Voor paarden die na de eerdere darmfasen nog mestwater hebben. Aardpeer levert prebiotische vezels die de darmflora en vezelfermentatie kunnen ondersteunen.",
+                        "supplement_type": "kruid",
+                        "add_by_default": true,
+                        "max_aantal_in_fase": 14,
+                        "min_aantal_per_week": 4,
+                        "rust_periode_in_weken": 4,
+                        "dosis_type": "per_600_kg",
+                        "dosis": 75,
+                        "unit": "g",
+                        "instructions": "Door de geweekte bijvoeding mengen en rustig opbouwen. Verlaag de dosering of stop wanneer het paard gasvorming, buikongemak of dunnere mest krijgt.\n\nEvalueer altijd na twee weken. Alleen voortzetten wanneer het mestwater afneemt en de vertering rustig blijft.",
+                        "weeks": [
+                            1,
+                            2,
+                            3,
+                            4
+                        ]
+                    }
+                ]
+            },
+            {
+                "order": 11,
+                "name": "Lever en nieren ondersteunen",
+                "description": "Deze fase duurt 12 weken. In de oneven weken geef je de kruiden, spirulina en vitamine B ter ondersteuning van de lever en nieren. In de even weken geef je alleen zeoliet, omdat dit ook gewenste voedingsstoffen kan binden. Zo kunnen beide onderdelen hun werk doen zonder elkaar te beïnvloeden.",
+                "required": true,
+                "start_after_previous_phase_weeks": null,
+                "weeks": [
+                    1,
+                    2,
+                    3,
+                    4,
+                    5,
+                    6,
+                    7,
+                    8,
+                    9,
+                    10,
+                    11,
+                    12
+                ],
+                "supplements": [
+                    {
+                        "name": "Agrimonie",
+                        "description": "Ondersteunt de lever, galfunctie en spijsvertering.",
+                        "supplement_type": "kruid",
+                        "add_by_default": true,
+                        "max_aantal_in_fase": 42,
+                        "min_aantal_per_week": 4,
+                        "rust_periode_in_weken": 2,
+                        "dosis_type": "per_600_kg",
+                        "dosis": 10,
+                        "unit": "g",
+                        "instructions": "Door de geweekte bijvoeding mengen.",
+                        "weeks": [
+                            1,
+                            3,
+                            5,
+                            7,
+                            9,
+                            11
+                        ]
+                    },
+                    {
+                        "name": "Brandnetelblad",
+                        "description": "Ondersteunt de nierfunctie, vochthuishouding en natuurlijke afvoer.",
+                        "supplement_type": "kruid",
+                        "add_by_default": true,
+                        "max_aantal_in_fase": 42,
+                        "min_aantal_per_week": 4,
+                        "rust_periode_in_weken": 2,
+                        "dosis_type": "per_600_kg",
+                        "dosis": 30,
+                        "unit": "g",
+                        "instructions": "Door de geweekte bijvoeding mengen.",
+                        "weeks": [
+                            1,
+                            3,
+                            5,
+                            7,
+                            9,
+                            11
+                        ]
+                    },
+                    {
+                        "name": "Kleefkruid",
+                        "description": "Ondersteunt het lymfestelsel en de natuurlijke afvoer.",
+                        "supplement_type": "kruid",
+                        "add_by_default": true,
+                        "max_aantal_in_fase": 42,
+                        "min_aantal_per_week": 4,
+                        "rust_periode_in_weken": 2,
+                        "dosis_type": "per_600_kg",
+                        "dosis": 30,
+                        "unit": "g",
+                        "instructions": "Door de geweekte bijvoeding mengen.",
+                        "weeks": [
+                            1,
+                            3,
+                            5,
+                            7,
+                            9,
+                            11
+                        ]
+                    },
+                    {
+                        "name": "Spirulina (bio)",
+                        "description": "Voedingsrijke alg die de weerstand, vitaliteit en het herstel ondersteunt.",
+                        "supplement_type": "kruid",
+                        "add_by_default": true,
+                        "max_aantal_in_fase": 42,
+                        "min_aantal_per_week": 4,
+                        "rust_periode_in_weken": 2,
+                        "dosis_type": "per_600_kg",
+                        "dosis": 30,
+                        "unit": "g",
+                        "instructions": "Door de geweekte bijvoeding mengen. \nNiet te snel opbouwen!",
+                        "weeks": [
+                            1,
+                            3,
+                            5,
+                            7,
+                            9,
+                            11
+                        ]
+                    },
+                    {
+                        "name": "VitOrtho Vitamine B Actief Complex",
+                        "description": "Actief vitamine-B-complex ter ondersteuning van de energiestofwisseling, het zenuwstelsel en het herstel.",
+                        "supplement_type": "supplement",
+                        "add_by_default": true,
+                        "max_aantal_in_fase": 42,
+                        "min_aantal_per_week": 5,
+                        "rust_periode_in_weken": 8,
+                        "dosis_type": "per_600_kg",
+                        "dosis": 2,
+                        "unit": "capsules",
+                        "instructions": "Capsules openen en de inhoud door de geweekte bijvoeding mengen.",
+                        "weeks": [
+                            1,
+                            3,
+                            5,
+                            7,
+                            9,
+                            11
+                        ]
+                    },
+                    {
+                        "name": "Zeoliet",
+                        "description": "Natuurlijk mineraal met een bindende werking in het spijsverteringskanaal. Wordt tijdelijk ingezet ter ondersteuning van de natuurlijke afvoer.",
+                        "supplement_type": "supplement",
+                        "add_by_default": true,
+                        "max_aantal_in_fase": 42,
+                        "min_aantal_per_week": 4,
+                        "rust_periode_in_weken": 2,
+                        "dosis_type": "per_600_kg",
+                        "dosis": 40,
+                        "unit": "g",
+                        "instructions": "Door geweekte bijvoeding zonder toegevoegde vitaminen of mineralen mengen. Gescheiden geven van supplementen en medicatie, omdat zeoliet ook gewenste stoffen kan binden. Houd anders minimaal enkele uren tussen beide innamemomenten en overleg bij twijfel met de dierenarts.",
+                        "weeks": [
+                            2,
+                            4,
+                            6,
+                            8,
+                            10
+                        ]
+                    }
+                ]
+            },
+            {
+                "order": 12,
+                "name": "Lever en nieren ondersteunen - KPU",
+                "description": "Deze fase duurt 12 weken. In de oneven weken geef je de kruiden en spirulina ter ondersteuning van de lever en nieren. In de even weken geef je alleen zeoliet, omdat dit ook gewenste voedingsstoffen kan binden. Zo kunnen beide onderdelen hun werk doen zonder elkaar te beïnvloeden.",
+                "required": false,
+                "start_after_previous_phase_weeks": null,
+                "weeks": [
+                    1,
+                    2,
+                    3,
+                    4,
+                    5,
+                    6,
+                    7,
+                    8,
+                    9,
+                    10,
+                    11,
+                    12
+                ],
+                "supplements": [
+                    {
+                        "name": "Agrimonie",
+                        "description": "Ondersteunt de lever, galfunctie en spijsvertering.",
+                        "supplement_type": "kruid",
+                        "add_by_default": true,
+                        "max_aantal_in_fase": 42,
+                        "min_aantal_per_week": 4,
+                        "rust_periode_in_weken": 2,
+                        "dosis_type": "per_600_kg",
+                        "dosis": 10,
+                        "unit": "g",
+                        "instructions": "Door de geweekte bijvoeding mengen.",
+                        "weeks": [
+                            1,
+                            3,
+                            5,
+                            7,
+                            9,
+                            11
+                        ]
+                    },
+                    {
+                        "name": "Brandnetelblad",
+                        "description": "Ondersteunt de nierfunctie, vochthuishouding en natuurlijke afvoer.",
+                        "supplement_type": "kruid",
+                        "add_by_default": true,
+                        "max_aantal_in_fase": 42,
+                        "min_aantal_per_week": 4,
+                        "rust_periode_in_weken": 2,
+                        "dosis_type": "per_600_kg",
+                        "dosis": 30,
+                        "unit": "g",
+                        "instructions": "Door de geweekte bijvoeding mengen.",
+                        "weeks": [
+                            1,
+                            3,
+                            5,
+                            7,
+                            9,
+                            11
+                        ]
+                    },
+                    {
+                        "name": "Kleefkruid",
+                        "description": "Ondersteunt het lymfestelsel en de natuurlijke afvoer.",
+                        "supplement_type": "kruid",
+                        "add_by_default": true,
+                        "max_aantal_in_fase": 42,
+                        "min_aantal_per_week": 4,
+                        "rust_periode_in_weken": 2,
+                        "dosis_type": "per_600_kg",
+                        "dosis": 30,
+                        "unit": "g",
+                        "instructions": "Door de geweekte bijvoeding mengen.",
+                        "weeks": [
+                            1,
+                            3,
+                            5,
+                            7,
+                            9,
+                            11
+                        ]
+                    },
+                    {
+                        "name": "Spirulina (bio)",
+                        "description": "Voedingsrijke alg die de weerstand, vitaliteit en het herstel ondersteunt.",
+                        "supplement_type": "kruid",
+                        "add_by_default": true,
+                        "max_aantal_in_fase": 42,
+                        "min_aantal_per_week": 4,
+                        "rust_periode_in_weken": 2,
+                        "dosis_type": "per_600_kg",
+                        "dosis": 30,
+                        "unit": "g",
+                        "instructions": "Door de geweekte bijvoeding mengen. \nNiet te snel opbouwen!",
+                        "weeks": [
+                            1,
+                            3,
+                            5,
+                            7,
+                            9,
+                            11
+                        ]
+                    },
+                    {
+                        "name": "Zeoliet",
+                        "description": "Natuurlijk mineraal met een bindende werking in het spijsverteringskanaal. Wordt tijdelijk ingezet ter ondersteuning van de natuurlijke afvoer.",
+                        "supplement_type": "supplement",
+                        "add_by_default": true,
+                        "max_aantal_in_fase": 42,
+                        "min_aantal_per_week": 4,
+                        "rust_periode_in_weken": 2,
+                        "dosis_type": "per_600_kg",
+                        "dosis": 40,
+                        "unit": "g",
+                        "instructions": "Door geweekte bijvoeding zonder toegevoegde vitaminen of mineralen mengen. Gescheiden geven van supplementen en medicatie, omdat zeoliet ook gewenste stoffen kan binden. Houd anders minimaal enkele uren tussen beide innamemomenten en overleg bij twijfel met de dierenarts.",
+                        "weeks": [
+                            2,
+                            4,
+                            6,
+                            8,
+                            10,
+                            12
+                        ]
+                    }
+                ]
+            }
+        ]
+    }
+]

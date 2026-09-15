@@ -1,5 +1,5 @@
 import { LibraryThumbnail } from "@/components/library/LibraryThumbnail";
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import {
   View,
   Text,
@@ -11,9 +11,10 @@ import {
   Alert,
   KeyboardAvoidingView,
   Platform,
+  useWindowDimensions,
 } from "react-native";
 import { router, useLocalSearchParams } from "expo-router";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import {
   Check,
   X,
@@ -22,6 +23,7 @@ import {
   ShoppingBag,
   TriangleAlert,
   Leaf,
+  LockKeyhole,
 } from "lucide-react-native";
 import { Button } from "@/components/ui/Button";
 import { Avatar } from "@/components/ui/Avatar";
@@ -49,14 +51,21 @@ import {
 import { ProtocolAnalysis } from "@/components/protocol/ProtocolAnalysis";
 import { CareAdvice } from "@/components/protocol/CareAdvice";
 import { ProtocolTabs } from "@/components/protocol/ProtocolTabs";
+import { accessibleNotificationPhase } from "@/lib/protocol-notifications";
+import { useDb } from "@/db/provider";
 import { protocolTab, type ProtocolTab } from "@/lib/protocol-tabs";
 
 export default function ProtocolListScreen() {
-  const { tab: tabParam, t: nonce } = useLocalSearchParams<{
+  const { tab: tabParam, t: nonce, horseId: requestedHorse, protocolId: requestedProtocol, phaseIds: requestedPhases } = useLocalSearchParams<{
     tab?: string;
     t?: string;
+    horseId?: string;
+    protocolId?: string;
+    phaseIds?: string;
   }>();
   const [tab, setTab] = useState<ProtocolTab>(protocolTab(tabParam) ?? "vandaag");
+  const { selectHorse } = useDb();
+  const handledLink = useRef<string | null>(null);
   const [month, setMonth] = useState<string>();
   const { data, error, refresh, horseId } = useHorseDashboard(month);
   const user = useCurrentUser();
@@ -76,6 +85,32 @@ export default function ProtocolListScreen() {
     setMonth(undefined);
   }, [horseId]);
   const protocol = data?.protocol;
+  const openPhase = (selected: DashboardPhase) => {
+    if (!selected.accessible) {
+      Alert.alert("Deze fase is nog niet toegankelijk", "Je kunt deze fase vanaf één week voor de start bekijken.");
+      return;
+    }
+    setPhase(selected);
+  };
+  useEffect(() => {
+    if (requestedHorse) selectHorse(requestedHorse);
+  }, [requestedHorse, selectHorse]);
+  useEffect(() => {
+    // Resolve links against this horse's current server response, never stale phase data.
+    if (!requestedPhases || !protocol || horseId !== requestedHorse || protocol.id !== requestedProtocol) return;
+    const key = `${requestedHorse}:${requestedProtocol}:${requestedPhases}:${nonce}`;
+    if (handledLink.current === key) return;
+    const selected = accessibleNotificationPhase(protocol, requestedProtocol, requestedPhases);
+    if (!selected) return;
+    handledLink.current = key;
+    setTab("kalender");
+    setPhase(selected);
+  }, [protocol, horseId, requestedHorse, requestedProtocol, requestedPhases, nonce]);
+  // Keep an open sheet in sync when a therapist changes the schedule or content.
+  const visiblePhase = phase ? protocol?.phases.find((item) => item.id === phase.id && item.accessible) : null;
+
+  const visibleOrders = orders?.map((item) => protocol?.orderItems.find((current) => current.id === item.id)).filter((item): item is DashboardSupplement => !!item);
+  const linkedPhases = protocol?.phases.filter((item) => item.accessible && requestedPhases?.split(',').includes(item.id)) ?? [];
   const sub =
     tab === "vandaag"
       ? protocol?.todayLabel
@@ -161,6 +196,7 @@ export default function ProtocolListScreen() {
                 date={data.date}
                 horseId={horseId}
                 onOrder={setOrders}
+                onPhase={openPhase}
                 onWeekly={() => setWeeklyOpen(true)}
               />
             )}
@@ -168,7 +204,7 @@ export default function ProtocolListScreen() {
               <Calendar
                 protocol={protocol}
                 onMonth={setMonth}
-                onPhase={setPhase}
+                onPhase={openPhase}
               />
             )}
             {tab === "voeding" && (
@@ -185,9 +221,9 @@ export default function ProtocolListScreen() {
             title="Bestellijst"
             onClose={() => setOrders(null)}
           >
-            {orders?.length ? (
+            {visibleOrders?.length ? (
               <View className="gap-2">
-                {orders.map((item) => (
+                {visibleOrders.map((item) => (
                   <Supplement key={item.id} item={item} />
                 ))}
               </View>
@@ -198,25 +234,42 @@ export default function ProtocolListScreen() {
             )}
           </Sheet>
           <Sheet
-            visible={phase !== null}
-            title={phase?.title ?? ""}
-            subtitle={phase ? `${phase.weekLabel} · ${phase.statusLabel}` : ""}
+            visible={!!visiblePhase}
+            title={visiblePhase?.title ?? ""}
+            subtitle={visiblePhase ? `${visiblePhase.weekLabel} · ${visiblePhase.statusLabel}` : ""}
             onClose={() => setPhase(null)}
           >
-            {!!phase?.description && (
+            {linkedPhases.length > 1 && (
+              <View className="mb-4 gap-2">
+                {linkedPhases.map((item) => <Button key={item.id} variant={item.id === visiblePhase?.id ? "primary" : "ghost"} title={item.title} onPress={() => openPhase(item)} />)}
+              </View>
+            )}
+            {visiblePhase && !visiblePhase.contentAvailable && (
+              <View className="mb-4 gap-3">
+                <Text className="text-[14px] text-ink-70">Deze fase is nu beschikbaar. Maak verbinding om de volledige fase en bestellijst op te halen.</Text>
+                <Button title="Opnieuw laden" onPress={() => void refresh()} />
+              </View>
+            )}
+            {!!visiblePhase?.description && (
               <Text className="mb-5 text-[14px] leading-[23px] text-ink-70">
-                {phase.description}
+                {visiblePhase.description}
               </Text>
             )}
-            {!!phase?.supplements.length && (
+            {!!visiblePhase?.supplements.length && (
               <>
                 <Label>Per kruid</Label>
                 <View className="mt-3 gap-2">
-                  {phase.supplements.map((item) => (
+                  {visiblePhase.supplements.map((item) => (
                     <Supplement key={item.id} item={item} />
                   ))}
                 </View>
               </>
+            )}
+            {visiblePhase?.contentAvailable && (
+              <Button title="Bekijk bestellijst" className="mt-5" onPress={() => {
+                setOrders(visiblePhase.supplements);
+                setPhase(null);
+              }} />
             )}
           </Sheet>
           <WeeklySheet
@@ -281,12 +334,14 @@ function Today({
   date,
   horseId,
   onOrder,
+  onPhase,
   onWeekly,
 }: {
   protocol: DashboardProtocol;
   date: string;
   horseId: string;
   onOrder: (items: DashboardSupplement[]) => void;
+  onPhase: (phase: DashboardPhase) => void;
   onWeekly: () => void;
 }) {
   const mutations = useStoreMutations();
@@ -406,6 +461,12 @@ function Today({
                 </View>
               ))}
             </View>
+            {notice.type === "next_phase" && notice.phaseId && (
+              <Button variant="ghost" title="Bekijk de fase" className="mt-3" onPress={() => {
+                const selected = protocol.phases.find((item) => item.id === notice.phaseId);
+                if (selected) onPhase(selected);
+              }} />
+            )}
             <Pressable
               accessibilityRole="button"
               onPress={() =>
@@ -418,7 +479,7 @@ function Today({
               <Text className="text-center font-semi text-[13px] text-[#6C5426]">
                 {notice.type === "weekly_update"
                   ? "Weekupdate invullen"
-                  : "Bekijk de bestellijst"}
+                  : "Bekijk bestellijst"}
               </Text>
             </Pressable>
           </View>
@@ -538,9 +599,10 @@ function Calendar({
           <Pressable
             key={phase.id}
             accessibilityRole="button"
-            accessibilityLabel={`${phase.title}, ${phase.statusLabel}`}
+            accessibilityLabel={`${phase.title}, ${phase.state === "locked" ? "vergrendeld, " : ""}${phase.statusLabel}`}
+            accessibilityHint={phase.accessible ? "Bekijk de fase" : "Beschikbaar vanaf één week voor de start"}
             onPress={() => onPhase(phase)}
-            className={`flex-row items-center gap-2 rounded-2xl border p-4 ${phase.state === "active" ? "border-mint-500 bg-white" : "border-ink-8 bg-white/70"}`}
+            className={`flex-row items-center gap-2 rounded-2xl border p-4 ${phase.state === "active" ? "border-mint-500 bg-white" : phase.state === "preview" ? "border-mint-200 bg-mint-50" : "border-ink-8 bg-white/70"}`}
           >
             <View className="flex-1">
               <Text className="font-semi text-[14px] text-ink">
@@ -550,8 +612,9 @@ function Calendar({
                 {phase.weekLabel}
               </Text>
             </View>
+            {phase.state === "locked" && <LockKeyhole size={13} color="#8A9292" />}
             <Text
-              className={`max-w-[40%] rounded-full px-2 py-1 text-[10px] ${phase.state === "active" ? "bg-mint-50 text-mint-700" : "bg-ink-8 text-ink-50"}`}
+              className={`max-w-[40%] rounded-full px-2 py-1 text-[10px] ${phase.state === "active" || phase.state === "preview" ? "bg-mint-50 text-mint-700" : "bg-ink-8 text-ink-50"}`}
             >
               {phase.statusLabel}
             </Text>
@@ -722,34 +785,58 @@ function Sheet({
   children: ReactNode;
   onClose: () => void;
 }) {
+  const { height } = useWindowDimensions();
+  const insets = useSafeAreaInsets();
+
   return (
     <Modal
       visible={visible}
       transparent
       animationType="slide"
       onRequestClose={onClose}
+      statusBarTranslucent
+      navigationBarTranslucent
     >
-      <Pressable onPress={onClose} className="flex-1 justify-end bg-black/30">
+      <View style={{ flex: 1, justifyContent: "flex-end" }}>
         <Pressable
-          onPress={(event) => event.stopPropagation()}
-          className="max-h-[82%] rounded-t-[28px] bg-canvas px-5 pt-3"
+          testID="protocol-sheet-backdrop"
+          accessibilityRole="button"
+          accessibilityLabel="Sluit details"
+          onPress={onClose}
+          style={{ position: "absolute", top: 0, right: 0, bottom: 0, left: 0 }}
+          className="bg-black/30"
+        />
+        <View
+          testID="protocol-sheet-panel"
+          accessibilityViewIsModal
+          style={{ height: Math.max(0, height - insets.top - 12), overflow: "hidden" }}
+          className="rounded-t-[28px] bg-canvas"
         >
-          <View className="mb-4 h-1 w-10 self-center rounded-full bg-ink-15" />
-          <Text className="font-bold text-[21px] text-ink">{title}</Text>
-          {!!subtitle && (
-            <Text className="mt-1 text-[12px] text-ink-50">{subtitle}</Text>
-          )}
+          <View style={{ flexShrink: 0, paddingTop: 12, paddingBottom: 16 }}>
+            <View testID="protocol-sheet-handle" className="h-1 w-10 self-center rounded-full bg-ink-15" />
+          </View>
           <ScrollView
-            className="my-4"
-            contentContainerStyle={{ paddingBottom: 8 }}
+            testID="protocol-sheet-scroll"
+            style={{ flex: 1, minHeight: 0 }}
+            nestedScrollEnabled
+            contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 24 }}
           >
-            {children}
+            <Text accessibilityRole="header" className="font-bold text-[21px] text-ink">{title}</Text>
+            {!!subtitle && (
+              <Text className="mt-1 text-[12px] text-ink-50">{subtitle}</Text>
+            )}
+            <View className="mt-4">
+              {children}
+            </View>
           </ScrollView>
-          <SafeAreaView edges={["bottom"]} className="pb-3">
+          <View
+            testID="protocol-sheet-footer"
+            style={{ flexShrink: 0, paddingHorizontal: 20, paddingTop: 12, paddingBottom: Math.max(insets.bottom, 12) }}
+          >
             <Button title="Sluiten" onPress={onClose} />
-          </SafeAreaView>
-        </Pressable>
-      </Pressable>
+          </View>
+        </View>
+      </View>
     </Modal>
   );
 }

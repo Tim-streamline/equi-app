@@ -3768,6 +3768,158 @@
           "showIf": {
             "giftige-planten": "Ja"
           }
+        },
+        {
+          "id": "sec-landbouw",
+          "label": "Omgeving & landbouwpercelen",
+          "type": "sectionhead"
+        },
+        {
+          "id": "landbouw-nabij",
+          "label": "Staat of graast je paard in de buurt van landbouwgrond, een boomgaard of wijngaard?",
+          "type": "radio",
+          "required": true,
+          "options": [
+            "Nee",
+            "Ja",
+            "Weet ik niet"
+          ]
+        },
+        {
+          "id": "landbouw-afstand",
+          "label": "Indien ja: hoe dichtbij ligt het dichtstbijzijnde perceel?",
+          "type": "radio",
+          "required": true,
+          "showIf": {
+            "landbouw-nabij": "Ja"
+          },
+          "options": [
+            "Direct grenzend aan paddock/weide",
+            "Minder dan 50 meter",
+            "50–200 meter",
+            "Meer dan 200 meter",
+            "Weet ik niet"
+          ]
+        },
+        {
+          "id": "landbouw-gewas",
+          "label": "Weet je wat er op dit perceel wordt verbouwd?",
+          "type": "text",
+          "required": true,
+          "showIf": {
+            "landbouw-nabij": "Ja"
+          },
+          "hint": "Bijvoorbeeld graan, maïs, zonnebloem, koolzaad, fruit, druiven, groente, onbekend."
+        },
+        {
+          "id": "landbouw-bespoten",
+          "label": "Weet je of het perceel wordt bespoten of behandeld met gewasbeschermingsmiddelen?",
+          "type": "radio",
+          "required": true,
+          "showIf": {
+            "landbouw-nabij": "Ja"
+          },
+          "options": [
+            "Ja",
+            "Nee",
+            "Weet ik niet"
+          ]
+        },
+        {
+          "id": "landbouw-middelen",
+          "label": "Weet je waarmee of waarvoor wordt gespoten?",
+          "type": "multi",
+          "required": true,
+          "showIf": {
+            "landbouw-nabij": "Ja",
+            "landbouw-bespoten": "Ja"
+          },
+          "hint": "Meerdere antwoorden mogelijk.",
+          "options": [
+            "Onkruidbestrijding / herbicide",
+            "Insectenbestrijding / insecticide",
+            "Schimmelbestrijding / fungicide",
+            "Anders",
+            "Weet ik niet"
+          ]
+        },
+        {
+          "id": "landbouw-frequentie",
+          "label": "Hoe vaak gebeurt dit ongeveer?",
+          "type": "radio",
+          "required": true,
+          "showIf": {
+            "landbouw-nabij": "Ja",
+            "landbouw-bespoten": "Ja"
+          },
+          "options": [
+            "Enkele keren per jaar",
+            "Regelmatig tijdens het groeiseizoen",
+            "Heel frequent",
+            "Weet ik niet"
+          ]
+        },
+        {
+          "id": "landbouw-nevel",
+          "label": "Kan nevel of afspoeling volgens jou het terrein van je paard bereiken?",
+          "type": "radio",
+          "required": true,
+          "showIf": {
+            "landbouw-nabij": "Ja"
+          },
+          "options": [
+            "Ja, bij wind kan het richting paddock/weide waaien",
+            "Ja, regenwater kan vanaf het perceel richting paarden lopen",
+            "Beide",
+            "Waarschijnlijk niet",
+            "Weet ik niet"
+          ]
+        },
+        {
+          "id": "landbouw-water",
+          "label": "Komt drinkwater, slootwater of grondwater mogelijk uit hetzelfde gebied als deze landbouwpercelen?",
+          "type": "radio",
+          "required": true,
+          "showIf": {
+            "landbouw-nabij": "Ja"
+          },
+          "options": [
+            "Nee",
+            "Ja",
+            "Weet ik niet"
+          ]
+        },
+        {
+          "id": "landbouw-klachten",
+          "label": "Heb je ooit gemerkt dat klachten kort na werkzaamheden op het land verergeren?",
+          "type": "radio",
+          "required": true,
+          "showIf": {
+            "landbouw-nabij": "Ja"
+          },
+          "hint": "Bijvoorbeeld huidreacties, luchtwegklachten, oogirritatie, mestveranderingen of opvallende onrust.",
+          "options": [
+            "Nee",
+            "Ja",
+            "Weet ik niet"
+          ]
+        },
+        {
+          "id": "landbouw-klachten-toelichting",
+          "label": "Licht kort toe welke klachten je hebt gemerkt.",
+          "type": "text",
+          "required": true,
+          "showIf": {
+            "landbouw-nabij": "Ja",
+            "landbouw-klachten": "Ja"
+          }
+        },
+        {
+          "id": "omgeving-overig",
+          "label": "Is er nog iets relevants over de omgeving van de paarden?",
+          "type": "textarea",
+          "optional": true,
+          "hint": "Denk bijvoorbeeld aan intensieve landbouw, kassen, boomgaard of wijngaard, mestopslag, compostering, industrie, een drukke weg, regelmatige verbranding of andere opvallende omgevingsfactoren?"
         }
       ]
     },

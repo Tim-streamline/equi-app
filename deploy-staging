@@ -1,0 +1,90 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+repo_dir="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
+server=ploi@37.97.209.204
+site=/home/ploi/equi-app.staging.optimize-it.nl
+build_only=0
+library=0
+seed=0
+rollback=
+artifact=
+while (($#)); do
+    case "$1" in
+        --build-only) build_only=1 ;;
+        --with-library) library=1 ;;
+        --seed-catalog) seed=1 ;;
+        --rollback) shift; rollback="${1:?Provide a release ID}" ;;
+        --artifact) shift; artifact="${1:?Provide a built artifact path}" ;;
+        --help|-h)
+            echo 'Usage: ./deploy-staging [--build-only] [--with-library] [--seed-catalog]'
+            echo '       ./deploy-staging --rollback RELEASE_ID'
+            echo '       ./deploy-staging --artifact deploy/builds/RELEASE_ID.tar.gz [--with-library] [--seed-catalog]'
+            exit 0 ;;
+        *) echo "Unknown option: $1" >&2; exit 1 ;;
+    esac
+    shift
+done
+ssh_options=(-o BatchMode=yes -o ConnectTimeout=15)
+if [[ -n "$rollback" ]]; then
+    [[ "$rollback" =~ ^[0-9]{8}T[0-9]{6}Z-[a-f0-9]{7,12}-[a-f0-9]{6}$ ]] || { echo 'Invalid release ID' >&2; exit 1; }
+    ((build_only == 0 && library == 0 && seed == 0)) && [[ -z "$artifact" ]] || { echo 'Rollback cannot be combined with build/import options' >&2; exit 1; }
+    ssh "${ssh_options[@]}" "$server" bash -s -- "$site" "$rollback" rollback 0 0 < "$repo_dir/deploy/activate-release.sh"
+    exit
+fi
+
+for command in rsync tar sha256sum; do command -v "$command" >/dev/null; done
+if ((library)); then
+    [[ -f "$repo_dir/deploy/lib-assets/manifest.json" ]] || { echo 'Export the library bundle first: ./deploy-library-items --export' >&2; exit 1; }
+fi
+if ((!build_only)); then
+    ssh "${ssh_options[@]}" "$server" "test -r '$site/shared/.env' && command -v php8.5 && command -v rsync && command -v pg_dump && test -w '$site/incoming'" >/dev/null
+fi
+
+if [[ -z "$artifact" ]]; then
+    command -v docker >/dev/null
+    revision="$(git -C "$repo_dir" rev-parse --short=12 HEAD)"
+    release="$(date -u +%Y%m%dT%H%M%SZ)-$revision-$(od -An -N3 -tx1 /dev/urandom | tr -d ' \n')"
+    mkdir -p "$repo_dir/deploy/builds"
+    workspace="$(mktemp -d "$repo_dir/deploy/builds/.build-XXXXXX")"
+    trap 'rm -rf -- "$workspace"' EXIT
+    mkdir -p "$workspace/app"
+
+    # An allowlist keeps credentials, local uploads, dev caches and tooling out.
+    bash "$repo_dir/deploy/package-backend.sh" "$repo_dir/backend" "$workspace/app"
+    mkdir -p "$workspace/app/.deploy" "$workspace/app/bootstrap/cache" \
+        "$workspace/app/storage/framework/"{cache/data,sessions,views} "$workspace/app/storage/logs"
+    cp "$repo_dir/deploy/build-backend.sh" "$repo_dir/deploy/check-release.php" "$repo_dir/deploy/backup-database.php" "$workspace/app/.deploy/"
+    printf '%s\n' "$release" > "$workspace/app/RELEASE_ID"
+    git -C "$repo_dir" status --porcelain > "$workspace/app/.deploy/source-status.txt"
+
+    image=sail-8.5/app
+    if ! docker image inspect "$image" >/dev/null 2>&1; then
+        (cd "$repo_dir/backend" && docker compose build laravel.test)
+    fi
+    echo "Building $release in Docker ($image)..."
+    docker run --rm --user "$(id -u):$(id -g)" --entrypoint bash \
+        --env COMPOSER_HOME=/tmp/equi-composer --env npm_config_cache=/tmp/equi-npm \
+        --env XDEBUG_MODE=off --volume "$workspace/app:/build" --workdir /build \
+        "$image" .deploy/build-backend.sh
+    artifact="$repo_dir/deploy/builds/$release.tar.gz"
+    tar -czf "$artifact" -C "$workspace/app" .
+    (cd "$repo_dir/deploy/builds" && sha256sum "$release.tar.gz" > "$release.tar.gz.sha256")
+    echo "Built: $artifact"
+    ((build_only)) && exit 0
+else
+    ((build_only == 0)) || { echo '--artifact and --build-only are mutually exclusive' >&2; exit 1; }
+    artifact="$(realpath -- "$artifact")"
+    release="$(basename -- "$artifact" .tar.gz)"
+    [[ "$release" =~ ^[0-9]{8}T[0-9]{6}Z-[a-f0-9]{7,12}-[a-f0-9]{6}$ && "$artifact" == *.tar.gz ]] || { echo 'Invalid artifact name' >&2; exit 1; }
+    (cd "$(dirname -- "$artifact")" && sha256sum -c "$release.tar.gz.sha256")
+fi
+
+if ((library)); then
+    echo 'Uploading library bundle (resumable; only changed files transfer)...'
+    rsync -a --partial -e 'ssh -o BatchMode=yes -o ConnectTimeout=15' \
+        "$repo_dir/deploy/lib-assets/" "$server:$site/shared/lib-assets/"
+fi
+rsync -a --partial -e 'ssh -o BatchMode=yes -o ConnectTimeout=15' \
+    "$artifact" "$artifact.sha256" "$server:$site/incoming/"
+ssh "${ssh_options[@]}" "$server" bash -s -- "$site" "$release" deploy "$library" "$seed" < "$repo_dir/deploy/activate-release.sh"

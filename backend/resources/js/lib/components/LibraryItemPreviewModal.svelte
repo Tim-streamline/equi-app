@@ -11,6 +11,7 @@
         description = '',
         body = '',
         heroImageUrl = '',
+        videoPosters = {},
         durationLabel = '',
         authorName = '',
         publishedAt = '',
@@ -223,7 +224,7 @@
                                     <figure class="my-6 overflow-hidden rounded-xl bg-muted"><img src={block.url} alt={block.alt} class="max-h-[32rem] w-full object-cover" /></figure>
                                 {:else if block.type === 'video' && block.url}
                                     {#if VideoJsPlayer}
-                                        <VideoJsPlayer src={block.url} poster={safeHero} class="my-6 aspect-video w-full rounded-xl" />
+                                        <VideoJsPlayer src={block.url} poster={safeUrl(videoPosters[block.url])} class="my-6 aspect-video w-full rounded-xl" />
                                     {:else}
                                         <div class="my-6 aspect-video w-full animate-pulse rounded-xl bg-black/80"></div>
                                     {/if}

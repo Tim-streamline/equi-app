@@ -10,7 +10,7 @@
     import { Card, CardContent, CardHeader, CardTitle, Button, Input, Textarea, Select } from '$lib/components/ui';
     import { ArrowLeft, Eye } from '@lucide/svelte';
 
-    let { item, categories, therapists, automaticThumbnailUrl, videoDurationMinutes } = $props();
+    let { item, categories, therapists, automaticThumbnailUrl, videoDurationMinutes, videoPosters = {} } = $props();
     const isNew = !item;
     // Use the editor's local calendar date, avoiding UTC shifts near midnight.
     const today = new Date();
@@ -21,9 +21,11 @@
     let mediaBusy = $state(false);
     let thumbnailBusy = $state(false);
     let automaticUrl = $state(automaticThumbnailUrl ?? '');
+    let previewVideoPosters = $state({ ...videoPosters });
     function uploaded(asset) {
         $form.media_ids = [...new Set([...$form.media_ids, asset.id])];
         if (asset.type === 'video') {
+            previewVideoPosters[asset.url] = asset.thumbnail_url ?? '';
             automaticUrl ||= asset.thumbnail_url ?? '';
             if ($form.thumbnail_mode === 'auto' && !$form.hero_image_url && ['video', 'course', 'program'].includes($form.format)) $form.hero_image_url = automaticUrl;
         }
@@ -43,6 +45,7 @@
     // Insert a media reference at the caret (or end) of the body field so
     // several files can be placed exactly where they belong in the article.
     function insertMedia(asset) {
+        if (asset.type === 'video') previewVideoPosters[asset.url] = asset.thumbnail_url ?? '';
         if (bodyEditor) bodyEditor.insertText(mediaSnippet(asset));
         else $form.body += mediaSnippet(asset);
     }
@@ -142,7 +145,7 @@
                     <p class="text-xs text-muted-foreground">Upload images, video and audio, then click ＋ to embed them in the body.</p>
                 </CardHeader>
                 <CardContent>
-                    <MediaUploader libraryItemId={item?.id ?? null} initial={item?.media ?? []} oninsert={insertMedia} onuploaded={uploaded} bind:busy={mediaBusy} onremoved={(asset) => { $form.media_ids = $form.media_ids.filter((id) => id !== asset.id); if ($form.hero_image_url === asset.thumbnail_url) $form.hero_image_url = ''; }} />
+                    <MediaUploader libraryItemId={item?.id ?? null} initial={item?.media ?? []} oninsert={insertMedia} onuploaded={uploaded} bind:busy={mediaBusy} onremoved={(asset) => { $form.media_ids = $form.media_ids.filter((id) => id !== asset.id); delete previewVideoPosters[asset.url]; if ($form.hero_image_url === asset.thumbnail_url) $form.hero_image_url = ''; }} />
                 </CardContent>
             </Card>
 
@@ -174,6 +177,7 @@
         description={$form.description}
         body={$form.body}
         heroImageUrl={$form.hero_image_url}
+        videoPosters={previewVideoPosters}
         durationLabel={$form.format === 'video' ? ($form.duration_minutes > 0 ? `${$form.duration_minutes} min` : '') : $form.duration_label}
         authorName={therapists.find((therapist) => therapist.id === $form.author_therapist_id)?.name ?? ''}
         publishedAt={$form.published_at}

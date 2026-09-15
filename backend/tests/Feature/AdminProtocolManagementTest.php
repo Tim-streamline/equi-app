@@ -4,7 +4,9 @@ namespace Tests\Feature;
 
 use App\Models\AdminUser;
 use App\Models\AuditLog;
+use App\Models\BewegingAdvies;
 use App\Models\Horse;
+use App\Models\ManagementAdvies;
 use App\Models\Protocol;
 use App\Models\ProtocolTemplate;
 use App\Models\ProtocolTemplatePhase;
@@ -12,6 +14,7 @@ use App\Models\Supplement;
 use App\Models\SupplementWeek;
 use App\Models\Therapist;
 use App\Models\User;
+use App\Models\VoedingAdvies;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
@@ -687,13 +690,39 @@ class AdminProtocolManagementTest extends TestCase
         $this->assertDatabaseMissing('protocols', ['title' => $payload['title']]);
     }
 
-    public function test_publishing_compact_analysis_requires_three_focus_points_and_observations(): void
+    public function test_publishing_compact_analysis_requires_observations(): void
     {
         $payload = $this->payload();
         $payload['published'] = true;
         $payload['analysis'] += ['summary' => 'Een korte persoonlijke samenvatting.', 'focus_points' => [], 'observations' => []];
         $this->actingAs($this->admin, 'admin')->post('/admin/protocols', $payload)
-            ->assertSessionHasErrors(['analysis.focus_points', 'analysis.observations']);
+            ->assertSessionHasErrors(['analysis.observations']);
+    }
+
+    public function test_analysis_can_be_published_and_updated_without_removed_focus_fields(): void
+    {
+        $payload = $this->payload();
+        $payload['published'] = true;
+        $payload['analysis'] += [
+            'summary' => 'Een korte persoonlijke samenvatting.',
+            'observations' => ['Vergelijk de signalen bij de evaluatie.'],
+        ];
+        $this->actingAs($this->admin, 'admin')->post('/admin/protocols', $payload)->assertSessionHasNoErrors();
+        $protocol = Protocol::query()->firstOrFail();
+        $this->assertNotNull($protocol->published_at);
+        $this->assertSame([], $protocol->analysis->focus_points);
+
+        // Hidden historical focus data must never be emptied by the new editor.
+        $historicalFocus = [['title' => 'Eerder aandachtspunt', 'body' => 'Eerder afgesproken doel.']];
+        $protocol->analysis->update(['focus_points' => $historicalFocus]);
+        $update = $this->storedPayload($protocol);
+        $update['published'] = true;
+        $update['analysis'] = [...$payload['analysis'], 'summary' => 'Bijgestelde persoonlijke samenvatting.'];
+        $this->put('/admin/protocols/'.$protocol->id, $update)->assertSessionHasNoErrors();
+        $this->get(route('admin.protocols.edit', $protocol))->assertInertia(fn (Assert $page) => $page
+            ->where('protocol.analysis.summary', 'Bijgestelde persoonlijke samenvatting.')
+            ->where('protocol.analysis.observations', $payload['analysis']['observations'])
+            ->where('protocol.analysis.focus_points', $historicalFocus));
     }
 
     public function test_failed_new_save_rolls_back_every_table_and_returns_a_clear_error(): void
@@ -745,12 +774,17 @@ class AdminProtocolManagementTest extends TestCase
 
     public function test_new_and_existing_protocol_save_publish_and_reopen_with_current_content(): void
     {
-        $this->actingAs($this->admin, 'admin')->post('/admin/protocols', $this->payload())->assertSessionHasNoErrors();
+        $selectedAdvice = [
+            'voeding_advies_ids' => [VoedingAdvies::query()->create(['title' => 'Voeding behouden', 'description' => 'Voedingsadvies.'])->id],
+            'management_advies_ids' => [ManagementAdvies::query()->create(['title' => 'Management behouden', 'description' => 'Managementadvies.'])->id],
+            'beweging_advies_ids' => [BewegingAdvies::query()->create(['title' => 'Beweging behouden', 'description' => 'Bewegingsadvies.'])->id],
+        ];
+        $this->actingAs($this->admin, 'admin')->post('/admin/protocols', [...$this->payload(), ...$selectedAdvice])->assertSessionHasNoErrors();
         $protocol = Protocol::query()->firstOrFail();
         $this->assertNull($protocol->published_at);
 
         foreach ([true, false, true, true] as $index => $published) {
-            $payload = $this->storedPayload($protocol);
+            $payload = [...$this->storedPayload($protocol), ...$selectedAdvice];
             $payload['published'] = $published;
             $payload['title'] = "Saved revision {$index}";
             $payload['analysis']['cause'] = "Analysis revision {$index}";
@@ -766,7 +800,13 @@ class AdminProtocolManagementTest extends TestCase
                 ->where('protocol.analysis.cause', "Analysis revision {$index}")
                 ->where('protocol.phases.0.supplements.0.dosage', "Dose {$index}")
                 ->has('protocol.phases.0.weeks', 5 + $index)
-                ->where('protocol.customer_settings.target_weight_kg', 510 + $index));
+                ->where('protocol.customer_settings.target_weight_kg', 510 + $index)
+                ->has('protocol.voeding_adviezen', 1)
+                ->where('protocol.voeding_adviezen.0.voeding_advies_id', $selectedAdvice['voeding_advies_ids'][0])
+                ->has('protocol.management_adviezen', 1)
+                ->where('protocol.management_adviezen.0.management_advies_id', $selectedAdvice['management_advies_ids'][0])
+                ->has('protocol.beweging_adviezen', 1)
+                ->where('protocol.beweging_adviezen.0.beweging_advies_id', $selectedAdvice['beweging_advies_ids'][0]));
             $this->assertDatabaseCount('protocols', 1);
             $this->assertDatabaseCount('protocol_phases', 3);
         }

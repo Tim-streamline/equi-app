@@ -54,11 +54,12 @@ export type LoginResponse = {
   };
 };
 
-export async function login(email: string, password: string): Promise<LoginResponse> {
+export async function login(email: string, password: string, signal?: AbortSignal): Promise<LoginResponse> {
   const res = await fetch(`${apiBaseUrl}/api/auth/login`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
     body: JSON.stringify({ email, password }),
+    signal,
   });
   if (!res.ok) {
     const body = await res.text().catch(() => '');

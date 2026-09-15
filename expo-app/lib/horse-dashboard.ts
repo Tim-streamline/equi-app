@@ -24,7 +24,14 @@ export type DashboardPhase = {
   title: string;
   description?: string;
   weekLabel: string;
-  state: "active" | "done" | "upcoming";
+  state: "active" | "done" | "preview" | "locked";
+  accessible: boolean;
+  startsAt: string | null;
+  endsAt: string | null;
+  weekStart: number;
+  weekEnd: number;
+  contentAvailable: boolean;
+  availableAt: string | null;
   statusLabel: string;
   supplements: DashboardSupplement[];
 };
@@ -35,6 +42,7 @@ export type DashboardNotification = {
   body: string;
   items: DashboardSupplement[];
   orderItems?: DashboardSupplement[];
+  phaseId?: string;
 };
 export type DashboardAdvice = {
   id: string;
@@ -149,4 +157,30 @@ export function libraryPath(
         : "/(tabs)/library/video/[id]",
     params: { id: item.id },
   };
+}
+
+/** Recalculate cached phase labels on midnight/resume without exposing unavailable content. */
+export function dashboardAtTime(data: HorseDashboard, now: Date): HorseDashboard {
+  if (!data.protocol) return data;
+  const phases = data.protocol.phases.map((phase): DashboardPhase => {
+    const available = Date.parse(phase.availableAt ?? '');
+    const start = Date.parse(phase.startsAt ?? '');
+    const end = Date.parse(phase.endsAt ?? '');
+    const time = now.getTime();
+    const state = !Number.isFinite(available) || time < available ? 'locked'
+      : time < start ? 'preview' : time < end ? 'active' : 'done';
+    return { ...phase, state, accessible: state !== 'locked',
+      statusLabel: state === 'active' ? `Actief · wk ${phase.weekStart}–${phase.weekEnd}`
+        : state === 'preview' ? 'Start volgende week' : state === 'done' ? 'Afgerond'
+          : phase.weekStart ? `Vanaf wk ${phase.weekStart}` : 'Nog niet ingepland',
+      description: state === 'locked' ? undefined : phase.description,
+      supplements: state === 'locked' ? [] : phase.supplements,
+    };
+  });
+  const allowed = new Set(phases.flatMap((phase) => phase.supplements.map((item) => item.id)));
+  return { ...data, protocol: { ...data.protocol, phases,
+    orderItems: data.protocol.orderItems.filter((item) => allowed.has(item.id)),
+    notifications: data.protocol.notifications.filter((notice) => notice.type !== 'next_phase'
+      || phases.some((phase) => phase.id === notice.phaseId && phase.state === 'preview')),
+  } };
 }

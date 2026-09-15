@@ -13,7 +13,7 @@ class AdminUserSeeder extends Seeder
         AdminUser::updateOrCreate(
             ['email' => 'contact@depaardentherapeut.nl'],
             [
-                'name' => 'EquiNova Owner',
+                'name' => 'Shelley Meeuwsen',
                 'password' => Hash::make('password'),
                 'role' => 'owner',
                 'active' => true,
@@ -24,7 +24,7 @@ class AdminUserSeeder extends Seeder
         AdminUser::updateOrCreate(
             ['email' => 'eversdijk@optimize-it.nl'],
             [
-                'name' => 'Content Editor',
+                'name' => 'Tim Eversdijk',
                 'password' => Hash::make('password'),
                 'role' => 'content_editor',
                 'active' => true,

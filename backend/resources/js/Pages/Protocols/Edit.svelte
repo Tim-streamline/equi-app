@@ -212,7 +212,6 @@
         analysis: {
             cause: initialProtocol?.analysis?.cause ?? '',
             summary: initialProtocol?.analysis?.summary ?? '',
-            focus_points: initialProtocol?.analysis?.focus_points ?? [],
             observations: initialProtocol?.analysis?.observations ?? [],
         },
         advice: (initialProtocol?.analysis?.advice ?? []).map((row) => ({
@@ -579,11 +578,6 @@
         }
 
         return null;
-    }
-
-    function addFocusPoint() {
-        if ($form.analysis.focus_points.length >= 4) return;
-        $form.analysis.focus_points = [...$form.analysis.focus_points, { title: '', body: '' }];
     }
 
     function addObservation() {
@@ -1094,24 +1088,6 @@
                                 </Field>
                                 <p class="mt-2 text-right text-xs text-[#1B2A2A]/50">{$form.analysis.summary.length}/600</p>
                             </div>
-                            <div class="mt-7">
-                                <div class="mb-4 flex items-center justify-between gap-3">
-                                    <div><h3 class="text-base font-bold">Focus van het protocol</h3><p class="mt-0.5 text-xs text-[#1B2A2A]/60">3–4 inhoudelijke focuspunten, elk met één korte doelzin. Geen algemene categorieën zoals Voeding, Management of Training.</p></div>
-                                    <Button type="button" variant="outline" class="shrink-0 rounded-full" onclick={addFocusPoint} disabled={$form.analysis.focus_points.length >= 4}><Plus class="size-4" /> Focuspunt</Button>
-                                </div>
-                                {#if $form.errors['analysis.focus_points']}<p class="mb-3 text-sm text-destructive">{$form.errors['analysis.focus_points']}</p>{/if}
-                                <div class="space-y-4">
-                                    {#each $form.analysis.focus_points as point, index (index)}
-                                        <div class="rounded-xl border border-[#1B2A2A]/10 p-4">
-                                            <div class="flex items-start gap-3">
-                                                <div class="flex-1"><Field label="Inhoudelijk focuspunt" error={errorFor(`analysis.focus_points.${index}.title`)}><Input aria-label={`Focuspunt ${index + 1}`} bind:value={$form.analysis.focus_points[index].title} maxlength="48" /></Field></div>
-                                                <Button type="button" variant="ghost" size="icon" class="mt-6" onclick={() => ($form.analysis.focus_points = $form.analysis.focus_points.filter((_, i) => i !== index))} aria-label={`Focuspunt ${index + 1} verwijderen`}><Trash2 class="size-4 text-destructive" /></Button>
-                                            </div>
-                                            <div class="mt-3"><Field label="Doel in één korte zin" error={errorFor(`analysis.focus_points.${index}.body`)} hint={`${point.body.length}/160 tekens`}><Textarea aria-label={`Doel ${index + 1}`} bind:value={$form.analysis.focus_points[index].body} rows="2" maxlength="160" /></Field></div>
-                                        </div>
-                                    {/each}
-                                </div>
-                            </div>
                             <div class="mt-8">
                                 <div class="mb-4 flex items-center justify-between gap-3">
                                     <div><h3 class="text-base font-bold">Waar letten we op?</h3><p class="mt-0.5 text-xs text-[#1B2A2A]/60">1–4 concrete observatiepunten voor de evaluatie. Beschrijf per punt in één korte zin waaraan je merkt of het de goede kant op gaat.</p></div>
@@ -1153,7 +1129,6 @@
                             <div class="space-y-8 px-6 py-7 md:px-8">
                                 {#if $form.analysis.summary}
                                     <section class="rounded-2xl bg-[#EAFBF9] p-4"><h3 class="text-xs font-bold uppercase tracking-wider text-[#0E6F69]">Persoonlijke analyse</h3><p class="mt-2 text-sm leading-5">{$form.analysis.summary}</p></section>
-                                    <section><h3 class="text-xs font-bold uppercase tracking-wider text-[#1B2A2A]/70">Focus van het protocol</h3><div class="mt-3 space-y-3">{#each $form.analysis.focus_points as point}<div class="rounded-xl border border-[#1B2A2A]/10 bg-white p-4"><strong>{point.title}</strong><p class="mt-1 text-sm">{point.body}</p></div>{/each}</div></section>
                                     <section><h3 class="text-xs font-bold uppercase tracking-wider text-[#1B2A2A]/70">Waar letten we op?</h3><ul class="mt-3 list-disc space-y-2 pl-4 text-sm">{#each $form.analysis.observations as observation}<li>{observation}</li>{/each}</ul></section>
                                 {/if}
                                 <section>

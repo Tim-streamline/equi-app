@@ -1,0 +1,29 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+repo_dir="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
+bundle_dir="${LIBRARY_BUNDLE_PATH:-$repo_dir/deploy/lib-assets}"
+runtime="${DEPLOY_LIBRARY_RUNTIME:-auto}"
+
+if [[ "$runtime" == auto ]]; then
+    if command -v php >/dev/null 2>&1; then runtime=php; else runtime=docker; fi
+fi
+
+case "$runtime" in
+    php)
+        exec php "$repo_dir/backend/artisan" deploy-library-items --path="$bundle_dir" "$@"
+        ;;
+    docker)
+        mkdir -p -- "$bundle_dir"
+        bundle_dir="$(cd -- "$bundle_dir" && pwd)"
+        cd -- "$repo_dir/backend"
+        exec docker compose run --rm --no-deps -T \
+            --user "$(id -u):$(id -g)" --entrypoint php \
+            --volume "$bundle_dir:/deploy/lib-assets" \
+            laravel.test artisan deploy-library-items --path=/deploy/lib-assets "$@"
+        ;;
+    *)
+        echo 'DEPLOY_LIBRARY_RUNTIME must be auto, php, or docker.' >&2
+        exit 1
+        ;;
+esac

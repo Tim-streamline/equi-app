@@ -24,13 +24,15 @@ import {
 type CachedToken = { token: string; expiresAt: number; userId: string };
 let cachedToken: CachedToken | null = null;
 
-async function mintToken(): Promise<{ token: string; endpoint: string; expiresIn: number } | null> {
+async function mintToken(signal?: AbortSignal): Promise<{ token: string; endpoint: string; expiresIn: number } | null> {
   const creds = await loadCredentials();
+  if (signal?.aborted) throw new Error('Request cancelled.');
   console.log('[connector] mintToken: have creds?', !!creds);
   if (!creds) return null;
   try {
     console.log('[connector] mintToken: calling login at', getApiBaseUrl());
-    const res = await loginRequest(creds.email, creds.password);
+    const res = await loginRequest(creds.email, creds.password, signal);
+    if (signal?.aborted) throw new Error('Request cancelled.');
     console.log('[connector] mintToken: got token, endpoint =', res.endpoint);
     cachedToken = {
       token: res.token,
@@ -39,19 +41,23 @@ async function mintToken(): Promise<{ token: string; endpoint: string; expiresIn
     };
     return { token: res.token, endpoint: res.endpoint, expiresIn: res.expires_in };
   } catch (err) {
+    // A timed-out request belongs to the old session: never let a late 401
+    // clear credentials that may already have been saved by the next login.
+    if (signal?.aborted) throw err;
     console.warn('[connector] login failed', String(err));
     if (String(err).includes('401')) await clearCredentials();
     return null;
   }
 }
 
-export async function getOrMintToken(): Promise<string | null> {
+export async function getOrMintToken(signal?: AbortSignal): Promise<string | null> {
   const creds = await loadCredentials();
+  if (signal?.aborted) throw new Error('Request cancelled.');
   if (!creds) return null;
   if (cachedToken && cachedToken.userId === creds.userId && cachedToken.expiresAt > Date.now() + 30_000) {
     return cachedToken.token;
   }
-  const minted = await mintToken();
+  const minted = await mintToken(signal);
   return minted?.token ?? null;
 }
 

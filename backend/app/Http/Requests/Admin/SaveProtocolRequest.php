@@ -114,15 +114,10 @@ class SaveProtocolRequest extends FormRequest
     {
         return [function (Validator $validator): void {
             $hasCompactAnalysis = filled($this->input('analysis.summary'))
-                || filled($this->input('analysis.focus_points'))
                 || filled($this->input('analysis.observations'));
             if ($this->boolean('published') && $hasCompactAnalysis) {
                 if (! filled($this->input('analysis.summary'))) {
                     $validator->errors()->add('analysis.summary', 'Vul een korte persoonlijke analyse in voordat je publiceert.');
-                }
-                $focus = $this->input('analysis.focus_points', []);
-                if (! is_array($focus) || count($focus) < 3) {
-                    $validator->errors()->add('analysis.focus_points', 'Vul 3 tot 4 inhoudelijke focuspunten in voordat je publiceert.');
                 }
                 if (! filled($this->input('analysis.observations'))) {
                     $validator->errors()->add('analysis.observations', 'Vul minimaal één observatiepunt in voordat je publiceert.');

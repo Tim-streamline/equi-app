@@ -30,7 +30,7 @@ function renderScreen(format, body, chapters = []) {
     'lucide-react-native': { Bookmark: 'Bookmark', ExternalLink: 'ExternalLink', Headphones: 'Headphones' },
     '@/hooks/useTabBarPadding': { useTabBarPadding: () => 80 },
     '@/db/hooks': {
-      useLibraryItem: () => ({ id: 'video-item', title: 'Video article', format, body, durationLabel: '5 min' }),
+      useLibraryItem: () => ({ id: 'video-item', title: 'Video article', format, body, durationLabel: '5 min', heroImageUrl: 'https://media.example.test/manual-cover.jpg' }),
       useLibraryChapters: () => chapters,
       useTherapist: () => ({ name: 'Author' }),
     },
@@ -77,4 +77,17 @@ test('video body coexists with chapters and absent body does not create a player
   const empty = renderScreen('video', undefined, chapters);
   assert.deepEqual(empty.videoSources, []);
   assert.ok(flatten(empty.tree).includes('First chapter'));
+});
+
+test('three embedded videos load their own native start frames and never receive the item cover', () => {
+  const urls = ['first', 'second', 'third'].map((name) => `https://media.example.test/${name}.mp4`);
+  const { tree, videoSources } = renderScreen('video', urls.map((url) => `<video src="${url}"></video>`).join('\n'));
+  assert.deepEqual(videoSources, urls);
+  const players = flatten(tree).filter((node) => node?.type === 'VideoView');
+  assert.equal(players.length, 3);
+  players.forEach((player, index) => {
+    assert.equal(player.props.player.url, urls[index]);
+    assert.equal(player.props.poster, undefined);
+  });
+  assert.equal(flatten(tree).some((node) => node?.type === 'Image' && node.props.source?.uri === 'https://media.example.test/manual-cover.jpg'), false);
 });

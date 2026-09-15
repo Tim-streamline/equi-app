@@ -23,6 +23,7 @@ import {
 import { PowerSyncContext } from '@powersync/react';
 import { OPSqliteOpenFactory } from '@powersync/op-sqlite';
 
+import { accountSession } from '@/lib/account-session';
 import { AppSchema } from './powersync-schema';
 import { LaravelConnector } from './connector';
 import {
@@ -130,7 +131,7 @@ export function DbProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const login = useCallback(
-    async (email: string, password: string) => {
+    (email: string, password: string) => accountSession.transition(async () => {
       if (!powersync) throw new Error('Database not ready');
       const res: LoginResponse = await loginRequest(email, password);
       await saveCredentials({
@@ -142,12 +143,19 @@ export function DbProvider({ children }: { children: ReactNode }) {
       setIsLoggedIn(true);
       setCurrentUserId(String(res.user.id));
       await connectToBackend(powersync);
-    },
+    }),
     [powersync, connectToBackend],
   );
 
-  const logout = useCallback(async () => {
+  const logout = useCallback(() => accountSession.transition(async () => {
     if (!powersync) return;
+    setIsLoggedIn(false);
+    try {
+      const { dashboardRequest, deviceTimezone } = await import('@/hooks/useHorseDashboard');
+      await dashboardRequest('/api/notifications/push-token', { token: null, timezone: deviceTimezone() });
+    } catch (error) {
+      if (__DEV__) console.warn('[notifications] Could not unregister this device during logout.', error);
+    }
     setSyncStatus('idle');
     connectedRef.current = false;
     try {
@@ -159,7 +167,7 @@ export function DbProvider({ children }: { children: ReactNode }) {
     setIsLoggedIn(false);
     setCurrentUserId(null);
     selectHorse(null);
-  }, [powersync]);
+  }), [powersync]);
 
   const value = useMemo<DbContextValue | null>(() => {
     if (!powersync) return null;
