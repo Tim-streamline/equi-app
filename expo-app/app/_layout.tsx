@@ -3,6 +3,7 @@ import '../global.css';
 import { Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import * as NavigationBar from 'expo-navigation-bar';
+import * as Updates from 'expo-updates';
 import { StatusBar } from 'expo-status-bar';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
@@ -25,6 +26,17 @@ import { IntakeSchemaProvider } from '@/lib/intake/schema-provider';
 SplashScreen.preventAutoHideAsync().catch(() => {});
 
 export default function RootLayout() {
+  useEffect(() => {
+    if (Updates.isEnabled) {
+      console.info('[updates] launch', JSON.stringify({
+        channel: Updates.channel,
+        runtimeVersion: Updates.runtimeVersion,
+        updateId: Updates.updateId,
+        isEmbeddedLaunch: Updates.isEmbeddedLaunch,
+      }));
+    }
+  }, []);
+
   const [loaded] = useFonts({
     SourceSans3_400Regular,
     SourceSans3_500Medium,

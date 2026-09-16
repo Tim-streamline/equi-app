@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "675868242198",
+    "project_id": "equi-app-6da3a",
+    "storage_bucket": "equi-app-6da3a.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:675868242198:android:867df0d7f7e7a4f3402037",
+        "android_client_info": {
+          "package_name": "com.anonymous.expoapp"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCyONEutBkJZ-2MzlglSUzQ-mpsHPbw3LI"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
