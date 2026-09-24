@@ -65,6 +65,136 @@ class HorseDashboardTest extends TestCase
         });
     }
 
+    private function dayUrl(string $date): string
+    {
+        return '/api/horses/'.$this->horse->id.'/protocol-day?'.http_build_query([
+            'protocol_id' => $this->protocol->id, 'date' => $date, 'timezone' => 'Europe/Amsterdam',
+        ]);
+    }
+
+    public function test_historical_days_use_their_phase_and_update_calendar_after_checking_and_unchecking(): void
+    {
+        $this->travelTo(now()->setDate(2026, 9, 3));
+        $date = '2026-08-27';
+        $day = $this->getJson($this->dayUrl($date))->assertOk()->assertJsonPath('items.0.name', 'Herb 1')
+            ->assertJsonPath('editable', true)->assertJsonPath('state', 'missed');
+        $itemId = $day->json('items.0.id');
+        foreach ([true => 'complete', false => 'missed'] as $done => $state) {
+            $this->postJson($this->dayUrl($date), ['item_id' => $itemId, 'done' => (bool) $done])
+                ->assertOk()->assertJsonPath('items.0.done', (bool) $done)->assertJsonPath('state', $state);
+            $calendar = $this->getJson('/api/horses/'.$this->horse->id.'/dashboard?month=2026-08')->assertOk()->json('protocol.calendar.cells');
+            $this->assertSame($state, collect($calendar)->filter()->firstWhere('date', $date)['state']);
+        }
+        $futureItem = $this->protocol->phases()->reorder('order', 'desc')->first()->supplements()->first()->id;
+        $this->postJson($this->dayUrl($date), ['item_id' => $futureItem, 'done' => true])->assertUnprocessable();
+    }
+
+    public function test_historical_correction_window_is_inclusive_and_older_days_are_read_only(): void
+    {
+        $this->travelTo(now()->setDate(2026, 9, 1));
+        $itemId = $this->getJson($this->dayUrl('2026-08-18'))->assertOk()->assertJsonPath('editable', true)->json('items.0.id');
+        $this->postJson($this->dayUrl('2026-08-18'), ['item_id' => $itemId, 'done' => true])->assertOk();
+        $this->postJson($this->dayUrl('2026-08-18'), ['item_id' => $itemId, 'done' => false])->assertOk();
+        $this->getJson($this->dayUrl('2026-08-17'))->assertOk()->assertJsonPath('editable', false);
+        foreach ([true, false] as $done) {
+            $this->postJson($this->dayUrl('2026-08-17'), ['item_id' => $itemId, 'done' => $done])->assertUnprocessable();
+        }
+        foreach (['2026-09-01', '2026-09-02'] as $date) {
+            $this->getJson($this->dayUrl($date))->assertUnprocessable();
+            $this->postJson($this->dayUrl($date), ['item_id' => $itemId, 'done' => true])->assertUnprocessable();
+        }
+        $this->getJson($this->dayUrl('2026-08-14'))->assertNotFound();
+    }
+
+    public function test_preserved_items_and_checkmarks_survive_removal_and_support_corrections(): void
+    {
+        $item = $this->protocol->phases()->first()->supplements()->first();
+        $item->intakes()->create(['horse_id' => $this->horse->id, 'date' => '2026-08-27', 'dosage' => '20 g', 'done' => true]);
+        $this->getJson($this->dayUrl('2026-08-27'))->assertOk()->assertJsonPath('items.0.done', true);
+        $item->delete();
+        $this->getJson($this->dayUrl('2026-08-27'))->assertOk()->assertJsonPath('items.0.name', 'Herb 1')->assertJsonPath('items.0.dosage', '20 g')->assertJsonPath('items.0.done', true);
+        $this->postJson($this->dayUrl('2026-08-27'), ['item_id' => $item->id, 'done' => false])->assertOk()->assertJsonPath('state', 'missed');
+        $this->postJson($this->dayUrl('2026-08-27'), ['item_id' => $item->id, 'done' => true])->assertOk()->assertJsonPath('state', 'complete');
+    }
+
+    public function test_history_is_owner_scoped_and_requires_a_published_protocol(): void
+    {
+        $other = Horse::create(['owner_id' => User::factory()->create()->id, 'name' => 'Other', 'status' => 'active']);
+        $url = str_replace($this->horse->id, $other->id, $this->dayUrl('2026-08-27'));
+        $this->getJson($url)->assertNotFound();
+        $this->postJson($url, ['item_id' => (string) \Illuminate\Support\Str::uuid(), 'done' => true])->assertNotFound();
+        $this->protocol->update(['published_at' => null]);
+        $this->getJson($this->dayUrl('2026-08-27'))->assertNotFound();
+    }
+
+    public function test_sync_upload_cannot_bypass_date_or_plan_limits_and_updates_history(): void
+    {
+        $item = $this->protocol->phases()->first()->supplements()->first();
+        $id = (string) \Illuminate\Support\Str::uuid();
+        $operation = ['op' => 'PUT', 'type' => 'protocol_supplement_intakes', 'id' => $id, 'data' => [
+            'protocol_phase_supplement_id' => $item->id, 'horse_id' => $this->horse->id,
+            'date' => '2026-08-27', 'done' => true, 'dosage' => '20 g',
+        ]];
+        $this->getJson($this->dayUrl('2026-08-27'))->assertOk();
+        $this->postJson('/api/sync/upload', ['operations' => [$operation]])->assertOk();
+        $this->getJson($this->dayUrl('2026-08-27'))->assertJsonPath('state', 'complete');
+        foreach (['2026-08-29', '2026-08-13'] as $date) {
+            $bad = $operation;
+            $bad['id'] = (string) \Illuminate\Support\Str::uuid();
+            $bad['data']['date'] = $date;
+            $this->postJson('/api/sync/upload', ['operations' => [$bad]])->assertUnprocessable();
+        }
+        $this->postJson('/api/sync/upload', ['operations' => [['op' => 'PATCH', 'type' => 'protocol_supplement_intakes', 'id' => $id, 'data' => ['done' => false]]]])->assertOk();
+        $this->getJson($this->dayUrl('2026-08-27'))->assertJsonPath('state', 'missed');
+    }
+
+    public function test_sync_date_limits_use_the_same_device_timezone_as_the_dashboard(): void
+    {
+        $this->travelTo(now()->setDate(2026, 8, 27)->setTime(12, 30));
+        $item = $this->protocol->phases()->first()->supplements()->first();
+        $this->postJson('/api/sync/upload', ['timezone' => 'Pacific/Kiritimati', 'operations' => [[
+            'op' => 'PUT', 'type' => 'protocol_supplement_intakes', 'id' => (string) \Illuminate\Support\Str::uuid(),
+            'data' => ['protocol_phase_supplement_id' => $item->id, 'horse_id' => $this->horse->id, 'date' => '2026-08-28', 'done' => true],
+        ]]])->assertOk();
+        $this->getJson('/api/horses/'.$this->horse->id.'/dashboard?timezone=Pacific/Kiritimati')
+            ->assertOk()->assertJsonPath('date', '2026-08-28')->assertJsonPath('protocol.today.done', 1);
+    }
+
+    public function test_phase_labels_use_duration_and_each_phases_own_week(): void
+    {
+        $this->getJson('/api/horses/'.$this->horse->id.'/dashboard')->assertOk()
+            ->assertJsonPath('protocol.phases.0.durationLabel', 'Duur: 2 weken')
+            ->assertJsonPath('protocol.phases.0.statusLabel', 'Actief · week 2 van 2');
+        $phase = $this->protocol->phases()->reorder('order', 'desc')->first();
+        foreach ($phase->weeks as $week) {
+            $week->update(['protocol_week_number' => $week->protocol_week_number - 1]);
+        }
+        $this->getJson('/api/horses/'.$this->horse->id.'/dashboard')->assertOk()
+            ->assertJsonPath('protocol.phases.0.statusLabel', 'Actief · week 2 van 2')
+            ->assertJsonPath('protocol.phases.1.statusLabel', 'Actief · week 1 van 2');
+    }
+
+    public function test_home_returns_up_to_four_published_recommendations_with_access_metadata(): void
+    {
+        $items = collect(range(1, 5))->map(fn ($i) => LibraryItem::create([
+            'title' => 'Lesson '.$i, 'slug' => 'home-lesson-'.$i, 'format' => $i === 1 ? 'audio' : 'article',
+            'published_at' => now()->subDay(), 'is_plus' => true, 'credit_cost' => 0,
+        ]));
+        LibraryItem::create(['title' => 'Draft', 'slug' => 'draft', 'format' => 'article']);
+        $url = '/api/horses/'.$this->horse->id.'/dashboard';
+        $first = $this->getJson($url)->assertOk()->assertJsonCount(4, 'recommendations');
+        $this->assertCount(4, array_unique(array_column($first->json('recommendations'), 'id')));
+        foreach ($first->json('recommendations') as $item) {
+            $this->assertTrue($items->contains('id', $item['id']));
+            $this->assertTrue($item['isPlus']);
+        }
+        $this->assertSame($first->json('recommendations'), $this->getJson($url)->json('recommendations'));
+        $items->skip(2)->each(fn ($item) => $item->update(['published_at' => now()->addDay()]));
+        $this->getJson($url)->assertJsonCount(2, 'recommendations');
+        $this->protocol->update(['status' => 'draft']);
+        $this->getJson($url)->assertJsonPath('variant', 'basic')->assertJsonCount(2, 'recommendations');
+    }
+
     public function test_backend_calculates_progress_next_phase_and_calendar_from_dates(): void
     {
         $this->getJson('/api/horses/'.$this->horse->id.'/dashboard?timezone=Europe/Amsterdam')

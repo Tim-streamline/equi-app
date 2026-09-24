@@ -10,7 +10,7 @@ import { useMemo } from 'react';
 import { useQuery, usePowerSync } from '@powersync/react';
 import { APP_STRINGS } from './app-strings';
 import { IDS } from './ids';
-import { useDb } from './provider';
+import { useDb } from '@/db/provider';
 import {
   ACTIVE_PROTOCOL_SQL,
   buildProtocolPlan,
@@ -307,10 +307,10 @@ export function useScanIngredients(scanId: string) {
 
 // ---------------------------------------------------------------- library
 export function useLibraryItems() {
-  return sorted(useCamelQuery(`SELECT * FROM library_items`));
+  return sorted(useCamelQuery(`SELECT * FROM library_items WHERE published_at IS NOT NULL AND datetime(published_at) <= datetime('now')`));
 }
 export function useLibraryFeatured() {
-  const rows = useCamelQuery(`SELECT * FROM library_items WHERE is_featured = 1 LIMIT 1`);
+  const rows = useCamelQuery(`SELECT * FROM library_items WHERE is_featured = 1 AND published_at IS NOT NULL AND datetime(published_at) <= datetime('now') LIMIT 1`);
   return rows[0];
 }
 export function useLibraryItem(id: string): Indexed {

@@ -10,7 +10,7 @@
     import { Card, CardContent, CardHeader, CardTitle, Button, Input, Textarea, Select } from '$lib/components/ui';
     import { ArrowLeft, Eye } from '@lucide/svelte';
 
-    let { item, categories, therapists, automaticThumbnailUrl, videoDurationMinutes, videoPosters = {} } = $props();
+    let { item, categories, therapists, automaticThumbnailUrl, videoDurationMinutes, videoPosters = {}, suggestionItems = [] } = $props();
     const isNew = !item;
     // Use the editor's local calendar date, avoiding UTC shifts near midnight.
     const today = new Date();
@@ -32,6 +32,15 @@
     }
 
     let previewOpen = $state(false);
+    let suggestionSearch = $state('');
+    const matchingSuggestions = $derived(suggestionSearch.trim()
+        ? suggestionItems.filter(i => !$form.featured_suggestion_ids.includes(i.id) && i.title.toLocaleLowerCase().includes(suggestionSearch.toLocaleLowerCase())).slice(0, 20)
+        : []);
+    function moveSuggestion(index, direction) {
+        const ids = [...$form.featured_suggestion_ids];
+        [ids[index], ids[index + direction]] = [ids[index + direction], ids[index]];
+        $form.featured_suggestion_ids = ids;
+    }
 
     // Build the markdown/HTML snippet embedded into the article body. Images
     // use markdown; video/audio use HTML5 tags (supported by the app's
@@ -64,10 +73,11 @@
         author_therapist_id: isNew ? defaultAuthorId : (item.author_therapist_id ?? ''),
         published_at: isNew ? publishDate : (item.published_at ? item.published_at.slice(0, 10) : ''),
         credit_cost: isNew ? 1 : (item.credit_cost ?? 0),
-        is_plus: isNew ? true : (item.is_plus ?? false),
+        is_plus: item?.is_plus ?? false,
         is_featured: item?.is_featured ?? false,
         order: item?.order ?? 0,
         category_ids: item?.categories?.map((c) => c.id) ?? [],
+        featured_suggestion_ids: item?.featured_suggestion_ids ?? [],
     });
 
     function toggle(arr, id) {
@@ -158,6 +168,27 @@
                             {c.label}
                         </button>
                     {/each}
+                </CardContent>
+            </Card>
+
+            <Card>
+                <CardHeader><CardTitle>Uitgelichte suggesties</CardTitle><p class="text-xs text-muted-foreground">Kies maximaal 4 items. De overige plekken bij Verder kijken worden automatisch aangevuld.</p></CardHeader>
+                <CardContent class="space-y-3">
+                    {#each $form.featured_suggestion_ids as id, index (id)}
+                        <div class="flex items-center gap-1 text-sm">
+                            <span class="min-w-0 flex-1">{suggestionItems.find(i => i.id === id)?.title ?? 'Verwijderd item'}</span>
+                            <Button type="button" size="sm" variant="ghost" aria-label="Suggestie omhoog" disabled={index === 0} onclick={() => moveSuggestion(index, -1)}>↑</Button>
+                            <Button type="button" size="sm" variant="ghost" aria-label="Suggestie omlaag" disabled={index === $form.featured_suggestion_ids.length - 1} onclick={() => moveSuggestion(index, 1)}>↓</Button>
+                            <Button type="button" size="sm" variant="ghost" aria-label="Suggestie verwijderen" onclick={() => ($form.featured_suggestion_ids = $form.featured_suggestion_ids.filter(value => value !== id))}>×</Button>
+                        </div>
+                    {/each}
+                    <Input placeholder="Zoek op titel" aria-label="Zoek uitgelichte suggesties op titel" bind:value={suggestionSearch} disabled={$form.featured_suggestion_ids.length >= 4} />
+                    <div class="max-h-56 overflow-y-auto">
+                        {#each matchingSuggestions as suggestion (suggestion.id)}
+                            <button type="button" disabled={$form.featured_suggestion_ids.length >= 4} class="block w-full rounded p-2 text-left text-sm hover:bg-accent" onclick={() => { $form.featured_suggestion_ids = [...$form.featured_suggestion_ids, suggestion.id]; suggestionSearch = ''; }}>{suggestion.title}{!suggestion.published_at ? ' (concept)' : ''}</button>
+                        {/each}
+                    </div>
+                    {#if $form.errors.featured_suggestion_ids}<p class="text-sm text-destructive">{$form.errors.featured_suggestion_ids}</p>{/if}
                 </CardContent>
             </Card>
 

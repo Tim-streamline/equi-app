@@ -104,6 +104,22 @@ class DeployLibraryItemsTest extends TestCase
         $this->assertDatabaseCount('library_items', 2);
     }
 
+    public function test_pinned_suggestions_remap_target_ids_and_remain_idempotent(): void
+    {
+        $source = $this->sourceCatalog();
+        $suggestion = LibraryItem::create(['slug' => 'suggestion', 'title' => 'Suggestion', 'format' => 'article']);
+        $source->update(['featured_suggestion_ids' => [$suggestion->id]]);
+        app(LibraryDeployment::class)->export($this->bundle);
+        $this->emptyCatalog();
+        $destination = LibraryItem::create(['slug' => 'suggestion', 'title' => 'Existing suggestion', 'format' => 'article']);
+        $this->artisan('deploy-library-items', ['--path' => $this->bundle])->assertSuccessful();
+        $this->assertSame([$destination->id], LibraryItem::where('slug', $source->slug)->sole()->featured_suggestion_ids);
+        $before = $this->rows();
+        $this->travel(1)->day();
+        $this->artisan('deploy-library-items', ['--path' => $this->bundle])->assertSuccessful();
+        $this->assertSame($before, $this->rows());
+    }
+
     public function test_distinct_content_blocks_with_the_same_order_are_preserved(): void
     {
         $item = $this->sourceCatalog();

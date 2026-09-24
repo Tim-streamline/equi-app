@@ -64,7 +64,7 @@ export default function CommunityCompose() {
       form.append('body', body.trim()); form.append('category_id', category); form.append('tags', JSON.stringify(tags));
       if (id) form.append('_method', 'PATCH');
       removed.forEach(mediaId => form.append('remove_media[]', mediaId));
-      assets.forEach((asset, index) => form.append('media[]', { uri: asset.uri, name: asset.fileName ?? `attachment-${index}.${asset.type === 'video' ? 'mp4' : 'jpg'}`, type: asset.mimeType ?? (asset.type === 'video' ? 'video/mp4' : 'image/jpeg') } as unknown as Blob));
+      assets.forEach((asset, index) => form.append('media[]', Platform.OS === 'web' && asset.file ? asset.file : { uri: asset.uri, name: asset.fileName ?? `attachment-${index}.${asset.type === 'video' ? 'mp4' : 'jpg'}`, type: asset.mimeType ?? (asset.type === 'video' ? 'video/mp4' : 'image/jpeg') } as unknown as Blob));
       const result = await communityRequest<{ id: string }>(`/api/community/posts${id ? `/${id}` : ''}`, 'POST', form);
       newPostId.current = result.id; setCompleted(true); setDirty(false);
     } catch (e) { Alert.alert('Bericht niet opgeslagen', e instanceof Error ? e.message : 'Probeer opnieuw. Je tekst blijft hier staan.'); }

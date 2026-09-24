@@ -4,7 +4,8 @@ module.exports = {
     './app/**/*.{js,jsx,ts,tsx}',
     './components/**/*.{js,jsx,ts,tsx}',
   ],
-  presets: [require('nativewind/preset')],
+  // Resolve from the consuming Expo project (native or ../web).
+  presets: [require(require.resolve('nativewind/preset', { paths: [process.cwd(), __dirname] }))],
   theme: {
     extend: {
       colors: {

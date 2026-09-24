@@ -3,10 +3,17 @@
 Run from the repository root:
 
 ```bash
+# Supply a Ploi token without recording it in shell history.
+read -rsp 'Ploi API token: ' PLOI_API_TOKEN
+printf '\n'
+export PLOI_API_TOKEN
 ./deploy-staging
+unset PLOI_API_TOKEN
 ```
 
-This builds the current working tree's backend inside the local Sail PHP 8.5 Docker image, including locked production Composer dependencies and compiled Svelte/Vite assets. It uploads a checksummed release to **`ploi@37.97.209.204` (`opt-staging`)** and activates it at **https://equi-app.staging.optimize-it.nl**. Uncommitted application changes are included; the Git revision and working-tree status are recorded in the artifact.
+This builds the current working tree's backend inside the local Sail PHP 8.5 Docker image, including locked production Composer dependencies and compiled Svelte/Vite assets. It also builds the customer web app with its shared Expo sources in an isolated Node 24 container. It uploads a checksummed release to **`ploi@37.97.209.204` (`opt-staging`)** and activates it at **https://equi-app.staging.optimize-it.nl**. Uncommitted application changes are included; the Git revision and working-tree status are recorded in the artifact.
+
+Nginx serves the customer web app at `/` and the admin panel at `/admin`, both over HTTPS on port **443**. HTTP port **80** redirects to HTTPS, preserving the path and query; ACME certificate-validation requests remain available over HTTP. Compiled web files are served directly, so no production Node server or public ports 3000/81 are needed. Those ports remain part of local development.
 
 Local requirements: Docker, Bash, Git, rsync, tar, sha256sum and working SSH-key access as `ploi`. No host PHP, Composer or Node is needed. The existing `sail-8.5/app` image is used; if missing, the script builds it from `backend/compose.yaml` (which requires the local Sail dependency). Builds use a disposable directory, so local `vendor`, `node_modules`, `.env`, storage and the running Sail app are untouched.
 
@@ -21,7 +28,11 @@ Local requirements: Docker, Bash, Git, rsync, tar, sha256sum and working SSH-key
 
 `RELEASE_ID` is the timestamp, Git revision and random suffix printed by the build. Build archives and the library bundle are excluded from Git. The first media transfer is 7.49 GiB; rsync retains interrupted files for retry and subsequent transfers send only changed files. Library import is optional and must finish checksum validation before records are changed. Default code deployments do not transfer media or overwrite catalog edits.
 
-The default deployment acquires a server-side lock, validates the staging environment and database identity, creates a PostgreSQL backup, briefly enables maintenance mode for migrations, refreshes Laravel caches, switches `current`, reloads PHP-FPM, and checks HTTPS `/up` and `/admin/login`. A failed activation restores the previous code release. Rollback does **not** reverse migrations or restore database contents; migrations must remain compatible with the previous release. Database backups and old releases are retained for explicit cleanup.
+The deployment acquires a server-side lock, validates the staging environment and database identity, backs up Nginx configuration and PostgreSQL, briefly enables maintenance mode for migrations, refreshes Laravel caches, and switches `current`. It reloads PHP-FPM, installs the release's Nginx configuration through Ploi, waits for the installed file, then requests a graceful Nginx reload. An HTTPS response marker confirms the configuration was loaded. Checks cover Laravel health, admin login, customer deep links, browser-session routing and HTTP redirects. A failed activation attempts to restore the previous code and Nginx configuration, reporting any restoration failure. Rollback does **not** reverse migrations or restore database contents; migrations must remain compatible with the previous release. Database backups and old releases are retained for explicit cleanup.
+
+Deployments and rollbacks require `PLOI_API_TOKEN` with **Manage sites** and **Manage servers** permissions. `--build-only` requires neither a token nor staging access. Supply the token through the invoking environment or CI secret storage, never through a command-line argument or a committed file. The script sends it to staging through encrypted SSH stdin and uses it only in the deployment process environment. Do not add it to Laravel's `.env` or the release archive.
+
+New artifacts contain `.deploy/nginx-staging.conf`. For a retained release built before this support, rollback uses the live configuration captured when that release was replaced. Rollback refuses to switch if neither an artifact configuration nor a saved configuration is available.
 
 ## Ploi configuration
 
@@ -42,25 +53,32 @@ Server layout under `/home/ploi/equi-app.staging.optimize-it.nl`:
 ```text
 .env -> shared/.env
 current -> releases/RELEASE_ID
-releases/RELEASE_ID/          # Backend, vendor, built assets, .env/storage symlinks
+releases/RELEASE_ID/          # Backend, vendor, admin assets, .env/storage symlinks
+releases/RELEASE_ID/web-dist/ # Compiled customer app, workers and WASM
+releases/RELEASE_ID/.deploy/  # Release checks and versioned Nginx configuration
 incoming/                   # Uploaded archives and SHA-256 checksums
 shared/.env                 # Persistent staging configuration, mode 0600
 shared/storage/             # Uploads, sessions, compiled views, logs and signing keys
-shared/backups/             # PostgreSQL backups, mode 0600
+shared/backups/             # PostgreSQL and Nginx backup files, mode 0600
+shared/nginx-releases/      # Saved Nginx configurations for legacy rollback
+shared/deploy-tools/        # Ploi API helper, without credentials
 shared/lib-assets/           # Optional separately transferred library bundle
 ```
 
-Storage and signing keys survive deployments and code rollback. Back up `shared/storage` and `shared/.env` separately; PostgreSQL backups do not contain these files. The scripts do not provision or deploy the separate PowerSync service. Its staging URL is reserved in the environment, but mobile synchronization requires that service to be configured separately.
+Storage and signing keys survive deployments and code rollback. Back up `shared/storage` and `shared/.env` separately; PostgreSQL backups do not contain these files. The scripts do not provision or deploy the separate PowerSync service. Nginx proxies `/powersync/` to `127.0.0.1:8080`, with browser workers and WASM served from the web build. Mobile and browser synchronization still require that service to be configured separately.
 
 FFmpeg 8.0.1 is installed under `shared/tools` for new-video thumbnail generation, using official Ubuntu packages extracted into a project-local runtime. `FFMPEG_BINARY` points to its wrapper. System packages are not changed. To refresh this runtime on opt-staging, run `ssh ploi@37.97.209.204 bash -s < deploy/install-media-tools.sh`, then refresh the Ploi environment/config cache if its path changed. The installer verifies a real JPEG encode before activating the runtime and retains package/version records. It is separate from routine code deployments.
 
-`staging.env.example` documents the environment without secrets; `nginx-staging.conf` records the Ploi site configuration. Ploi owns the included TLS configuration and certificate renewal.
+`staging.env.example` documents the Laravel environment without secrets; `nginx-staging.conf` is applied on every deployment. Ploi owns the included TLS configuration and certificate renewal. The template retains Ploi's `server` and `after` includes, but owns the HTTP and `www` redirects itself: including Ploi's existing `before/ssl-redirect.conf` would create duplicate virtual hosts. Preserve this distinction when customizing the site.
 
 Deployment regression checks:
 
 ```bash
 python3 deploy/test-deployment.py
+python3 deploy/test-nginx.py # Real Nginx container with isolated TLS and mock upstreams
+docker run --rm --volume "$PWD/deploy:/tests:ro" --entrypoint php sail-8.5/app /tests/test-ploi-nginx.php
 bash -n deploy-staging deploy/*.sh
+./deploy-staging --build-only
 ```
 
 ## Library deployment

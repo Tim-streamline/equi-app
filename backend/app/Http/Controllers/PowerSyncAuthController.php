@@ -57,6 +57,11 @@ class PowerSyncAuthController extends Controller
             return response()->json(['message' => 'Invalid credentials'], 401);
         }
 
+        return $this->tokenResponse($user);
+    }
+
+    public function tokenResponse(User $user): JsonResponse
+    {
         return response()->json([
             'endpoint' => config('powersync.service_url'),
             'token' => $this->mintToken($user),

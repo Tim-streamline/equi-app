@@ -29,6 +29,7 @@ Route::middleware(AuthenticatePowerSyncJwt::class)
 Route::middleware(AuthenticatePowerSyncJwt::class)->group(function () {
     Route::post('/api/notifications/push-token', [PushTokenController::class, 'store']);
     Route::get('/api/horses/{horse}/dashboard', [HorseDashboardController::class, 'show']);
+    Route::match(['get', 'post'], '/api/horses/{horse}/protocol-day', [HorseDashboardController::class, 'day']);
     Route::post('/api/horses/{horse}/weekly-update', [HorseDashboardController::class, 'weeklyUpdate']);
 });
 
@@ -49,4 +50,24 @@ Route::middleware(AuthenticatePowerSyncJwt::class)->prefix('api/community')->con
         Route::post('/{type}/{id}/report', 'report')->whereUuid('id');
         Route::match(['put', 'delete'], '/mutes/{type}/{id}', 'mute')->whereUuid('id');
     });
+});
+
+Route::middleware(AuthenticatePowerSyncJwt::class)->prefix('api/library')->controller(\App\Http\Controllers\LibraryController::class)->group(function () {
+    Route::get('/access', 'access');
+    Route::get('/bookmarks', 'bookmarks');
+    Route::get('/selections/{selection}', 'selection')->where('selection', '[a-z-]+');
+    Route::get('/{library}', 'show')->whereUuid('library');
+    Route::post('/{library}/unlock', 'unlock')->whereUuid('library')->middleware('throttle:60,1');
+    Route::get('/{library}/related', 'related')->whereUuid('library');
+    Route::match(['get', 'put', 'delete'], '/{library}/bookmark', 'bookmark')->whereUuid('library');
+});
+
+// Browser sessions intentionally live outside api/* so Laravel enforces CSRF.
+Route::prefix('web-session')->controller(\App\Http\Controllers\WebSessionController::class)->group(function () {
+    Route::get('/csrf', 'csrf');
+    Route::post('/login', 'login')->middleware('throttle:10,1');
+    Route::post('/token', 'token');
+    Route::post('/logout', 'logout');
+    Route::get('/media/{media}', [CommunityController::class, 'media'])
+        ->whereUuid('media')->middleware(\App\Http\Middleware\AuthenticateWebAppSession::class);
 });

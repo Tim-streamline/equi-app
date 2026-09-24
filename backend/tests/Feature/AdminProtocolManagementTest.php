@@ -120,6 +120,24 @@ class AdminProtocolManagementTest extends TestCase
         }
     }
 
+    public function test_editing_a_plan_freezes_unopened_past_days_before_supplements_are_removed(): void
+    {
+        $this->travelTo(now()->setDate(2026, 9, 24)->setTime(12, 0));
+        $payload = [...$this->payload(), 'published' => true, 'started_at' => '2026-09-15'];
+        $this->actingAs($this->admin, 'admin')->post('/admin/protocols', $payload)->assertSessionHasNoErrors();
+        $protocol = Protocol::firstOrFail();
+        $history = app(\App\Support\ProtocolDayHistory::class);
+        $update = $this->storedPayload($protocol);
+        $update['phases'][0]['supplements'] = [];
+        $this->put('/admin/protocols/'.$protocol->id, $update)->assertSessionHasNoErrors();
+        $day = $history->day($protocol->fresh(), '2026-09-16', \Carbon\CarbonImmutable::now('Europe/Amsterdam'));
+        $this->assertNotEmpty($day['items']);
+        $this->assertSame('Psylliumzaad', $day['items'][0]['name']);
+        $this->assertDatabaseMissing('protocol_phase_supplements', ['id' => $day['items'][0]['id']]);
+        $corrected = $history->setDone($protocol, '2026-09-16', $day['items'][0]['id'], true, \Carbon\CarbonImmutable::now('Europe/Amsterdam'));
+        $this->assertTrue($corrected['items'][0]['done']);
+    }
+
     public function test_admin_can_open_the_horse_specific_protocol_creator(): void
     {
         $this->actingAs($this->admin, 'admin')

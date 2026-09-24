@@ -23,7 +23,10 @@ class LibraryItemController extends Controller
 {
     public function index(Request $request): Response
     {
+        $request->validate(['category_ids' => ['sometimes', 'array'], 'category_ids.*' => ['uuid', 'exists:library_categories,id']]);
+        $categoryIds = $request->input('category_ids', []);
         $items = LibraryItem::query()
+            ->when($categoryIds, fn ($query) => $query->whereHas('categories', fn ($categories) => $categories->whereIn('library_categories.id', $categoryIds)))
             ->when($request->string('q')->toString(), fn ($query, $q) => $query->where('title', 'ilike', "%{$q}%"))
             ->when($request->string('format')->toString(), fn ($query, $f) => $query->where('format', $f))
             ->when($request->string('gate')->toString(), function ($query, $g) {
@@ -52,7 +55,8 @@ class LibraryItemController extends Controller
 
         return Inertia::render('Library/Index', [
             'items' => $items,
-            'filters' => $request->only('q', 'format', 'gate'),
+            'filters' => $request->only('q', 'format', 'gate', 'category_ids'),
+            'categories' => LibraryCategory::withCount('items')->orderByDesc('is_quick_filter')->orderByRaw('CASE WHEN is_quick_filter THEN "order" ELSE 2147483647 END')->orderByDesc('items_count')->orderBy('label')->get(),
             'counts' => [
                 'total' => LibraryItem::count(),
                 'drafts' => LibraryItem::whereNull('published_at')->count(),
@@ -69,6 +73,7 @@ class LibraryItemController extends Controller
             'automaticThumbnailUrl' => $library ? app(LibraryThumbnail::class)->sourceAsset($library)?->thumbnail_url : null,
             'videoPosters' => $library ? app(LibraryThumbnail::class)->videoPosters($library) : (object) [],
             'categories' => LibraryCategory::orderBy('order')->get(['id', 'label']),
+            'suggestionItems' => LibraryItem::query()->when($library, fn ($q) => $q->where('id', '!=', $library->id))->orderBy('title')->get(['id', 'title', 'published_at']),
             'therapists' => Therapist::availableFor($library?->author_therapist_id)->orderBy('name')->get(['id', 'name', 'title', 'archived_at'])
                 ->map(fn (Therapist $therapist) => [
                     'id' => $therapist->id,
@@ -136,6 +141,10 @@ class LibraryItemController extends Controller
     {
         $validated = $request->validate([
             'title' => ['required', 'string', 'max:255'],
+            'featured_suggestion_ids' => ['sometimes', 'array', 'max:4'],
+            'featured_suggestion_ids.*' => ['uuid', 'distinct', Rule::exists('library_items', 'id'), Rule::notIn(array_filter([$id]))],
+            'category_ids' => ['sometimes', 'array'],
+            'category_ids.*' => ['uuid', 'distinct', 'exists:library_categories,id'],
             'slug' => ['nullable', 'string', 'max:255', 'unique:library_items,slug'.($id ? ",{$id}" : '')],
             'format' => ['required', 'in:article,video,audio,podcast,course,program'],
             'description' => ['nullable', 'string'],
@@ -176,7 +185,7 @@ class LibraryItemController extends Controller
                 $validated['duration_sec'] = $minutes === null ? null : (int) round($minutes * 60);
             }
         }
-        unset($validated['duration_minutes'], $validated['media_ids']);
+        unset($validated['duration_minutes'], $validated['media_ids'], $validated['category_ids']);
         // Preserve clients that still send the legacy image URL field.
         if (! isset($validated['thumbnail_mode']) && ! empty($validated['hero_image_url'])) {
             $validated['thumbnail_mode'] = 'manual';

@@ -1,0 +1,33 @@
+{
+  "extends": "expo/tsconfig.base",
+  "compilerOptions": {
+    "strict": true,
+    "paths": {
+      "@/db/provider": [
+        "./db/provider"
+      ],
+      "@/db/auth": [
+        "./db/auth"
+      ],
+      "@/db/connector": [
+        "./db/connector"
+      ],
+      "@/*": [
+        "../expo-app/*"
+      ],
+      "@powersync/react-native": [
+        "./node_modules/@powersync/common"
+      ]
+    },
+    "baseUrl": "."
+  },
+  "include": [
+    "app/**/*.tsx",
+    "db/**/*.ts",
+    "db/**/*.tsx",
+    "components/**/*.tsx",
+    "expo-env.d.ts",
+    "nativewind-env.d.ts",
+    ".expo/types/**/*.ts"
+  ]
+}

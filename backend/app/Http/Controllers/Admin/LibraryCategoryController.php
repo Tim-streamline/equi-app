@@ -55,6 +55,7 @@ class LibraryCategoryController extends Controller
             'slug' => ['nullable', 'string', 'max:255', 'unique:library_categories,slug'.($id ? ",{$id}" : '')],
             'order' => ['nullable', 'integer', 'min:0'],
             'is_default' => ['boolean'],
+            'is_quick_filter' => ['boolean'],
         ]);
     }
 }

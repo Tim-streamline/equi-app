@@ -7,18 +7,19 @@ const sources = await Promise.all([
   '../components/library/MarkdownBody.tsx',
   '../app/(tabs)/library/video/[id].tsx',
   '../app/(tabs)/library/article/[id].tsx',
+  '../components/library/LibraryContent.tsx',
 ].map(async (path) => ts.transpileModule(await readFile(new URL(path, import.meta.url), 'utf8'), {
   compilerOptions: { jsx: ts.JsxEmit.ReactJSX, module: ts.ModuleKind.CommonJS },
 }).outputText));
 
 // Render the real screen and markdown components with native views/player stubbed.
 // This verifies that synced CMS content reaches the player, not native playback.
-function renderScreen(format, body, chapters = []) {
+function renderScreen(format, body, chapters = [], canRead = true) {
   const videoSources = [];
   const jsx = (type, props) => typeof type === 'function' ? type(props) : { type, props };
   const modules = {
     'react/jsx-runtime': { jsx, jsxs: jsx, Fragment: 'Fragment' },
-    react: { useMemo: (fn) => fn() },
+    react: { useMemo: (fn) => fn(), useRef: (value) => ({ current: value }), useState: (value) => [value, () => {}] },
     'react-native': Object.fromEntries(['View', 'Text', 'ScrollView', 'Image', 'Pressable'].map((name) => [name, name])),
     'expo-video': {
       VideoView: 'VideoView',
@@ -28,6 +29,9 @@ function renderScreen(format, body, chapters = []) {
     'expo-router': { router: { back: () => {} }, useLocalSearchParams: () => ({ id: 'video-item' }) },
     'react-native-safe-area-context': { SafeAreaView: 'SafeAreaView' },
     'lucide-react-native': { Bookmark: 'Bookmark', ExternalLink: 'ExternalLink', Headphones: 'Headphones' },
+    '@/hooks/useLibraryResource': { useLibraryResource: () => ({ data: { canRead, body: canRead ? body : null, chapters: canRead ? chapters : [], item: { id: 'video-item', creditCost: 1 }, access: { hasPlus: false, unlockedIds: [], credits: 0 } } }) },
+    '@/components/library/LibraryBookmarkButton': { LibraryBookmarkButton: 'LibraryBookmarkButton' },
+    '@/components/library/RelatedLibraryItems': { RelatedLibraryItems: 'RelatedLibraryItems' },
     '@/hooks/useTabBarPadding': { useTabBarPadding: () => 80 },
     '@/db/hooks': {
       useLibraryItem: () => ({ id: 'video-item', title: 'Video article', format, body, durationLabel: '5 min', heroImageUrl: 'https://media.example.test/manual-cover.jpg' }),
@@ -47,6 +51,8 @@ function renderScreen(format, body, chapters = []) {
     return exports;
   }
   modules['@/components/library/MarkdownBody'] = load(sources[0]);
+  modules['./MarkdownBody'] = modules['@/components/library/MarkdownBody'];
+  modules['@/components/library/LibraryContent'] = load(sources[3]);
   return { tree: load(sources[format === 'article' ? 2 : 1]).default(), videoSources };
 }
 
@@ -91,3 +97,13 @@ test('three embedded videos load their own native start frames and never receive
   });
   assert.equal(flatten(tree).some((node) => node?.type === 'Image' && node.props.source?.uri === 'https://media.example.test/manual-cover.jpg'), false);
 });
+
+for (const format of ['video', 'article']) {
+  test(`${format} locked details never render paid body or chapters`, () => {
+    const { tree, videoSources } = renderScreen(format, body, [{ id: 'one', title: 'Private chapter' }], false);
+    assert.deepEqual(videoSources, []);
+    assert.equal(flatten(tree).includes('Before the video.'), false);
+    assert.equal(flatten(tree).includes('Private chapter'), false);
+    assert.ok(flatten(tree).includes('Ontgrendelen'));
+  });
+}

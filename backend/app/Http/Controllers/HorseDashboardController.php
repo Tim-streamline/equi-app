@@ -34,6 +34,24 @@ class HorseDashboardController extends Controller
         return response()->json(['saved' => true]);
     }
 
+    public function day(Request $request, Horse $horse, \App\Support\ProtocolDayHistory $history)
+    {
+        $this->owner($request, $horse);
+        $data = $request->validate([
+            'protocol_id' => ['required', 'uuid'], 'date' => ['required', 'date_format:Y-m-d'],
+            'timezone' => ['sometimes', 'timezone'],
+            'item_id' => [$request->isMethod('POST') ? 'required' : 'sometimes', 'uuid'],
+            'done' => [$request->isMethod('POST') ? 'required' : 'sometimes', 'boolean'],
+        ]);
+        $now = CarbonImmutable::now($data['timezone'] ?? 'Europe/Amsterdam');
+        $protocol = $horse->protocols()->whereKey($data['protocol_id'])->where('status', 'active')
+            ->whereNotNull('published_at')->where('published_at', '<=', $now)->firstOrFail();
+
+        return response()->json($request->isMethod('POST')
+            ? $history->setDone($protocol, $data['date'], $data['item_id'], (bool) $data['done'], $now)
+            : $history->day($protocol, $data['date'], $now));
+    }
+
     private function owner(Request $request, Horse $horse): User
     {
         $user = User::query()->whereNull('disabled_at')->findOrFail($request->attributes->get('powersync_user_id'));

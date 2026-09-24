@@ -7,7 +7,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 
-#[Fillable(['slug', 'label', 'order', 'is_default'])]
+#[Fillable(['slug', 'label', 'order', 'is_default', 'is_quick_filter'])]
 class LibraryCategory extends Model
 {
     use HasUuids;
@@ -15,6 +15,7 @@ class LibraryCategory extends Model
     {
         return [
             'is_default' => 'boolean',
+            'is_quick_filter' => 'boolean',
         ];
     }
 

@@ -104,6 +104,7 @@ class SyncControllerAuthorizationTest extends TestCase
 
     public function test_owner_can_register_an_intake_for_their_protocol_supplement(): void
     {
+        $this->travelTo(now()->setDate(2026, 8, 23)->setTime(12, 0));
         $owner = User::factory()->create();
         $horse = Horse::query()->create([
             'owner_id' => $owner->id,
@@ -111,6 +112,9 @@ class SyncControllerAuthorizationTest extends TestCase
             'status' => 'active',
         ]);
         $supplement = $this->createProtocolSupplement($horse);
+        $supplement->phase->protocol->update(['started_at' => '2026-08-23']);
+        $week = $supplement->phase->weeks()->create(['number' => 1, 'protocol_week_number' => 1]);
+        $supplement->weeks()->create(['protocol_phase_week_id' => $week->id]);
         $intakeId = (string) Str::uuid();
 
         $this->postSyncAs($owner, [[

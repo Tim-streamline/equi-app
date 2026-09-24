@@ -1,14 +1,12 @@
 import { View, Text, ScrollView } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Bookmark } from 'lucide-react-native';
+import { LibraryBookmarkButton } from '@/components/library/LibraryBookmarkButton';
+import { RelatedLibraryItems } from '@/components/library/RelatedLibraryItems';
 import { SubHeader } from '@/components/ui/SubHeader';
-import { IconButton } from '@/components/ui/IconButton';
-import { SectionTitle } from '@/components/ui/SectionTitle';
-import { MarkdownBody } from '@/components/library/MarkdownBody';
+import { LibraryContent } from '@/components/library/LibraryContent';
 import { useTabBarPadding } from '@/hooks/useTabBarPadding';
 import {
-  useLibraryChapters,
   useLibraryItem,
   useTherapist,
 } from '@/db/hooks';
@@ -16,10 +14,8 @@ import {
 export default function VideoScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const item = useLibraryItem(id ?? '');
-  const chapters = useLibraryChapters(id ?? '');
   const therapist = useTherapist((item.authorTherapistId as string) || undefined);
   const padBottom = useTabBarPadding();
-  const body = (item.body as string) || '';
 
   return (
     <View className="flex-1 bg-canvas">
@@ -27,9 +23,7 @@ export default function VideoScreen() {
         <SubHeader
           onBack={() => router.back()}
           right={
-            <IconButton>
-              <Bookmark size={18} color="#1B2A2A" />
-            </IconButton>
+            <LibraryBookmarkButton key={id} itemId={id ?? ''} />
           }
         />
         <ScrollView contentContainerStyle={{ paddingBottom: padBottom }}>
@@ -54,41 +48,8 @@ export default function VideoScreen() {
             </View>
           </View>
 
-          {!!body && (
-            <View className="w-full px-5 pt-5">
-              <MarkdownBody markdown={body} />
-            </View>
-          )}
-
-          {chapters.length > 0 && (
-            <>
-              <SectionTitle>Hoofdstukken</SectionTitle>
-              <View className="px-4">
-                {chapters.map((c: any, i: number) => {
-                  const active = i === 0;
-                  return (
-                    <View
-                      key={c.id}
-                      className={`flex-row items-center justify-between rounded-xl p-3.5 ${active ? 'bg-mint-50' : ''}`}
-                    >
-                      <View className="flex-row items-center gap-3 flex-1">
-                        <Text
-                          className={`font-bold ${active ? 'text-mint-700' : 'text-ink-50'}`}
-                          style={{ fontSize: 14, minWidth: 24 }}
-                        >
-                          {String(i + 1).padStart(2, '0')}
-                        </Text>
-                        <Text className="flex-1 text-[14px] text-ink font-medium">{c.title}</Text>
-                      </View>
-                      <Text className="text-[12px] text-ink-50" style={{ fontVariant: ['tabular-nums'] }}>
-                        {c.startLabel}
-                      </Text>
-                    </View>
-                  );
-                })}
-              </View>
-            </>
-          )}
+          <LibraryContent key={id} itemId={id ?? ''} />
+          <RelatedLibraryItems itemId={id ?? ''} />
         </ScrollView>
       </SafeAreaView>
     </View>

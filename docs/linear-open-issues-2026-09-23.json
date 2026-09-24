@@ -1,0 +1,405 @@
+{
+  "fetchedAt": "2026-09-23T21:18:37.127Z",
+  "scope": "All non-archived workspace issues excluding completed/canceled; all pages retrieved",
+  "issues": [
+    {
+      "issue": {
+        "id": "OPT-51",
+        "uuid": "f2754619-8223-48c9-97c8-96eee9c93a26",
+        "title": "CTA ‘Hooi laten analyseren of zelf testen’ opent relevante bibliotheekselectie",
+        "description": "Issue: CTA ‘Hooi laten analyseren of zelf testen’ opent relevante bibliotheekselectie\n\n\\> Laat de CTA ‘Hooi laten analyseren of zelf testen’ onder Ruwvoer, de basis visueel precies zoals hij nu is.\n\nPas alleen de actie bij aanklikken aan.\n\nOp dit moment opent de gehele bibliotheek. In plaats daarvan moet na aanklikken een selectiepagina openen met precies deze twee bestaande library-items:\n\n1\\. Ruwvoer laten analyseren: welke analyse kies je?\n\n2\\. Het suikergehalte van hooi zelf meten met een refractometer\n\nToon beide als normale bibliotheekkaarten met:\n\nthumbnail\n\ntitel\n\ncontenttype\n\nduur of leestijd\n\nAls de gebruiker daarna op één van deze twee kaarten klikt, opent het bijbehorende library-item.\n\nBelangrijk:\n\nde CTA op de Voeding-tab zelf blijft ongewijzigd\n\nde CTA opent dus niet direct één artikel of video\n\nhij opent eerst een keuze-overzicht met deze twee relevante items\n\ngebruik de bestaande library-items en bestaande toegangslogica\n\nhardcode geen losse artikel- of videoinhoud in deze tussenpagina",
+        "priority": {
+          "value": 0,
+          "name": "No priority"
+        },
+        "url": "https://linear.app/0ptimize-it/issue/OPT-51/cta-hooi-laten-analyseren-of-zelf-testen-opent-relevante",
+        "gitBranchName": "eversdijk/opt-51-cta-hooi-laten-analyseren-of-zelf-testen-opent-relevante",
+        "createdAt": "2026-09-23T21:13:54.932Z",
+        "updatedAt": "2026-09-23T21:13:54.932Z",
+        "archivedAt": null,
+        "completedAt": null,
+        "startedAt": null,
+        "canceledAt": null,
+        "dueDate": null,
+        "slaStartedAt": null,
+        "slaMediumRiskAt": null,
+        "slaHighRiskAt": null,
+        "slaBreachesAt": null,
+        "status": "Backlog",
+        "statusType": "backlog",
+        "labels": [],
+        "attachments": [],
+        "documents": [],
+        "stateHistory": [
+          {
+            "state": {
+              "id": "dabb8401-1f64-4aae-bb09-95371a91a8e1",
+              "name": "Backlog",
+              "type": "backlog"
+            },
+            "startedAt": "2026-09-23T21:13:54.932Z",
+            "endedAt": null
+          }
+        ],
+        "createdBy": "Shelley",
+        "createdById": "6c40f7b4-f814-414e-aa9b-729b1db794c7",
+        "assignee": "Tim Eversdijk",
+        "assigneeId": "831e6dfc-2b72-44d0-9086-28e93354ca9a",
+        "team": "OpTimize-IT",
+        "teamId": "454f59cd-1fea-4347-bb10-e7671c536e28",
+        "relations": {
+          "blocks": [],
+          "blockedBy": [],
+          "relatedTo": [],
+          "duplicateOf": null
+        }
+      },
+      "comments": {
+        "comments": [],
+        "hasNextPage": false
+      }
+    },
+    {
+      "issue": {
+        "id": "OPT-50",
+        "uuid": "486543f9-ce45-4dc1-8dcd-8a2dd7246eb5",
+        "title": "X-knop toevoegen aan zoekbalk Bibliotheek",
+        "description": " Voeg aan de zoekbalk in de Bibliotheek een duidelijke X-knop toe zodra er tekst is ingevuld.\n\nGedrag\n\nzonder zoekterm is de X niet zichtbaar\n\nzodra de gebruiker begint te typen verschijnt rechts in het zoekveld een X\n\nbij tikken op de X wordt de volledige zoekterm direct gewist\n\nde resultatenlijst reset daarna meteen naar de normale weergave\n\nhet toetsenbord mag open blijven zodat de gebruiker direct opnieuw kan zoeken\n\nGebruik een subtiel grijs X-icoon dat past bij de bestaande EquiApp-stijl.\n\nZorg dat de knop een voldoende groot tappable gebied heeft, ook al is het icoon zelf klein.",
+        "priority": {
+          "value": 0,
+          "name": "No priority"
+        },
+        "url": "https://linear.app/0ptimize-it/issue/OPT-50/x-knop-toevoegen-aan-zoekbalk-bibliotheek",
+        "gitBranchName": "eversdijk/opt-50-x-knop-toevoegen-aan-zoekbalk-bibliotheek",
+        "createdAt": "2026-09-23T21:06:48.633Z",
+        "updatedAt": "2026-09-23T21:06:48.861Z",
+        "archivedAt": null,
+        "completedAt": null,
+        "startedAt": null,
+        "canceledAt": null,
+        "dueDate": null,
+        "slaStartedAt": null,
+        "slaMediumRiskAt": null,
+        "slaHighRiskAt": null,
+        "slaBreachesAt": null,
+        "status": "Backlog",
+        "statusType": "backlog",
+        "labels": [],
+        "attachments": [],
+        "documents": [],
+        "stateHistory": [
+          {
+            "state": {
+              "id": "dabb8401-1f64-4aae-bb09-95371a91a8e1",
+              "name": "Backlog",
+              "type": "backlog"
+            },
+            "startedAt": "2026-09-23T21:06:48.633Z",
+            "endedAt": null
+          }
+        ],
+        "createdBy": "Shelley",
+        "createdById": "6c40f7b4-f814-414e-aa9b-729b1db794c7",
+        "assignee": "Tim Eversdijk",
+        "assigneeId": "831e6dfc-2b72-44d0-9086-28e93354ca9a",
+        "team": "OpTimize-IT",
+        "teamId": "454f59cd-1fea-4347-bb10-e7671c536e28",
+        "relations": {
+          "blocks": [],
+          "blockedBy": [],
+          "relatedTo": [],
+          "duplicateOf": null
+        }
+      },
+      "comments": {
+        "comments": [],
+        "hasNextPage": false
+      }
+    },
+    {
+      "issue": {
+        "id": "OPT-49",
+        "uuid": "b5e2d677-4137-430f-93db-6480aacf19e8",
+        "title": "Creditsfilter toevoegen aan Bibliotheek",
+        "description": "Voeg in de Bibliotheek onder Uitgebreid zoeken / Filters een extra filter toe:\n\nCredits\n\nOpties:\n\nGratis\n\n1 credit\n\n2 credits\n\n3 credits\n\n4+ credits\n\nMaak multi-select mogelijk, zodat meerdere opties tegelijk geselecteerd kunnen worden.\n\nVoeg daarnaast een filter toe:\n\nAl ontgrendeld\n\nHiermee ziet de gebruiker alleen content waar hij/zij al toegang toe heeft.\n\nDe creditsfilter moet gecombineerd kunnen worden met bestaande filters zoals categorie, contenttype en opgeslagen.\n\nToon actieve filters als compacte chips en voeg een optie Wis filters toe.\n\nLaat de resultaten direct verversen wanneer een filter wordt aangepast.",
+        "priority": {
+          "value": 0,
+          "name": "No priority"
+        },
+        "url": "https://linear.app/0ptimize-it/issue/OPT-49/creditsfilter-toevoegen-aan-bibliotheek",
+        "gitBranchName": "eversdijk/opt-49-creditsfilter-toevoegen-aan-bibliotheek",
+        "createdAt": "2026-09-23T21:04:33.492Z",
+        "updatedAt": "2026-09-23T21:04:33.492Z",
+        "archivedAt": null,
+        "completedAt": null,
+        "startedAt": null,
+        "canceledAt": null,
+        "dueDate": null,
+        "slaStartedAt": null,
+        "slaMediumRiskAt": null,
+        "slaHighRiskAt": null,
+        "slaBreachesAt": null,
+        "status": "Backlog",
+        "statusType": "backlog",
+        "labels": [],
+        "attachments": [],
+        "documents": [],
+        "stateHistory": [
+          {
+            "state": {
+              "id": "dabb8401-1f64-4aae-bb09-95371a91a8e1",
+              "name": "Backlog",
+              "type": "backlog"
+            },
+            "startedAt": "2026-09-23T21:04:33.492Z",
+            "endedAt": null
+          }
+        ],
+        "createdBy": "Shelley",
+        "createdById": "6c40f7b4-f814-414e-aa9b-729b1db794c7",
+        "assignee": "Tim Eversdijk",
+        "assigneeId": "831e6dfc-2b72-44d0-9086-28e93354ca9a",
+        "team": "OpTimize-IT",
+        "teamId": "454f59cd-1fea-4347-bb10-e7671c536e28",
+        "relations": {
+          "blocks": [],
+          "blockedBy": [],
+          "relatedTo": [],
+          "duplicateOf": null
+        }
+      },
+      "comments": {
+        "comments": [],
+        "hasNextPage": false
+      }
+    },
+    {
+      "issue": {
+        "id": "OPT-48",
+        "uuid": "242d31f6-2a47-49e2-b74b-b6761864bd2e",
+        "title": "Clontenttype tonen op bibliotheekkaarten op Home",
+        "description": "Voeg op de homepage bij alle bibliotheekitems duidelijk toe welk contenttype het item heeft.\n\nGebruik dezelfde stijl als in het bibliotheekoverzicht:\n\nVideo → play/video-icoon + Video\n\nArtikel → boek/artikel-icoon \n\nAudio → audio/koptelefoon-icoon \n\nToon dit compact op de thumbnail rechtsonder.\n\nDit moet gelden voor alle gebruikers, zowel Basic als Plus.\n\nGebruik altijd het daadwerkelijke format van het library-item en hardcode geen labels.",
+        "priority": {
+          "value": 0,
+          "name": "No priority"
+        },
+        "url": "https://linear.app/0ptimize-it/issue/OPT-48/clontenttype-tonen-op-bibliotheekkaarten-op-home",
+        "gitBranchName": "eversdijk/opt-48-clontenttype-tonen-op-bibliotheekkaarten-op-home",
+        "createdAt": "2026-09-23T21:03:58.384Z",
+        "updatedAt": "2026-09-23T21:03:58.955Z",
+        "archivedAt": null,
+        "completedAt": null,
+        "startedAt": null,
+        "canceledAt": null,
+        "dueDate": null,
+        "slaStartedAt": null,
+        "slaMediumRiskAt": null,
+        "slaHighRiskAt": null,
+        "slaBreachesAt": null,
+        "status": "Backlog",
+        "statusType": "backlog",
+        "labels": [],
+        "attachments": [],
+        "documents": [],
+        "stateHistory": [
+          {
+            "state": {
+              "id": "dabb8401-1f64-4aae-bb09-95371a91a8e1",
+              "name": "Backlog",
+              "type": "backlog"
+            },
+            "startedAt": "2026-09-23T21:03:58.384Z",
+            "endedAt": null
+          }
+        ],
+        "createdBy": "Shelley",
+        "createdById": "6c40f7b4-f814-414e-aa9b-729b1db794c7",
+        "assignee": "Tim Eversdijk",
+        "assigneeId": "831e6dfc-2b72-44d0-9086-28e93354ca9a",
+        "team": "OpTimize-IT",
+        "teamId": "454f59cd-1fea-4347-bb10-e7671c536e28",
+        "relations": {
+          "blocks": [],
+          "blockedBy": [],
+          "relatedTo": [],
+          "duplicateOf": null
+        }
+      },
+      "comments": {
+        "comments": [],
+        "hasNextPage": false
+      }
+    },
+    {
+      "issue": {
+        "id": "OPT-47",
+        "uuid": "80357025-1f79-4d06-bc3a-b95c07fca54d",
+        "title": "Filter ‘Opgeslagen’ toevoegen aan Bibliotheek",
+        "description": " Voeg op de home van de Bibliotheek naast de bestaande filter ‘Alles’ een extra filter toe:\n\nOpgeslagen\n\nGedrag\n\nAlles toont alle bibliotheekitems waar de gebruiker toegang toe heeft.\n\nOpgeslagen toont alleen de items die deze gebruiker zelf heeft opgeslagen/gebookmarked.\n\nGebruik hiervoor de bestaande opgeslagen-status van library-items.\n\nDe lijst moet direct updaten wanneer de gebruiker tussen Alles en Opgeslagen wisselt.\n\nVisueel\n\nToon beide als compacte filtertabs/chips boven het bibliotheekoverzicht:\n\nAlles Opgeslagen\n\nactieve filter duidelijk turquoise\n\ninactieve filter neutraal\n\nsluit aan op de bestaande EquiApp-stijl\n\nExtra logica\n\nAls de gebruiker vanuit een item op opslaan/verwijderen uit opgeslagen tikt, moet de status direct worden bijgewerkt.\n\nAls een item vanuit de filter Opgeslagen wordt verwijderd uit opgeslagen, verdwijnt het direct uit deze lijst.\n\nAls er nog niets is opgeslagen, toon een nette lege staat:\n\nNog niets opgeslagen\n\nBewaar interessante artikelen, video's en andere content zodat je ze hier makkelijk terugvindt.\n\nEventueel met CTA: Bekijk de bibliotheek\n\nDeze filter moet voor alle gebruikers beschikbaar zijn.",
+        "priority": {
+          "value": 0,
+          "name": "No priority"
+        },
+        "url": "https://linear.app/0ptimize-it/issue/OPT-47/filter-opgeslagen-toevoegen-aan-bibliotheek",
+        "gitBranchName": "eversdijk/opt-47-filter-opgeslagen-toevoegen-aan-bibliotheek",
+        "createdAt": "2026-09-23T20:58:17.443Z",
+        "updatedAt": "2026-09-23T20:58:17.632Z",
+        "archivedAt": null,
+        "completedAt": null,
+        "startedAt": null,
+        "canceledAt": null,
+        "dueDate": null,
+        "slaStartedAt": null,
+        "slaMediumRiskAt": null,
+        "slaHighRiskAt": null,
+        "slaBreachesAt": null,
+        "status": "Backlog",
+        "statusType": "backlog",
+        "labels": [],
+        "attachments": [],
+        "documents": [],
+        "stateHistory": [
+          {
+            "state": {
+              "id": "dabb8401-1f64-4aae-bb09-95371a91a8e1",
+              "name": "Backlog",
+              "type": "backlog"
+            },
+            "startedAt": "2026-09-23T20:58:17.443Z",
+            "endedAt": null
+          }
+        ],
+        "createdBy": "Shelley",
+        "createdById": "6c40f7b4-f814-414e-aa9b-729b1db794c7",
+        "assignee": "Tim Eversdijk",
+        "assigneeId": "831e6dfc-2b72-44d0-9086-28e93354ca9a",
+        "team": "OpTimize-IT",
+        "teamId": "454f59cd-1fea-4347-bb10-e7671c536e28",
+        "relations": {
+          "blocks": [],
+          "blockedBy": [],
+          "relatedTo": [],
+          "duplicateOf": null
+        }
+      },
+      "comments": {
+        "comments": [],
+        "hasNextPage": false
+      }
+    },
+    {
+      "issue": {
+        "id": "OPT-46",
+        "uuid": "ffced867-fd09-470d-887f-4023264e9f92",
+        "title": "Homepage compacter: Shelby als chatbubble + 4 bibliotheekitems",
+        "description": "Pas de Home voor alle gebruikers aan, dus zowel Basic- als Plus-leden.\n\nVraag het Shelby\n\nVerwijder de huidige grote ‘Vraag het Shelby’ kaart uit de homepage.\n\nVervang deze voor iedereen door een floating chat bubble rechtsonder in beeld.\n\nGebruik een compacte, herkenbare Shelby/chat-knop in de EquiApp-stijl.\n\nDe bubble blijft zichtbaar tijdens scrollen en opent direct Vraag het Shelby.\n\nZorg dat deze geen belangrijke content of navigatie overlapt.\n\nBibliotheek op Home\n\nToon onder ‘Ontdek in de bibliotheek’ standaard 4 items in plaats van 2.\n\nGebruik hiervoor een compacte 2 × 2 grid.\n\nPer item: thumbnail, titel en alleen de belangrijkste meta-info, bijvoorbeeld duur, credits of ontgrendeld-status.\n\nMaak de kaarten duidelijk compacter dan de huidige versie.\n\nDoel\n\nMaak de homepage zo efficiënt mogelijk zodat zoveel mogelijk belangrijke content direct op het eerste scherm zichtbaar is zonder scrollen.\n\nVoor Plus blijft het actieve protocolblok bovenaan staan.\n\nVoor Basic blijft de eigen Basic-content/Plus-CTA gelden.\n\nDe Shelby-chatbubble en de 4 bibliotheekitems gelden voor beide abonnementstypes.\n\nBehoud de bestaande rustige EquiApp-stijl en voorkom dat het scherm door de compactere indeling druk gaat ogen.",
+        "priority": {
+          "value": 0,
+          "name": "No priority"
+        },
+        "url": "https://linear.app/0ptimize-it/issue/OPT-46/homepage-compacter-shelby-als-chatbubble-4-bibliotheekitems",
+        "gitBranchName": "eversdijk/opt-46-homepage-compacter-shelby-als-chatbubble-4-bibliotheekitems",
+        "createdAt": "2026-09-23T20:52:22.712Z",
+        "updatedAt": "2026-09-23T20:52:22.712Z",
+        "archivedAt": null,
+        "completedAt": null,
+        "startedAt": null,
+        "canceledAt": null,
+        "dueDate": null,
+        "slaStartedAt": null,
+        "slaMediumRiskAt": null,
+        "slaHighRiskAt": null,
+        "slaBreachesAt": null,
+        "status": "Backlog",
+        "statusType": "backlog",
+        "labels": [],
+        "attachments": [],
+        "documents": [],
+        "stateHistory": [
+          {
+            "state": {
+              "id": "dabb8401-1f64-4aae-bb09-95371a91a8e1",
+              "name": "Backlog",
+              "type": "backlog"
+            },
+            "startedAt": "2026-09-23T20:52:22.712Z",
+            "endedAt": null
+          }
+        ],
+        "createdBy": "Shelley",
+        "createdById": "6c40f7b4-f814-414e-aa9b-729b1db794c7",
+        "assignee": "Tim Eversdijk",
+        "assigneeId": "831e6dfc-2b72-44d0-9086-28e93354ca9a",
+        "team": "OpTimize-IT",
+        "teamId": "454f59cd-1fea-4347-bb10-e7671c536e28",
+        "relations": {
+          "blocks": [],
+          "blockedBy": [],
+          "relatedTo": [],
+          "duplicateOf": null
+        }
+      },
+      "comments": {
+        "comments": [],
+        "hasNextPage": false
+      }
+    },
+    {
+      "issue": {
+        "id": "OPT-30",
+        "uuid": "2080bb9b-837a-467b-b1cd-267c71130ddf",
+        "title": "Verwijder alle dummy/testdata uit de volledige backend en app",
+        "description": "> Verwijder overal alle bestaande dummy-, demo- en testdata uit het systeem, zodat we verder kunnen werken met een volledig schone omgeving.\n>\n> Dit geldt onder andere voor:\n>\n> * Users\n> * Horses\n> * Therapists\n> * Bookings\n> * Communitydata\n> * Protocoldata\n> * Testcontent\n> * Eventuele dummy authors\n> * Overige voorbeeldrecords die tijdens development zijn aangemaakt\n>\n> Controleer hierbij de **volledige database en alle backendmodules**, zodat er nergens nog testrecords zichtbaar zijn in lijsten, dashboards, dropdowns, statistieken of relaties.\n>\n> Belangrijk:\n>\n> * Verwijder alleen dummy/testdata.\n> * Behoud echte content, configuratie, categorieën, instellingen en functionaliteit die al voor productie bedoeld zijn.\n> * Controleer ook gekoppelde data en relaties, zodat er geen verweesde records of foutmeldingen ontstaan na het verwijderen.\n> * Na opschoning moeten alle aantallen, dashboards en overzichten de nieuwe lege/werkelijke situatie correct tonen.",
+        "priority": {
+          "value": 4,
+          "name": "Low"
+        },
+        "url": "https://linear.app/0ptimize-it/issue/OPT-30/verwijder-alle-dummytestdata-uit-de-volledige-backend-en-app",
+        "gitBranchName": "eversdijk/opt-30-verwijder-alle-dummytestdata-uit-de-volledige-backend-en-app",
+        "createdAt": "2026-09-10T09:38:18.913Z",
+        "updatedAt": "2026-09-14T18:32:08.894Z",
+        "archivedAt": null,
+        "completedAt": null,
+        "startedAt": null,
+        "canceledAt": null,
+        "dueDate": null,
+        "slaStartedAt": null,
+        "slaMediumRiskAt": null,
+        "slaHighRiskAt": null,
+        "slaBreachesAt": null,
+        "status": "Backlog",
+        "statusType": "backlog",
+        "labels": [],
+        "attachments": [],
+        "documents": [],
+        "stateHistory": [
+          {
+            "state": {
+              "id": "dabb8401-1f64-4aae-bb09-95371a91a8e1",
+              "name": "Backlog",
+              "type": "backlog"
+            },
+            "startedAt": "2026-09-10T09:38:18.913Z",
+            "endedAt": null
+          }
+        ],
+        "createdBy": "Shelley",
+        "createdById": "6c40f7b4-f814-414e-aa9b-729b1db794c7",
+        "project": "Equi App",
+        "projectId": "16138ed6-99f5-4752-9d02-044e05c26c1c",
+        "team": "OpTimize-IT",
+        "teamId": "454f59cd-1fea-4347-bb10-e7671c536e28",
+        "relations": {
+          "blocks": [],
+          "blockedBy": [],
+          "relatedTo": [],
+          "duplicateOf": null
+        }
+      },
+      "comments": {
+        "comments": [],
+        "hasNextPage": false
+      }
+    }
+  ]
+}

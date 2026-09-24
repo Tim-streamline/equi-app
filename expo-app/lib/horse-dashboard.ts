@@ -6,6 +6,7 @@ export type LibraryRecommendation = {
   durationLabel?: string;
   heroImageUrl?: string | null;
   creditCost: number;
+  isPlus?: boolean;
   unlocked: boolean;
   phaseContext?: string;
 };
@@ -24,6 +25,9 @@ export type DashboardPhase = {
   title: string;
   description?: string;
   weekLabel: string;
+  durationWeeks: number;
+  durationLabel: string;
+  currentPhaseWeek: number | null;
   state: "active" | "done" | "preview" | "locked";
   accessible: boolean;
   startsAt: string | null;
@@ -83,6 +87,7 @@ export type DashboardProtocol = {
       day: number;
       state: "default" | "complete" | "partial" | "missed";
       isToday: boolean;
+      available?: boolean;
     } | null)[];
   };
   nutrition: {
@@ -113,6 +118,7 @@ export type DashboardProtocol = {
 };
 export type HorseDashboard = {
   generatedAt: string;
+  timezone?: string;
   date: string;
   greeting: string;
   horse: { id: string; name: string };
@@ -152,9 +158,9 @@ export function libraryPath(
 ) {
   return {
     pathname:
-      item.format === "article"
-        ? "/(tabs)/library/article/[id]"
-        : "/(tabs)/library/video/[id]",
+      item.format === "video"
+        ? "/(tabs)/library/video/[id]"
+        : "/(tabs)/library/article/[id]",
     params: { id: item.id },
   };
 }
@@ -169,10 +175,22 @@ export function dashboardAtTime(data: HorseDashboard, now: Date): HorseDashboard
     const time = now.getTime();
     const state = !Number.isFinite(available) || time < available ? 'locked'
       : time < start ? 'preview' : time < end ? 'active' : 'done';
-    return { ...phase, state, accessible: state !== 'locked',
-      statusLabel: state === 'active' ? `Actief · wk ${phase.weekStart}–${phase.weekEnd}`
+    const durationWeeks = Math.max(0, phase.weekEnd - phase.weekStart + 1);
+    // Count calendar dates in the response timezone, not 24-hour periods across DST.
+    const dateParts = new Intl.DateTimeFormat('en-CA', {
+      timeZone: data.timezone ?? 'Europe/Amsterdam', year: 'numeric', month: '2-digit', day: '2-digit',
+    });
+    const dayNumber = (date: Date) => {
+      const parts = Object.fromEntries(dateParts.formatToParts(date).map((part) => [part.type, part.value]));
+      return Date.UTC(Number(parts.year), Number(parts.month) - 1, Number(parts.day)) / 86400000;
+    };
+    const currentPhaseWeek = state === 'active'
+      ? Math.min(durationWeeks, Math.max(1, Math.floor((dayNumber(now) - dayNumber(new Date(start))) / 7) + 1)) : null;
+    return { ...phase, state, durationWeeks, currentPhaseWeek,
+      durationLabel: phase.weekStart > 0 ? `Duur: ${durationWeeks} ${durationWeeks === 1 ? 'week' : 'weken'}` : 'Nog niet ingepland', accessible: state !== 'locked',
+      statusLabel: state === 'active' ? `Actief · week ${currentPhaseWeek} van ${durationWeeks}`
         : state === 'preview' ? 'Start volgende week' : state === 'done' ? 'Afgerond'
-          : phase.weekStart ? `Vanaf wk ${phase.weekStart}` : 'Nog niet ingepland',
+          : phase.weekStart ? `Start in protocolweek ${phase.weekStart}` : 'Nog niet ingepland',
       description: state === 'locked' ? undefined : phase.description,
       supplements: state === 'locked' ? [] : phase.supplements,
     };

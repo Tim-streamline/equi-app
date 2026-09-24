@@ -89,6 +89,7 @@ export class LaravelConnector implements PowerSyncBackendConnector {
         Authorization: `Bearer ${token}`,
       },
       body: JSON.stringify({
+        timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || 'Europe/Amsterdam',
         operations: batch.crud.map((op) => ({
           op: op.op, // PUT | PATCH | DELETE
           id: op.id,

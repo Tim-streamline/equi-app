@@ -96,6 +96,7 @@ class SyncController extends Controller
         $userId = $request->attributes->get('powersync_user_id');
 
         $payload = $request->validate([
+            'timezone' => ['sometimes', 'timezone'],
             'operations' => 'required|array',
             'operations.*.op' => 'required|in:PUT,PATCH,DELETE',
             'operations.*.type' => 'required|string',
@@ -129,7 +130,12 @@ class SyncController extends Controller
                         'therapist_id.exists' => 'Deze therapist is gearchiveerd of niet beschikbaar voor nieuwe koppelingen.',
                     ])->validate();
                 }
+                $historical = $op['type'] === 'protocol_supplement_intakes' ? $this->validateIntake($op, $payload['timezone'] ?? null) : null;
                 $this->applyOp($modelClass, $op);
+                if ($historical) {
+                    [$protocol, $date, $itemId, $done, $now] = $historical;
+                    app(\App\Support\ProtocolDayHistory::class)->setDone($protocol, $date, $itemId, $done, $now, false);
+                }
                 $applied++;
             }
         });
@@ -143,6 +149,38 @@ class SyncController extends Controller
             'skipped' => count($skipped),
             'user_id' => $userId,
         ]);
+    }
+
+    private function validateIntake(array $op, ?string $timezone): ?array
+    {
+        $existing = Models\ProtocolSupplementIntake::find($op['id']);
+        if (! $existing && $op['op'] !== 'PUT') {
+            return null;
+        }
+        $data = array_merge($existing?->getAttributes() ?? [], $op['data'] ?? []);
+        validator($data, ['date' => ['required', 'date_format:Y-m-d'], 'done' => ['required', 'boolean']])->validate();
+        if ($existing) {
+            foreach (['date', 'horse_id', 'protocol_phase_supplement_id'] as $key) {
+                abort_unless((string) $data[$key] === (string) $existing->getRawOriginal($key), 422, 'Een registratie kan niet naar een andere dag of een ander item worden verplaatst.');
+            }
+        }
+        $item = Models\ProtocolPhaseSupplement::findOrFail($data['protocol_phase_supplement_id']);
+        $history = app(\App\Support\ProtocolDayHistory::class);
+        $protocol = Models\Protocol::query()->lockForUpdate()->findOrFail($item->phase->protocol_id);
+        $now = \Carbon\CarbonImmutable::now($timezone ?? $history->timezone($protocol));
+        abort_unless($protocol->published_at && $protocol->published_at->lte($now) && $protocol->status === 'active', 422);
+        abort_unless($data['date'] >= $now->subDays(14)->toDateString() && $data['date'] <= $now->toDateString(), 422, 'Alleen vandaag en de afgelopen 14 dagen kunnen worden aangepast.');
+        if ($data['date'] < $now->toDateString()) {
+            $day = $history->day($protocol, $data['date'], $now);
+            abort_unless(collect($day['items'])->contains('id', $item->id), 422, 'Dit item stond niet op deze dag gepland.');
+
+            return [$protocol, $data['date'], $item->id, $op['op'] === 'DELETE' ? false : (bool) $data['done'], $now];
+        }
+        $start = $protocol->started_at ? \Carbon\CarbonImmutable::parse($protocol->started_at->toDateString(), $now->timezone) : null;
+        $week = $start ? (int) floor($start->diffInDays($now->startOfDay(), false) / 7) + 1 : 0;
+        abort_unless($week > 0 && $item->weeks()->whereHas('protocolPhaseWeek', fn ($query) => $query->where('protocol_week_number', $week))->exists(), 422, 'Dit item staat vandaag niet gepland.');
+
+        return null;
     }
 
     private function homePreferenceData(array $data): array

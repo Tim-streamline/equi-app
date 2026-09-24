@@ -14,4 +14,10 @@ if (Illuminate\Support\Facades\DB::selectOne('select current_database() as name'
 if (! is_file(public_path('build/manifest.json'))) {
     throw new RuntimeException('Built admin assets are missing.');
 }
+if (! is_file(base_path('web-dist/index.html')) || ! is_dir(base_path('web-dist/powersync/worker'))) {
+    throw new RuntimeException('Built customer web app or PowerSync workers are missing.');
+}
+if (! config('session.secure')) {
+    throw new RuntimeException('HTTPS deployment requires SESSION_SECURE_COOKIE=true.');
+}
 echo "Staging environment, database connection and build verified.\n";

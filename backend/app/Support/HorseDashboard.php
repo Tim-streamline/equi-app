@@ -31,7 +31,7 @@ class HorseDashboard
         $itemData = fn ($item) => [
             'id' => $item->id, 'title' => $item->title, 'format' => $item->format, 'heroImageUrl' => $item->hero_image_url,
             'description' => Str::limit(strip_tags($item->description ?? ''), 100), 'durationLabel' => $item->duration_label,
-            'creditCost' => (int) $item->credit_cost, 'unlocked' => in_array($item->id, $unlocked, true),
+            'creditCost' => (int) $item->credit_cost, 'isPlus' => (bool) $item->is_plus, 'unlocked' => in_array($item->id, $unlocked, true),
         ];
         $topic = fn ($term) => $items->first(fn ($item) => str_contains(mb_strtolower($item->slug.' '.$item->title), $term));
         if ($data) {
@@ -63,7 +63,7 @@ class HorseDashboard
             $offset = ((int) $now->startOfDay()->diffInDays(CarbonImmutable::parse('2020-01-01', $now->timezone), true)) % max(1, $ordered->count());
 
             return $ordered->slice($offset)->concat($ordered->take($offset));
-        })->take(2)->map(fn ($item) => array_diff_key($item, ['rank' => true]))->values()->all();
+        })->take(4)->map(fn ($item) => array_diff_key($item, ['rank' => true]))->values()->all();
         $tip = SeasonalTip::query()->where('active', true)
             ->where(fn ($q) => $q->whereNull('active_from')->orWhereDate('active_from', '<=', $now))
             ->where(fn ($q) => $q->whereNull('active_to')->orWhereDate('active_to', '>=', $now))
@@ -73,7 +73,7 @@ class HorseDashboard
         $plusPlan = Plan::query()->where('slug', 'plus')->with('benefits')->first();
 
         return [
-            'generatedAt' => $now->toIso8601String(), 'date' => $now->toDateString(),
+            'timezone' => $now->timezoneName, 'generatedAt' => $now->toIso8601String(), 'date' => $now->toDateString(),
             'greeting' => ($now->hour < 12 ? 'Goedemorgen' : ($now->hour < 18 ? 'Goedemiddag' : 'Goedenavond')).', '.explode(' ', trim($user->name))[0],
             'horse' => ['id' => $horse->id, 'name' => $horse->name],
             'hasPlus' => $hasPlus, 'showPlusUpsell' => ! $hasPlus && ! $protocol,
@@ -116,6 +116,9 @@ class HorseDashboard
         })->values()->all();
         $allSupplements = collect($phases)->flatMap(fn ($p) => $p['supplements']);
         $monthDate = $month ? CarbonImmutable::createFromFormat('!Y-m', $month, $now->timezone) : $now->startOfMonth();
+        $history = app(ProtocolDayHistory::class);
+        $history->preserve($protocol, $now);
+        $historicalDays = $history->days($protocol, $monthDate->format('Y-m'));
         $intakes = $protocol->horse->supplementIntakes()->whereBetween('date', [min($monthDate->startOfMonth()->toDateString(), $now->toDateString()), max($monthDate->endOfMonth()->toDateString(), $now->toDateString())])->get()->groupBy(fn ($i) => $i->date->toDateString());
         $rowsFor = function (int $number, string $date) use ($allSupplements, $intakes) {
             $records = $intakes->get($date, collect())->keyBy('protocol_phase_supplement_id');
@@ -151,7 +154,10 @@ class HorseDashboard
             if ($rows->isNotEmpty() && $iso <= $now->toDateString()) {
                 $state = $completed === $rows->count() ? 'complete' : ($completed ? 'partial' : ($iso < $now->toDateString() ? 'missed' : 'default'));
             }
-            $cells[] = ['date' => $iso, 'day' => $dayNumber, 'state' => $state, 'isToday' => $iso === $now->toDateString()];
+            if ($iso < $now->toDateString() && $historicalDays->has($iso)) {
+                $state = $history->state($historicalDays->get($iso));
+            }
+            $cells[] = ['available' => $iso < $now->toDateString() && $historicalDays->has($iso), 'date' => $iso, 'day' => $dayNumber, 'state' => $state, 'isToday' => $iso === $now->toDateString()];
         }
         while (count($cells) % 7) {
             $cells[] = null;

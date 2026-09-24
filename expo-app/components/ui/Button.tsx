@@ -43,6 +43,7 @@ export function Button({
   };
   return (
     <Pressable
+      accessibilityRole="button"
       onPress={onPress}
       disabled={disabled}
       className={`${base} ${variants[variant]} ${disabled ? 'opacity-40' : ''} ${className}`}

@@ -262,6 +262,7 @@ const library_items = new Table({
   duration_sec: column.integer,
   author_therapist_id: column.text,
   views_label: column.text,
+  credit_cost: column.integer,
   published_at: column.text,
   is_plus: column.integer,
   is_featured: column.integer,

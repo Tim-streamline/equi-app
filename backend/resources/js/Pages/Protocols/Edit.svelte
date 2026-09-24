@@ -1009,7 +1009,8 @@
                                     </div>
                                     <p class="text-xs text-muted-foreground">De backend berekent 2–3 kg ruwvoer per 100 kg streefgewicht. Zonder streefgewicht verschijnt geen hoeveelheid.</p>
                                     <div class="grid gap-4 md:grid-cols-2">
-                                        <Field label="Hooianalyse in de bibliotheek"><Select bind:value={$form.customer_settings.hay_library_item_id} placeholder="Automatisch zoeken" options={libraryItems.map((item) => ({ value: item.id, label: item.title }))} /></Field>
+                                        <div class="space-y-2"><Field label="Afbeelding bij hooianalyse"><Select bind:value={$form.customer_settings.hay_library_item_id} placeholder="Automatisch zoeken" options={libraryItems.map((item) => ({ value: item.id, label: item.title }))} /></Field>
+                                        <p class="text-xs text-muted-foreground">Dit item bepaalt alleen de afbeelding van de CTA. De knop opent altijd de vaste selectie met het artikel en de video over hooianalyse.</p></div>
                                         <Field label="Wateranalyse in de bibliotheek"><Select bind:value={$form.customer_settings.water_library_item_id} placeholder="Automatisch zoeken" options={libraryItems.map((item) => ({ value: item.id, label: item.title }))} /></Field>
                                     </div>
                                     <h3 class="font-bold">Bijvoeding uit de intake</h3>

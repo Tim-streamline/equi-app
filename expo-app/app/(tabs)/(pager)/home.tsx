@@ -1,4 +1,4 @@
-import { LibraryThumbnail } from "@/components/library/LibraryThumbnail";
+import { LibraryCard } from "@/components/library/LibraryCard";
 import { useState } from "react";
 import {
   View,
@@ -14,7 +14,6 @@ import { router } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
 import {
   ChevronDown,
-  ChevronRight,
   Sparkles,
   UserRound,
 } from "lucide-react-native";
@@ -54,7 +53,7 @@ export default function HomeScreen() {
       <ScrollView
         contentContainerStyle={{
           paddingHorizontal: 20,
-          paddingBottom: padBottom,
+          paddingBottom: padBottom + 72,
         }}
         refreshControl={
           <RefreshControl
@@ -106,7 +105,6 @@ export default function HomeScreen() {
             <ChevronDown size={14} color="#536C6B" />
           </Pressable>
         </View>
-        {seasonalCard}
         {!!error && (
           <Pressable
             onPress={() => void refresh()}
@@ -122,32 +120,7 @@ export default function HomeScreen() {
         {data && (
           <>
             {data.protocol && <ProtocolCard data={data} />}
-            <Pressable
-              accessibilityRole="button"
-              onPress={() =>
-                router.push({
-                  pathname: "/nova-chat",
-                  params: {
-                    horseId: horse.id,
-                    protocolId: data.protocol?.id ?? "",
-                  },
-                })
-              }
-              className="mb-4 flex-row items-center gap-3 rounded-[22px] bg-white p-4"
-            >
-              <View className="h-11 w-11 items-center justify-center rounded-2xl bg-mint-50">
-                <Sparkles size={22} color="#127A79" />
-              </View>
-              <View className="flex-1">
-                <Text className="font-semi text-[17px] text-ink">
-                  Vraag het Shelby
-                </Text>
-                <Text className="mt-0.5 text-[12px] leading-[17px] text-ink-50">
-                  Je persoonlijke AI-assistent voor paardengezondheid
-                </Text>
-              </View>
-              <ChevronRight size={19} color="#127A79" />
-            </Pressable>
+            {seasonalCard}
             <View className="mb-3 mt-2 flex-row items-center justify-between gap-2">
               <Text className="flex-1 font-semi text-[10px] uppercase tracking-[1.2px] text-ink-70">
                 Ontdek in de bibliotheek
@@ -158,29 +131,12 @@ export default function HomeScreen() {
                 </Text>
               )}
             </View>
-            <View className="flex-row items-stretch gap-3">
+            <View className="flex-row flex-wrap justify-between gap-y-3">
               {data.recommendations.map((item) => (
-                <Pressable
-                  key={item.id}
-                  accessibilityRole="link"
-                  onPress={() => router.push(libraryPath(item) as any)}
-                  className="flex-1 rounded-[20px] bg-white p-4"
-                >
-                  <LibraryThumbnail uri={item.heroImageUrl} format={item.format} />
-                  <Text className="mb-1 mt-3 font-semi text-[14px] leading-[19px] text-ink">
-                    {item.title}
-                  </Text>
-                  <Text numberOfLines={3} className="text-[11px] leading-[16px] text-ink-50">
-                    {data.variant === "basic"
-                      ? item.unlocked
-                        ? "Al ontgrendeld"
-                        : item.creditCost === 0
-                          ? "Gratis"
-                          : `${item.creditCost} ${item.creditCost === 1 ? "credit" : "credits"}`
-                      : (item.phaseContext ?? item.description)}
-                    {item.durationLabel ? ` · ${item.durationLabel}` : ""}
-                  </Text>
-                </Pressable>
+                <LibraryCard key={item.id} item={item} compact access={{
+                  hasPlus: data.hasPlus,
+                  unlockedIds: data.recommendations.filter(recommendation => recommendation.unlocked).map(recommendation => recommendation.id),
+                }} />
               ))}
             </View>
             <Pressable onPress={openLibrary} className="mb-5 mt-4 py-1">
@@ -209,6 +165,13 @@ export default function HomeScreen() {
           </>
         )}
       </ScrollView>
+      <Pressable accessibilityRole="button" accessibilityLabel="Vraag het Shelby"
+        onPress={() => router.push({ pathname: "/nova-chat", params: { horseId: horse.id, protocolId: data?.protocol?.id ?? "" } })}
+        style={{ position: 'absolute', right: 20, bottom: padBottom, width: 56, height: 56,
+          alignItems: 'center', justifyContent: 'center', borderRadius: 28, backgroundColor: '#127A79',
+          elevation: 4, shadowColor: '#105C5B', shadowOpacity: 0.18, shadowRadius: 8, shadowOffset: { width: 0, height: 3 } }}>
+        <Sparkles size={24} color="#FFFFFF" />
+      </Pressable>
       <Modal
         visible={pickerOpen}
         transparent

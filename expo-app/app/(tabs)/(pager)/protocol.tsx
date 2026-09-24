@@ -202,9 +202,13 @@ export default function ProtocolListScreen() {
             )}
             {tab === "kalender" && (
               <Calendar
+                key={`${horseId}:${protocol.id}`}
                 protocol={protocol}
                 onMonth={setMonth}
                 onPhase={openPhase}
+                horseId={horseId}
+                onToday={() => setTab("vandaag")}
+                onRefresh={refresh}
               />
             )}
             {tab === "voeding" && (
@@ -318,11 +322,6 @@ function Supplement({ item }: { item: DashboardSupplement }) {
       {!!item.instructions && (
         <Text className="mt-1 text-[12px] leading-[18px] text-ink-70">
           {item.instructions}
-        </Text>
-      )}
-      {!!item.frequencyLabel && (
-        <Text className="mt-1 text-[11px] text-ink-50">
-          {item.frequencyLabel}
         </Text>
       )}
     </View>
@@ -489,17 +488,66 @@ function Today({
   );
 }
 
+type ProtocolDay = {
+  date: string;
+  label: string;
+  editable: boolean;
+  items: DashboardSupplement[];
+  state: "default" | "missed" | "partial" | "complete";
+};
+
 function Calendar({
   protocol,
   onMonth,
   onPhase,
+  horseId,
+  onToday,
+  onRefresh,
 }: {
+  horseId: string;
+  onToday: () => void;
+  onRefresh: () => Promise<void>;
   protocol: DashboardProtocol;
   onMonth: (month: string) => void;
   onPhase: (phase: DashboardPhase) => void;
 }) {
   const [selected, setSelected] = useState<string>();
+  const [day, setDay] = useState<ProtocolDay | null>(null);
+  const [dayError, setDayError] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+  const request = useRef(0);
+  const [states, setStates] = useState<Record<string, ProtocolDay["state"]>>({});
+  useEffect(() => () => { request.current++; }, []);
+  const closeDay = () => { request.current++; setSelected(undefined); setDay(null); setDayError(null); setBusy(false); };
+  const openDay = async (date: string) => {
+    const generation = ++request.current;
+    setSelected(date); setDay(null); setDayError(null); setBusy(true);
+    try {
+      const query = new URLSearchParams({ protocol_id: protocol.id, date, timezone: deviceTimezone() });
+      const result = await dashboardRequest(`/api/horses/${horseId}/protocol-day?${query}`) as ProtocolDay;
+      if (generation === request.current) setDay(result);
+    } catch {
+      if (generation === request.current) setDayError("De daglijst kon niet worden geladen. Probeer het opnieuw.");
+    } finally { if (generation === request.current) setBusy(false); }
+  };
+  const toggleDayItem = async (item: DashboardSupplement) => {
+    if (!day?.editable || busy) return;
+    const generation = ++request.current;
+    setBusy(true); setDayError(null);
+    try {
+      const result = await dashboardRequest(`/api/horses/${horseId}/protocol-day`, {
+        protocol_id: protocol.id, date: day.date, item_id: item.id, done: !item.done, timezone: deviceTimezone(),
+      }) as ProtocolDay;
+      if (generation !== request.current) return;
+      setDay(result);
+      setStates((previous) => ({ ...previous, [result.date]: result.state }));
+      void onRefresh();
+    } catch {
+      if (generation === request.current) setDayError("Niet opgeslagen. Controleer je verbinding; alleen de afgelopen 14 dagen kunnen worden aangepast.");
+    } finally { if (generation === request.current) setBusy(false); }
+  };
   const calendar = protocol.calendar;
+  useEffect(() => { setStates({}); }, [calendar]);
   const colors = {
     default: ["#FFFFFF", "#E8ECEB", "#9EA6A5"],
     complete: ["#18BAB0", "#18BAB0", "#FFFFFF"],
@@ -544,7 +592,7 @@ function Calendar({
           {calendar.cells.map((cell, index) => {
             const tone = cell?.isToday
               ? ["#0B4A49", "#0B4A49", "#FFFFFF"]
-              : colors[cell?.state ?? "default"];
+              : colors[(cell && states[cell.date]) ?? cell?.state ?? "default"];
             return (
               <View
                 key={cell?.date ?? `blank-${index}`}
@@ -553,9 +601,10 @@ function Calendar({
                 {cell && (
                   <Pressable
                     accessibilityRole="button"
-                    accessibilityLabel={`${cell.date}, ${cell.state}`}
+                    accessibilityLabel={`${cell.date}, ${states[cell.date] ?? cell.state}`}
                     accessibilityState={{ selected: selected === cell.date }}
-                    onPress={() => setSelected(cell.date)}
+                    disabled={!cell.isToday && !cell.available}
+                    onPress={() => cell.isToday ? onToday() : void openDay(cell.date)}
                     className="flex-1 items-center justify-center rounded-xl"
                     style={{
                       backgroundColor: tone[0],
@@ -591,6 +640,27 @@ function Calendar({
           ))}
         </View>
       </Card>
+      <Sheet visible={!!selected} title={day?.label ?? selected ?? ""} subtitle="Daglijst van deze dag" onClose={closeDay}>
+        {busy && !day && <ActivityIndicator color="#18BAB0" />}
+        {!!dayError && <Text accessibilityRole="alert" className="mb-3 text-[13px] text-[#8B621C]">{dayError}</Text>}
+        {!day && !busy && selected && <Button title="Opnieuw proberen" onPress={() => void openDay(selected)} />}
+        {day && !day.editable && <Text className="mb-3 text-[13px] text-ink-50">Deze dag is alleen te bekijken. Je kunt tot 14 dagen terug aanpassen.</Text>}
+        {day?.items.length === 0 && <Text className="py-3 text-ink-50">Op deze dag stond niets gepland.</Text>}
+        {day?.items.map((item) => (
+          <Pressable key={item.id} accessibilityRole="checkbox" accessibilityLabel={`${item.name}, ${item.dosage ?? "dosering niet ingesteld"}`}
+            accessibilityState={{ checked: !!item.done, disabled: busy || !day.editable }} disabled={busy || !day.editable}
+            onPress={() => void toggleDayItem(item)} className="mb-2 flex-row items-center gap-3 rounded-xl border border-ink-15 bg-white p-3">
+            <View className={`h-[22px] w-[22px] items-center justify-center rounded-md border ${item.done ? "border-mint-500 bg-mint-500" : "border-ink-30"}`}>
+              {item.done && <Check size={13} color="white" />}
+            </View>
+            <View className="flex-1">
+              <Text className={`font-semi text-[14px] ${item.done ? "text-ink-50 line-through" : "text-ink"}`}>{item.name}</Text>
+              {!!item.instructions && <Text className="mt-1 text-[12px] text-ink-50">{item.instructions}</Text>}
+            </View>
+            <Text className="max-w-[35%] font-bold text-[13px] text-mint-700">{item.dosage ?? "Dosering niet ingesteld"}</Text>
+          </Pressable>
+        ))}
+      </Sheet>
       <View className="mb-3 mt-5">
         <Label>Verloop van het protocol</Label>
       </View>
@@ -609,7 +679,7 @@ function Calendar({
                 {phase.title}
               </Text>
               <Text className="mt-1 text-[12px] text-ink-50">
-                {phase.weekLabel}
+                {phase.durationLabel}
               </Text>
             </View>
             {phase.state === "locked" && <LockKeyhole size={13} color="#8A9292" />}
@@ -631,18 +701,22 @@ function LibraryLink({
   description,
   item,
   search,
+  selection,
 }: {
   title: string;
   description: string;
   item: LibraryRecommendation | null;
   search: string;
+  selection?: boolean;
 }) {
   return (
     <Pressable
       accessibilityRole="link"
       onPress={() =>
         router.push(
-          item
+          selection
+            ? "/(tabs)/library/selection/hay-analysis"
+            : item
             ? (libraryPath(item) as any)
             : {
                 pathname: "/(tabs)/(pager)/library",
@@ -710,6 +784,7 @@ function Nutrition({
         description={`Bekijk hoe je een monster neemt en de uitslag beoordeelt.${hasPlus ? " Zonder credit met Plus." : ""}`}
         item={nutrition.hayLibraryItem}
         search="Hooianalyse"
+        selection
       />
       {nutrition.feeds.length > 0 && (
         <Card>

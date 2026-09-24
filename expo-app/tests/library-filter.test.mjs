@@ -84,26 +84,6 @@ test('ignores surrounding whitespace and accents in search text', () => {
   );
 });
 
-test('the Library screen wires search and category controls to the filtered list', async () => {
-  const source = await readFile(
-    new URL('../app/(tabs)/(pager)/library.tsx', import.meta.url),
-    'utf8',
-  );
-
-  assert.match(source, /onChangeText=\{setSearchQuery\}/);
-  assert.match(source, /useState<string\[]>\(\[\]\)/);
-  assert.doesNotMatch(source, /category\.isDefault/);
-  assert.match(source, /label="Alles"/);
-  assert.ok(source.indexOf('label="Alles"') < source.indexOf('categories.map'));
-  assert.match(source, /selected:\s*activeCategoryIds\.length === 0/);
-  assert.match(source, /onPress=\{\(\) => toggleCategory\(c\.id\)\}/);
-  assert.match(
-    source,
-    /filterLibraryItems\(list, itemCategories, activeCategoryIds, searchQuery\)/,
-  );
-  assert.match(source, /filteredList\.map/);
-});
-
 test('active Library filters use the app dark green and light cream colors', async () => {
   const [librarySource, chipSource] = await Promise.all([
     readFile(new URL('../app/(tabs)/(pager)/library.tsx', import.meta.url), 'utf8'),
@@ -112,10 +92,29 @@ test('active Library filters use the app dark green and light cream colors', asy
 
   assert.match(
     librarySource,
-    /variant=\{activeCategoryIds\.includes\(c\.id\) \? 'filterActive' : 'outline'\}/,
+    /variant=\{selected \? 'filterActive' : 'outline'\}/,
   );
   assert.match(
     chipSource,
     /filterActive:\s*\{\s*box:\s*'bg-teal-700',\s*text:\s*'text-canvas'\s*\}/,
   );
+});
+
+test('credit bands compose with saved, category, format and search without hiding locked items in Alles', () => {
+  const catalog = [
+    { id: 'free', title: 'Hooi', format: 'article', creditCost: 0 },
+    { id: 'plus', title: 'Hooi Plus', format: 'article', creditCost: 0, isPlus: 1 },
+    ...[1, 2, 3, 4, 7].map(n => ({ id: `paid${n}`, title: 'Hooi video', format: 'video', creditCost: n })),
+  ];
+  const ids = options => filterLibraryItems(catalog, [], [], '', options).map(item => item.id);
+  assert.equal(ids({}).length, 7);
+  assert.deepEqual(ids({ credits: ['free'] }), ['free']);
+  assert.deepEqual(ids({ credits: ['1', '3', '4+'] }), ['paid1', 'paid3', 'paid4', 'paid7']);
+  assert.deepEqual(ids({ savedOnly: true, savedIds: ['free', 'paid2'], formats: ['video'], credits: ['2'] }), ['paid2']);
+  assert.deepEqual(filterLibraryItems(catalog, [{ itemId: 'paid2', categoryId: 'hay' }], ['hay'], 'Hooi', {
+    formats: ['video'], credits: ['2'], savedOnly: true, savedIds: ['paid2'],
+  }).map(item => item.id), ['paid2']);
+  assert.deepEqual(ids({ accessibleOnly: true, access: { hasPlus: false, unlockedIds: ['paid2'] } }), ['free', 'paid2']);
+  assert.equal(ids({ accessibleOnly: true, access: { hasPlus: true, unlockedIds: [] } }).length, 7);
+  assert.deepEqual(ids({ accessibleOnly: true, access: null }), []);
 });

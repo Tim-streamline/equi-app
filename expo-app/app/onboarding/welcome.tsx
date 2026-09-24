@@ -14,8 +14,8 @@ import { ArrowRight } from 'lucide-react-native';
 import { Button } from '@/components/ui/Button';
 import { useDb } from '@/db/provider';
 
-const DEFAULT_EMAIL = 'marit@voorbeeld.nl';
-const DEFAULT_PASSWORD = 'password';
+const DEFAULT_EMAIL = Platform.OS === 'web' ? '' : 'marit@voorbeeld.nl';
+const DEFAULT_PASSWORD = Platform.OS === 'web' ? '' : 'password';
 
 export default function WelcomeScreen() {
   const { communityPost } = useLocalSearchParams<{ communityPost?: string }>();
@@ -30,6 +30,8 @@ export default function WelcomeScreen() {
     setBusy(true);
     try {
       await login(email.trim(), password);
+      // The web database changes on login; navigate after its route tree mounts.
+      if (Platform.OS === 'web') return;
       if (communityPost && /^[0-9a-f-]{36}$/i.test(communityPost)) {
         router.replace({ pathname: '/(tabs)/community/thread/[id]', params: { id: communityPost } });
       } else router.replace('/(tabs)/(pager)/home');
@@ -90,6 +92,8 @@ export default function WelcomeScreen() {
                   value={email}
                   onChangeText={setEmail}
                   placeholder="Email"
+                  accessibilityLabel="E-mailadres"
+                  autoComplete="email"
                   placeholderTextColor="rgba(255,255,255,0.5)"
                   autoCapitalize="none"
                   autoCorrect={false}
@@ -100,6 +104,9 @@ export default function WelcomeScreen() {
                   value={password}
                   onChangeText={setPassword}
                   placeholder="Wachtwoord"
+                  accessibilityLabel="Wachtwoord"
+                  autoComplete="current-password"
+                  onSubmitEditing={() => { if (!busy) void submit(); }}
                   placeholderTextColor="rgba(255,255,255,0.5)"
                   secureTextEntry
                   className="rounded-pill bg-white/10 px-4 py-3 font-sans text-[14px] text-white"

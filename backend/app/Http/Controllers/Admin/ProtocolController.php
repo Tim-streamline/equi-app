@@ -103,6 +103,9 @@ class ProtocolController extends Controller
 
         try {
             DB::transaction(function () use ($data, $protocol) {
+                $protocol = Protocol::query()->lockForUpdate()->findOrFail($protocol->id);
+                $history = app(\App\Support\ProtocolDayHistory::class);
+                $history->preserve($protocol, \Carbon\CarbonImmutable::now($history->timezone($protocol)));
                 $attributes = $this->protocolAttributes($data);
                 if ($data['published'] && $protocol->published_at) {
                     $attributes['published_at'] = $protocol->published_at;

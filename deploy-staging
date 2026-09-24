@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+set +x
 set -euo pipefail
 
 repo_dir="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
@@ -20,16 +21,27 @@ while (($#)); do
             echo 'Usage: ./deploy-staging [--build-only] [--with-library] [--seed-catalog]'
             echo '       ./deploy-staging --rollback RELEASE_ID'
             echo '       ./deploy-staging --artifact deploy/builds/RELEASE_ID.tar.gz [--with-library] [--seed-catalog]'
+            echo 'Deploy/rollback require PLOI_API_TOKEN (Manage sites and Manage servers); --build-only does not.'
             exit 0 ;;
         *) echo "Unknown option: $1" >&2; exit 1 ;;
     esac
     shift
 done
 ssh_options=(-o BatchMode=yes -o ConnectTimeout=15)
+if ((!build_only)); then
+    [[ -n "${PLOI_API_TOKEN:-}" ]] || { echo 'Set PLOI_API_TOKEN with Manage sites and Manage servers permissions (not needed for --build-only).' >&2; exit 1; }
+fi
+remote_activate() {
+    ssh "${ssh_options[@]}" "$server" "mkdir -p '$site/shared/deploy-tools'"
+    rsync -a -e 'ssh -o BatchMode=yes -o ConnectTimeout=15' "$repo_dir/deploy/ploi-nginx.php" "$server:$site/shared/deploy-tools/"
+    # Feed the token over encrypted stdin, never command arguments or release files.
+    { printf 'export PLOI_API_TOKEN=%q\n' "$PLOI_API_TOKEN"; cat "$repo_dir/deploy/activate-release.sh"; } |
+        ssh "${ssh_options[@]}" "$server" bash -s -- "$site" "$1" "$2" "$3" "$4"
+}
 if [[ -n "$rollback" ]]; then
     [[ "$rollback" =~ ^[0-9]{8}T[0-9]{6}Z-[a-f0-9]{7,12}-[a-f0-9]{6}$ ]] || { echo 'Invalid release ID' >&2; exit 1; }
     ((build_only == 0 && library == 0 && seed == 0)) && [[ -z "$artifact" ]] || { echo 'Rollback cannot be combined with build/import options' >&2; exit 1; }
-    ssh "${ssh_options[@]}" "$server" bash -s -- "$site" "$rollback" rollback 0 0 < "$repo_dir/deploy/activate-release.sh"
+    remote_activate "$rollback" rollback 0 0
     exit
 fi
 
@@ -54,6 +66,7 @@ if [[ -z "$artifact" ]]; then
     bash "$repo_dir/deploy/package-backend.sh" "$repo_dir/backend" "$workspace/app"
     mkdir -p "$workspace/app/.deploy" "$workspace/app/bootstrap/cache" \
         "$workspace/app/storage/framework/"{cache/data,sessions,views} "$workspace/app/storage/logs"
+    cp "$repo_dir/deploy/nginx-staging.conf" "$workspace/app/.deploy/"
     cp "$repo_dir/deploy/build-backend.sh" "$repo_dir/deploy/check-release.php" "$repo_dir/deploy/backup-database.php" "$workspace/app/.deploy/"
     printf '%s\n' "$release" > "$workspace/app/RELEASE_ID"
     git -C "$repo_dir" status --porcelain > "$workspace/app/.deploy/source-status.txt"
@@ -67,6 +80,14 @@ if [[ -z "$artifact" ]]; then
         --env COMPOSER_HOME=/tmp/equi-composer --env npm_config_cache=/tmp/equi-npm \
         --env XDEBUG_MODE=off --volume "$workspace/app:/build" --workdir /build \
         "$image" .deploy/build-backend.sh
+    echo 'Building the customer web app in an isolated Node 24 container...'
+    bash "$repo_dir/deploy/package-web.sh" "$repo_dir" "$workspace/frontend"
+    cp "$repo_dir/deploy/build-web.sh" "$workspace/frontend/build-web.sh"
+    docker run --rm --user "$(id -u):$(id -g)" --entrypoint bash \
+        --env npm_config_cache=/tmp/equi-npm --env EXPO_NO_TELEMETRY=1 \
+        --volume "$workspace/frontend:/build" --workdir /build/web \
+        node:24-bookworm-slim /build/build-web.sh
+    mv "$workspace/frontend/web/dist" "$workspace/app/web-dist"
     artifact="$repo_dir/deploy/builds/$release.tar.gz"
     tar -czf "$artifact" -C "$workspace/app" .
     (cd "$repo_dir/deploy/builds" && sha256sum "$release.tar.gz" > "$release.tar.gz.sha256")
@@ -87,4 +108,4 @@ if ((library)); then
 fi
 rsync -a --partial -e 'ssh -o BatchMode=yes -o ConnectTimeout=15' \
     "$artifact" "$artifact.sha256" "$server:$site/incoming/"
-ssh "${ssh_options[@]}" "$server" bash -s -- "$site" "$release" deploy "$library" "$seed" < "$repo_dir/deploy/activate-release.sh"
+remote_activate "$release" deploy "$library" "$seed"

@@ -23,8 +23,9 @@ test('library articles do not render dummy media above their body', async () => 
   assert.doesNotMatch(source, /contentContainerStyle=\{\{ padding: 20,/);
   assert.match(source, /contentContainerStyle=\{\{ width: '100%', paddingBottom: padBottom \}\}/);
   assert.match(source, /<View className="px-5">[\s\S]*<Eyebrow/);
-  assert.match(source, /<View className="w-full px-5">[\s\S]*<MarkdownBody markdown=\{body\}/);
-  assert.match(source, /<MarkdownBody markdown=\{body\}/);
+  assert.match(source, /<LibraryContent key=\{id\} itemId=/);
+  const content = await readFile(new URL('../components/library/LibraryContent.tsx', import.meta.url), 'utf8');
+  assert.match(content, /<View className="w-full px-5 pt-5"><MarkdownBody markdown=\{data.body\}/);
 });
 
 test('embedded markdown videos fill the available markdown width', async () => {

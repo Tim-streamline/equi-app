@@ -46,7 +46,7 @@ test('unsaved uploads and media insertion update per-video posters without overw
             item: { id: 'item', format: 'video', thumbnail_mode: 'manual', hero_image_url: 'https://media.test/cover.jpg' },
             categories: [], therapists: [], videoPosters: { 'https://media.test/existing.mp4': 'https://media.test/existing.jpg' },
         }),
-        $state: (value) => value, useForm: (value) => { context.$form = value; return value; },
+        $state: (value) => value, $derived: (value) => value, useForm: (value) => { context.$form = value; return value; },
     });
     vm.runInContext(editorScript, context);
     vm.runInContext(`

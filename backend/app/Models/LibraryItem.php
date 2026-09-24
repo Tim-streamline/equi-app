@@ -17,6 +17,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
     'body',
     'hero_image_url',
     'thumbnail_mode',
+    'featured_suggestion_ids',
     'duration_label',
     'duration_sec',
     'author_therapist_id',
@@ -37,6 +38,7 @@ class LibraryItem extends Model
     {
         return [
             'published_at' => 'datetime',
+            'featured_suggestion_ids' => 'array',
             'duration_sec' => 'integer',
             'is_plus' => 'boolean',
             'is_featured' => 'boolean',

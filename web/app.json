@@ -1,0 +1,20 @@
+{
+  "expo": {
+    "name": "EquiNova",
+    "slug": "equinova-web",
+    "userInterfaceStyle": "light",
+    "platforms": [
+      "web"
+    ],
+    "web": {
+      "output": "single",
+      "favicon": "../expo-app/assets/images/favicon.png"
+    },
+    "plugins": [
+      "expo-router"
+    ],
+    "experiments": {
+      "typedRoutes": true
+    }
+  }
+}

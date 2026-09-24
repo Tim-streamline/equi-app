@@ -1,11 +1,11 @@
 import { View, Text, ScrollView } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Bookmark } from 'lucide-react-native';
+import { LibraryBookmarkButton } from '@/components/library/LibraryBookmarkButton';
+import { RelatedLibraryItems } from '@/components/library/RelatedLibraryItems';
 import { SubHeader } from '@/components/ui/SubHeader';
-import { IconButton } from '@/components/ui/IconButton';
 import { Eyebrow } from '@/components/ui/Eyebrow';
-import { MarkdownBody } from '@/components/library/MarkdownBody';
+import { LibraryContent } from '@/components/library/LibraryContent';
 import { useTabBarPadding } from '@/hooks/useTabBarPadding';
 import {
   useLibraryItem,
@@ -17,7 +17,6 @@ export default function ArticleScreen() {
   const item = useLibraryItem(id ?? '');
   const therapist = useTherapist((item.authorTherapistId as string) || undefined);
   const padBottom = useTabBarPadding();
-  const body = (item.body as string) || '';
 
   return (
     <View className="flex-1 bg-canvas">
@@ -26,9 +25,7 @@ export default function ArticleScreen() {
           title="Artikel"
           onBack={() => router.back()}
           right={
-            <IconButton>
-              <Bookmark size={18} color="#1B2A2A" />
-            </IconButton>
+            <LibraryBookmarkButton key={id} itemId={id ?? ''} />
           }
         />
         <ScrollView contentContainerStyle={{ width: '100%', paddingBottom: padBottom }}>
@@ -41,11 +38,8 @@ export default function ArticleScreen() {
             </Text>
           </View>
 
-          {!!body && (
-            <View className="w-full px-5">
-              <MarkdownBody markdown={body} />
-            </View>
-          )}
+          <LibraryContent key={id} itemId={id ?? ''} />
+          <RelatedLibraryItems itemId={id ?? ''} />
         </ScrollView>
       </SafeAreaView>
     </View>

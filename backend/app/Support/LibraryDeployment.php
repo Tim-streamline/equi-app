@@ -43,7 +43,14 @@ class LibraryDeployment
                 if ($table === 'therapists') {
                     $query->whereIn('id', DB::table('library_items')->select('author_therapist_id'));
                 }
-                $records[$table] = $query->get()->map(fn (object $row) => (array) $row)->all();
+                $records[$table] = $query->get()->map(function (object $row) use ($table) {
+                    $data = (array) $row;
+                    if ($table === 'library_items' && is_string($data['featured_suggestion_ids'] ?? null)) {
+                        $data['featured_suggestion_ids'] = json_decode($data['featured_suggestion_ids'], true, 512, JSON_THROW_ON_ERROR);
+                    }
+
+                    return $data;
+                })->all();
             }
 
             return $records;
@@ -219,6 +226,9 @@ class LibraryDeployment
                         $row[$field] = $ids[$parent][$row[$field]];
                     }
                 }
+                if ($table === 'library_items') {
+                    unset($row['featured_suggestion_ids']);
+                }
                 if ($table === 'media_assets') {
                     $row['url'] = Storage::disk($row['disk'])->url($row['path']);
                     $row['thumbnail_url'] = $row['thumbnail_path'] ? Storage::disk($row['disk'])->url($row['thumbnail_path']) : null;
@@ -237,6 +247,16 @@ class LibraryDeployment
                 }
                 $ids[$table][$source['id']] = $model->id;
             }
+        }
+
+        // Suggestions can reference later items or items matched by slug at the destination.
+        foreach ($records['library_items'] as $source) {
+            LibraryItem::findOrFail($ids['library_items'][$source['id']])->update([
+                'featured_suggestion_ids' => isset($source['featured_suggestion_ids']) ? array_values(array_filter(array_map(
+                    fn ($id) => $ids['library_items'][$id] ?? null,
+                    $source['featured_suggestion_ids'],
+                ))) : null,
+            ]);
         }
 
         // Replace only the imported items' child content and category membership.
