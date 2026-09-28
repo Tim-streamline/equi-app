@@ -70,3 +70,16 @@ export async function logout() {
   if (!response.ok) throw new Error('Uitloggen is niet gelukt. Probeer opnieuw.');
   forgetSession();
 }
+
+export type RegistrationInput = { name: string; email: string; password: string; password_confirmation: string };
+export async function register(input: RegistrationInput): Promise<LoginResponse> {
+  const current = ++revision;
+  const response = await request('register', input);
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    const messages = Object.values(data.errors ?? {}).flat();
+    throw new Error(response.status === 429 ? 'Te veel pogingen. Wacht een minuut en probeer opnieuw.' : String(messages[0] ?? 'Registreren is niet gelukt. Probeer opnieuw.'));
+  }
+  if (current !== revision) throw new Error('Je sessie is gewijzigd. Probeer opnieuw.');
+  return accept(data);
+}

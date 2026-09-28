@@ -7,7 +7,7 @@ use App\Models\AuditLog;
 use App\Models\ChatSession;
 use App\Models\DataExport;
 use App\Models\Horse;
-use App\Models\IntakeResponse;
+use App\Models\IntakeBooking;
 use App\Models\ProtocolTemplate;
 use App\Models\Therapist;
 use App\Models\User;
@@ -45,7 +45,7 @@ class AdminHorseActionsTest extends TestCase
             'therapist_id' => $therapist->id, 'scheduled_at' => now(), 'status' => 'confirmed']);
         $scan = $this->horse->scans()->create(['user_id' => $this->owner->id, 'scanned_at' => now(), 'score' => 90, 'rating' => 'Goed']);
         $chat = ChatSession::create(['user_id' => $this->owner->id, 'horse_id' => $this->horse->id, 'started_at' => now()]);
-        $intake = IntakeResponse::create(['user_id' => $this->owner->id, 'horse_id' => $this->horse->id, 'started_at' => now()]);
+        $intake = IntakeBooking::create(['user_id' => $this->owner->id, 'horse_id' => $this->horse->id, 'started_at' => now()]);
         $export = DataExport::create(['user_id' => $this->owner->id, 'horse_id' => $this->horse->id, 'format' => 'pdf', 'requested_at' => now()]);
 
         return compact('chat', 'intake', 'export', 'protocol', 'observation', 'photo', 'share', 'booking', 'scan', 'therapist', 'template');
@@ -73,7 +73,7 @@ class AdminHorseActionsTest extends TestCase
         $other = Horse::create(['owner_id' => $this->owner->id, 'name' => 'Other', 'status' => 'active']);
         $otherObservation = $other->observations()->create(['author_id' => $this->owner->id, 'date' => today()]);
         $this->getJson('/admin/horses/'.$this->horse->id.'/deletion-preview')
-            ->assertOk()->assertJsonPath('removed.protocols.count', 1)->assertJsonPath('detached.bookings.count', 1);
+            ->assertOk()->assertJsonPath('removed.protocols.count', 1)->assertJsonPath('detached.bookings.count', 2);
         $this->delete('/admin/horses/'.$this->horse->id, ['confirm_delete' => true])
             ->assertRedirect('/admin/horses')->assertSessionHasNoErrors();
         $this->assertNull($this->horse->fresh());

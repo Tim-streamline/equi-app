@@ -52,7 +52,7 @@
         <p class="mt-1 text-sm text-muted-foreground">{booking.therapist?.name}{booking.horse?.name ? ` · ${booking.horse.name}` : ''}</p>
     </div>
     <div class="space-y-4 px-6 py-5 text-sm">
-        <p>Weet je zeker dat je deze booking wilt verwijderen? Deze actie kan niet ongedaan worden gemaakt.</p>
+        <p>Weet je zeker dat je deze booking, intake-antwoorden en bijlagen wilt verwijderen? Deze actie kan niet ongedaan worden gemaakt.</p>
         {#if error}<p role="alert" class="rounded-lg bg-destructive/10 p-3 text-destructive">{error}</p>{/if}
     </div>
     <div class="flex justify-end gap-2 border-t px-6 py-4">

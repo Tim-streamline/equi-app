@@ -1,7 +1,7 @@
 import type { AbstractPowerSyncDatabase, PowerSyncBackendConnector } from '@powersync/common';
 import { getSession } from './auth';
-export async function getOrMintToken(signal?: AbortSignal): Promise<string | null> {
-  return (await getSession(signal))?.token ?? null;
+export async function getOrMintToken(signal?: AbortSignal, forceRefresh = false): Promise<string | null> {
+  return (await getSession(signal, forceRefresh))?.token ?? null;
 }
 export class LaravelConnector implements PowerSyncBackendConnector {
   constructor(private readonly userId: string) {}

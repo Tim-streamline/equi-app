@@ -122,5 +122,5 @@ export function useHorseDashboard(month?: string) {
   }, [syncStatus, refresh]);
   const data =
     snapshot?.key === key ? dashboardForHorse(dashboardAtTime(snapshot.data, clock), horseId) : null;
-  return { data, error, refresh, horseId, loading: !data && !error };
+  return { data, error, refresh, horseId, loading: !!horseId && !!currentUserId && !data && !error };
 }

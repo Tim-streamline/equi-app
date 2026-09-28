@@ -76,6 +76,11 @@ class LibraryItem extends Model
         return $this->hasMany(LibraryProgress::class, 'item_id');
     }
 
+    public function attachments(): HasMany
+    {
+        return $this->hasMany(LibraryAttachment::class)->orderBy('order')->orderBy('id');
+    }
+
     public function media(): HasMany
     {
         return $this->hasMany(MediaAsset::class)->latest();

@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -15,7 +16,11 @@ class WebSessionController extends Controller
 
     public function login(Request $request): JsonResponse
     {
+        if (is_string($request->input('email'))) {
+            $request->merge(['email' => mb_strtolower(trim($request->input('email')))]);
+        }
         $credentials = $request->validate(['email' => 'required|email', 'password' => 'required|string']);
+        $credentials['email'] = User::whereRaw('lower(email) = ?', [$credentials['email']])->value('email') ?? $credentials['email'];
         if (! Auth::guard('web')->attempt([...$credentials, 'disabled_at' => null])) {
             return response()->json(['message' => 'Invalid credentials'], 401);
         }

@@ -37,17 +37,20 @@ class LibraryDiscovery
         return [
             'hasPlus' => $user->subscriptions()->where('status', 'active')
                 ->where(fn ($q) => $q->whereNull('started_at')->orWhereDate('started_at', '<=', today()))
+                ->whereNull('ended_at')
+                ->where(fn ($q) => $q->whereNull('paid_through')->orWhere('paid_through', '>', now()))
                 ->where(fn ($q) => $q->whereNull('cancelled_at')->orWhereDate('cancelled_at', '>', today()))
                 ->whereHas('plan', fn ($q) => $q->where('slug', 'plus'))->exists(),
-            'credits' => (int) (DB::table('library_credit_balances')->where('user_id', $user->id)->value('balance') ?? 0),
+            'credits' => app(CreditLedger::class)->summary($user)['balance'],
+            'hasBasic' => (bool) app(CreditLedger::class)->basic($user),
             'unlockedIds' => DB::table('library_unlocks')->where('user_id', $user->id)->pluck('item_id')->all(),
         ];
     }
 
     public function canRead(LibraryItem $item, array $access): bool
     {
-        return $access['hasPlus'] || in_array($item->id, $access['unlockedIds'], true)
-            || (! $item->is_plus && (int) $item->credit_cost === 0);
+        return in_array($item->id, $access['unlockedIds'], true)
+            || ($item->is_plus ? $access['hasPlus'] : (int) $item->credit_cost === 0);
     }
 
     public function summary(LibraryItem $item): array
@@ -56,7 +59,7 @@ class LibraryDiscovery
             'id' => $item->id, 'title' => $item->title, 'description' => $item->description,
             'format' => $item->format, 'heroImageUrl' => $item->hero_image_url,
             'durationLabel' => $item->duration_label, 'creditCost' => (int) $item->credit_cost,
-            'isPlus' => $item->is_plus,
+            'isPlus' => $item->is_plus, 'authorName' => $item->author?->name,
         ];
     }
 

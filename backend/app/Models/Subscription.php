@@ -20,7 +20,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
     'renews_at',
     'renews_label',
     'cancelled_at',
-    'max_horses',
+    'max_horses', 'paid_through', 'cancel_requested_at', 'ended_at',
 ])]
 class Subscription extends Model
 {
@@ -28,6 +28,7 @@ class Subscription extends Model
     protected function casts(): array
     {
         return [
+            'paid_through' => 'datetime', 'cancel_requested_at' => 'datetime', 'ended_at' => 'datetime',
             'price_cents' => 'integer',
             'max_horses' => 'integer',
             'started_at' => 'date',

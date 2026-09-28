@@ -78,7 +78,7 @@ class HorseDashboard
             'horse' => ['id' => $horse->id, 'name' => $horse->name],
             'hasPlus' => $hasPlus, 'showPlusUpsell' => ! $hasPlus && ! $protocol,
             'variant' => $hasPlus || $protocol ? 'plus' : 'basic',
-            'credits' => (int) (DB::table('library_credit_balances')->where('user_id', $user->id)->value('balance') ?? 0),
+            'credits' => app(CreditLedger::class)->summary($user)['balance'],
             'plusOffer' => $plusPlan ? ['name' => $plusPlan->name, 'description' => $plusPlan->description,
                 'priceLabel' => ($plusPlan->currency === 'EUR' ? '€' : $plusPlan->currency).' '.number_format($plusPlan->price_cents / 100, 2, ',', '.'),
                 'priceSuffix' => $plusPlan->price_suffix, 'benefits' => $plusPlan->benefits->pluck('label')->all()] : null,

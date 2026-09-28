@@ -3,14 +3,14 @@
 namespace App\Support;
 
 use App\Models\Horse;
-use App\Models\IntakeResponse;
+use App\Models\IntakeBooking;
 use App\Models\Protocol;
 
 class ProtocolNutrition
 {
     public function answers(Horse $horse): array
     {
-        $response = IntakeResponse::query()->where('horse_id', $horse->id)
+        $response = IntakeBooking::query()->where('horse_id', $horse->id)
             ->whereNotNull('submitted_at')->orderByDesc('submitted_at')->with('answers')->first();
 
         return $response?->answers->mapWithKeys(function ($answer) {

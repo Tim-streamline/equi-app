@@ -113,14 +113,14 @@ class LibraryDiscoveryTest extends TestCase
     {
         $user = $this->customer();
         $item = $this->item('Credits', ['credit_cost' => 2, 'is_plus' => false, 'body' => 'Paid lesson']);
-        DB::table('library_credit_balances')->insert(['user_id' => $user->id, 'balance' => 3]);
+        app(\App\Support\CreditLedger::class)->grant($user, 3, 'adjustment');
         $url = '/api/library/'.$item->id;
         $this->getJson($url)->assertJsonPath('canRead', false)->assertJsonPath('body', null);
         $this->postJson($url.'/unlock', ['credits' => 1])->assertStatus(409);
-        $this->assertDatabaseHas('library_credit_balances', ['user_id' => $user->id, 'balance' => 3]);
+        $this->assertSame(3, app(\App\Support\CreditLedger::class)->summary($user)['balance']);
         $this->postJson($url.'/unlock', ['credits' => 2])->assertOk()->assertJsonPath('body', 'Paid lesson');
         $this->postJson($url.'/unlock', ['credits' => 2])->assertOk()->assertJsonPath('canRead', true);
-        $this->assertDatabaseHas('library_credit_balances', ['user_id' => $user->id, 'balance' => 1]);
+        $this->assertSame(1, app(\App\Support\CreditLedger::class)->summary($user)['balance']);
         $this->assertDatabaseCount('library_unlocks', 1);
         $other = $this->item('Too expensive', ['credit_cost' => 2, 'is_plus' => false]);
         $this->postJson('/api/library/'.$other->id.'/unlock', ['credits' => 2])->assertStatus(422);
@@ -129,6 +129,32 @@ class LibraryDiscoveryTest extends TestCase
         $this->assertDatabaseCount('library_unlocks', 1);
         $this->customer();
         $this->getJson($url)->assertJsonPath('canRead', false)->assertJsonPath('body', null);
+    }
+
+    public function test_locked_preview_exposes_metadata_and_only_free_or_unlocked_access_bypasses_purchase(): void
+    {
+        $user = $this->customer();
+        $author = \App\Models\Therapist::create(['name' => 'Shelley', 'title' => 'Therapeut']);
+        $item = $this->item('Preview', [
+            'description' => 'The complete description, including the final sentence.',
+            'author_therapist_id' => $author->id, 'hero_image_url' => '/storage/preview.jpg',
+            'credit_cost' => 2, 'body' => 'Premium body',
+        ]);
+        $url = '/api/library/'.$item->id;
+        $this->getJson($url)->assertOk()->assertJsonPath('item.authorName', 'Shelley')
+            ->assertJsonPath('item.description', $item->description)->assertJsonPath('item.heroImageUrl', '/storage/preview.jpg')
+            ->assertJsonPath('item.durationLabel', null)->assertJsonPath('canRead', false)->assertJsonPath('body', null)
+            ->assertJsonPath('chapters', [])->assertJsonPath('access.credits', 0);
+        $item->update(['credit_cost' => 0]);
+        $this->getJson($url)->assertJsonPath('canRead', true)->assertJsonPath('body', 'Premium body');
+        $item->update(['credit_cost' => 2, 'is_plus' => true]);
+        $plan = Plan::create(['slug' => 'plus', 'label' => 'Plus', 'name' => 'Plus', 'price_cents' => 900, 'interval' => 'monthly']);
+        Subscription::create(['user_id' => $user->id, 'plan_id' => $plan->id, 'status' => 'active', 'price_cents' => 900, 'interval' => 'monthly']);
+        $this->getJson($url)->assertJsonPath('canRead', true)->assertJsonPath('body', 'Premium body');
+        $item->update(['is_plus' => false]);
+        $this->getJson($url)->assertJsonPath('canRead', false)->assertJsonPath('body', null);
+        $this->assertDatabaseCount('library_unlocks', 0);
+        $this->assertDatabaseCount('library_credit_balances', 0);
     }
 
 }

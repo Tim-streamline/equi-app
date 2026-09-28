@@ -3,6 +3,7 @@
 namespace App\Support;
 
 use App\Models\LibraryArticleSection;
+use App\Models\LibraryAttachment;
 use App\Models\LibraryCategory;
 use App\Models\LibraryChapter;
 use App\Models\LibraryItem;
@@ -27,6 +28,7 @@ class LibraryDeployment
         'library_article_sections' => LibraryArticleSection::class,
         'library_item_categories' => LibraryItemCategory::class,
         'media_assets' => MediaAsset::class,
+        'library_attachments' => LibraryAttachment::class,
     ];
 
     private const URL_PATTERN = '~(?:https?://|/storage/)[^\s<>"\'()]+~u';
@@ -66,6 +68,10 @@ class LibraryDeployment
             if ($asset['thumbnail_path']) {
                 $this->addFile($files, $asset['disk'], $asset['thumbnail_path'], $asset['thumbnail_url']);
             }
+        }
+
+        foreach ($records['library_attachments'] as $attachment) {
+            $this->addFile($files, 'local', $attachment['path'], null);
         }
 
         // Older content can reference public uploads without a media_assets row.
@@ -120,7 +126,7 @@ class LibraryDeployment
         }
         unset($file);
 
-        $manifest = ['version' => 1, 'exported_at' => now()->toIso8601String(), 'records' => $records, 'files' => array_values($files)];
+        $manifest = ['version' => 2, 'exported_at' => now()->toIso8601String(), 'records' => $records, 'files' => array_values($files)];
         $temporary = $directory.'/.manifest-'.Str::uuid();
         try {
             $json = json_encode($manifest, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR).PHP_EOL;
@@ -199,7 +205,7 @@ class LibraryDeployment
                 }
             }
 
-            DB::transaction(fn () => $this->importRecords($manifest['records'], $urls));
+            DB::transaction(fn () => $this->importRecords($manifest['records'], $urls, $manifest['version'] >= 2));
         } catch (Throwable $exception) {
             foreach ($created as $path) {
                 if (is_file($path)) {
@@ -212,12 +218,12 @@ class LibraryDeployment
         return $manifest;
     }
 
-    private function importRecords(array $records, array $urls): void
+    private function importRecords(array $records, array $urls, bool $replaceAttachments): void
     {
         $ids = [];
         foreach (self::MODELS as $table => $class) {
             $ids[$table] = [];
-            foreach ($records[$table] as $source) {
+            foreach ($records[$table] ?? [] as $source) {
                 $row = array_map(fn ($value) => is_string($value)
                     ? preg_replace_callback(self::URL_PATTERN, fn ($match) => $urls[html_entity_decode($match[0], ENT_QUOTES | ENT_HTML5)] ?? $match[0], $value)
                     : $value, $source);
@@ -237,7 +243,7 @@ class LibraryDeployment
                     'therapists' => Arr::only($row, ['name', 'title']),
                     'library_items', 'library_categories' => Arr::only($row, ['slug']),
                     // Order is not unique: two blocks may legitimately share it.
-                    'library_chapters', 'library_article_sections' => Arr::only($row, ['id']),
+                    'library_chapters', 'library_article_sections', 'library_attachments' => Arr::only($row, ['id']),
                     'library_item_categories' => Arr::only($row, ['item_id', 'category_id']),
                     'media_assets' => Arr::only($row, ['disk', 'path']),
                 };
@@ -257,6 +263,12 @@ class LibraryDeployment
                     $source['featured_suggestion_ids'],
                 ))) : null,
             ]);
+        }
+
+        // Legacy bundles predate PDF support and must not erase destination PDFs.
+        if ($replaceAttachments) {
+            DB::table('library_attachments')->whereIn('library_item_id', array_values($ids['library_items']))
+                ->whereNotIn('id', array_values($ids['library_attachments']))->delete();
         }
 
         // Replace only the imported items' child content and category membership.
@@ -291,6 +303,8 @@ class LibraryDeployment
             $fields[] = 'archived_at';
         }
 
+        if ($table === 'library_attachments') $fields[] = 'library_item_id';
+
         return array_values(array_diff(['id', ...$fields], ['uploaded_by']));
     }
 
@@ -300,18 +314,19 @@ class LibraryDeployment
             'library_items' => ['author_therapist_id' => 'therapists'],
             'library_chapters', 'library_article_sections' => ['item_id' => 'library_items'],
             'library_item_categories' => ['item_id' => 'library_items', 'category_id' => 'library_categories'],
-            'media_assets' => ['library_item_id' => 'library_items'],
+            'media_assets', 'library_attachments' => ['library_item_id' => 'library_items'],
             default => [],
         };
     }
 
     private function validateManifest(mixed $manifest): void
     {
-        if (! is_array($manifest) || ($manifest['version'] ?? null) !== 1 || ! is_array($manifest['files'] ?? null)) {
+        if (! is_array($manifest) || ! in_array($manifest['version'] ?? null, [1, 2], true) || ! is_array($manifest['files'] ?? null)) {
             throw new RuntimeException('Unsupported or invalid library bundle.');
         }
         $ids = [];
         foreach (self::MODELS as $table => $class) {
+            if ($table === 'library_attachments' && $manifest['version'] === 1 && ! isset($manifest['records'][$table])) continue;
             if (! is_array($manifest['records'][$table] ?? null)) {
                 throw new RuntimeException("Missing bundle records: {$table}");
             }
@@ -346,6 +361,11 @@ class LibraryDeployment
             }
             $files[$key] = $file;
         }
+        foreach ($manifest['records']['library_attachments'] ?? [] as $attachment) {
+            if (! isset($files['local:'.$attachment['path']])) {
+                throw new RuntimeException('Private PDF missing from bundle: '.$attachment['path']);
+            }
+        }
         foreach ($manifest['records']['media_assets'] as $asset) {
             foreach (array_filter([$asset['path'], $asset['thumbnail_path']]) as $path) {
                 if (! isset($files[$asset['disk'].':'.$path])) {
@@ -364,7 +384,7 @@ class LibraryDeployment
         $key = $disk.':'.$path;
         $files[$key] ??= ['disk' => $disk, 'path' => $path, 'urls' => []];
         $files[$key]['urls'] = array_values(array_unique(array_filter([
-            ...$files[$key]['urls'], $url, Storage::disk($disk)->url($path),
+            ...$files[$key]['urls'], $url, $disk === 'local' ? null : Storage::disk($disk)->url($path),
             $disk === 'public' ? '/storage/'.$path : null,
         ])));
     }

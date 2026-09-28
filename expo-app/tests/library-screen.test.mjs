@@ -50,10 +50,10 @@ function screen() {
   return { render, press, ids, bookmarks, focused: () => focused };
 }
 
-test('actual Library screen composes saved, price, category and search; X preserves filters and focus', () => {
+test('actual Library screen composes saved, category and search; X preserves filters and focus', () => {
   const app = screen();
   assert.deepEqual(app.ids(), ['free', 'paid', 'plus']);
-  app.press('Opgeslagen'); app.press('Hooi'); app.press('Filters'); app.press('2 credits');
+  app.press('Opgeslagen'); app.press('Hooi');
   assert.deepEqual(app.ids(), ['paid']);
   app.render().find(node => node.type === 'TextInput').props.onChangeText('missing');
   assert.deepEqual(app.ids(), []);
@@ -66,11 +66,15 @@ test('actual Library screen composes saved, price, category and search; X preser
   assert.ok(app.render().some(node => node.props.children === 'Nog niets opgeslagen'));
 });
 
-test('Alles includes locked items; accessible-only excludes locked items; clearing restores discovery', () => {
-  const app = screen(); app.press('Filters'); app.press('Al ontgrendeld');
-  assert.deepEqual(app.ids(), ['free']);
-  app.press('Al ontgrendeld verwijderen');
+test('Alles clears saved and category filters and the navigation is one horizontal row', () => {
+  const app = screen(); app.press('Opgeslagen'); app.press('Hooi');
+  assert.deepEqual(app.ids(), ['paid']);
+  app.press('Alles');
   assert.deepEqual(app.ids(), ['free', 'paid', 'plus']);
-  app.press('Opgeslagen'); app.press('Alles');
-  assert.deepEqual(app.ids(), ['free', 'paid', 'plus']);
+  const nodes = app.render();
+  assert.ok(!nodes.some(node => node.props.accessibilityLabel === 'Filters'));
+  const rows = nodes.filter(node => node.type === 'ScrollView' && node.props.horizontal);
+  assert.equal(rows.length, 1);
+  assert.ok(rows[0].props.children.flat().some(node => node?.props?.accessibilityLabel === 'Alles'));
+  assert.ok(rows[0].props.children.flat().some(node => node?.props?.accessibilityLabel === 'Hooi'));
 });

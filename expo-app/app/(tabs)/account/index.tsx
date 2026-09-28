@@ -165,6 +165,7 @@ export default function AccountScreen() {
             </>
           )}
 
+          <View className="px-4 mb-5"><Card onPress={() => router.push('/(tabs)/account/credits')}><View className="flex-row items-center justify-between"><View><Text className="font-bold text-[16px] text-ink">Credits</Text><Text className="text-[13px] text-ink-50">Saldo, bijkopen en creditgeschiedenis</Text></View><ChevronRight size={18} color="#127A79" /></View></Card></View>
           <SectionTitle>Algemeen</SectionTitle>
           <View className="px-4">
             {accountRows.map((r) => {

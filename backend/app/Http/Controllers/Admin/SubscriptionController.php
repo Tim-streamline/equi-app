@@ -47,7 +47,17 @@ class SubscriptionController extends Controller
             'max_horses' => ['required', 'integer', 'min:1', 'max:50'],
         ]);
         $before = $subscription->only(array_keys($data));
-        $subscription->update($data);
+        app(\App\Support\CreditLedger::class)->locked($subscription->user, function () use ($subscription, &$data) {
+            if ($data['status'] === 'cancelled' && $subscription->paid_through?->isFuture()) {
+                $data['status'] = 'active';
+                $data['cancel_requested_at'] = $subscription->cancel_requested_at ?? now();
+            } elseif ($data['status'] === 'cancelled') {
+                $data['ended_at'] = $subscription->ended_at ?? now();
+            }
+            // Editing a renewal date or status is never proof of payment and grants no credits.
+            $subscription->update($data);
+            app(\App\Support\CreditLedger::class)->expire($subscription->user);
+        });
         AuditLogger::updated($subscription, $before, $request->input('reason'));
 
         return back()->with('success', 'Subscription updated.');

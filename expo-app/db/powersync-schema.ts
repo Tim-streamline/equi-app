@@ -485,6 +485,11 @@ const intake_bookings = new Table({
   duration_minutes: column.integer,
   status: column.text,
   notes: column.text,
+  intake_status: column.text,
+  started_at: column.text,
+  submitted_at: column.text,
+  created_at: column.text,
+  updated_at: column.text,
 }, { indexes: { byUser: ['user_id'] } });
 
 const intake_questionnaires = new Table({
@@ -538,19 +543,7 @@ const intake_fields = new Table({
   updated_at: column.text,
 }, { indexes: { bySection: ['section_id'] } });
 
-// Protocol-intake form: one response row per user, with one answer row per
-// answered question. `value` holds the JSON-encoded answer (scalar, multi
-// array, or repeater rows) — see lib/intake/store.tsx.
-const intake_responses = new Table({
-  user_id: column.text,
-  horse_id: column.text,
-  status: column.text,
-  started_at: column.text,
-  submitted_at: column.text,
-  created_at: column.text,
-  updated_at: column.text,
-}, { indexes: { byUser: ['user_id'] } });
-
+// Answers reference the shared booking/intake UUID.
 const intake_answers = new Table({
   response_id: column.text,
   section_id: column.text,
@@ -613,6 +606,5 @@ export const AppSchema = new Schema({
   intake_questionnaires,
   intake_sections,
   intake_fields,
-  intake_responses,
   intake_answers,
 });

@@ -57,7 +57,7 @@
     <div class="mb-4 grid gap-4 sm:grid-cols-3">
         <StatCard label="Total items" value={counts.total} icon={FileText} accent="muted" />
         <StatCard label="Drafts" value={counts.drafts} icon={FileText} accent="warning" />
-        <StatCard label="Plus-gated" value={counts.plus} icon={Star} accent="primary" />
+        <StatCard label="Met credits" value={counts.credits} icon={Star} accent="primary" />
     </div>
 
     <Card>
@@ -73,7 +73,7 @@
                 ]} />
                 <Select class="w-40" bind:value={gate} onchange={apply} options={[
                     { value: '', label: 'All' }, { value: 'featured', label: 'Featured' },
-                    { value: 'plus', label: 'Plus only' }, { value: 'draft', label: 'Drafts' },
+                    { value: 'plus', label: 'Plus only' }, { value: 'credits', label: 'Met credits' }, { value: 'draft', label: 'Drafts' },
                 ]} />
                 <details class="relative">
                     <summary class="cursor-pointer rounded-md border px-3 py-2 text-sm">Categorieën {selectedCategories.length ? `(${selectedCategories.length})` : ''}</summary>
@@ -135,7 +135,7 @@
                             <TableCell>
                                 <div class="flex gap-1">
                                     {#if i.is_featured}<Badge>featured</Badge>{/if}
-                                    {#if i.is_plus}<Badge variant="warning">plus</Badge>{/if}
+                                    {#if i.is_plus}<Badge variant="warning">Plus only</Badge>{:else if i.credit_cost > 0}<Badge variant="warning">{i.credit_cost} credits</Badge>{/if}
                                 </div>
                             </TableCell>
                             <TableCell>{#if i.published}<span class="text-muted-foreground">{formatDate(i.published_at)}</span>{:else}<Badge variant="muted">draft</Badge>{/if}</TableCell>

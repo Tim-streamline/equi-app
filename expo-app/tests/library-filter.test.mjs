@@ -115,6 +115,6 @@ test('credit bands compose with saved, category, format and search without hidin
     formats: ['video'], credits: ['2'], savedOnly: true, savedIds: ['paid2'],
   }).map(item => item.id), ['paid2']);
   assert.deepEqual(ids({ accessibleOnly: true, access: { hasPlus: false, unlockedIds: ['paid2'] } }), ['free', 'paid2']);
-  assert.equal(ids({ accessibleOnly: true, access: { hasPlus: true, unlockedIds: [] } }).length, 7);
+  assert.equal(ids({ accessibleOnly: true, access: { hasPlus: true, unlockedIds: [] } }).length, 2);
   assert.deepEqual(ids({ accessibleOnly: true, access: null }), []);
 });

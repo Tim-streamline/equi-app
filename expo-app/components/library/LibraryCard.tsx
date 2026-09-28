@@ -17,7 +17,7 @@ export function LibraryCard({ item, access, compact = false, showBookmark = fals
         <LibraryThumbnail uri={item.heroImageUrl} format={item.format} style={compact ? { maxHeight: 160 } : undefined} />
         <View className="absolute bottom-1.5 right-1.5 flex-row items-center gap-1 rounded-lg bg-white px-1.5 py-1" style={{ maxWidth: '95%' }}>
           <Icon size={12} color="#127A79" />
-          <Text numberOfLines={1} className="shrink font-semi text-[10px] text-teal-700">{libraryFormat(item.format)}{item.durationLabel ? ` · ${item.durationLabel}` : ''}</Text>
+          <Text numberOfLines={1} className="shrink font-semi text-[10px] text-teal-700">{libraryFormat(item.format)}</Text>
         </View>
       </View>
       <View className="flex-1 px-1 pb-1 pt-2">

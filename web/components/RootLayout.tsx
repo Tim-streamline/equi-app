@@ -30,7 +30,7 @@ function Navigation() {
   const pathname = usePathname();
   const navigation = useRootNavigationState();
   useEffect(() => {
-    if (navigation?.key && isLoggedIn && pathname === '/onboarding/welcome') {
+    if (navigation?.key && isLoggedIn && ['/onboarding/welcome', '/onboarding/register'].includes(pathname)) {
       router.replace(loginDestination(window.location.search) as any);
     }
     if (navigation?.key && !isLoggedIn && pathname !== '/' && !pathname.startsWith('/onboarding')) {

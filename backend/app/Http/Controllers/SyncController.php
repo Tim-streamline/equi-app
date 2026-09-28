@@ -87,7 +87,6 @@ class SyncController extends Controller
         'chat_messages' => Models\ChatMessage::class,
         'nova_fallback_replies' => Models\NovaFallbackReply::class,
         'intake_bookings' => Models\IntakeBooking::class,
-        'intake_responses' => Models\IntakeResponse::class,
         'intake_answers' => Models\IntakeAnswer::class,
     ];
 
@@ -113,6 +112,7 @@ class SyncController extends Controller
 
         DB::transaction(function () use ($payload, &$applied, &$skipped, $policy, $userId) {
             foreach ($payload['operations'] as $op) {
+                abort_if($op['type'] === 'intake_responses', 409, 'Werk de app bij om de intake te synchroniseren.');
                 $modelClass = self::TABLE_TO_MODEL[$op['type']] ?? null;
                 if (! $modelClass) {
                     $skipped[] = $op['type'];
@@ -120,6 +120,20 @@ class SyncController extends Controller
                     continue;
                 }
                 $policy->authorize($userId, $op);
+                if ($op['type'] === 'intake_bookings') {
+                    // Clinical review is admin-only, even though it shares the booking table.
+                    $op['data'] = array_intersect_key($op['data'] ?? [], array_flip([
+                        'user_id', 'horse_id', 'therapist_id', 'scheduled_at', 'slot_label',
+                        'duration_minutes', 'status', 'notes', 'intake_status', 'started_at', 'submitted_at',
+                    ]));
+                    validator($op['data'], [
+                        'intake_status' => ['sometimes', 'in:draft,submitted'],
+                        'status' => ['sometimes', 'in:pending,confirmed,done,cancelled'],
+                        'submitted_at' => ['sometimes', 'nullable', 'date'],
+                        'started_at' => ['sometimes', 'nullable', 'date'],
+                    ])->validate();
+                }
+
                 if ($op['type'] === 'user_home_preferences') {
                     $op['data'] = $this->homePreferenceData($op['data'] ?? []);
                 }

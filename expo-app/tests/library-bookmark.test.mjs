@@ -77,13 +77,13 @@ test('concurrent mutations keep independent outcomes and stores are isolated per
   assert.deepEqual(store.getSnapshot().itemIds, ['b']);
   assert.deepEqual(other.getSnapshot().itemIds, []);
 });
-test('card labels distinguish free, credits, Plus and existing unlocks', () => {
+test('card labels distinguish free, credits and permanent unlocks independently of Plus', () => {
   const access = { hasPlus: false, unlockedIds: ['unlocked'] };
   assert.deepEqual(libraryAccessLabel({ id: 'free' }, access), { label: 'Gratis', locked: false });
   assert.deepEqual(libraryAccessLabel({ id: 'paid', creditCost: 2 }, access), { label: '2 credits', locked: true });
-  assert.deepEqual(libraryAccessLabel({ id: 'plus', isPlus: true }, access), { label: 'Plus', locked: true });
+  assert.deepEqual(libraryAccessLabel({ id: 'plus', isPlus: true }, access), { label: 'Alleen voor Plus', locked: true });
   assert.equal(libraryAccessLabel({ id: 'unlocked', creditCost: 2 }, access).locked, false);
-  assert.equal(libraryAccessLabel({ id: 'paid', creditCost: 2 }, { hasPlus: true, unlockedIds: [] }).locked, false);
+  assert.equal(libraryAccessLabel({ id: 'paid', creditCost: 2 }, { hasPlus: true, unlockedIds: [] }).locked, true);
   assert.equal(libraryFormat('audio'), 'Audio'); assert.equal(libraryFormat('video'), 'Video'); assert.equal(libraryFormat('article'), 'Artikel');
 });
 

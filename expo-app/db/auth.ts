@@ -67,3 +67,17 @@ export async function login(email: string, password: string, signal?: AbortSigna
   }
   return (await res.json()) as LoginResponse;
 }
+
+export type RegistrationInput = { name: string; email: string; password: string; password_confirmation: string };
+export async function register(input: RegistrationInput): Promise<LoginResponse> {
+  const response = await fetch(`${apiBaseUrl}/api/auth/register`, {
+    method: 'POST', headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+    body: JSON.stringify(input),
+  });
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    const messages = Object.values(data.errors ?? {}).flat();
+    throw new Error(response.status === 429 ? 'Te veel pogingen. Wacht een minuut en probeer opnieuw.' : String(messages[0] ?? 'Registreren is niet gelukt. Probeer opnieuw.'));
+  }
+  return data;
+}

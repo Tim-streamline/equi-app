@@ -50,6 +50,7 @@ export const navSections = [
         title: 'Content',
         roles: ['content_editor'],
         items: [
+            { label: 'Ontdek Plus', href: '/admin/plus-page', icon: BookOpen, roles: ['content_editor'] },
             { label: 'Library', href: '/admin/library', icon: BookOpen },
             { label: 'Categories', href: '/admin/library-categories', icon: FolderTree },
             { label: 'Seasonal tips', href: '/admin/seasonal-tips', icon: CalendarHeart },
@@ -79,6 +80,7 @@ export const navSections = [
             { label: 'Plans', href: '/admin/plans', icon: CreditCard },
             { label: 'Subscriptions', href: '/admin/subscriptions', icon: Receipt },
             { label: 'Payments', href: '/admin/payments', icon: Receipt },
+            { label: 'Credits', href: '/admin/credits', icon: CreditCard },
         ],
     },
     {

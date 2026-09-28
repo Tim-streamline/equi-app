@@ -27,3 +27,11 @@ export function accessibleNotificationPhase<T extends { id: string; accessible: 
   if (!protocol || protocol.id !== protocolId || !phaseIds) return null;
   return protocol.phases.find((phase) => phase.accessible && phaseIds.split(',').includes(phase.id)) ?? null;
 }
+
+/** Credit reminders only navigate within the account they were issued for. */
+export function creditNotificationRoute(data: unknown, userId: string) {
+  if (!data || typeof data !== 'object') return null;
+  const value = data as { type?: unknown; userId?: unknown };
+  return value.type === 'credit_expiry' && value.userId === userId
+    ? { pathname: '/(tabs)/account/credits' as const } : null;
+}

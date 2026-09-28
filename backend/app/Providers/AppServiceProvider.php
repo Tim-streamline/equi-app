@@ -16,6 +16,7 @@ class AppServiceProvider extends ServiceProvider
 {
     public function register(): void
     {
+        $this->app->bind(\App\Contracts\CreditPaymentGateway::class, \App\Support\UnconfiguredCreditPayments::class);
         $this->app->singleton(Vite::class, FreshViteManifest::class);
     }
 

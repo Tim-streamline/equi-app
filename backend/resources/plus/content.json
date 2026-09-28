@@ -1,0 +1,42 @@
+{
+  "heroTitle": "Je hoeft het niet allemaal zelf uit te zoeken.",
+  "heroBody": "Ik zet alle losse signalen om in een plan dat past bij jouw paard, zodat jij gericht kunt werken aan meer rust, herstel en een paard dat weer lekkerder in z'n vel zit.",
+  "price": "€ 147,00",
+  "period": "/ 3 maanden",
+  "heroButton": "Start mijn intake",
+  "stepsTitle": "Zo werkt Plus in de praktijk",
+  "steps": [
+    {"title": "Ik haal de juiste informatie boven tafel.", "body": "Je hoeft zelf niet te bedenken wat relevant is. Ik weet welke vragen ik moet stellen om een compleet beeld van jouw paard te krijgen en waar mogelijke verbanden kunnen zitten."},
+    {"title": "Je protocol wordt op maat gemaakt.", "body": "Ik leg alle informatie naast elkaar, kijk naar patronen en kies wat op dat moment de meeste aandacht verdient. Van daaruit bouw ik de eerste fase van je protocol op."},
+    {"title": "Jij gaat ermee aan de slag.", "body": "In de app zie je precies wat je doet, wat je geeft, hoeveel en hoe lang."},
+    {"title": "We kijken hoe je paard reageert.", "body": "Via periodieke updates volg ik de voortgang en bouw ik het protocol van daaruit verder op."}
+  ],
+  "stepsButton": "Ik wil een protocol voor mijn paard",
+  "guideTitle": "Hoi, ik ben Shelley",
+  "guideBody": "Ik hou ervan om uit te pluizen waarom een paard blijft vastlopen op dezelfde dingen. Alles op tafel, verbanden leggen, kritisch kijken en daarna bepalen wat voor dít paard nu de slimste volgende stap is.\n\nDaar maak ik vervolgens een helder plan van, in een volgorde die past bij jouw paard. Zodat jij weet wat je nu kunt doen om hem écht verder te helpen.",
+  "guideSignature": "Shelley · De Paardentherapeut",
+  "reviewsTitle": "Wat andere eigenaren zeggen",
+  "reviewsAreExamples": true,
+  "reviews": [
+    {"title": "Eindelijk rust en overzicht.", "quote": "Mijn merrie was al maanden niet zichzelf. Ik wist dat er 'iets' speelde, maar niet waar ik moest beginnen. Door de intake zag ik ineens hoe alles samenhing en wist ik wat ik moest doen.", "name": "Linda, eigenaar van Fleur"},
+    {"title": "Eén plan in plaats van losse dingen.", "quote": "Ik had kruiden, supplementen en ander voer geprobeerd, maar niets hielp echt. Met Plus kreeg ik voor het eerst één plan dat bij mijn paard past. Ik heb nu eindelijk mijn paard weer terug.", "name": "Anouk, eigenaar van Sem"},
+    {"title": "Het plan groeit mee.", "quote": "Wat ik heel fijn vind, is dat je niet op dag één een plan voor drie maanden krijgt. Het protocol wordt onderweg aangepast aan hoe je paard reageert, dat maakt het echt op maat.", "name": "Esther, eigenaar van Jip"},
+    {"title": "Eindelijk minder jeuk.", "quote": "Elk voorjaar stond hij zich weer kapot te schuren aan het hek. Met zijn protocol pakten we het van binnenuit aan. Na zeven weken werd de jeuk eindelijk minder.", "name": "Marieke, eigenaar van Bo"}
+  ],
+  "benefits": ["Van losse klachten naar één duidelijk plan", "Persoonlijke stappen voor voeding, kruiden & management", "Onbeperkt voer & supplementen scannen", "Regelmatige evaluatie en aanpassingen"],
+  "priceButton": "Word Plus-member!",
+  "priceNote": "Per 3 maanden, stoppen wanneer je wilt",
+  "faqs": [
+    {"question": "Ik merk dat er iets speelt bij mijn paard, maar ik krijg mijn vinger er niet op. Kan ik dan met Plus starten?", "answer": "Ja. Je hoeft vooraf echt nog niet te weten waar het vandaan komt. De intake is juist zo opgebouwd dat ik precies de informatie krijg die ik nodig heb: wat je ziet, wat je voert, hoe je paard leeft, wat er eerder speelde en welke kleine dingen misschien al langer terugkomen.\n\nIk leg alles naast elkaar en bepaal van daaruit waar we het beste kunnen beginnen met je protocol."},
+    {"question": "Hoe persoonlijk is het protocol echt?", "answer": "Het protocol wordt opgebouwd vanuit jouw paard en jouw intake. Voeding, management, voorgeschiedenis, klachten en eventuele bijzonderheden worden daarin meegenomen. Je krijgt vervolgens een plan voor drie maanden, verdeeld in duidelijke fases. Tijdens het traject kun je vragen stellen en wordt het protocol periodiek bijgewerkt op basis van hoe het gaat."},
+    {"question": "Wat als er tijdens het traject iets verandert of ik denk dat er medisch iets speelt?", "answer": "Geef dat altijd aan in je update of tijdens het vragenmoment. Jij kent je paard het beste en ziet als eerste wanneer er iets verandert. Op basis van wat je beschrijft kan ik aangeven of het verstandig is om eerst verder onderzoek door de dierenarts te laten doen. Eventuele uitslagen kunnen we daarna weer meenemen in het vervolg van je protocol."},
+    {"question": "Wat gebeurt er na die drie maanden?", "answer": "Plus stopt automatisch na afloop van je protocol. Heeft je paard meer tijd nodig om verder te herstellen? Dan kun je binnen 1 week verlengen met 10% korting en pakken we de draad gewoon weer op waar we gebleven waren."}
+  ],
+  "closingTitle": "Jouw paard kan het je niet vertellen. Met Plus weet je het toch.",
+  "confirmationTitle": "EquiApp Plus",
+  "confirmationPlan": "Plus, per 3 maanden",
+  "confirmationProtocol": "Protocol op maat · 3 maanden",
+  "confirmationButton": "Bevestig en start intake",
+  "welcomeTitle": "Welkom bij Plus",
+  "welcomeBody": "Je intake staat klaar. Vul hem in wanneer het jou uitkomt, daarna ga ik aan de slag met het protocol voor jouw paard."
+}

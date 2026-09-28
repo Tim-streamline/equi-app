@@ -22,7 +22,6 @@ class HorseDeletion
             'detached' => [
                 'scans' => ['scan_results', 'Scans'],
                 'bookings' => ['intake_bookings', 'Bookings'],
-                'intakes' => ['intake_responses', 'Intakes'],
                 'chats' => ['chat_sessions', 'Chats'],
                 'exports' => ['data_exports', 'Gegevensexports'],
             ],

@@ -1,37 +1,34 @@
-import { ActivityIndicator, ScrollView, Text, View } from 'react-native';
-import { router } from 'expo-router';
+import { useCallback, useState } from 'react';
+import { ActivityIndicator, Text, View } from 'react-native';
+import { router, useFocusEffect } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Check } from 'lucide-react-native';
+import { getApiBaseUrl } from '@/db/auth';
 import { SubHeader } from '@/components/ui/SubHeader';
-import { useHorseDashboard } from '@/hooks/useHorseDashboard';
+import { Button } from '@/components/ui/Button';
+import { PlusPage } from '@/components/plus/PlusPage';
+import { PlusPageData } from '@/lib/plus-page';
 
 export default function PlusScreen() {
-  const { data, error, loading } = useHorseDashboard();
-  const offer = data?.plusOffer;
-  return (
-    <SafeAreaView className="flex-1 bg-canvas">
-      <SubHeader title="Ontdek Plus" onBack={() => router.back()} />
-      <ScrollView contentContainerStyle={{ padding: 20, paddingBottom: 40 }}>
-        {loading && <ActivityIndicator color="#18BAB0" />}
-        {!!error && <Text className="mb-4 text-[13px] text-ink-70">{error}</Text>}
-        {offer ? (
-          <View className="rounded-[22px] bg-[#127A79] p-6">
-            <Text className="mb-3 text-[11px] uppercase tracking-[2px] text-white/75">Plus</Text>
-            <Text className="font-bold text-[25px] text-white">{offer.name}</Text>
-            {!!offer.description && <Text className="mt-3 text-[15px] leading-[23px] text-white/90">{offer.description}</Text>}
-            <Text className="mt-5 font-bold text-[28px] text-white">{offer.priceLabel}</Text>
-            {!!offer.priceSuffix && <Text className="text-[14px] text-white/75">{offer.priceSuffix}</Text>}
-            <View className="mt-6 gap-4">
-              {offer.benefits.map((benefit, index) => (
-                <View key={`${index}:${benefit}`} className="flex-row items-start gap-3">
-                  <Check size={20} color="#8EE7DD" />
-                  <Text className="flex-1 text-[15px] leading-[21px] text-white">{benefit}</Text>
-                </View>
-              ))}
-            </View>
-          </View>
-        ) : !loading && !error ? <Text className="text-[15px] text-ink-70">De informatie over Plus is nog niet beschikbaar.</Text> : null}
-      </ScrollView>
-    </SafeAreaView>
-  );
+  const [data, setData] = useState<PlusPageData | null>(null);
+  const [error, setError] = useState('');
+  const [retry, setRetry] = useState(0);
+  useFocusEffect(useCallback(() => {
+    const controller = new AbortController();
+    let active = true;
+    const timer = setTimeout(() => controller.abort(), 15000);
+    setError('');
+    void fetch(`${getApiBaseUrl()}/api/plus-page`, { signal: controller.signal, headers: { Accept: 'application/json' } })
+      .then(async response => {
+        if (!response.ok) throw new Error('Plus-informatie is niet beschikbaar.');
+        const page = await response.json() as PlusPageData;
+        if (active) setData(page);
+      }).catch(() => { if (active) setError('De Plus-pagina kon niet worden geladen. Controleer je verbinding en probeer opnieuw.'); })
+      .finally(() => clearTimeout(timer));
+    return () => { active = false; clearTimeout(timer); controller.abort(); };
+  }, [retry]));
+  return <SafeAreaView edges={['top', 'bottom']} className="flex-1 bg-canvas">
+    <View className="w-full self-center" style={{ maxWidth: 560 }}><SubHeader title="Ontdek Plus" onBack={() => router.canGoBack() ? router.back() : router.replace('/(tabs)/(pager)/home')} /></View>
+    {data ? <PlusPage data={data} apiBaseUrl={getApiBaseUrl()} onIntake={() => router.push('/intake')} /> :
+      <View className="flex-1 items-center justify-center gap-4 px-6">{error ? <><Text accessibilityRole="alert" className="text-center text-ink-70">{error}</Text><Button title="Opnieuw proberen" onPress={() => setRetry(value => value + 1)} /></> : <ActivityIndicator accessibilityLabel="Plus-pagina laden" color="#127A79" />}</View>}
+  </SafeAreaView>;
 }

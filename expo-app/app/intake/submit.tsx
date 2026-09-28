@@ -35,7 +35,7 @@ export default function IntakeSubmit() {
     return { section: s, fields, incomplete: empty || fields.length > 0 };
   }).filter((m) => m.incomplete);
 
-  const onSubmit = () => {
+  const onSubmit = async () => {
     if (missingBySection.length > 0) {
       // "Pushmelding": tell the customer exactly which question in which
       // subscreen still needs an answer before the form can be sent.
@@ -52,8 +52,12 @@ export default function IntakeSubmit() {
       );
       return;
     }
-    submit();
-    router.replace('/intake/sent' as any);
+    try {
+      await submit();
+      router.replace('/intake/sent' as any);
+    } catch (error) {
+      Alert.alert('Intake niet verstuurd', error instanceof Error ? error.message : 'Probeer opnieuw.');
+    }
   };
 
   return (

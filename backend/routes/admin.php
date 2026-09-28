@@ -46,6 +46,9 @@ Route::middleware('auth:admin')->group(function () {
 
     Route::get('/', [DashboardController::class, 'index'])->name('dashboard');
 
+    Route::patch('bookings/{booking}/review', [IntakeBookingController::class, 'review'])->name('bookings.review');
+    Route::get('intake-media/{attachment}', [App\Http\Controllers\IntakeAttachmentController::class, 'admin'])->whereUuid('attachment')->name('intake-media');
+
     // ---- Support console: users, horses ---------------------------------
     Route::controller(UserController::class)->prefix('users')->as('users.')->group(function () {
         Route::get('/', 'index')->name('index');
@@ -79,6 +82,8 @@ Route::middleware('auth:admin')->group(function () {
 
     // ---- Content / CMS ---------------------------------------------------
     Route::middleware('admin.role:content_editor')->group(function () {
+        Route::get('plus-page', [\App\Http\Controllers\Admin\PlusPageController::class, 'index'])->name('plus-page.index');
+        Route::post('plus-page', [\App\Http\Controllers\Admin\PlusPageController::class, 'update'])->name('plus-page.update');
         // Media upload/delete must be declared before the library resource so
         // `library/media` isn't shadowed by the `library/{library}` binding.
         Route::post('library/media/chunks', [ChunkedMediaUploadController::class, 'store'])->name('library.media.chunks.store');
@@ -88,6 +93,7 @@ Route::middleware('auth:admin')->group(function () {
         Route::delete('library/media/chunks', [ChunkedMediaUploadController::class, 'destroy'])->name('library.media.chunks.destroy');
         Route::post('library/media', [MediaAssetController::class, 'store'])->name('library.media.store');
         Route::delete('library/media/{medium}', [MediaAssetController::class, 'destroy'])->name('library.media.destroy');
+        Route::get('library/attachments/{attachment}', [App\Http\Controllers\LibraryAttachmentController::class, 'admin'])->whereUuid('attachment')->name('library.attachments.show');
         Route::resource('library', LibraryItemController::class)->except('show');
         Route::resource('library-categories', LibraryCategoryController::class)->only(['index', 'store', 'update', 'destroy']);
         Route::resource('seasonal-tips', SeasonalTipController::class)->only(['index', 'store', 'update', 'destroy']);
@@ -134,6 +140,11 @@ Route::middleware('auth:admin')->group(function () {
 
     // ---- Billing ---------------------------------------------------------
     Route::middleware('admin.role:billing')->group(function () {
+        Route::get('credits', [\App\Http\Controllers\Admin\CreditController::class, 'index'])->name('credits.index');
+        Route::put('credits/settings', [\App\Http\Controllers\Admin\CreditController::class, 'settings'])->name('credits.settings');
+        Route::post('credits/bundles', [\App\Http\Controllers\Admin\CreditController::class, 'bundle'])->name('credits.bundles.store');
+        Route::put('credits/bundles/{bundle}', [\App\Http\Controllers\Admin\CreditController::class, 'bundle'])->whereUuid('bundle')->name('credits.bundles.update');
+
         Route::resource('plans', PlanController::class)->except(['create', 'show']);
         Route::controller(SubscriptionController::class)->prefix('subscriptions')->as('subscriptions.')->group(function () {
             Route::get('/', 'index')->name('index');

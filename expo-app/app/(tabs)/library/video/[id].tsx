@@ -1,4 +1,4 @@
-import { View, Text, ScrollView } from 'react-native';
+import { View, ScrollView } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LibraryBookmarkButton } from '@/components/library/LibraryBookmarkButton';
@@ -27,28 +27,7 @@ export default function VideoScreen() {
           }
         />
         <ScrollView contentContainerStyle={{ paddingBottom: padBottom }}>
-          <View className="px-5 pt-5">
-            <Text className="font-bold text-ink mb-2" style={{ fontSize: 24, lineHeight: 30 }}>
-              {item.title as string}
-            </Text>
-            <View className="flex-row items-center gap-2">
-              {therapist.name && (
-                <>
-                  <Text className="text-[12px] text-ink-50">Door {therapist.name as string}</Text>
-                  <Text className="text-[12px] text-ink-50">·</Text>
-                </>
-              )}
-              <Text className="text-[12px] text-ink-50">{item.durationLabel as string}</Text>
-              {item.viewsLabel ? (
-                <>
-                  <Text className="text-[12px] text-ink-50">·</Text>
-                  <Text className="text-[12px] text-ink-50">{item.viewsLabel as string}</Text>
-                </>
-              ) : null}
-            </View>
-          </View>
-
-          <LibraryContent key={id} itemId={id ?? ''} />
+          <LibraryContent key={id} itemId={id ?? ''} preview={{ ...item, id: id ?? '', authorName: therapist.name as string | undefined }} />
           <RelatedLibraryItems itemId={id ?? ''} />
         </ScrollView>
       </SafeAreaView>

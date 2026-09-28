@@ -23,3 +23,10 @@ test('a locked cached dashboard leaves the notification pending for delayed fres
   assert.equal(accessibleNotificationPhase(fresh, 'old-protocol', 'phase'), null);
   assert.equal(accessibleNotificationPhase(fresh, 'protocol', 'deleted-phase'), null);
 });
+
+test('credit reminder opens credits only for its intended signed-in account', async () => {
+  const { creditNotificationRoute } = await import('../lib/protocol-notifications.ts');
+  assert.deepEqual(creditNotificationRoute({ type: 'credit_expiry', userId: 'owner' }, 'owner'), { pathname: '/(tabs)/account/credits' });
+  assert.equal(creditNotificationRoute({ type: 'credit_expiry', userId: 'other' }, 'owner'), null);
+  for (const data of [null, {}, 'credit_expiry', { type: 'other', userId: 'owner' }]) assert.equal(creditNotificationRoute(data, 'owner'), null);
+});

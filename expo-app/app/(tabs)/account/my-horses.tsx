@@ -26,7 +26,7 @@ export default function MyHorsesScreen() {
           title="Mijn paarden"
           onBack={() => router.back()}
           right={
-            <IconButton>
+            <IconButton onPress={() => router.push('/onboarding/add-horse')}>
               <Plus size={20} color="#1B2A2A" />
             </IconButton>
           }
@@ -60,7 +60,7 @@ export default function MyHorsesScreen() {
             </View>
           ))}
 
-          <Bigchip title="Voeg paard toe" dashed icon={<Plus size={20} color="#0D5C5B" />} />
+          <Bigchip title="Voeg paard toe" onPress={() => router.push('/onboarding/add-horse')} dashed icon={<Plus size={20} color="#0D5C5B" />} />
 
           {shares.length > 0 && (
             <View>

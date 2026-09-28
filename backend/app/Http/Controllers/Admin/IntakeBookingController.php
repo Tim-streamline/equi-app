@@ -36,11 +36,32 @@ class IntakeBookingController extends Controller
         ]);
     }
 
-    public function show(IntakeBooking $booking): Response
+    public function show(Request $request, IntakeBooking $booking): Response
     {
         $booking->load('user:id,name,email', 'horse:id,name,breed', 'therapist:id,name,title');
 
-        return Inertia::render('Bookings/Show', ['booking' => $booking]);
+        return Inertia::render('Bookings/Show', ['booking' => $booking, 'printMode' => $request->boolean('print'), 'review' => app(\App\Support\IntakeReview::class)->forBooking($booking)]);
+    }
+
+    public function review(Request $request, IntakeBooking $booking): \Illuminate\Http\JsonResponse
+    {
+        $data = $request->validate([
+            'accepted_triggers' => ['sometimes', 'array', 'max:1000'],
+            'accepted_triggers.*' => ['string', 'distinct', 'max:150'],
+            'notes' => ['sometimes', 'nullable', 'string', 'max:50000'],
+        ]);
+        if (array_key_exists('accepted_triggers', $data)) {
+            $valid = array_column(app(\App\Support\IntakeReview::class)->forBooking($booking)['triggers'], 'id');
+            abort_if(array_diff($data['accepted_triggers'], $valid), 422, 'Een protocol-trigger is niet meer van toepassing. Vernieuw de pagina.');
+            $booking->accepted_triggers = $data['accepted_triggers'];
+        }
+        if (array_key_exists('notes', $data)) {
+            $booking->review_notes = $data['notes'];
+        }
+        $booking->review_updated_at = now();
+        $booking->save();
+
+        return response()->json(['updated_at' => $booking->review_updated_at->toISOString()]);
     }
 
     public function destroy(Request $request, IntakeBooking $booking): RedirectResponse

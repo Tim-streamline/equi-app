@@ -13,6 +13,7 @@ use App\Support\LibraryVideoDuration;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
@@ -31,6 +32,7 @@ class LibraryItemController extends Controller
             ->when($request->string('format')->toString(), fn ($query, $f) => $query->where('format', $f))
             ->when($request->string('gate')->toString(), function ($query, $g) {
                 match ($g) {
+                    'credits' => $query->where('is_plus', false)->where('credit_cost', '>', 0),
                     'plus' => $query->where('is_plus', true),
                     'featured' => $query->where('is_featured', true),
                     'draft' => $query->whereNull('published_at'),
@@ -47,6 +49,7 @@ class LibraryItemController extends Controller
                 'hero_image_url' => $i->hero_image_url,
                 'format' => $i->format,
                 'author' => $i->author?->name,
+                'credit_cost' => $i->credit_cost,
                 'is_plus' => $i->is_plus,
                 'is_featured' => $i->is_featured,
                 'published' => (bool) $i->published_at,
@@ -60,7 +63,7 @@ class LibraryItemController extends Controller
             'counts' => [
                 'total' => LibraryItem::count(),
                 'drafts' => LibraryItem::whereNull('published_at')->count(),
-                'plus' => LibraryItem::where('is_plus', true)->count(),
+                'credits' => LibraryItem::where('is_plus', false)->where('credit_cost', '>', 0)->count(),
             ],
         ]);
     }
@@ -68,7 +71,7 @@ class LibraryItemController extends Controller
     public function edit(?LibraryItem $library = null): Response
     {
         return Inertia::render('Library/Edit', [
-            'item' => $library?->load('categories:id', 'media'),
+            'item' => $library?->load('categories:id', 'media', 'attachments'),
             'videoDurationMinutes' => $library ? LibraryVideoDuration::minutes($library->duration_label, $library->duration_sec) : null,
             'automaticThumbnailUrl' => $library ? app(LibraryThumbnail::class)->sourceAsset($library)?->thumbnail_url : null,
             'videoPosters' => $library ? app(LibraryThumbnail::class)->videoPosters($library) : (object) [],
@@ -95,12 +98,7 @@ class LibraryItemController extends Controller
     {
         $data = $this->validateData($request);
         $data['slug'] ??= Str::slug($data['title']).'-'.Str::lower(Str::random(4));
-        DB::transaction(function () use ($data, $request) {
-            $item = LibraryItem::create($data);
-            $this->syncRelations($item, $request);
-            app(LibraryThumbnail::class)->resolve($item);
-            AuditLogger::created($item);
-        });
+        $this->persist(new LibraryItem, $data, $request);
 
         return redirect()->route('admin.library.index')->with('success', 'Library item created.');
     }
@@ -108,23 +106,67 @@ class LibraryItemController extends Controller
     public function update(Request $request, LibraryItem $library): RedirectResponse
     {
         $data = $this->validateData($request, $library->id);
-        $before = $library->only(array_keys($data));
-        DB::transaction(function () use ($library, $data, $request, $before) {
-            $library->update($data);
-            $this->syncRelations($library, $request);
-            app(LibraryThumbnail::class)->resolve($library);
-            AuditLogger::updated($library, $before);
-        });
+        $this->persist($library, $data, $request);
 
         return redirect()->route('admin.library.index')->with('success', 'Library item updated.');
     }
 
     public function destroy(LibraryItem $library): RedirectResponse
     {
-        AuditLogger::deleted($library);
-        $library->delete();
+        $paths = $library->attachments()->pluck('path')->all();
+        DB::transaction(function () use ($library) {
+            AuditLogger::deleted($library);
+            $library->delete();
+        });
+        Storage::disk('local')->delete($paths);
 
         return back()->with('success', 'Library item deleted.');
+    }
+
+    private function persist(LibraryItem $item, array $data, Request $request): void
+    {
+        $attachments = $data['attachments'] ?? null;
+        unset($data['attachments']);
+        $createdPaths = [];
+        $removedPaths = [];
+        try {
+            DB::transaction(function () use ($item, $data, $request, $attachments, &$createdPaths, &$removedPaths) {
+                $new = ! $item->exists;
+                if (! $new) $item = LibraryItem::whereKey($item->id)->lockForUpdate()->firstOrFail();
+                $before = $item->only(array_keys($data));
+                $item->fill($data)->save();
+                $this->syncRelations($item, $request);
+                if ($attachments !== null) {
+                    $existing = $item->attachments()->get()->keyBy('id');
+                    $kept = [];
+                    foreach ($attachments as $order => $entry) {
+                        $attachment = ! empty($entry['id']) ? $existing->get($entry['id']) : $item->attachments()->make();
+                        abort_unless($attachment, 422, 'Deze bijlage is niet meer beschikbaar. Herlaad het item.');
+                        if ($file = $entry['file'] ?? null) {
+                            $path = $file->store('library-attachments/'.$item->id, 'local');
+                            if (! $path) throw new \RuntimeException('PDF opslaan is niet gelukt.');
+                            $createdPaths[] = $path;
+                            if ($attachment->exists) $removedPaths[] = $attachment->path;
+                            $attachment->fill(['path' => $path, 'name' => mb_substr(basename($file->getClientOriginalName()), 0, 255), 'size_bytes' => $file->getSize()]);
+                        }
+                        $attachment->fill(['title' => $entry['title'], 'order' => $order])->save();
+                        $kept[] = $attachment->id;
+                    }
+                    foreach ($existing as $attachment) {
+                        if (! in_array($attachment->id, $kept, true)) {
+                            $removedPaths[] = $attachment->path;
+                            $attachment->delete();
+                        }
+                    }
+                }
+                app(LibraryThumbnail::class)->resolve($item);
+                $new ? AuditLogger::created($item) : AuditLogger::updated($item, $before);
+            });
+        } catch (\Throwable $error) {
+            Storage::disk('local')->delete($createdPaths);
+            throw $error;
+        }
+        Storage::disk('local')->delete($removedPaths);
     }
 
     private function syncRelations(LibraryItem $item, Request $request): void
@@ -139,7 +181,16 @@ class LibraryItemController extends Controller
 
     private function validateData(Request $request, ?string $id = null): array
     {
+        // Multipart forms omit empty arrays; an explicit marker allows removing all PDFs.
+        if ($request->boolean('attachments_present') && ! $request->has('attachments')) {
+            $request->merge(['attachments' => []]);
+        }
         $validated = $request->validate([
+            'attachments' => ['sometimes', 'array', 'max:20'],
+            'attachments.*' => ['array:id,title,file'],
+            'attachments.*.id' => ['nullable', 'uuid', 'distinct', Rule::exists('library_attachments', 'id')->where('library_item_id', $id ?? '00000000-0000-0000-0000-000000000000')],
+            'attachments.*.title' => ['required', 'string', 'max:255'],
+            'attachments.*.file' => ['required_without:attachments.*.id', 'nullable', 'file', 'mimes:pdf', 'max:20480'],
             'title' => ['required', 'string', 'max:255'],
             'featured_suggestion_ids' => ['sometimes', 'array', 'max:4'],
             'featured_suggestion_ids.*' => ['uuid', 'distinct', Rule::exists('library_items', 'id'), Rule::notIn(array_filter([$id]))],
@@ -191,6 +242,9 @@ class LibraryItemController extends Controller
             $validated['thumbnail_mode'] = 'manual';
         }
 
+        if ($validated['is_plus'] ?? ($id ? LibraryItem::find($id)?->is_plus : false)) {
+            $validated['credit_cost'] = 0;
+        }
         return $validated;
     }
 }

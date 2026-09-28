@@ -61,10 +61,13 @@ class LibraryController extends Controller
         return response()->json([
             'item' => $discovery->summary($library), 'access' => $access, 'canRead' => $canRead,
             'body' => $canRead ? $library->body : null,
+            'attachments' => $canRead ? $library->attachments->map(fn ($file) => [
+                'id' => $file->id, 'title' => $file->title, 'name' => $file->name,
+            ]) : [],
             'chapters' => $canRead ? $library->chapters->map(fn ($chapter) => [
                 'id' => $chapter->id, 'title' => $chapter->title, 'startLabel' => $chapter->start_label,
             ]) : [],
-        ]);
+        ])->header('Cache-Control', 'private, no-store');
     }
 
     public function unlock(Request $request, LibraryItem $library, LibraryDiscovery $discovery)
@@ -80,12 +83,10 @@ class LibraryController extends Controller
             if ($discovery->canRead($item, $access)) {
                 return;
             }
-            abort_if($item->is_plus, 403, 'Dit item is beschikbaar met Plus.');
+            abort_if($item->is_plus, 403, 'Dit item is alleen beschikbaar met actief Plus.');
             $cost = (int) $item->credit_cost;
             abort_if($request->integer('credits') !== $cost, 409, 'Het aantal benodigde credits is gewijzigd. Open het item opnieuw.');
-            $balance = DB::table('library_credit_balances')->where('user_id', $user->id)->lockForUpdate()->first();
-            abort_unless($balance && $balance->balance >= $cost, 422, 'Je hebt onvoldoende credits voor dit item.');
-            DB::table('library_credit_balances')->where('user_id', $user->id)->decrement('balance', $cost, ['updated_at' => now()]);
+            app(\App\Support\CreditLedger::class)->spend($user, $cost, $item->id);
             DB::table('library_unlocks')->insert(['user_id' => $user->id, 'item_id' => $item->id, 'created_at' => now(), 'updated_at' => now()]);
         });
 

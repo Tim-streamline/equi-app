@@ -30,6 +30,8 @@ import {
   clearCredentials,
   loadCredentials,
   login as loginRequest,
+  register as registerRequest,
+  type RegistrationInput,
   saveCredentials,
   type LoginResponse,
 } from './auth';
@@ -58,6 +60,7 @@ type DbContextValue = {
   selectedHorseId: string | null;
   selectHorse: (id: string) => void;
   login: (email: string, password: string) => Promise<void>;
+  register: (input: RegistrationInput) => Promise<void>;
   logout: () => Promise<void>;
 };
 
@@ -147,6 +150,16 @@ export function DbProvider({ children }: { children: ReactNode }) {
     [powersync, connectToBackend],
   );
 
+  const register = useCallback((input: RegistrationInput) => accountSession.transition(async () => {
+    if (!powersync) throw new Error('Database not ready');
+    const res = await registerRequest(input);
+    await saveCredentials({ email: res.user.email, password: input.password, userId: String(res.user.id), endpoint: res.endpoint });
+    setCurrentUserId(String(res.user.id));
+    selectHorse(null);
+    setIsLoggedIn(true);
+    await connectToBackend(powersync);
+  }), [powersync, connectToBackend]);
+
   const logout = useCallback(() => accountSession.transition(async () => {
     if (!powersync) return;
     setIsLoggedIn(false);
@@ -180,9 +193,10 @@ export function DbProvider({ children }: { children: ReactNode }) {
       selectedHorseId,
       selectHorse,
       login,
+      register,
       logout,
     };
-  }, [powersync, isLoggedIn, syncStatus, currentUserId, selectedHorseId, login, logout]);
+  }, [powersync, isLoggedIn, syncStatus, currentUserId, selectedHorseId, login, register, logout]);
 
   if (!powersync || !value) {
     return (

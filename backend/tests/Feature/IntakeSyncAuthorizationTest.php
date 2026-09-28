@@ -2,7 +2,7 @@
 
 namespace Tests\Feature;
 
-use App\Models\IntakeResponse;
+use App\Models\IntakeBooking;
 use App\Models\User;
 use Firebase\JWT\JWT;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -50,9 +50,9 @@ class IntakeSyncAuthorizationTest extends TestCase
         $this->postSyncAs($user, [
             [
                 'op' => 'PUT',
-                'type' => 'intake_responses',
+                'type' => 'intake_bookings',
                 'id' => $responseId,
-                'data' => ['user_id' => $user->id, 'status' => 'draft'],
+                'data' => ['user_id' => $user->id, 'intake_status' => 'draft'],
             ],
             [
                 'op' => 'PUT',
@@ -67,7 +67,7 @@ class IntakeSyncAuthorizationTest extends TestCase
             ],
         ])->assertOk();
 
-        $this->assertDatabaseHas('intake_responses', ['id' => $responseId, 'user_id' => $user->id]);
+        $this->assertDatabaseHas('intake_bookings', ['id' => $responseId, 'user_id' => $user->id]);
         $this->assertDatabaseHas('intake_answers', ['id' => $answerId, 'field_id' => 'naam']);
     }
 
@@ -78,18 +78,18 @@ class IntakeSyncAuthorizationTest extends TestCase
 
         $this->postSyncAs($attacker, [[
             'op' => 'PUT',
-            'type' => 'intake_responses',
+            'type' => 'intake_bookings',
             'id' => (string) Str::uuid(),
-            'data' => ['user_id' => $victim->id, 'status' => 'draft'],
+            'data' => ['user_id' => $victim->id, 'intake_status' => 'draft'],
         ]])->assertForbidden();
 
-        $this->assertDatabaseMissing('intake_responses', ['user_id' => $victim->id]);
+        $this->assertDatabaseMissing('intake_bookings', ['user_id' => $victim->id]);
     }
 
     public function test_agriculture_answers_survive_authenticated_mobile_upload_and_reload(): void
     {
         $user = User::factory()->create();
-        $response = IntakeResponse::query()->create(['user_id' => $user->id, 'status' => 'draft']);
+        $response = IntakeBooking::query()->create(['user_id' => $user->id, 'intake_status' => 'draft']);
         $answers = [
             'landbouw-nabij' => 'Ja',
             'landbouw-afstand' => 'Minder dan 50 meter',
@@ -125,9 +125,9 @@ class IntakeSyncAuthorizationTest extends TestCase
     {
         $owner = User::factory()->create();
         $attacker = User::factory()->create();
-        $response = IntakeResponse::query()->create([
+        $response = IntakeBooking::query()->create([
             'user_id' => $owner->id,
-            'status' => 'draft',
+            'intake_status' => 'draft',
         ]);
 
         $this->postSyncAs($attacker, [[
@@ -143,6 +143,25 @@ class IntakeSyncAuthorizationTest extends TestCase
         ]])->assertForbidden();
 
         $this->assertDatabaseMissing('intake_answers', ['response_id' => $response->id]);
+    }
+
+    public function test_existing_answer_cannot_be_reassigned_to_steal_it(): void
+    {
+        $owner = User::factory()->create();
+        $attacker = User::factory()->create();
+        $victimBooking = IntakeBooking::create(['user_id' => $owner->id]);
+        $ownBooking = IntakeBooking::create(['user_id' => $attacker->id]);
+        $answer = $victimBooking->answers()->create(['section_id' => 'paard', 'field_id' => 'naam', 'value' => '"Nova"']);
+        $this->postSyncAs($attacker, [['op' => 'PATCH', 'type' => 'intake_answers', 'id' => $answer->id,
+            'data' => ['response_id' => $ownBooking->id, 'value' => '"Stolen"']]])->assertForbidden();
+        $this->assertSame($victimBooking->id, $answer->fresh()->response_id);
+    }
+
+    public function test_old_client_intake_writes_require_an_update_instead_of_being_silently_lost(): void
+    {
+        $user = User::factory()->create();
+        $this->postSyncAs($user, [['op' => 'PUT', 'type' => 'intake_responses', 'id' => (string) Str::uuid(),
+            'data' => ['user_id' => $user->id, 'status' => 'draft']]])->assertStatus(409);
     }
 
     private function postSyncAs(User $user, array $operations)

@@ -2,6 +2,7 @@
     import AdminLayout from '../../Layouts/AdminLayout.svelte';
     import PageHeader from '$lib/components/PageHeader.svelte';
     import Field from '$lib/components/Field.svelte';
+    import LibraryAttachmentsEditor from '$lib/components/LibraryAttachmentsEditor.svelte';
     import MediaUploader from '$lib/components/MediaUploader.svelte';
     import ThumbnailUploader from '$lib/components/ThumbnailUploader.svelte';
     import MarkdownEditor from '$lib/components/MarkdownEditor.svelte';
@@ -74,6 +75,8 @@
         published_at: isNew ? publishDate : (item.published_at ? item.published_at.slice(0, 10) : ''),
         credit_cost: isNew ? 1 : (item.credit_cost ?? 0),
         is_plus: item?.is_plus ?? false,
+        attachments_present: true,
+        attachments: (item?.attachments ?? []).map(file => ({ id: file.id, title: file.title, name: file.name, file: null })),
         is_featured: item?.is_featured ?? false,
         order: item?.order ?? 0,
         category_ids: item?.categories?.map((c) => c.id) ?? [],
@@ -86,9 +89,11 @@
     function submit(e) {
         e.preventDefault();
         if (thumbnailBusy || mediaBusy || $form.processing) return;
-        $form.transform((data) => ({ ...data, duration_minutes: data.duration_minutes ?? null }));
-        if (isNew) $form.post('/admin/library');
-        else $form.put(`/admin/library/${item.id}`);
+        $form.transform((data) => ({ ...data, _method: isNew ? 'post' : 'put', duration_minutes: data.duration_minutes ?? null,
+            credit_cost: data.is_plus ? 0 : data.credit_cost,
+            attachments: data.attachments.map(({ id, title, file }) => ({ id, title, file })),
+        }));
+        $form.post(isNew ? '/admin/library' : `/admin/library/${item.id}`, { forceFormData: true });
     }
 </script>
 
@@ -119,13 +124,22 @@
                     </Field>
                 </CardContent>
             </Card>
+            <Card>
+                <CardHeader><CardTitle>Bijlagen</CardTitle></CardHeader>
+                <CardContent><LibraryAttachmentsEditor bind:attachments={$form.attachments} errors={$form.errors} /></CardContent>
+            </Card>
         </div>
 
         <div class="space-y-4">
             <Card>
                 <CardHeader><CardTitle>Publishing</CardTitle></CardHeader>
                 <CardContent class="space-y-4">
-                    <Field label="Credits (0 = gratis)" error={$form.errors.credit_cost}><Input type="number" min="0" bind:value={$form.credit_cost} /></Field>
+                    <label class="flex items-center gap-2 text-sm"><input type="checkbox" bind:checked={$form.is_plus} /> Plus only</label>
+                    {#if $form.is_plus}
+                        <p class="text-sm text-muted-foreground">Alleen voor actief Plus. Geen credits nodig. Eerder met credits ontgrendelde items blijven toegankelijk.</p>
+                    {:else}
+                        <Field label="Credits (0 = gratis)" error={$form.errors.credit_cost}><Input type="number" min="0" bind:value={$form.credit_cost} /></Field>
+                    {/if}
                     <Field label="Publish date" hint="Blank = draft" error={$form.errors.published_at}><Input type="date" bind:value={$form.published_at} /></Field>
                     <Field label="Author" error={$form.errors.author_therapist_id}>
                         <Select bind:value={$form.author_therapist_id}
@@ -145,7 +159,6 @@
                     {/if}
                     <Field label="Order"><Input type="number" bind:value={$form.order} /></Field>
                     <label class="flex items-center gap-2 text-sm"><input type="checkbox" bind:checked={$form.is_featured} class="size-4 rounded border-input" /> Featured</label>
-                    <label class="flex items-center gap-2 text-sm"><input type="checkbox" bind:checked={$form.is_plus} class="size-4 rounded border-input" /> Plus only</label>
                 </CardContent>
             </Card>
 
@@ -172,7 +185,7 @@
             </Card>
 
             <Card>
-                <CardHeader><CardTitle>Uitgelichte suggesties</CardTitle><p class="text-xs text-muted-foreground">Kies maximaal 4 items. De overige plekken bij Verder kijken worden automatisch aangevuld.</p></CardHeader>
+                <CardHeader><CardTitle>Uitgelichte suggesties</CardTitle><p class="text-xs text-muted-foreground">Kies maximaal 4 items. De overige plekken bij Gerelateerde items worden automatisch aangevuld.</p></CardHeader>
                 <CardContent class="space-y-3">
                     {#each $form.featured_suggestion_ids as id, index (id)}
                         <div class="flex items-center gap-1 text-sm">

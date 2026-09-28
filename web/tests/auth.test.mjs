@@ -52,3 +52,26 @@ test('failed CSRF fetch never submits credentials and failed logout remains retr
   await assert.rejects(logout(), /Uitloggen/);
   assert.equal((await getSession()).user.id, 'first');
 });
+
+test('registration uses CSRF and creates a renewable browser session', async () => {
+  const { register } = await import('../db/auth.ts');
+  const requests = [];
+  globalThis.fetch = async (url, options) => {
+    requests.push({ url, options });
+    return response(url.endsWith('/csrf') ? { token: 'registration-csrf' } : session('new-user'), url.endsWith('/register') ? 201 : 200);
+  };
+  const input = { name: 'New Owner', email: 'new@example.test', password: 'test-password', password_confirmation: 'test-password' };
+  await register(input);
+  assert.equal((await getSession()).user.id, 'new-user');
+  assert.equal(requests[1].url, '/web-session/register');
+  assert.equal(requests[1].options.headers['X-CSRF-TOKEN'], 'registration-csrf');
+  assert.deepEqual(JSON.parse(requests[1].options.body), input);
+  await getSession(undefined, true);
+  assert.equal(requests.at(-1).options.body, '{}');
+});
+
+test('registration surfaces validation failures without creating a session', async () => {
+  const { register } = await import('../db/auth.ts');
+  globalThis.fetch = async url => response(url.endsWith('/csrf') ? { token: 'csrf' } : { errors: { email: ['Dit e-mailadres is al in gebruik.'] } }, url.endsWith('/csrf') ? 200 : 422);
+  await assert.rejects(register({ name: 'Test', email: 'used@example.test', password: 'password', password_confirmation: 'password' }), /al in gebruik/);
+});

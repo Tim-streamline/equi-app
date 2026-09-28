@@ -44,7 +44,7 @@
                 <TableBody>
                     {#each bookings.data as b (b.id)}
                         <TableRow>
-                            <TableCell class="whitespace-nowrap"><Link href={`/admin/bookings/${b.id}`} class="font-medium hover:text-primary hover:underline">{formatDateTime(b.scheduled_at)}</Link></TableCell>
+                            <TableCell class="whitespace-nowrap"><Link href={`/admin/bookings/${b.id}`} class="font-medium hover:text-primary hover:underline">{b.scheduled_at ? formatDateTime(b.scheduled_at) : 'Nog niet ingepland'}</Link></TableCell>
                             <TableCell>{b.user?.name}</TableCell>
                             <TableCell class="text-muted-foreground">{b.horse?.name ?? '—'}</TableCell>
                             <TableCell>{b.therapist?.name}</TableCell>

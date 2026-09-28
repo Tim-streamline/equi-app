@@ -19,6 +19,6 @@ class IntakeAnswer extends Model
 
     public function response(): BelongsTo
     {
-        return $this->belongsTo(IntakeResponse::class, 'response_id');
+        return $this->belongsTo(IntakeBooking::class, 'response_id');
     }
 }

@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import test from 'node:test';
 import ts from 'typescript';
+import * as library from '../lib/library.ts';
 
 const sources = await Promise.all([
   '../components/library/MarkdownBody.tsx',
@@ -18,6 +19,7 @@ function renderScreen(format, body, chapters = [], canRead = true) {
   const videoSources = [];
   const jsx = (type, props) => typeof type === 'function' ? type(props) : { type, props };
   const modules = {
+    '@/components/credits/TemporaryCreditButton': { TemporaryCreditButton: 'TemporaryCreditButton' },
     'react/jsx-runtime': { jsx, jsxs: jsx, Fragment: 'Fragment' },
     react: { useMemo: (fn) => fn(), useRef: (value) => ({ current: value }), useState: (value) => [value, () => {}] },
     'react-native': Object.fromEntries(['View', 'Text', 'ScrollView', 'Image', 'Pressable'].map((name) => [name, name])),
@@ -29,6 +31,10 @@ function renderScreen(format, body, chapters = [], canRead = true) {
     'expo-router': { router: { back: () => {} }, useLocalSearchParams: () => ({ id: 'video-item' }) },
     'react-native-safe-area-context': { SafeAreaView: 'SafeAreaView' },
     'lucide-react-native': { Bookmark: 'Bookmark', ExternalLink: 'ExternalLink', Headphones: 'Headphones' },
+    '@/lib/library': library,
+    './LibraryAttachments': { LibraryAttachments: 'LibraryAttachments' },
+    './LibraryThumbnail': { LibraryThumbnail: 'LibraryThumbnail' },
+    '@/components/ui/Button': { Button: 'Button' },
     '@/hooks/useLibraryResource': { useLibraryResource: () => ({ data: { canRead, body: canRead ? body : null, chapters: canRead ? chapters : [], item: { id: 'video-item', creditCost: 1 }, access: { hasPlus: false, unlockedIds: [], credits: 0 } } }) },
     '@/components/library/LibraryBookmarkButton': { LibraryBookmarkButton: 'LibraryBookmarkButton' },
     '@/components/library/RelatedLibraryItems': { RelatedLibraryItems: 'RelatedLibraryItems' },
@@ -104,6 +110,6 @@ for (const format of ['video', 'article']) {
     assert.deepEqual(videoSources, []);
     assert.equal(flatten(tree).includes('Before the video.'), false);
     assert.equal(flatten(tree).includes('Private chapter'), false);
-    assert.ok(flatten(tree).includes('Ontgrendelen'));
+    assert.ok(flatten(tree).some(node => node?.type === 'Button' && node.props.title === 'Ontgrendel voor 1 credit' && node.props.disabled));
   });
 }

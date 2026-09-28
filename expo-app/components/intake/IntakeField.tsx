@@ -8,6 +8,7 @@ import { Check, Camera, Plus, FileText, Trash2 } from 'lucide-react-native';
 import { Field, FieldValue, RepeaterSub } from '@/lib/intake/schema';
 import { isFieldRequired, isNoneOption } from '@/lib/intake/logic';
 import { useIntake } from '@/lib/intake/store';
+import { AttachmentField } from './AttachmentField';
 import { FieldLabel } from './FieldLabel';
 
 /** Bundled example strip shown under the "hoefgerelateerd" upload header. */
@@ -75,7 +76,7 @@ export function IntakeField({ field, sectionId, n, noneOptions }: Props) {
         required={isFieldRequired(field)}
         link={field.link}
       />
-      {renderInput(field, value, set, noneOptions)}
+      {renderInput(field, value, set, noneOptions, sectionId)}
     </View>
   );
 }
@@ -85,6 +86,7 @@ function renderInput(
   value: FieldValue,
   set: (v: FieldValue) => void,
   noneOptions: readonly string[],
+  sectionId: string,
 ) {
   switch (field.type) {
     case 'text':
@@ -151,19 +153,8 @@ function renderInput(
         />
       );
     case 'photo':
-      return (
-        <PhotoField
-          value={asArray(value)}
-          onChange={set}
-        />
-      );
     case 'file':
-      return (
-        <FileField
-          value={asArray(value)}
-          onChange={set}
-        />
-      );
+      return <AttachmentField value={asArray(value)} onChange={set} section={sectionId} field={field.id} photo={field.type === 'photo'} />;
     case 'repeater':
       return (
         <RepeaterField
@@ -435,96 +426,6 @@ function MultiField({
 }
 
 /* ---------------------------------------------------------------- PHOTO */
-
-function PhotoField({
-  value,
-  onChange,
-}: {
-  value: string[];
-  onChange: (v: string[]) => void;
-}) {
-  // Local-only stub: tap = add a placeholder entry so the UI can prove the
-  // wiring works. A future PR can replace this with expo-image-picker and
-  // an actual upload URL.
-  const add = () => onChange([...value, `placeholder-${value.length + 1}`]);
-  const remove = (i: number) => onChange(value.filter((_, idx) => idx !== i));
-  return (
-    <View>
-      {value.length > 0 && (
-        <View className="mb-2 flex-row flex-wrap gap-2">
-          {value.map((p, i) => (
-            <View key={i} className="relative">
-              <View className="h-16 w-16 items-center justify-center rounded-xl bg-mint-100">
-                <Camera size={20} color="#108A82" />
-              </View>
-              <Pressable
-                onPress={() => remove(i)}
-                hitSlop={8}
-                className="absolute -right-1 -top-1 h-5 w-5 items-center justify-center rounded-full bg-ink"
-              >
-                <Text className="font-bold text-[10px] text-white">×</Text>
-              </Pressable>
-            </View>
-          ))}
-        </View>
-      )}
-      <Pressable
-        onPress={add}
-        className="flex-row items-center justify-center gap-2 rounded-xl border border-dashed border-ink-15 bg-white py-4"
-      >
-        <Camera size={18} color="#108A82" />
-        <Text className="font-semi text-[13px] text-mint-700">
-          {value.length === 0 ? 'Foto toevoegen' : 'Nog een foto'}
-        </Text>
-      </Pressable>
-    </View>
-  );
-}
-
-/* ---------------------------------------------------------------- FILE */
-
-function FileField({
-  value,
-  onChange,
-}: {
-  value: string[];
-  onChange: (v: string[]) => void;
-}) {
-  // Same local-only treatment as photos — a placeholder label per "upload".
-  const add = () => onChange([...value, `document-${value.length + 1}.pdf`]);
-  const remove = (i: number) => onChange(value.filter((_, idx) => idx !== i));
-  return (
-    <View>
-      {value.length > 0 && (
-        <View className="mb-2 gap-1.5">
-          {value.map((name, i) => (
-            <View
-              key={i}
-              className="flex-row items-center gap-3 rounded-xl border border-ink-8 bg-white px-3 py-2.5"
-            >
-              <FileText size={18} color="#108A82" />
-              <Text className="flex-1 font-semi text-[13px] text-ink" numberOfLines={1}>
-                {name}
-              </Text>
-              <Pressable onPress={() => remove(i)} hitSlop={8}>
-                <Trash2 size={16} color="rgba(27,42,42,0.5)" />
-              </Pressable>
-            </View>
-          ))}
-        </View>
-      )}
-      <Pressable
-        onPress={add}
-        className="flex-row items-center justify-center gap-2 rounded-xl border border-dashed border-ink-15 bg-white py-3.5"
-      >
-        <Plus size={18} color="#108A82" />
-        <Text className="font-semi text-[13px] text-mint-700">Document toevoegen</Text>
-      </Pressable>
-    </View>
-  );
-}
-
-/* ---------------------------------------------------------------- REPEATER */
 
 function RepeaterField({
   sub,

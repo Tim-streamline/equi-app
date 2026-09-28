@@ -11,6 +11,8 @@ import type {
   PowerSyncCredentials,
 } from '@powersync/react-native';
 
+import { accountSession } from '@/lib/account-session';
+
 import {
   clearCredentials,
   getApiBaseUrl,
@@ -25,6 +27,7 @@ type CachedToken = { token: string; expiresAt: number; userId: string };
 let cachedToken: CachedToken | null = null;
 
 async function mintToken(signal?: AbortSignal): Promise<{ token: string; endpoint: string; expiresIn: number } | null> {
+  const revision = accountSession.revision;
   const creds = await loadCredentials();
   if (signal?.aborted) throw new Error('Request cancelled.');
   console.log('[connector] mintToken: have creds?', !!creds);
@@ -33,6 +36,7 @@ async function mintToken(signal?: AbortSignal): Promise<{ token: string; endpoin
     console.log('[connector] mintToken: calling login at', getApiBaseUrl());
     const res = await loginRequest(creds.email, creds.password, signal);
     if (signal?.aborted) throw new Error('Request cancelled.');
+    if (revision !== accountSession.revision) throw new Error('Je sessie is gewijzigd.');
     console.log('[connector] mintToken: got token, endpoint =', res.endpoint);
     cachedToken = {
       token: res.token,
@@ -43,18 +47,22 @@ async function mintToken(signal?: AbortSignal): Promise<{ token: string; endpoin
   } catch (err) {
     // A timed-out request belongs to the old session: never let a late 401
     // clear credentials that may already have been saved by the next login.
-    if (signal?.aborted) throw err;
+    if (signal?.aborted || revision !== accountSession.revision) throw err;
     console.warn('[connector] login failed', String(err));
-    if (String(err).includes('401')) await clearCredentials();
-    return null;
+    if (String(err).includes('Login failed (401)')) {
+      await clearCredentials();
+      cachedToken = null;
+      return null;
+    }
+    throw new Error('Verbinding niet beschikbaar. Probeer opnieuw.');
   }
 }
 
-export async function getOrMintToken(signal?: AbortSignal): Promise<string | null> {
+export async function getOrMintToken(signal?: AbortSignal, forceRefresh = false): Promise<string | null> {
   const creds = await loadCredentials();
   if (signal?.aborted) throw new Error('Request cancelled.');
   if (!creds) return null;
-  if (cachedToken && cachedToken.userId === creds.userId && cachedToken.expiresAt > Date.now() + 30_000) {
+  if (!forceRefresh && cachedToken && cachedToken.userId === creds.userId && cachedToken.expiresAt > Date.now() + 30_000) {
     return cachedToken.token;
   }
   const minted = await mintToken(signal);

@@ -21,10 +21,15 @@ streams:
             - SELECT * FROM products
             - SELECT * FROM ingredients
 
-            # library/catalog content
-            - SELECT * FROM library_items
-            - SELECT * FROM library_chapters
-            - SELECT * FROM library_article_sections
+            # Preview metadata only. Bodies, chapters and private PDFs are served
+            # through the API after checking permanent unlocks and Plus access.
+            - |
+                SELECT id, slug, format, title, description, hero_image_url,
+                       duration_label, duration_sec, author_therapist_id, views_label,
+                       published_at, credit_cost, is_plus, is_featured, "order",
+                       created_at, updated_at
+                FROM library_items
+                WHERE published_at IS NOT NULL
             - SELECT * FROM library_categories
             - SELECT * FROM library_item_categories
             - SELECT * FROM seasonal_tips
@@ -86,12 +91,11 @@ streams:
                 WHERE session_id IN (
                     SELECT id FROM chat_sessions WHERE user_id = auth.user_id()
                 )
-            - SELECT * FROM intake_bookings WHERE user_id = auth.user_id()
-            - SELECT * FROM intake_responses WHERE user_id = auth.user_id()
+            - SELECT id, user_id, horse_id, therapist_id, scheduled_at, slot_label, duration_minutes, status, notes, intake_status, started_at, submitted_at, created_at, updated_at FROM intake_bookings WHERE user_id = auth.user_id()
             - |
                 SELECT * FROM intake_answers
                 WHERE response_id IN (
-                    SELECT id FROM intake_responses WHERE user_id = auth.user_id()
+                    SELECT id FROM intake_bookings WHERE user_id = auth.user_id()
                 )
 
     horse_private:

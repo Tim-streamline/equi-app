@@ -2,10 +2,15 @@
 
 use App\Http\Controllers\CommunityController;
 use App\Http\Controllers\HorseDashboardController;
+use App\Http\Controllers\IntakeAttachmentController;
+use App\Http\Controllers\LibraryController;
 use App\Http\Controllers\PowerSyncAuthController;
 use App\Http\Controllers\PushTokenController;
+use App\Http\Controllers\RegistrationController;
 use App\Http\Controllers\SyncController;
+use App\Http\Controllers\WebSessionController;
 use App\Http\Middleware\AuthenticatePowerSyncJwt;
+use App\Http\Middleware\AuthenticateWebAppSession;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
@@ -18,6 +23,7 @@ Route::get('/.well-known/jwks.json', [PowerSyncAuthController::class, 'jwks']);
 
 // Token mint endpoint hit by the Expo client from BackendConnector.fetchCredentials().
 // CSRF is disabled globally for `api/*` paths in bootstrap/app.php.
+Route::post('/api/auth/register', [RegistrationController::class, 'store'])->middleware('throttle:5,1');
 Route::post('/api/auth/login', [PowerSyncAuthController::class, 'login']);
 
 // Write-back endpoint hit by BackendConnector.uploadData() — applies a batch
@@ -27,6 +33,8 @@ Route::middleware(AuthenticatePowerSyncJwt::class)
     ->post('/api/sync/upload', [SyncController::class, 'upload']);
 
 Route::middleware(AuthenticatePowerSyncJwt::class)->group(function () {
+    Route::post('/api/intakes/{id}/attachments', [IntakeAttachmentController::class, 'store'])->whereUuid('id')->middleware('throttle:60,1');
+    Route::get('/api/intake-media/{attachment}', [IntakeAttachmentController::class, 'show'])->whereUuid('attachment');
     Route::post('/api/notifications/push-token', [PushTokenController::class, 'store']);
     Route::get('/api/horses/{horse}/dashboard', [HorseDashboardController::class, 'show']);
     Route::match(['get', 'post'], '/api/horses/{horse}/protocol-day', [HorseDashboardController::class, 'day']);
@@ -52,22 +60,38 @@ Route::middleware(AuthenticatePowerSyncJwt::class)->prefix('api/community')->con
     });
 });
 
-Route::middleware(AuthenticatePowerSyncJwt::class)->prefix('api/library')->controller(\App\Http\Controllers\LibraryController::class)->group(function () {
+Route::middleware(AuthenticatePowerSyncJwt::class)->prefix('api/library')->controller(LibraryController::class)->group(function () {
     Route::get('/access', 'access');
     Route::get('/bookmarks', 'bookmarks');
     Route::get('/selections/{selection}', 'selection')->where('selection', '[a-z-]+');
     Route::get('/{library}', 'show')->whereUuid('library');
     Route::post('/{library}/unlock', 'unlock')->whereUuid('library')->middleware('throttle:60,1');
     Route::get('/{library}/related', 'related')->whereUuid('library');
+    Route::post('/{library}/attachments/{attachment}/open', [\App\Http\Controllers\LibraryAttachmentController::class, 'open'])->whereUuid(['library', 'attachment']);
     Route::match(['get', 'put', 'delete'], '/{library}/bookmark', 'bookmark')->whereUuid('library');
 });
 
 // Browser sessions intentionally live outside api/* so Laravel enforces CSRF.
-Route::prefix('web-session')->controller(\App\Http\Controllers\WebSessionController::class)->group(function () {
+Route::prefix('web-session')->controller(WebSessionController::class)->group(function () {
+    Route::post('/register', [RegistrationController::class, 'store'])->name('web-session.register')->middleware('throttle:5,1');
     Route::get('/csrf', 'csrf');
     Route::post('/login', 'login')->middleware('throttle:10,1');
     Route::post('/token', 'token');
     Route::post('/logout', 'logout');
     Route::get('/media/{media}', [CommunityController::class, 'media'])
-        ->whereUuid('media')->middleware(\App\Http\Middleware\AuthenticateWebAppSession::class);
+        ->whereUuid('media')->middleware(AuthenticateWebAppSession::class);
 });
+
+Route::middleware(AuthenticatePowerSyncJwt::class)->prefix('api/library/credits')->controller(\App\Http\Controllers\CreditController::class)->group(function () {
+    Route::get('/', 'index');
+    Route::post('/purchase', 'purchase')->middleware('throttle:15,1');
+    Route::post('/temporary-top-up', 'temporaryTopUp')->middleware('throttle:15,1');
+    Route::get('/orders/{order}', 'order')->whereUuid('order');
+    Route::post('/cancel-basic', 'cancel');
+});
+
+Route::get('/api/library-attachments/{attachment}', [\App\Http\Controllers\LibraryAttachmentController::class, 'show'])
+    ->whereUuid('attachment')->middleware('signed')->name('library.attachment');
+
+Route::get('/api/plus-page', [\App\Http\Controllers\PlusPageController::class, 'show']);
+Route::get('/api/plus-page/images/{kind}', [\App\Http\Controllers\PlusPageController::class, 'image'])->where('kind', 'hero|portrait');

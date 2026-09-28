@@ -112,7 +112,7 @@ export default function SubscriptionScreen() {
           </View>
 
           <View className="pt-5">
-            <Button title="Abonnement opzeggen" variant="ghost" textClassName="text-danger" />
+            <Button title="Basic en credits beheren" variant="ghost" onPress={() => router.push('/(tabs)/account/credits')} />
           </View>
         </ScrollView>
       </SafeAreaView>

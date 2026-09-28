@@ -394,7 +394,7 @@ export function useScreenCopy(screen: string) {
 export function useNextIntakeBooking() {
   const uid = useCurrentUserId();
   const rows = useCamelQuery(
-    `SELECT * FROM intake_bookings WHERE user_id = ? AND status != 'cancelled' LIMIT 1`,
+    `SELECT * FROM intake_bookings WHERE user_id = ? AND status IN ('pending', 'confirmed') AND scheduled_at IS NOT NULL ORDER BY scheduled_at LIMIT 1`,
     [uid],
   );
   return rows[0];
@@ -494,6 +494,7 @@ export function useStoreMutations() {
         return id;
       },
       async upsertHorse(id: string, input: Record<string, any>) {
+        id = id || newId();
         // Callers pass camelCase keys (matching the rest of the UI). Convert
         // to snake_case column names for the SQL.
         const camelToSnake = (k: string) => k.replace(/[A-Z]/g, (c) => `_${c.toLowerCase()}`);
@@ -518,6 +519,7 @@ export function useStoreMutations() {
             [id, ...inputVals],
           );
         }
+        return id;
       },
     }),
     [powersync],

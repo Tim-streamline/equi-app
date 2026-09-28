@@ -5,12 +5,12 @@
 
 import { useState } from 'react';
 import {
-  View, Text, Image, TextInput, ActivityIndicator, KeyboardAvoidingView, Platform, ScrollView,
+  View, Text, Image, TextInput, Pressable, ActivityIndicator, KeyboardAvoidingView, Platform, ScrollView,
 } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
-import { ArrowRight } from 'lucide-react-native';
+import { ArrowRight, Eye, EyeOff } from 'lucide-react-native';
 import { Button } from '@/components/ui/Button';
 import { useDb } from '@/db/provider';
 
@@ -22,6 +22,7 @@ export default function WelcomeScreen() {
   const { login } = useDb();
   const [email, setEmail] = useState(DEFAULT_EMAIL);
   const [password, setPassword] = useState(DEFAULT_PASSWORD);
+  const [passwordVisible, setPasswordVisible] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -100,6 +101,7 @@ export default function WelcomeScreen() {
                   keyboardType="email-address"
                   className="rounded-pill bg-white/10 px-4 py-3 font-sans text-[14px] text-white"
                 />
+                <View className="flex-row items-center rounded-pill bg-white/10">
                 <TextInput
                   value={password}
                   onChangeText={setPassword}
@@ -108,9 +110,13 @@ export default function WelcomeScreen() {
                   autoComplete="current-password"
                   onSubmitEditing={() => { if (!busy) void submit(); }}
                   placeholderTextColor="rgba(255,255,255,0.5)"
-                  secureTextEntry
-                  className="rounded-pill bg-white/10 px-4 py-3 font-sans text-[14px] text-white"
+                  secureTextEntry={!passwordVisible}
+                  className="flex-1 px-4 py-3 font-sans text-[14px] text-white"
                 />
+                <Pressable accessibilityRole="button" accessibilityLabel={passwordVisible ? 'Wachtwoord verbergen' : 'Wachtwoord tonen'} accessibilityState={{ checked: passwordVisible }} onPress={() => setPasswordVisible(value => !value)} style={{ width: 48, height: 48, alignItems: 'center', justifyContent: 'center' }}>
+                  {passwordVisible ? <EyeOff size={20} color="#fff" /> : <Eye size={20} color="#fff" />}
+                </Pressable>
+                </View>
               </View>
               {error ? (
                 <Text className="font-semi text-[12px]" style={{ color: '#FCA5A5' }}>
@@ -127,6 +133,7 @@ export default function WelcomeScreen() {
                 onPress={submit}
                 trailing={busy ? <ActivityIndicator color="#fff" /> : <ArrowRight size={18} color="#fff" />}
               />
+              <Button title="Nieuw hier? Maak een account" variant="text" textClassName="text-white" disabled={busy} onPress={() => router.push('/onboarding/register')} />
             </View>
           </ScrollView>
         </SafeAreaView>

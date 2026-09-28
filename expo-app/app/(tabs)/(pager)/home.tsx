@@ -116,6 +116,11 @@ export default function HomeScreen() {
             </Text>
           </Pressable>
         )}
+        {!horse.id && !loading && <View className="mb-5 rounded-2xl bg-white p-5">
+          <Text className="mb-2 font-semi text-[20px] text-ink">Voeg je paard toe wanneer je wilt</Text>
+          <Text className="mb-4 text-[14px] text-ink-50">Je kunt alvast rondkijken in de bibliotheek en de community.</Text>
+          <Pressable accessibilityRole="button" onPress={() => router.push('/onboarding/add-horse')} className="rounded-xl bg-teal-700 p-4"><Text className="text-center font-semi text-white">Paard toevoegen</Text></Pressable>
+        </View>}
         {loading && <ActivityIndicator color="#18BAB0" />}
         {data && (
           <>

@@ -16,6 +16,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
     'duration_minutes',
     'status',
     'notes',
+    'intake_status', 'started_at', 'submitted_at', 'accepted_triggers', 'review_notes', 'review_updated_at',
 ])]
 class IntakeBooking extends Model
 {
@@ -24,8 +25,15 @@ class IntakeBooking extends Model
     {
         return [
             'scheduled_at' => 'datetime',
+            'started_at' => 'datetime', 'submitted_at' => 'datetime',
+            'accepted_triggers' => 'array', 'review_updated_at' => 'datetime',
             'duration_minutes' => 'integer',
         ];
+    }
+
+    public function answers(): \Illuminate\Database\Eloquent\Relations\HasMany
+    {
+        return $this->hasMany(IntakeAnswer::class, 'response_id');
     }
 
     public function user(): BelongsTo

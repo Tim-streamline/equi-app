@@ -5,7 +5,7 @@ namespace Tests\Feature;
 use App\Http\Middleware\AuthenticatePowerSyncJwt;
 use App\Models\BewegingAdvies;
 use App\Models\Horse;
-use App\Models\IntakeResponse;
+use App\Models\IntakeBooking;
 use App\Models\LibraryItem;
 use App\Models\ManagementAdvies;
 use App\Models\Plan;
@@ -239,7 +239,7 @@ class HorseDashboardTest extends TestCase
     public function test_nutrition_uses_target_not_current_weight_and_horse_intake(): void
     {
         $this->protocol->update(['customer_settings' => ['target_weight_kg' => 400, 'sugar' => '<6%', 'protein' => '7–10%']]);
-        $response = IntakeResponse::create(['user_id' => $this->owner->id, 'horse_id' => $this->horse->id, 'status' => 'submitted', 'submitted_at' => now()]);
+        $response = IntakeBooking::create(['user_id' => $this->owner->id, 'horse_id' => $this->horse->id, 'intake_status' => 'submitted', 'submitted_at' => now()]);
         foreach (['huidige-bijvoeding' => [['merk' => 'Metazoa', 'product' => 'Fit', 'hoeveelheid' => '100 g'], ['merk' => 'Other', 'product' => 'Mix']], 'water-type' => ['Grondwater / bronwater']] as $field => $value) {
             $response->answers()->create(['section_id' => 'voeding', 'field_id' => $field, 'value' => json_encode($value)]);
         }
@@ -367,7 +367,7 @@ class HorseDashboardTest extends TestCase
     {
         $this->protocol->update(['published_at' => null]);
         $item = LibraryItem::create(['slug' => 'hooianalyse', 'title' => 'Hay analysis', 'format' => 'article', 'published_at' => now()->subDay()]);
-        DB::table('library_credit_balances')->insert(['user_id' => $this->owner->id, 'balance' => 9]);
+        app(\App\Support\CreditLedger::class)->grant($this->owner, 9, 'adjustment');
         DB::table('library_unlocks')->insert(['user_id' => $this->owner->id, 'item_id' => $item->id]);
         SeasonalTip::create(['month' => 'augustus', 'month_order' => 8, 'body' => 'Managed seasonal text', 'active' => true, 'cta_item_id' => $item->id]);
         SeasonalTip::create(['month' => 'juli', 'month_order' => 7, 'body' => 'Outdated text', 'active' => true]);
