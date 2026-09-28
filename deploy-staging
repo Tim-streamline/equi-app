@@ -21,7 +21,7 @@ while (($#)); do
             echo 'Usage: ./deploy-staging [--build-only] [--with-library] [--seed-catalog]'
             echo '       ./deploy-staging --rollback RELEASE_ID'
             echo '       ./deploy-staging --artifact deploy/builds/RELEASE_ID.tar.gz [--with-library] [--seed-catalog]'
-            echo 'Deploy/rollback require PLOI_API_TOKEN (Manage sites and Manage servers); --build-only does not.'
+            echo 'Deploy/rollback require PLOI_API_TOKEN or the private local token file; --build-only does not.'
             exit 0 ;;
         *) echo "Unknown option: $1" >&2; exit 1 ;;
     esac
@@ -29,7 +29,15 @@ while (($#)); do
 done
 ssh_options=(-o BatchMode=yes -o ConnectTimeout=15)
 if ((!build_only)); then
-    [[ -n "${PLOI_API_TOKEN:-}" ]] || { echo 'Set PLOI_API_TOKEN with Manage sites and Manage servers permissions (not needed for --build-only).' >&2; exit 1; }
+    # Read a local secret as data; never execute a credentials file as shell code.
+    token_file="${XDG_CONFIG_HOME:-$HOME/.config}/equi-app/ploi-api-token"
+    if [[ -z "${PLOI_API_TOKEN:-}" && -f "$token_file" ]]; then
+        [[ -O "$token_file" && "$(stat -c %a -- "$token_file")" == 600 ]] || {
+            echo 'The local Ploi token file must belong to you and have mode 600.' >&2; exit 1;
+        }
+        PLOI_API_TOKEN="$(<"$token_file")"
+    fi
+    [[ -n "${PLOI_API_TOKEN:-}" ]] || { echo 'Set PLOI_API_TOKEN or save it in ~/.config/equi-app/ploi-api-token (mode 600; not needed for --build-only).' >&2; exit 1; }
 fi
 remote_activate() {
     ssh "${ssh_options[@]}" "$server" "mkdir -p '$site/shared/deploy-tools'"

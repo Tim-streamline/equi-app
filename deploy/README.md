@@ -1,6 +1,8 @@
 # Staging deployment
 
-Run from the repository root:
+Run from the repository root. The script automatically reads a token stored in `${XDG_CONFIG_HOME:-~/.config}/equi-app/ploi-api-token`, which must be owned by your user with permissions `600`. This file contains only the raw token, outside the repository. An explicit `PLOI_API_TOKEN` environment variable takes precedence.
+
+For a one-off token instead:
 
 ```bash
 # Supply a Ploi token without recording it in shell history.
@@ -30,7 +32,7 @@ Local requirements: Docker, Bash, Git, rsync, tar, sha256sum and working SSH-key
 
 The deployment acquires a server-side lock, validates the staging environment and database identity, backs up Nginx configuration and PostgreSQL, briefly enables maintenance mode for migrations, refreshes Laravel caches, and switches `current`. It reloads PHP-FPM, installs the release's Nginx configuration through Ploi, waits for the installed file, then requests a graceful Nginx reload. An HTTPS response marker confirms the configuration was loaded. Checks cover Laravel health, admin login, customer deep links, browser-session routing and HTTP redirects. A failed activation attempts to restore the previous code and Nginx configuration, reporting any restoration failure. Rollback does **not** reverse migrations or restore database contents; migrations must remain compatible with the previous release. Database backups and old releases are retained for explicit cleanup.
 
-Deployments and rollbacks require `PLOI_API_TOKEN` with **Manage sites** and **Manage servers** permissions. `--build-only` requires neither a token nor staging access. Supply the token through the invoking environment or CI secret storage, never through a command-line argument or a committed file. The script sends it to staging through encrypted SSH stdin and uses it only in the deployment process environment. Do not add it to Laravel's `.env` or the release archive.
+Deployments and rollbacks require `PLOI_API_TOKEN` with server and site **Read/Create** scopes (the Ploi API uses these for configuration changes and service reloads). Delete scopes and MCP access are unnecessary. `--build-only` requires neither a token nor staging access. Supply the token through the private local token file, invoking environment or CI secret storage, never through a command-line argument or a committed file. The dedicated local key allows requests only from the staging server IP `37.97.209.204`; API requests run on that server over SSH and explicitly use IPv4 to match the allowlist. The key created on 2026-09-28 expires on 2028-09-28; renew it before then. The script sends it to staging through encrypted SSH stdin and uses it only in the deployment process environment. Do not add it to Laravel's `.env` or the release archive.
 
 New artifacts contain `.deploy/nginx-staging.conf`. For a retained release built before this support, rollback uses the live configuration captured when that release was replaced. Rollback refuses to switch if neither an artifact configuration nor a saved configuration is available.
 

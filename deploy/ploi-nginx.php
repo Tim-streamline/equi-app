@@ -62,6 +62,8 @@ final class PloiNginx
             $curl = curl_init('https://ploi.io/api'.$path);
             curl_setopt_array($curl, [
                 CURLOPT_RETURNTRANSFER => true, CURLOPT_CUSTOMREQUEST => $method,
+                // The deployment token is allowlisted to the staging server's IPv4 address.
+                CURLOPT_IPRESOLVE => CURL_IPRESOLVE_V4,
                 CURLOPT_CONNECTTIMEOUT => 15, CURLOPT_TIMEOUT => 60,
                 CURLOPT_HTTPHEADER => ['Accept: application/json', 'Content-Type: application/json', 'Authorization: Bearer '.$token],
             ]);
