@@ -1,5 +1,6 @@
+import { KeyboardScrollView as ScrollView, KeyboardViewport as KeyboardAvoidingView } from '@/components/ui/KeyboardForm';
 import type { ReactNode } from 'react';
-import { ActivityIndicator, Modal, Pressable, ScrollView, Text, View, KeyboardAvoidingView, Platform } from 'react-native';
+import { ActivityIndicator, Modal, Pressable, Text, View, Platform } from 'react-native';
 import { router } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 

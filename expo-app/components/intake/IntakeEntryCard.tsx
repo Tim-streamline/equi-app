@@ -33,11 +33,16 @@ export function IntakeEntryCard({ variant = 'banner' }: Props) {
   const { done, total, pct } = intakeProgress(state.answers, schema, noneOptions);
   const hasStarted = Object.keys(state.answers).length > 0;
 
-  const headline = hasStarted ? 'Ga verder met je intake' : 'Start jouw protocol intake';
+  const isBanner = variant === 'banner';
+  const headline = hasStarted
+    ? (isBanner ? 'Ga verder met jouw protocol intake' : 'Ga verder met je intake')
+    : 'Start jouw protocol intake';
   const sub = hasStarted
     ? `${done} van ${total} secties klaar, verder waar je gebleven was.`
     : `${total - 1} korte secties, samen ongeveer 60 minuten. Op basis van deze informatie wordt jouw protocol gemaakt.`;
-  const ctaLabel = hasStarted ? 'Verder' : 'Beginnen';
+  const ctaLabel = isBanner
+    ? (hasStarted ? 'Ga verder' : 'Start intake')
+    : (hasStarted ? 'Verder' : 'Beginnen');
 
   const onPress = () => {
     router.push('/intake' as any);
@@ -45,11 +50,11 @@ export function IntakeEntryCard({ variant = 'banner' }: Props) {
 
   const wrap =
     variant === 'banner'
-      ? 'mx-4 mb-4 overflow-hidden rounded-card bg-teal-700 px-4 py-4'
+      ? 'mb-4 overflow-hidden rounded-card bg-teal-700 px-4 py-4'
       : 'rounded-card bg-teal-700 px-4 py-4';
 
   return (
-    <Pressable onPress={onPress} className={wrap}>
+    <Pressable onPress={onPress} className={wrap} accessibilityRole="button" accessibilityLabel={headline}>
       <View className="flex-row items-start gap-3">
         <View className="h-10 w-10 items-center justify-center rounded-xl bg-mint-500">
           <ClipboardList size={20} color="#fff" />
@@ -64,7 +69,18 @@ export function IntakeEntryCard({ variant = 'banner' }: Props) {
           <Text className="mt-1 font-bold text-white" style={{ fontSize: 17, lineHeight: 22 }}>
             {headline}
           </Text>
-          <Text className="mt-1 text-[12.5px] leading-[18px] text-white/80">{sub}</Text>
+          {isBanner ? (
+            <>
+              <Text className="mt-1 text-[12.5px] leading-[18px] text-white/80">
+                {total - 1} korte secties · ongeveer 60 minuten
+              </Text>
+              <Text className="mt-1 text-[12.5px] leading-[18px] text-white/80">
+                Op basis van deze informatie wordt jouw protocol gemaakt.
+              </Text>
+            </>
+          ) : (
+            <Text className="mt-1 text-[12.5px] leading-[18px] text-white/80">{sub}</Text>
+          )}
 
           {hasStarted && (
             <View className="mt-3 h-1 overflow-hidden rounded-pill bg-white/15">
@@ -84,9 +100,9 @@ export function IntakeEntryCard({ variant = 'banner' }: Props) {
         </View>
       </View>
 
-      {hasStarted && (
+      {(hasStarted || isBanner) && (
         <View className="mt-2.5 flex-row items-center justify-between">
-          <Text className="text-[11px] text-white/65">{pct}% klaar</Text>
+          <Text className="text-[11px] text-white/65">{hasStarted ? `${pct}% klaar` : ''}</Text>
           <Text className="font-semi text-[11px] text-mint-200">{ctaLabel} →</Text>
         </View>
       )}

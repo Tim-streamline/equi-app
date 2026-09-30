@@ -200,4 +200,15 @@ class CreditLedgerTest extends TestCase
         $this->postJson('/api/library/credits/temporary-top-up', ['requestKey' => (string) Str::uuid()])->assertForbidden();
         $this->assertDatabaseCount('credit_grants', 2);
     }
+    public function test_summary_only_warns_for_credits_expiring_within_four_weeks(): void
+    {
+        $this->ledger->grant($this->user, 2, 'purchased', now()->addDays(28)->toDateTimeString());
+        $this->ledger->grant($this->user, 3, 'purchased', now()->addDays(29)->toDateTimeString());
+        $this->getJson('/api/library/credits')->assertOk()->assertJsonPath('balance', 5)
+            ->assertJsonCount(1, 'expiring')->assertJsonPath('expiring.0.credits', 2);
+        $subscription = $this->basic();
+        $this->getJson('/api/library/credits')->assertJsonPath('nextRenewal', $subscription->renews_at->toIso8601String())->assertJsonPath('endsAt', null);
+        $this->postJson('/api/library/credits/cancel-basic')->assertOk()->assertJsonPath('nextRenewal', null)
+            ->assertJsonPath('endsAt', $subscription->paid_through->toIso8601String());
+    }
 }

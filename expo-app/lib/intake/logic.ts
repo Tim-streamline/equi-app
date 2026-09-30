@@ -294,7 +294,7 @@ export function countFlags(
   let n = 0;
   for (const sec of schema) {
     const a = answers[sec.id] ?? {};
-    for (const f of sec.fields) {
+    for (const f of visibleFields(sec, a, answers, noneOptions)) {
       if (fieldFlagged(f, a[f.id], noneOptions)) n++;
     }
   }

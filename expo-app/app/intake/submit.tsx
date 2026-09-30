@@ -1,6 +1,5 @@
-// Final review screen — lists each section with an edit shortcut, surfaces
-// the number of flagged answers (so the customer knows Shelley will pay extra
-// attention to those), and submits the intake.
+// Final review screen: lists each section with an edit shortcut and submits
+// the intake. Automatic attention points remain part of the internal review.
 
 import { View, Text, ScrollView, Pressable, Alert } from 'react-native';
 import { router } from 'expo-router';
@@ -11,7 +10,6 @@ import { Button } from '@/components/ui/Button';
 import { IconButton } from '@/components/ui/IconButton';
 import { useIntakeSchema } from '@/lib/intake/schema-provider';
 import {
-  countFlags,
   hasCriticalAnswers,
   isSectionComplete,
   missingRequired,
@@ -22,7 +20,6 @@ export default function IntakeSubmit() {
   const insets = useSafeAreaInsets();
   const { state, submit } = useIntake();
   const { schema, noneOptions } = useIntakeSchema();
-  const flags = countFlags(state.answers, schema, noneOptions);
   const critical = hasCriticalAnswers(state.answers, schema);
 
   // Per section, the still-missing required questions (by their visible label),
@@ -81,8 +78,8 @@ export default function IntakeSubmit() {
             <Text className="text-mint-700">Mooi werk.</Text>
           </Text>
           <Text className="mt-2 mb-5 text-[14px] leading-[20px] text-ink-70">
-            Ik (Shelley) lees jouw intake binnen 5 werkdagen helemaal door en stuur het eerste
-            protocol terug via de app. Je krijgt een notificatie.
+            Ik (Shelley) lees jouw intake binnen 5 werkdagen helemaal door en zet de eerste
+            fase van je protocol klaar in de app. Je krijgt een notificatie.
           </Text>
 
           {critical && (
@@ -91,15 +88,6 @@ export default function IntakeSubmit() {
               <Text className="flex-1 text-[13px] leading-[18px] text-[#5A4214]">
                 Een of meer antwoorden vragen extra aandacht. Geen probleem, ik kijk er bij
                 ontvangst persoonlijk naar voor we starten.
-              </Text>
-            </View>
-          )}
-
-          {flags > 0 && !critical && (
-            <View className="mb-4 rounded-2xl bg-mint-50 p-3.5">
-              <Text className="text-[13px] leading-[18px] text-ink-70">
-                <Text className="font-bold text-mint-700">{flags} aandachtspunten · </Text>
-                Ik zal deze als eerste bekijken bij je intake.
               </Text>
             </View>
           )}

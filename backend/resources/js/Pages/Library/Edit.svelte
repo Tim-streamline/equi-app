@@ -134,12 +134,6 @@
             <Card>
                 <CardHeader><CardTitle>Publishing</CardTitle></CardHeader>
                 <CardContent class="space-y-4">
-                    <label class="flex items-center gap-2 text-sm"><input type="checkbox" bind:checked={$form.is_plus} /> Plus only</label>
-                    {#if $form.is_plus}
-                        <p class="text-sm text-muted-foreground">Alleen voor actief Plus. Geen credits nodig. Eerder met credits ontgrendelde items blijven toegankelijk.</p>
-                    {:else}
-                        <Field label="Credits (0 = gratis)" error={$form.errors.credit_cost}><Input type="number" min="0" bind:value={$form.credit_cost} /></Field>
-                    {/if}
                     <Field label="Publish date" hint="Blank = draft" error={$form.errors.published_at}><Input type="date" bind:value={$form.published_at} /></Field>
                     <Field label="Author" error={$form.errors.author_therapist_id}>
                         <Select bind:value={$form.author_therapist_id}
@@ -159,6 +153,12 @@
                     {/if}
                     <Field label="Order"><Input type="number" bind:value={$form.order} /></Field>
                     <label class="flex items-center gap-2 text-sm"><input type="checkbox" bind:checked={$form.is_featured} class="size-4 rounded border-input" /> Featured</label>
+                    <label class="flex items-center gap-2 text-sm"><input type="checkbox" bind:checked={$form.is_plus} class="size-4 rounded border-input" /> Plus only</label>
+                    {#if $form.is_plus}
+                        <p class="text-sm text-muted-foreground">Alleen voor actief Plus. Geen credits nodig. Eerder met credits ontgrendelde items blijven toegankelijk.</p>
+                    {:else}
+                        <Field label="Credits (0 = gratis)" error={$form.errors.credit_cost}><Input type="number" min="0" bind:value={$form.credit_cost} /></Field>
+                    {/if}
                 </CardContent>
             </Card>
 

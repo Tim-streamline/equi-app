@@ -1,0 +1,286 @@
+- generic [ref=f3e3]:
+  - complementary [ref=f3e4]:
+    - generic [ref=f3e5]:
+      - generic [ref=f3e8]:
+        - generic [ref=f3e9]: EquiNova
+        - generic [ref=f3e10]: Admin console
+      - button "Close menu" [ref=f3e11]
+    - navigation [ref=f3e13]:
+      - link "Dashboard" [ref=f3e15] [cursor=pointer]:
+        - /url: http://localhost:81/admin
+      - generic [ref=f3e18]:
+        - generic [ref=f3e19]: Support
+        - link "Users" [ref=f3e20] [cursor=pointer]:
+          - /url: http://localhost:81/admin/users
+        - link "Horses" [ref=f3e23] [cursor=pointer]:
+          - /url: http://localhost:81/admin/horses
+        - link "Therapists" [ref=f3e26] [cursor=pointer]:
+          - /url: http://localhost:81/admin/therapists
+        - link "Intake bookings" [ref=f3e29] [cursor=pointer]:
+          - /url: http://localhost:81/admin/bookings
+        - link "Protocols" [ref=f3e32] [cursor=pointer]:
+          - /url: http://localhost:81/admin/protocols
+      - generic [ref=f3e35]:
+        - generic [ref=f3e36]: Content
+        - link "Ontdek Plus" [ref=f3e37] [cursor=pointer]:
+          - /url: http://localhost:81/admin/plus-page
+        - link "Library" [ref=f3e40] [cursor=pointer]:
+          - /url: http://localhost:81/admin/library
+        - link "Categories" [ref=f3e43] [cursor=pointer]:
+          - /url: http://localhost:81/admin/library-categories
+        - link "Seasonal tips" [ref=f3e46] [cursor=pointer]:
+          - /url: http://localhost:81/admin/seasonal-tips
+        - link "Nova chat" [ref=f3e49] [cursor=pointer]:
+          - /url: http://localhost:81/admin/nova
+      - generic [ref=f3e52]:
+        - generic [ref=f3e53]: Scanner
+        - link "Scan results" [ref=f3e54] [cursor=pointer]:
+          - /url: http://localhost:81/admin/scans
+        - link "Products" [ref=f3e57] [cursor=pointer]:
+          - /url: http://localhost:81/admin/products
+        - link "Ingredients" [ref=f3e60] [cursor=pointer]:
+          - /url: http://localhost:81/admin/ingredients
+      - generic [ref=f3e63]:
+        - generic [ref=f3e64]: Community
+        - link "Posts & replies" [ref=f3e65] [cursor=pointer]:
+          - /url: http://localhost:81/admin/community
+        - link "Reports" [ref=f3e68] [cursor=pointer]:
+          - /url: http://localhost:81/admin/reports
+      - generic [ref=f3e71]:
+        - generic [ref=f3e72]: Billing
+        - link "Plans" [ref=f3e73] [cursor=pointer]:
+          - /url: http://localhost:81/admin/plans
+        - link "Subscriptions" [ref=f3e76] [cursor=pointer]:
+          - /url: http://localhost:81/admin/subscriptions
+        - link "Payments" [ref=f3e79] [cursor=pointer]:
+          - /url: http://localhost:81/admin/payments
+        - link "Credits" [ref=f3e82] [cursor=pointer]:
+          - /url: http://localhost:81/admin/credits
+      - generic [ref=f3e85]:
+        - generic [ref=f3e86]: Operations
+        - link "Data exports" [ref=f3e87] [cursor=pointer]:
+          - /url: http://localhost:81/admin/exports
+        - link "Notifications" [ref=f3e90] [cursor=pointer]:
+          - /url: http://localhost:81/admin/notifications
+        - link "Sync health" [ref=f3e93] [cursor=pointer]:
+          - /url: http://localhost:81/admin/sync-health
+        - link "Audit log" [ref=f3e96] [cursor=pointer]:
+          - /url: http://localhost:81/admin/audit-log
+        - link "Intakevragen" [ref=f3e99] [cursor=pointer]:
+          - /url: http://localhost:81/admin/intake-questionnaire
+        - link "Protocol Templates" [ref=f3e102] [cursor=pointer]:
+          - /url: http://localhost:81/admin/protocol-settings
+        - link "Protocol Settings" [ref=f3e105] [cursor=pointer]:
+          - /url: http://localhost:81/admin/protocol-settings/advice
+        - link "Settings" [ref=f3e108] [cursor=pointer]:
+          - /url: http://localhost:81/admin/settings
+    - generic [ref=f3e112]:
+      - generic [ref=f3e113]: EO
+      - generic [ref=f3e114]:
+        - generic [ref=f3e115]: EquiNova Owner
+        - generic [ref=f3e116]: owner
+      - button "Log out" [ref=f3e117]
+  - generic [ref=f3e119]:
+    - banner [ref=f3e120]:
+      - button "Open menu" [ref=f3e121]
+      - heading "Nieuw protocol" [level=1] [ref=f3e123]
+    - main [ref=f3e124]:
+      - generic [ref=f3e125]:
+        - group [ref=f3e127]:
+          - generic [ref=f3e128]:
+            - generic [ref=f3e129]:
+              - link "Protocollen" [ref=f3e130] [cursor=pointer]:
+                - /url: http://localhost:81/admin/protocols
+              - generic [ref=f3e133]:
+                - generic [ref=f3e134]:
+                  - generic [ref=f3e135]: Darm protocol · R
+                  - generic [ref=f3e136]: Concept
+                - generic [ref=f3e137]: Darm protocol
+              - button "Volledige preview" [ref=f3e138] [cursor=pointer]
+              - button "Opslaan" [ref=f3e140] [cursor=pointer]
+              - button "Publiceren" [ref=f3e142] [cursor=pointer]
+            - navigation "Protocolonderdelen" [ref=f3e144]:
+              - button "Basis" [ref=f3e145]
+              - button "Planning" [ref=f3e148]
+              - button "Voeding 0" [ref=f3e150]:
+                - text: Voeding
+                - generic [ref=f3e152]: "0"
+              - button "Management 0" [ref=f3e153]:
+                - text: Management
+                - generic [ref=f3e155]: "0"
+              - button "Beweging 0" [ref=f3e156]:
+                - text: Beweging
+                - generic [ref=f3e158]: "0"
+              - button "Analyse" [ref=f3e159]
+              - button "Klantweergave" [ref=f3e161]
+          - generic [ref=f3e163]:
+            - complementary [ref=f3e164]:
+              - generic [ref=f3e165]:
+                - generic [ref=f3e166]: Paard
+                - combobox [ref=f3e167]:
+                  - option "Kies een paard" [disabled]
+                  - option "Nova · Shelley Meeuwsen"
+                  - option "R · Shelley Meeuwsen" [selected]
+                  - option "Rolo · Tim"
+                  - option "Rolo · Shelley Rochelle Meeuwsen"
+              - generic [ref=f3e168]:
+                - generic [ref=f3e169]: Plan
+                - generic [ref=f3e170]:
+                  - generic [ref=f3e171]:
+                    - term [ref=f3e172]: Fases
+                    - definition [ref=f3e173]: "3"
+                  - generic [ref=f3e174]:
+                    - term [ref=f3e175]: Duur
+                    - definition [ref=f3e176]: 20 weken
+                  - generic [ref=f3e177]:
+                    - term [ref=f3e178]: Huidige week
+                    - definition [ref=f3e179]: "1"
+                  - generic [ref=f3e180]:
+                    - term [ref=f3e181]: Supplementen
+                    - definition [ref=f3e182]: "12"
+                  - generic [ref=f3e183]:
+                    - term [ref=f3e184]: Adviezen
+                    - definition [ref=f3e185]: "0"
+            - main [ref=f3e186]:
+              - generic [ref=f3e187]:
+                - generic [ref=f3e188]:
+                  - generic [ref=f3e189]: Stap 1
+                  - heading "Protocolbasis" [level=2] [ref=f3e190]
+                  - paragraph [ref=f3e191]: Kies de template en leg de patiëntspecifieke basis vast. Planning en voortgang worden automatisch berekend.
+                - generic [ref=f3e192]:
+                  - generic [ref=f3e194]:
+                    - generic [ref=f3e195]: Protocol template
+                    - combobox [ref=f3e196]:
+                      - option "Darm protocol" [selected]
+                  - generic [ref=f3e197]:
+                    - generic [ref=f3e198]: Protocolnaam
+                    - textbox [ref=f3e199]: Darm protocol · R
+                  - generic [ref=f3e200]:
+                    - generic [ref=f3e201]: Behandelaar
+                    - combobox [ref=f3e202]:
+                      - option "Geen behandelaar" [disabled] [selected]
+                      - option "Shelley Meeuwsen · De Paardentherapeut"
+                  - generic [ref=f3e203]:
+                    - generic [ref=f3e204]: Startdatum
+                    - textbox [ref=f3e205]
+                  - generic [ref=f3e206]:
+                    - generic [ref=f3e207]: Levenscyclus
+                    - combobox [ref=f3e208]:
+                      - option "Gepauzeerd" [selected]
+                      - option "Actief"
+                      - option "Afgerond"
+                  - generic [ref=f3e209]:
+                    - generic [ref=f3e210]: Automatisch berekend
+                    - generic [ref=f3e211]: 20 weken · huidige week 1 · fase-statussen en klantlabels volgen uit de planning.
+                - button "Naar planning" [ref=f3e213] [cursor=pointer]
+        - dialog "Volledige klantpreview" [ref=f3e215]:
+          - generic [ref=f3e216]:
+            - button "Preview sluiten" [active] [ref=f3e217]
+            - generic [ref=f3e218]:
+              - generic [ref=f3e219]:
+                - button "Terug naar bewerken" [ref=f3e220]
+                - button "Preview sluiten" [ref=f3e222]
+              - generic [ref=f3e224]:
+                - generic [ref=f3e225]: Preview · niet opgeslagen
+                - generic [ref=f3e226]:
+                  - text: Bekijk week
+                  - combobox "Previewweek" [ref=f3e227]:
+                    - option "1" [selected]
+                    - option "2"
+                    - option "3"
+                    - option "4"
+                    - option "5"
+                    - option "6"
+                    - option "7"
+                    - option "8"
+                    - option "9"
+                    - option "10"
+                    - option "11"
+                    - option "12"
+                    - option "13"
+                    - option "14"
+                    - option "15"
+                    - option "16"
+                    - option "17"
+                    - option "18"
+                    - option "19"
+                    - option "20"
+              - generic [ref=f3e228]:
+                - paragraph [ref=f3e229]: R
+                - heading "Darm protocol · R" [level=2] [ref=f3e230]
+                - paragraph [ref=f3e231]: Week 1 van 20 · Darmrevalidatie · Mineralen aanvullen
+              - navigation "Protocolonderdelen" [ref=f3e232]:
+                - button "Vandaag" [pressed] [ref=f3e233]
+                - button "Kalender" [ref=f3e234]
+                - button "Voeding" [ref=f3e235]
+                - button "Zorg" [ref=f3e236]
+                - button "Analyse" [ref=f3e237]
+              - generic [ref=f3e238]:
+                - generic [ref=f3e239]:
+                  - paragraph [ref=f3e240]: Je protocol is actief
+                  - heading "Vandaag voor R" [level=3] [ref=f3e241]
+                  - paragraph [ref=f3e242]: Week 1 van 20 · woensdag 30 september
+                - article [ref=f3e243]:
+                  - generic [ref=f3e244]:
+                    - heading "Lapachoschors" [level=4] [ref=f3e245]
+                    - generic [ref=f3e246]: 20 g
+                  - paragraph [ref=f3e247]: 4× per week
+                  - paragraph [ref=f3e248]: Protocolweek 1, 2, 3, 4, 5, 6
+                  - paragraph [ref=f3e249]: Antimicrobieel, ondersteunt gezonde darmflora.
+                  - paragraph [ref=f3e250]: Door de geweekte bijvoeding mengen.
+                - article [ref=f3e251]:
+                  - generic [ref=f3e252]:
+                    - heading "Paardenbloemblad" [level=4] [ref=f3e253]
+                    - generic [ref=f3e254]: 45 g
+                  - paragraph [ref=f3e255]: 4× per week
+                  - paragraph [ref=f3e256]: Protocolweek 1, 2, 3, 4, 5, 6
+                  - paragraph [ref=f3e257]: Ondersteunt de spijsvertering en vochtafvoer en levert van nature veel kalium en bitterstoffen. Stimuleert daarnaast mild de lever-, gal- en nierfunctie.
+                  - paragraph [ref=f3e258]: Door de geweekte bijvoeding mengen.
+                - article [ref=f3e259]:
+                  - generic [ref=f3e260]:
+                    - heading "Salie" [level=4] [ref=f3e261]
+                    - generic [ref=f3e262]: 10 g
+                  - paragraph [ref=f3e263]: 4× per week
+                  - paragraph [ref=f3e264]: Protocolweek 1, 2, 3, 4
+                  - paragraph [ref=f3e265]: Ontstekingswerend, infectiewerend en krampwerend. Windverdrijvend bij darmgistingen.
+                  - paragraph [ref=f3e266]: "Door de geweekte bijvoeding mengen. Nooit langer dan 4 weken achter elkaar geven! Verse salie kan als alternatief: ong. 1 vers blad per 100 kg lichaamsgewicht."
+                - article [ref=f3e267]:
+                  - generic [ref=f3e268]:
+                    - heading "Smalle weegbree" [level=4] [ref=f3e269]
+                    - generic [ref=f3e270]: 45 g
+                  - paragraph [ref=f3e271]: 4× per week
+                  - paragraph [ref=f3e272]: Protocolweek 1, 2, 3, 4, 5, 6
+                  - paragraph [ref=f3e273]: Kalmeert en beschermt de darmwand, ondersteunt het herstel van het slijmvlies en helpt de ontlasting reguleren. Werkt daarnaast verzachtend, samentrekkend en bacterieremmend.
+                  - paragraph [ref=f3e274]: Door de geweekte bijvoeding mengen.
+                - article [ref=f3e275]:
+                  - generic [ref=f3e276]:
+                    - heading "AGROBS Zink Puur" [level=4] [ref=f3e277]
+                    - generic [ref=f3e278]: 30 g
+                  - paragraph [ref=f3e279]: 4× per week
+                  - paragraph [ref=f3e280]: Protocolweek 1, 2, 3, 4, 5, 6, 7, 8
+                  - paragraph [ref=f3e281]: Organisch gebonden zink ter tijdelijke aanvulling. Ondersteunt de normale stofwisseling, weerstand, huid en hoeven.
+                  - paragraph [ref=f3e282]: Door de geweekte bijvoeding mengen. Niet combineren met andere zinkhoudende supplementen.
+                - article [ref=f3e283]:
+                  - generic [ref=f3e284]:
+                    - heading "BePure MSM (organische zwavel)" [level=4] [ref=f3e285]
+                    - generic [ref=f3e286]: 15 g
+                  - paragraph [ref=f3e287]: 4× per week
+                  - paragraph [ref=f3e288]: Protocolweek 1, 2, 3, 4, 5, 6, 7, 8
+                  - paragraph [ref=f3e289]: Zuivere MSM zonder toevoegingen. Levert organisch gebonden zwavel als bouwstof voor onder andere darmwand, bindweefsel, huid, vacht en hoeven.
+                  - paragraph [ref=f3e290]: Door de geweekte bijvoeding mengen.
+                - heading "Verloop van je protocol" [level=3] [ref=f3e291]
+                - 'button "Darmrevalidatie Week 1 t/m 6 · Duur: 6 weken Actief · week 1 van 6" [ref=f3e292]':
+                  - generic [ref=f3e293]:
+                    - heading "Darmrevalidatie" [level=4] [ref=f3e294]
+                    - paragraph [ref=f3e295]: "Week 1 t/m 6 · Duur: 6 weken"
+                  - generic [ref=f3e296]: Actief · week 1 van 6
+                - 'button "Mineralen aanvullen Week 1 t/m 8 · Duur: 8 weken Actief · week 1 van 8" [ref=f3e298]':
+                  - generic [ref=f3e299]:
+                    - heading "Mineralen aanvullen" [level=4] [ref=f3e300]
+                    - paragraph [ref=f3e301]: "Week 1 t/m 8 · Duur: 8 weken"
+                  - generic [ref=f3e302]: Actief · week 1 van 8
+                - 'button "Lever en nieren ondersteunen Week 9 t/m 20 · Duur: 12 weken Start in protocolweek 9" [ref=f3e304]':
+                  - generic [ref=f3e305]:
+                    - heading "Lever en nieren ondersteunen" [level=4] [ref=f3e306]
+                    - paragraph [ref=f3e307]: "Week 9 t/m 20 · Duur: 12 weken"
+                  - generic [ref=f3e308]: Start in protocolweek 9

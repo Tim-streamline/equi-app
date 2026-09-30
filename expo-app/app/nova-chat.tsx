@@ -1,6 +1,7 @@
+import { KeyboardViewport, KeyboardScrollView as ScrollView, KeyboardTextInput as TextInput } from '@/components/ui/KeyboardForm';
 import { useState, useRef, useEffect } from 'react';
 import {
-  View, Text, Pressable, TextInput, ScrollView, KeyboardAvoidingView, Platform,
+  View, Text, Pressable,
 } from 'react-native';
 import { router } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -59,6 +60,7 @@ export default function NovaChatModal() {
   };
 
   return (
+    <KeyboardViewport style={{ flex: 1 }}>
     <Pressable
       style={{ flex: 1, backgroundColor: 'rgba(11,42,41,0.45)', justifyContent: 'flex-end' }}
       onPress={() => router.back()}
@@ -76,10 +78,7 @@ export default function NovaChatModal() {
         }}
       >
         <View className="mx-auto mb-3 h-1 w-9 rounded-pill bg-ink-15" />
-        <KeyboardAvoidingView
-          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-          keyboardVerticalOffset={20}
-        >
+        <ScrollView ref={scrollRef} style={{ flexGrow: 0 }} contentContainerStyle={{ paddingBottom: 8 }}>
           <View className="flex-row items-center gap-2.5 mb-3">
             <LinearGradient
               colors={['#30C7BA', '#0D5C5B']}
@@ -95,7 +94,7 @@ export default function NovaChatModal() {
             </View>
           </View>
 
-          <ScrollView ref={scrollRef} style={{ maxHeight: 320 }} contentContainerStyle={{ gap: 8, paddingVertical: 4 }}>
+          <View style={{ gap: 8, paddingVertical: 4 }}>
             {messages.map((m: any) => (
               <View
                 key={m.id}
@@ -117,7 +116,7 @@ export default function NovaChatModal() {
                 <View className="h-1.5 w-1.5 rounded-full bg-ink-50" />
               </View>
             )}
-          </ScrollView>
+          </View>
 
           {sessionError && <Text className="text-[12px] text-ink-50">Het gesprek kon niet worden geopend. Sluit dit venster en probeer opnieuw.</Text>}
           <View className="mt-3 flex-row items-center gap-2">
@@ -137,8 +136,9 @@ export default function NovaChatModal() {
               <Send size={16} color="#fff" />
             </Pressable>
           </View>
-        </KeyboardAvoidingView>
+        </ScrollView>
       </Pressable>
     </Pressable>
+    </KeyboardViewport>
   );
 }

@@ -91,6 +91,7 @@ export type DashboardProtocol = {
     } | null)[];
   };
   nutrition: {
+    advice?: { id: string; title: string; description?: string }[];
     roughage: {
       rangeLabel: string | null;
       description: string;

@@ -34,7 +34,7 @@ class AdminIntakeQuestionnaireTest extends TestCase
 
         $this->assertDatabaseCount('intake_questionnaires', 1);
         $this->assertDatabaseCount('intake_sections', 12);
-        $this->assertDatabaseCount('intake_fields', 359);
+        $this->assertDatabaseCount('intake_fields', 382);
         $this->assertDatabaseHas('intake_fields', [
             'key' => 'merrie-vruchtbaarheid',
             'type' => 'radio',

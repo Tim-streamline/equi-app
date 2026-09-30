@@ -1,4 +1,4 @@
-%% EquiNova data model — generated from datamodel.md
+%% Equi App data model — generated from datamodel.md
 %% Paste into any Mermaid renderer (mermaid.live, GitHub, VS Code, etc.)
 
 erDiagram
@@ -60,6 +60,8 @@ erDiagram
   SCAN_RESULT }o--o| PRODUCT : scans
   SCAN_RESULT ||--o{ SCAN_INGREDIENT : breaks_down
   INGREDIENT ||--o{ SCAN_INGREDIENT : appears_in
+  PRODUCT ||--o{ INGREDIENT_PRODUCT : contains
+  INGREDIENT ||--o{ INGREDIENT_PRODUCT : used_in
 
   %% ---------- library ----------
   LIBRARY_ITEM ||--o{ LIBRARY_CHAPTER : chapters
@@ -230,6 +232,12 @@ erDiagram
     string name
     text description
     string defaultTag
+  }
+  INGREDIENT_PRODUCT {
+    string productId PK,FK
+    string ingredientId PK,FK
+    int order
+    string amount
   }
   SCAN_RESULT {
     string id PK

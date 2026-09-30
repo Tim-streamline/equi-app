@@ -61,6 +61,8 @@ class CreditLedger
 
     public function summary(User $user): array
     {
+        // Also catch up the current test month when an account opens the app before the scheduler runs.
+        app(MonthlyTestCredits::class)->grant($user);
         return $this->locked($user, function () use ($user) {
             $this->expire($user);
             $grants = $this->grants($user); $basic = $this->basic($user); $settings = $this->settings();
@@ -70,7 +72,7 @@ class CreditLedger
                 'purchased' => (int) $grants->where('source', 'purchased')->sum('remaining'),
                 'other' => (int) $grants->whereNotIn('source', ['membership', 'purchased'])->sum('remaining'),
                 'membershipCap' => (int) $settings->membership_cap, 'monthlyCredits' => (int) $settings->monthly_credits,
-                'expiring' => $grants->where('source', 'purchased')->filter(fn ($g) => $g->expires_at && CarbonImmutable::parse($g->expires_at)->lte(now()->addDays(30)))->map(fn ($g) => ['credits' => $g->remaining, 'date' => $g->expires_at, 'urgent' => CarbonImmutable::parse($g->expires_at)->lte(now()->addDays(7))])->values(),
+                'expiring' => $grants->where('source', 'purchased')->filter(fn ($g) => $g->expires_at && CarbonImmutable::parse($g->expires_at)->lte(now()->addDays(28)))->map(fn ($g) => ['credits' => $g->remaining, 'date' => $g->expires_at, 'urgent' => CarbonImmutable::parse($g->expires_at)->lte(now()->addDays(7))])->values(),
                 'nextExpiry' => $grants->first(fn ($g) => $g->source === 'purchased' && $g->expires_at)?->expires_at,
                 'nextRenewal' => $basic && ! $basic->cancel_requested_at && $basic->renews_at?->isFuture() ? $basic->renews_at?->toIso8601String() : null,
                 'endsAt' => $basic?->cancel_requested_at ? $basic->paid_through?->toIso8601String() : null,

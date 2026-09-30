@@ -1,4 +1,4 @@
-# EquiNova web
+# Equi App web
 
 Browser version of the Expo app, with shared routes, screens, assets, and business logic. Run commands from this directory. Requires Node 22.18+ (or Node 24 LTS) and the existing Laravel/PostgreSQL/PowerSync services.
 

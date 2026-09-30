@@ -1,6 +1,7 @@
-import { Modal, Pressable, View, KeyboardAvoidingView, Platform } from 'react-native';
+import { Modal, Pressable, View } from 'react-native';
 import { ReactNode, useEffect, useRef } from 'react';
 import { Animated, Easing } from 'react-native';
+import { KeyboardViewport, KeyboardScrollView } from './KeyboardForm';
 
 type Props = {
   open: boolean;
@@ -29,16 +30,16 @@ export function Sheet({ open, onClose, children, heightFraction = 0.78 }: Props)
       <Animated.View
         style={{ flex: 1, backgroundColor: 'rgba(11, 42, 41, 0.45)', opacity, justifyContent: 'flex-end' }}
       >
-        <Pressable style={{ flex: 1 }} onPress={onClose} />
-        <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+        <KeyboardViewport style={{ flex: 1, justifyContent: 'flex-end' }}>
+        <Pressable style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }} onPress={onClose} />
           <Animated.View
-            style={{ transform: [{ translateY }] }}
+            style={{ transform: [{ translateY }], maxHeight: `${heightFraction * 100}%`, flexShrink: 1 }}
             className="rounded-t-3xl bg-white px-5 pb-8 pt-3"
           >
             <View className="mx-auto mb-4 h-1 w-9 rounded-pill bg-ink-15" />
-            <View style={{ maxHeight: `${heightFraction * 100}%` as any }}>{children}</View>
+            <KeyboardScrollView style={{ flexGrow: 0 }} contentContainerStyle={{ paddingBottom: 16 }}>{children}</KeyboardScrollView>
           </Animated.View>
-        </KeyboardAvoidingView>
+        </KeyboardViewport>
       </Animated.View>
     </Modal>
   );

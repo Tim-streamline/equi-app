@@ -13,6 +13,7 @@ const { outputText } = ts.transpileModule(source, {
 function renderLogin(platform, params = {}, replace = () => {}) {
   const jsx = (type, props) => ({ type, props });
   const modules = {
+    '@/components/ui/KeyboardForm': { KeyboardViewport: 'KeyboardAvoidingView', KeyboardScrollView: 'ScrollView', KeyboardTextInput: 'TextInput' },
     'react/jsx-runtime': { jsx, jsxs: jsx },
     react: { useState: (initial) => [initial, () => {}] },
     'react-native': {

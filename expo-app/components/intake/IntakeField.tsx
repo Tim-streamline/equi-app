@@ -2,9 +2,10 @@
 // reads/writes the value through the IntakeProvider. Sticking to one parent
 // component keeps auto-save behavior uniform across every input type.
 
-import { View, Text, TextInput, Pressable, Image } from 'react-native';
-import { Check, Camera, Plus, FileText, Trash2 } from 'lucide-react-native';
+import { View, Text, Pressable, Image } from 'react-native';
+import { Check, Plus, Trash2 } from 'lucide-react-native';
 
+import { IntakeTextInput as TextInput } from './IntakeScrollView';
 import { Field, FieldValue, RepeaterSub } from '@/lib/intake/schema';
 import { isFieldRequired, isNoneOption } from '@/lib/intake/logic';
 import { useIntake } from '@/lib/intake/store';
@@ -52,6 +53,7 @@ export function IntakeField({ field, sectionId, n, noneOptions }: Props) {
         <Text className="font-semi uppercase text-mint-700 text-[11px] tracking-eyebrow">
           {field.label}
         </Text>
+        {field.hint && <Text className="mt-2 text-[13.5px] leading-[20px] text-ink-70">{field.hint}</Text>}
         {field.id === 'sec-hoef-upload' && (
           <View className="mt-3">
             <Image
@@ -149,7 +151,9 @@ function renderInput(
           options={field.options ?? []}
           value={asArray(value)}
           onChange={set}
-          noneOptions={noneOptions}
+          noneOptions={sectionId === 'gedrag' && field.id === 'gedrag-signalen'
+            ? [...noneOptions, 'geen van bovenstaande', 'weet ik niet']
+            : noneOptions}
         />
       );
     case 'photo':
@@ -159,6 +163,8 @@ function renderInput(
       return (
         <RepeaterField
           sub={field.sub ?? []}
+          firstAddLabel={sectionId === 'voer' && ['huidig-extra', 'historie-extra'].includes(field.id) ? 'Supplement toevoegen' : undefined}
+          addLabel={sectionId === 'medisch' && field.id === 'medicatie-ooit-details' ? 'Medicatie toevoegen' : undefined}
           value={asArray<Record<string, string>>(value)}
           onChange={(rows) => set(rows)}
         />
@@ -428,10 +434,14 @@ function MultiField({
 /* ---------------------------------------------------------------- PHOTO */
 
 function RepeaterField({
+  firstAddLabel,
+  addLabel,
   sub,
   value,
   onChange,
 }: {
+  firstAddLabel?: string;
+  addLabel?: string;
   sub: RepeaterSub[];
   value: Record<string, string>[];
   onChange: (rows: Record<string, string>[]) => void;
@@ -512,7 +522,7 @@ function RepeaterField({
       >
         <Plus size={16} color="#108A82" />
         <Text className="font-semi text-[13px] text-mint-700">
-          {value.length === 0 ? 'Eerste toevoegen' : 'Nog één toevoegen'}
+          {addLabel ?? (value.length === 0 ? (firstAddLabel ?? 'Eerste toevoegen') : 'Nog één toevoegen')}
         </Text>
       </Pressable>
     </View>

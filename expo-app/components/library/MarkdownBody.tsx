@@ -1,7 +1,6 @@
 import { ReactNode, useMemo } from 'react';
-import { Image, Pressable, Text, View } from 'react-native';
-import { ExternalLink, Headphones } from 'lucide-react-native';
-import { useVideoPlayer, VideoView } from 'expo-video';
+import { Image, Text, View } from 'react-native';
+import { LibraryMedia, type LibraryMediaMetadata } from './LibraryMedia';
 import * as WebBrowser from 'expo-web-browser';
 
 type MarkdownBlock =
@@ -184,37 +183,7 @@ function InlineMarkdown({ children, color = '#1B2A2A' }: { children: string; col
   return <Text style={{ color }}>{nodes}</Text>;
 }
 
-function EmbeddedVideo({ url }: { url: string }) {
-  const player = useVideoPlayer(url);
-
-  return (
-    <View className="mb-5 w-full aspect-video overflow-hidden rounded-2xl bg-teal-800">
-      <VideoView
-        player={player}
-        nativeControls
-        contentFit="contain"
-        fullscreenOptions={{ enable: true, orientation: 'landscape' }}
-        style={{ width: '100%', height: '100%' }}
-      />
-    </View>
-  );
-}
-
-function EmbeddedAudioLink({ url }: { url: string }) {
-  return (
-    <Pressable
-      accessibilityRole="link"
-      onPress={() => WebBrowser.openBrowserAsync(url)}
-      className="mb-5 flex-row items-center gap-3 rounded-2xl bg-mint-50 px-4 py-3.5 active:bg-mint-100"
-    >
-      <Headphones size={20} color="#108A82" />
-      <Text className="flex-1 font-semi text-[14px] text-mint-800">Beluister audio</Text>
-      <ExternalLink size={16} color="#108A82" />
-    </Pressable>
-  );
-}
-
-export function MarkdownBody({ markdown }: { markdown: string }) {
+export function MarkdownBody({ markdown, mediaMetadata }: { markdown: string; mediaMetadata?: LibraryMediaMetadata }) {
   const blocks = useMemo(() => parseMarkdown(markdown), [markdown]);
 
   return (
@@ -285,9 +254,9 @@ export function MarkdownBody({ markdown }: { markdown: string }) {
           );
         }
 
-        if (block.type === 'video') return <EmbeddedVideo key={index} url={block.url} />;
+        if (block.type === 'video') return <LibraryMedia key={index} url={block.url} metadata={mediaMetadata} />;
 
-        if (block.type === 'audio') return <EmbeddedAudioLink key={index} url={block.url} />;
+        if (block.type === 'audio') return <LibraryMedia key={index} url={block.url} audio metadata={mediaMetadata} />;
 
         return <View key={index} className="my-5 h-px bg-ink-8" />;
       })}

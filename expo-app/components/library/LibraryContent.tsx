@@ -54,18 +54,16 @@ export function LibraryContent({ itemId, preview }: { itemId: string; preview?: 
         <Button title="Bekijk Plus" onPress={() => router.push('/(tabs)/(pager)/protocol')} />
       </View> : !data.canRead ? <View className="mx-5 mt-5 gap-3 rounded-2xl bg-mint-50 p-5">
         <Text className="font-bold text-[20px] text-ink">Ontgrendel dit item</Text>
-          <Text className="text-[15px] text-ink-70">{`Dit item kost ${credits(cost)}. Je hebt ${credits(balance)}.`}</Text>
-          {insufficient && <Text className="text-[14px] text-ink-70">{`Je hebt nog ${credits(cost - balance)} nodig om dit item te ontgrendelen.`}</Text>}
+          <Text className="text-[15px] text-ink-70">{insufficient ? `Je hebt nog ${credits(cost - balance)} nodig` : `Je hebt ${credits(balance)}`}</Text>
           {insufficient && <TemporaryCreditButton disabled={busy} onAdded={() => refresh()} />}
-          {confirmedCost !== null ? <>
+          {!insufficient && (confirmedCost !== null ? <>
             <Text className="text-[15px] text-ink">{`${credits(confirmedCost)} gebruiken?`}</Text>
             <Text className="text-[15px] text-ink">{`Daarna heb je nog ${credits(Math.max(0, balance - confirmedCost))}.`}</Text>
-            <Text className="text-[14px] text-ink-70">Dit item blijft daarna ontgrendeld in je bibliotheek.</Text>
             <Button title={busy ? 'Ontgrendelen…' : `Bevestig: ${credits(confirmedCost)} gebruiken`} disabled={busy || insufficient} onPress={() => void unlock()} />
             <Button title="Annuleren" variant="text" disabled={busy} onPress={() => setConfirmedCost(null)} />
-          </> : <Button title={`Ontgrendel voor ${credits(cost)}`} disabled={busy || insufficient} onPress={() => { setPurchaseError(''); setConfirmedCost(cost); }} />}
+          </> : <Button title={`Ontgrendel voor ${credits(cost)}`} disabled={busy || insufficient} onPress={() => { setPurchaseError(''); setConfirmedCost(cost); }} />)}
       </View> : <>
-        {!!data.body && <View className="w-full px-5 pt-5"><MarkdownBody markdown={data.body} /></View>}
+        {!!data.body && <View className="w-full px-5 pt-5"><MarkdownBody markdown={data.body} mediaMetadata={{ title: item.title, artist: item.authorName ?? undefined, artwork: item.heroImageUrl ?? undefined }} /></View>}
         {data.chapters.length > 0 && <>
           <SectionTitle>Hoofdstukken</SectionTitle>
           <View className="px-4">{data.chapters.map((chapter, index) => <View key={chapter.id} className="flex-row items-center gap-3 rounded-xl p-3.5">

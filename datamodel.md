@@ -1,4 +1,4 @@
-# EquiNova — Data Model
+# Equi App — Data Model
 
 Derived from the Expo frontend in `expo-app/`. Each screen / mock structure was mapped to one or more persisted entities. Field names are suggestions; types are indicative. All entities have implicit `id`, `createdAt`, `updatedAt` unless noted.
 
@@ -206,7 +206,7 @@ Photo attachments (1..n per observation).
 | kind         | enum       | `skin` / `stool` / `feed` / `other` |
 
 ### `TimelineEvent` (derived / event log)
-Generic activity feed for the horse profile timeline. May be a materialised view over Observations + system events ("Nova toegevoegd aan EquiNova", "Intake met Shelley").
+Generic activity feed for the horse profile timeline. May be a materialised view over Observations + system events ("Nova toegevoegd aan Equi App", "Intake met Shelley").
 
 | Field      | Type       | Notes                                                 |
 |------------|------------|-------------------------------------------------------|
@@ -257,6 +257,17 @@ Master list of known ingredients.
 | name       | string  | "Lijnzaad"                  |
 | description| text    | default explanation         |
 | defaultTag | enum    | `good` / `warn` / `danger`  |
+
+### `IngredientProduct` (product composition)
+Many-to-many link between products and the shared ingredient catalog, stored in `ingredient_product`.
+The admin product form manages ingredient selection, ordering, and amounts.
+
+| Field        | Type          | Notes                                      |
+|--------------|---------------|--------------------------------------------|
+| productId    | FK→Product    | composite primary key with ingredientId    |
+| ingredientId | FK→Ingredient | reusable across products                   |
+| order        | integer       | positive display order within the product  |
+| amount       | string?       | product-specific amount, e.g. 250 mg or 12% |
 
 ### `ScanIngredient` (join with override)
 Per-scan ingredient assessment (`SCAN_RESULT.ingredients`).
@@ -427,7 +438,7 @@ Plus, Opleiding bundel, etc.
 | Field   | Type   | Notes                              |
 |---------|--------|------------------------------------|
 | id      | string | `plus`, `bundle`                   |
-| name    | string | "EquiNova Plus"                    |
+| name    | string | "Equi App Plus"                    |
 | price   | int    | cents                              |
 | interval| enum   |                                    |
 | benefits| string[] | "Onbeperkte scans + AI-advies", … |

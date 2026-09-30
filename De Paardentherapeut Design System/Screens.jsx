@@ -25,7 +25,7 @@ function ScreenWelcome({ go }) {
               <img src="assets/logo-horse-white.png" alt="" style={{ width: 22 }} />
             </div>
             <div>
-              <div style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 18, letterSpacing: 0.5 }}>EquiNova</div>
+              <div style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 18, letterSpacing: 0.5 }}>Equi App</div>
               <div style={{ fontSize: 10, color: 'var(--mint-200)', letterSpacing: 0.2, textTransform: 'uppercase', fontWeight: 600 }}>by De Paardentherapeut</div>
             </div>
           </div>
@@ -132,7 +132,7 @@ function ScreenConnect({ go, back }) {
   const plans = [
   {
     id: 'basis',
-    naam: 'Equinova Basis',
+    naam: 'Equi App Basis',
     prijs: '€ 9',
     per: 'per maand',
     hint: 'De app voor alledag',
@@ -375,7 +375,7 @@ function ScreenHorseProfile({ back, go }) {
             </div>
             <div className="step done">
               <div className="when">3 weken geleden</div>
-              <div className="what">Nova toegevoegd aan EquiNova</div>
+              <div className="what">Nova toegevoegd aan Equi App</div>
             </div>
           </div>
         </div>
@@ -1065,7 +1065,7 @@ function ScreenAccount({ go }) {
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
               <div>
                 <span className="chip" style={{ background: 'var(--mint-500)', color: 'white' }}>Plus</span>
-                <div style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 20, marginTop: 10 }}>EquiNova Plus</div>
+                <div style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 20, marginTop: 10 }}>Equi App Plus</div>
                 <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.7)', marginTop: 2 }}>Verlengt 22 mei · € 12 / maand</div>
               </div>
               <span style={{ color: 'rgba(255,255,255,0.7)' }}>{I.chevron}</span>
@@ -1215,7 +1215,7 @@ function ScreenSubscription({ back }) {
               <div>
                 <span className="chip">Aanbevolen</span>
                 <div style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 18, marginTop: 8 }}>Opleiding bundel</div>
-                <div style={{ fontSize: 12, color: 'var(--app-ink-3)', marginTop: 2 }}>EquiNova Plus + 8-maands opleiding</div>
+                <div style={{ fontSize: 12, color: 'var(--app-ink-3)', marginTop: 2 }}>Equi App Plus + 8-maands opleiding</div>
               </div>
               <div style={{ textAlign: 'right' }}>
                 <div style={{ fontWeight: 700 }}>€ 4.997</div>

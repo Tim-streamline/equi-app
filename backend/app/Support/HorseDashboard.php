@@ -21,36 +21,26 @@ class HorseDashboard
         $answers = $this->nutrition->answers($horse);
         $protocol = $horse->protocols()->where('status', 'active')->whereNotNull('published_at')
             ->where('published_at', '<=', $now)->orderByDesc('published_at')->first();
-        $hasPlus = $user->subscriptions()->where('status', 'active')
-            ->where(fn ($q) => $q->whereNull('started_at')->orWhereDate('started_at', '<=', $now))
-            ->where(fn ($q) => $q->whereNull('cancelled_at')->orWhereDate('cancelled_at', '>', $now))
-            ->whereHas('plan', fn ($q) => $q->where('slug', 'plus'))->exists();
+        $discovery = app(LibraryDiscovery::class);
+        $access = $discovery->access($user);
+        $hasPlus = $access['hasPlus'];
         $data = $protocol ? $this->protocol($protocol, $now, $month, $answers) : null;
         $items = LibraryItem::query()->whereNotNull('published_at')->where('published_at', '<=', $now)->with('categories')->get();
-        $unlocked = DB::table('library_unlocks')->where('user_id', $user->id)->pluck('item_id')->all();
+        $unlocked = $access['unlockedIds'];
         $itemData = fn ($item) => [
             'id' => $item->id, 'title' => $item->title, 'format' => $item->format, 'heroImageUrl' => $item->hero_image_url,
             'description' => Str::limit(strip_tags($item->description ?? ''), 100), 'durationLabel' => $item->duration_label,
             'creditCost' => (int) $item->credit_cost, 'isPlus' => (bool) $item->is_plus, 'unlocked' => in_array($item->id, $unlocked, true),
         ];
-        $topic = fn ($term) => $items->first(fn ($item) => str_contains(mb_strtolower($item->slug.' '.$item->title), $term));
         if ($data) {
-            foreach (['hayLibraryItem' => 'hooianalyse', 'waterLibraryItem' => 'wateranalyse'] as $key => $term) {
-                $configuredId = $protocol->customer_settings[$key === 'hayLibraryItem' ? 'hay_library_item_id' : 'water_library_item_id'] ?? null;
-                $item = $items->firstWhere('id', $configuredId) ?? $topic($term);
-                if (! $item) {
-                    $subject = $key === 'hayLibraryItem' ? 'hooi' : 'water';
-                    $item = $items->first(fn ($item) => preg_match('/'.$subject.'.*analy|analy.*'.$subject.'/isu', $item->title.' '.$item->description) === 1);
-                }
-                $data['nutrition'][$key] = $item ? $itemData($item) : null;
-            }
+            $data['nutrition'] += $this->nutritionLinks($protocol, $items, $itemData);
         }
         $phaseText = implode(' ', array_column(array_filter($data['phases'] ?? [], fn ($p) => $p['state'] === 'active'), 'title'));
         $profileText = $horse->breed.' '.json_encode($answers, JSON_UNESCAPED_UNICODE);
         $tokens = fn ($text) => array_values(array_unique(array_filter(preg_split('/[^\p{L}]+/u', mb_strtolower($text)), fn ($word) => mb_strlen($word) >= 4)));
         $phaseTokens = $tokens($phaseText);
         $profileTokens = $tokens($profileText);
-        $ranked = $items->map(function ($item) use ($tokens, $phaseTokens, $profileTokens, $itemData, $phaseText) {
+        $ranked = $items->reject(fn ($item) => $discovery->canRead($item, $access))->map(function ($item) use ($tokens, $phaseTokens, $profileTokens, $itemData, $phaseText) {
             $words = $tokens($item->title.' '.$item->description.' '.$item->categories->pluck('label')->join(' '));
             $phaseMatch = count(array_intersect($phaseTokens, $words)) > 0;
 
@@ -87,9 +77,9 @@ class HorseDashboard
         ];
     }
 
-    public function protocol(Protocol $protocol, CarbonImmutable $now, ?string $month = null, array $answers = []): array
+    public function protocol(Protocol $protocol, CarbonImmutable $now, ?string $month = null, array $answers = [], bool $preview = false): array
     {
-        $protocol->load(['phases.weeks', 'phases.supplements.weeks', 'analysis.advice', 'managementAdviezen', 'bewegingAdviezen']);
+        $protocol->loadMissing(['phases.weeks', 'phases.supplements.weeks', 'analysis.advice', 'voedingAdviezen', 'managementAdviezen', 'bewegingAdviezen']);
         $start = $protocol->started_at ? CarbonImmutable::parse($protocol->started_at->toDateString(), $now->timezone)->startOfDay() : null;
         $totalWeeks = max((int) $protocol->total_weeks, (int) $protocol->phases->flatMap->weeks->max('protocol_week_number'));
         $totalDays = $totalWeeks * 7;
@@ -97,15 +87,15 @@ class HorseDashboard
         $day = max(0, min($totalDays, $elapsed));
         $week = $day > 0 ? (int) ceil($day / 7) : 0;
         $running = $elapsed > 0 && $elapsed <= $totalDays;
-        $phases = $protocol->phases->map(function ($phase) use ($protocol, $now) {
+        $phases = $protocol->phases->map(function ($phase) use ($protocol, $now, $preview) {
             $availability = app(ProtocolPhaseAvailability::class)->forPhase($protocol, $phase, $now);
             $weeks = $phase->weeks->pluck('protocol_week_number', 'id');
 
             return $availability + [
                 'id' => $phase->id, 'title' => $phase->title,
-                'description' => $availability['accessible'] ? $phase->description : null,
-                'contentAvailable' => $availability['accessible'],
-                'supplements' => $availability['accessible'] ? $phase->supplements->map(fn ($s) => [
+                'description' => ($preview || $availability['accessible']) ? $phase->description : null,
+                'contentAvailable' => $preview || $availability['accessible'],
+                'supplements' => ($preview || $availability['accessible']) ? $phase->supplements->map(fn ($s) => [
                     'id' => $s->id, 'name' => $s->name, 'dosage' => $s->dosage,
                     'description' => $s->description, 'instructions' => $s->instructions,
                     'frequencyLabel' => $s->aantal_per_week ? $s->aantal_per_week.'× per week' : null,
@@ -117,9 +107,11 @@ class HorseDashboard
         $allSupplements = collect($phases)->flatMap(fn ($p) => $p['supplements']);
         $monthDate = $month ? CarbonImmutable::createFromFormat('!Y-m', $month, $now->timezone) : $now->startOfMonth();
         $history = app(ProtocolDayHistory::class);
-        $history->preserve($protocol, $now);
-        $historicalDays = $history->days($protocol, $monthDate->format('Y-m'));
-        $intakes = $protocol->horse->supplementIntakes()->whereBetween('date', [min($monthDate->startOfMonth()->toDateString(), $now->toDateString()), max($monthDate->endOfMonth()->toDateString(), $now->toDateString())])->get()->groupBy(fn ($i) => $i->date->toDateString());
+        if (! $preview) {
+            $history->preserve($protocol, $now);
+        }
+        $historicalDays = $preview ? collect() : $history->days($protocol, $monthDate->format('Y-m'));
+        $intakes = $preview ? collect() : $protocol->horse->supplementIntakes()->whereBetween('date', [min($monthDate->startOfMonth()->toDateString(), $now->toDateString()), max($monthDate->endOfMonth()->toDateString(), $now->toDateString())])->get()->groupBy(fn ($i) => $i->date->toDateString());
         $rowsFor = function (int $number, string $date) use ($allSupplements, $intakes) {
             $records = $intakes->get($date, collect())->keyBy('protocol_phase_supplement_id');
 
@@ -130,7 +122,7 @@ class HorseDashboard
         $done = $today->where('done', true)->count();
         $notifications = [];
         $reminderDay = (int) ($protocol->customer_settings['weekly_update_day'] ?? 7);
-        $weeklyDue = $running && (($day - 1) % 7 + 1) >= $reminderDay
+        $weeklyDue = ! $preview && $running && (($day - 1) % 7 + 1) >= $reminderDay
             && ! DB::table('protocol_weekly_updates')->where('protocol_id', $protocol->id)->where('week_number', $week)->exists();
         if ($weeklyDue) {
             $notifications[] = ['id' => 'weekly-'.$week, 'type' => 'weekly_update', 'title' => 'Weekupdate invullen', 'body' => 'Hoe gaat het met '.$protocol->horse->name.' in week '.$week.'?', 'items' => []];
@@ -173,7 +165,7 @@ class HorseDashboard
             'notifications' => $notifications,
             'orderItems' => $allSupplements->filter(fn ($s) => count($s['weekNumbers']) > 0)->values()->all(),
             'calendar' => ['month' => $monthDate->format('Y-m'), 'label' => $monthDate->locale('nl')->translatedFormat('F Y'), 'previousMonth' => $monthDate->subMonth()->format('Y-m'), 'nextMonth' => $monthDate->addMonth()->format('Y-m'), 'cells' => $cells],
-            'nutrition' => $this->nutrition->forProtocol($protocol, $answers),
+            'nutrition' => $this->nutrition->forProtocol($protocol, $answers) + ['advice' => $protocol->voedingAdviezen->map(fn ($a) => ['id' => $a->id, 'title' => $a->title, 'description' => $a->description])->values()->all()],
             'management' => $this->management($protocol),
             'movement' => $protocol->bewegingAdviezen->map(fn ($a) => ['id' => $a->id, 'title' => $a->title, 'description' => $a->description])->all(),
             'analysis' => filled($protocol->analysis?->summary) ? [
@@ -183,6 +175,23 @@ class HorseDashboard
                 'observations' => $protocol->analysis->observations ?? [],
             ] : null,
         ];
+    }
+
+    public function nutritionLinks(Protocol $protocol, $items, callable $itemData): array
+    {
+        $links = [];
+        $topic = fn ($term) => $items->first(fn ($item) => str_contains(mb_strtolower($item->slug.' '.$item->title), $term));
+        foreach (['hayLibraryItem' => 'hooianalyse', 'waterLibraryItem' => 'wateranalyse'] as $key => $term) {
+            $configuredId = $protocol->customer_settings[$key === 'hayLibraryItem' ? 'hay_library_item_id' : 'water_library_item_id'] ?? null;
+            $item = $items->firstWhere('id', $configuredId) ?? $topic($term);
+            if (! $item) {
+                $subject = $key === 'hayLibraryItem' ? 'hooi' : 'water';
+                $item = $items->first(fn ($item) => preg_match('/'.$subject.'.*analy|analy.*'.$subject.'/isu', $item->title.' '.$item->description) === 1);
+            }
+            $links[$key] = $item ? $itemData($item) : null;
+        }
+
+        return $links;
     }
 
     private function management(Protocol $protocol): array

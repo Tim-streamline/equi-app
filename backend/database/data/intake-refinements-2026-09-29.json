@@ -1,0 +1,328 @@
+{
+  "sections": {
+    "paard": {
+      "update": {
+        "geboortedatum": {
+          "hint": "Geboortedatum niet bekend? Vul hieronder dan de (geschatte) leeftijd in."
+        },
+        "bij-jou-hoelang": {
+          "showIf": {
+            "eerdere-eigenaar": "Ja"
+          }
+        },
+        "conditie-veranderd": {
+          "label": "Is de lichaamsconditie van je paard de afgelopen jaren veranderd?",
+          "hint": "Denk aan periodes waarin je paard duidelijk is aangekomen, afgevallen of juist sterk wisselde in gewicht."
+        }
+      },
+      "add": [
+        {
+          "after": "sinds-bezit",
+          "field": {
+            "id": "eerdere-eigenaar",
+            "label": "Heeft je paard vóór jou al een andere eigenaar gehad?",
+            "type": "radio",
+            "options": [
+              "Nee, ik heb hem/haar zelf gefokt",
+              "Nee, hij/zij komt rechtstreeks van de fokker",
+              "Ja",
+              "Onbekend"
+            ],
+            "required": true
+          }
+        }
+      ],
+      "retire": [
+        "eerste-eigenaar"
+      ]
+    },
+    "klacht": {
+      "update": {
+        "acuut": {
+          "options": [
+            "Koorts / verhoging",
+            "Koliek(achtige) klachten",
+            "Acute kreupelheid",
+            "Ernstige benauwdheid / ademhalingsproblemen",
+            "Ernstige wond of recent trauma",
+            "Acute neurologische verschijnselen",
+            "Herstel van operatie, blessure of ziekte",
+            "Pijnstillers / ontstekingsremmers",
+            "Antibiotica",
+            "Corticosteroïden (bijv. prednison, dexamethason, jeukinjecties)",
+            "Maagmedicatie",
+            "PPID/Cushing-medicatie",
+            "Andere voorgeschreven medicatie",
+            "Drachtig",
+            "Veulen aan de voet",
+            "Ernstig gewichtsverlies zonder bekende oorzaak",
+            "Recent opgenomen in kliniek",
+            "Anders, namelijk",
+            "Geen van bovenstaande"
+          ]
+        },
+        "bloedonderzoek": {
+          "label": "Is er in de afgelopen 3 jaar bloedonderzoek bij je paard gedaan?",
+          "hint": "Upload in dat geval hieronder de uitslag(en) van bloedonderzoek van maximaal 3 jaar oud."
+        },
+        "gedragsveranderingen": {
+          "label": "Heb je de laatste tijd veranderingen opgemerkt in het gedrag van je paard?",
+          "hint": "Denk aan sneller geïrriteerd zijn, terugtrekken, angstiger of onrustiger zijn, minder werklust, ander gedrag naar mensen of paarden, moeite met aanraken of een andere reactie tijdens het rijden of trainen."
+        },
+        "allergie": {
+          "label": "Heeft je paard bekende allergieën of overgevoeligheden?",
+          "hint": "Denk aan een bekende of vermoede reactie op voeding, kruiden, medicatie, insecten, pollen, stof of andere stoffen. Zo ja, beschrijf waarop je paard reageert en wat je merkt."
+        },
+        "stressfactoren": {
+          "label": "Zijn er de afgelopen maanden veranderingen geweest die invloed kunnen hebben op je paard?",
+          "hint": "Denk aan een verhuizing, verandering van kudde of stalgenoot, ander ruwvoer of voer, verandering in weidegang, training of werk, meer of minder beweging, transport, ziekte, blessure of een andere verandering in de dagelijkse routine."
+        }
+      },
+      "add": [],
+      "retire": [
+        "ervaring-holistisch"
+      ]
+    },
+    "geschiedenis": {
+      "update": {
+        "eerste-maanden": {
+          "label": "Hoe zag het leven van je paard er in de eerste maanden uit?",
+          "hint": "Denk aan: bij de moeder of zonder moeder, opgroeien in een kudde, weidegang of stal, contact met andere veulens en eventuele bijzonderheden. Weet je het niet? Vul ‘onbekend’ in."
+        },
+        "moeder-voer-huis": {
+          "label": "Hoe werd de moeder tijdens de dracht en zoogperiode gehouden en gevoerd?",
+          "hint": "Denk aan huisvesting, voeding en eventuele supplementen. Weet je het niet? Vul ‘onbekend’ in."
+        },
+        "medische-gebeurtenissen": {
+          "sub": [
+            {
+              "id": "datum",
+              "label": "Geschatte datum / periode",
+              "type": "text"
+            },
+            {
+              "id": "diagnose",
+              "label": "Diagnose of klacht",
+              "type": "text"
+            },
+            {
+              "id": "symptomen",
+              "label": "Wat was er aan de hand?",
+              "type": "textarea",
+              "hint": "Beschrijf kort de klacht, blessure, ziekte of andere medische gebeurtenis."
+            },
+            {
+              "id": "dierenarts",
+              "label": "Is hiervoor een dierenarts geweest?",
+              "type": "radio",
+              "options": [
+                "Ja",
+                "Nee",
+                "Weet ik niet"
+              ]
+            },
+            {
+              "id": "onderzoeken",
+              "label": "Is er onderzoek gedaan?",
+              "type": "text",
+              "hint": "Zo ja, welk onderzoek en wat kwam daaruit? Denk aan bloedonderzoek, röntgenfoto’s, echo, scopie of ander onderzoek. Geen onderzoek gedaan? Vul \"nee\" in."
+            },
+            {
+              "id": "behandelingen",
+              "label": "Is er iets gedaan of behandeld?",
+              "type": "text",
+              "hint": "Zo ja, beschrijf kort wat er is gedaan of gegeven. Denk aan medicatie, rust, revalidatie, therapie of aanpassingen in management. Niets gedaan? Vul ‘nee’ in."
+            },
+            {
+              "id": "reactie",
+              "label": "Hoe reageerde je paard daarop?",
+              "type": "text",
+              "hint": "Beschrijf kort wat je merkte na de behandeling of aanpassing. Is er niets gedaan? Vul ‘n.v.t.’ in."
+            },
+            {
+              "id": "verdwenen",
+              "label": "Hoe is het nu met deze klacht?",
+              "type": "radio",
+              "options": [
+                "Volledig verdwenen",
+                "Verbeterd, maar nog aanwezig",
+                "Komt af en toe terug",
+                "Nog steeds aanwezig",
+                "Weet ik niet"
+              ]
+            }
+          ]
+        }
+      },
+      "add": [],
+      "retire": []
+    },
+    "medisch": {
+      "update": {
+        "vacc-laatst": {
+          "label": "Wanneer is je paard voor het laatst gevaccineerd?"
+        },
+        "vacc-volgende": {
+          "label": "Wanneer staat de volgende vaccinatie gepland?",
+          "hint": "Een exacte datum is niet nodig. Maand of periode is ook voldoende.",
+          "required": true,
+          "showIf": {
+            "vacc-gepland": "Ja"
+          }
+        },
+        "mestonderzoek-uitslag": {
+          "hint": "Beschrijf kort de belangrijkste bevindingen of uitkomsten. Weet je de uitslag niet? Vul dan \"onbekend\" in."
+        },
+        "sec-aandoening": {
+          "hint": "Hieronder staan een aantal aandoeningen die relevant kunnen zijn voor het totaalbeeld van je paard. Geef per aandoening aan of deze is vastgesteld, je zelf een vermoeden hebt, of dat deze voor zover je weet niet speelt."
+        },
+        "ir-status": {
+          "options": [
+            "Vastgesteld door dierenarts/onderzoek",
+            "Ik vermoed dit",
+            "Voor zover ik weet niet",
+            "Weet ik niet"
+          ],
+          "flagIf": [
+            "aangetoond door dierenarts",
+            "vermoeden van mij",
+            "Vastgesteld door dierenarts/onderzoek",
+            "Ik vermoed dit"
+          ]
+        },
+        "ir-attest": {
+          "showIf": {
+            "ir-status": [
+              "aangetoond door dierenarts",
+              "Vastgesteld door dierenarts/onderzoek"
+            ]
+          }
+        },
+        "ems-status": {
+          "options": [
+            "Vastgesteld door dierenarts/onderzoek",
+            "Ik vermoed dit",
+            "Voor zover ik weet niet",
+            "Weet ik niet"
+          ],
+          "flagIf": [
+            "aangetoond door dierenarts",
+            "vermoeden van mij",
+            "Vastgesteld door dierenarts/onderzoek",
+            "Ik vermoed dit"
+          ]
+        },
+        "kpu-status": {
+          "options": [
+            "Aangetoond met urineonderzoek",
+            "Ik vermoed dit",
+            "Voor zover ik weet niet",
+            "Weet ik niet"
+          ],
+          "flagIf": [
+            "aangetoond uit urine onderzoek",
+            "vermoeden van mij",
+            "Aangetoond met urineonderzoek",
+            "Ik vermoed dit"
+          ]
+        },
+        "kpu-attest": {
+          "showIf": {
+            "kpu-status": [
+              "aangetoond uit urine onderzoek",
+              "Aangetoond met urineonderzoek"
+            ]
+          }
+        },
+        "medicatie-ooit-welke": {
+          "options": [
+            "Antibiotica",
+            "Ontstekingsremmers / pijnstilling (bijv. Bute, Meloxicam, Equioxx)",
+            "Corticosteroïden / prednison / dexamethason",
+            "Maagmedicatie (bijv. omeprazol)",
+            "Ventipulmin",
+            "PPID / Cushing medicatie (bijv. Prascend)",
+            "Sedatie / kalmeringsmiddelen",
+            "Hormoon- of vruchtbaarheidsmedicatie",
+            "Antischimmel / antiparasitaire medicatie",
+            "Anders, namelijk",
+            "Geen"
+          ]
+        },
+        "medicatie-ooit-anders": {
+          "showIf": {
+            "medicatie-recent": [
+              "Ja, incidenteel",
+              "Ja, meerdere keren of langdurig"
+            ],
+            "medicatie-ooit-welke": "Anders, namelijk"
+          }
+        },
+        "medicatie-ooit-details": {
+          "label": "Indien bekend, vertel hieronder meer over de medicatie die je paard heeft gehad.",
+          "showIf": {
+            "medicatie-recent": [
+              "Ja, incidenteel",
+              "Ja, meerdere keren of langdurig"
+            ],
+            "medicatie-ooit-welke": "any-checked"
+          },
+          "hint": "Voeg de gebruikte medicatie één voor één toe. Geef per middel aan waarvoor het is gegeven, wanneer en hoe lang je paard het heeft gekregen en, voor zover je dat weet, wat het effect was."
+        }
+      },
+      "add": [
+        {
+          "after": "vacc-laatst",
+          "field": {
+            "id": "vacc-gepland",
+            "label": "Staat er een volgende vaccinatie gepland?",
+            "type": "radio",
+            "required": true,
+            "options": [
+              "Ja",
+              "Nee",
+              "Weet ik niet"
+            ]
+          }
+        },
+        {
+          "after": "ijzers",
+          "field": {
+            "id": "ijzers-afgelopen-twee-jaar",
+            "label": "Heeft je paard in de afgelopen 2 jaar op hoefijzers gestaan?",
+            "type": "radio",
+            "required": true,
+            "options": [
+              "Ja",
+              "Nee",
+              "Weet ik niet"
+            ],
+            "showIf": {
+              "ijzers": "nee"
+            }
+          }
+        },
+        {
+          "after": "ijzers-afgelopen-twee-jaar",
+          "field": {
+            "id": "ijzers-af",
+            "label": "Wanneer zijn de hoefijzers eraf gegaan?",
+            "type": "text",
+            "optional": true,
+            "hint": "Een geschatte maand of periode is voldoende.",
+            "showIf": {
+              "ijzers": "nee",
+              "ijzers-afgelopen-twee-jaar": "Ja"
+            }
+          }
+        }
+      ],
+      "retire": [
+        "mestonderzoek-uitslag-file"
+      ]
+    }
+  },
+  "none_options_add": [
+    "geen van bovenstaande"
+  ]
+}

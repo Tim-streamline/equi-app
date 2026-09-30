@@ -1,5 +1,6 @@
+import { KeyboardTextInput as TextInput } from '@/components/ui/KeyboardForm';
 import { useState } from 'react';
-import { Alert, Pressable, Share, Text, TextInput, View } from 'react-native';
+import { Alert, Pressable, Share, Text, View } from 'react-native';
 import { router } from 'expo-router';
 import * as Linking from 'expo-linking';
 import { Bookmark, MessageCircle, MoreHorizontal, ThumbsUp } from 'lucide-react-native';

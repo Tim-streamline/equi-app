@@ -133,6 +133,7 @@ Route::middleware('auth:admin')->group(function () {
     Route::controller(IntakeBookingController::class)->prefix('bookings')->as('bookings.')->group(function () {
         Route::get('/', 'index')->name('index');
         Route::get('{booking}', 'show')->name('show');
+        Route::get('{booking}/answers.pdf', 'answersPdf')->name('answers-pdf');
         Route::delete('{booking}', 'destroy')->name('destroy');
         Route::post('{booking}/status', 'updateStatus')->name('status');
         Route::put('{booking}', 'update')->name('update');
@@ -159,6 +160,8 @@ Route::middleware('auth:admin')->group(function () {
         Route::get('/', 'index')->name('index');
         Route::get('create', 'create')->name('create');
         Route::post('/', 'store')->name('store');
+        Route::post('preview', 'preview')->name('preview');
+        Route::post('{protocol}/preview', 'preview')->name('preview-existing');
         Route::get('{protocol}/edit', 'edit')->name('edit');
         Route::put('{protocol}', 'update')->name('update');
         Route::get('{protocol}', 'show')->name('show');

@@ -6,6 +6,9 @@ use App\Http\Controllers\Controller;
 use App\Models\IntakeBooking;
 use App\Models\Therapist;
 use App\Support\AuditLogger;
+use App\Support\IntakeAnswersPdf;
+use App\Support\IntakeReview;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -21,7 +24,7 @@ class IntakeBookingController extends Controller
             ->when($request->string('status')->toString(), fn ($query, $s) => $query->where('status', $s))
             ->when($request->string('therapist')->toString(), fn ($query, $t) => $query->where('therapist_id', $t))
             ->with('user:id,name,email', 'horse:id,name', 'therapist:id,name')
-            ->orderBy('scheduled_at')
+            ->orderByRaw('submitted_at DESC NULLS LAST')->orderByDesc('created_at')->orderBy('id')
             ->paginate(25)
             ->withQueryString();
 
@@ -40,10 +43,20 @@ class IntakeBookingController extends Controller
     {
         $booking->load('user:id,name,email', 'horse:id,name,breed', 'therapist:id,name,title');
 
-        return Inertia::render('Bookings/Show', ['booking' => $booking, 'printMode' => $request->boolean('print'), 'review' => app(\App\Support\IntakeReview::class)->forBooking($booking)]);
+        return Inertia::render('Bookings/Show', ['booking' => $booking, 'printMode' => $request->boolean('print'), 'review' => app(IntakeReview::class)->forBooking($booking)]);
     }
 
-    public function review(Request $request, IntakeBooking $booking): \Illuminate\Http\JsonResponse
+    public function answersPdf(IntakeBooking $booking, IntakeAnswersPdf $pdf): \Illuminate\Http\Response
+    {
+        return response($pdf->render($booking), 200, [
+            'Content-Type' => 'application/pdf',
+            'Content-Disposition' => 'attachment; filename="'.$pdf->filename($booking).'"',
+            'Cache-Control' => 'private, no-store',
+            'X-Content-Type-Options' => 'nosniff',
+        ]);
+    }
+
+    public function review(Request $request, IntakeBooking $booking): JsonResponse
     {
         $data = $request->validate([
             'accepted_triggers' => ['sometimes', 'array', 'max:1000'],
@@ -51,7 +64,7 @@ class IntakeBookingController extends Controller
             'notes' => ['sometimes', 'nullable', 'string', 'max:50000'],
         ]);
         if (array_key_exists('accepted_triggers', $data)) {
-            $valid = array_column(app(\App\Support\IntakeReview::class)->forBooking($booking)['triggers'], 'id');
+            $valid = array_column(app(IntakeReview::class)->forBooking($booking)['triggers'], 'id');
             abort_if(array_diff($data['accepted_triggers'], $valid), 422, 'Een protocol-trigger is niet meer van toepassing. Vernieuw de pagina.');
             $booking->accepted_triggers = $data['accepted_triggers'];
         }
@@ -90,7 +103,7 @@ class IntakeBookingController extends Controller
         $booking->update(['status' => $status]);
         AuditLogger::updated($booking, $before, $request->input('reason'));
 
-        return back()->with('success', "Booking marked {$status}.");
+        return back()->with('success', "Booking: {$booking->status_label}.");
     }
 
     public function update(Request $request, IntakeBooking $booking): RedirectResponse

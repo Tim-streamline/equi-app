@@ -26,12 +26,3 @@ test('library articles do not render dummy media above their body', async () => 
   const content = await readFile(new URL('../components/library/LibraryContent.tsx', import.meta.url), 'utf8');
   assert.match(content, /<View className="w-full px-5 pt-5"><MarkdownBody markdown=\{data.body\}/);
 });
-
-test('embedded markdown videos fill the available markdown width', async () => {
-  const source = await readFile(
-    new URL('../components/library/MarkdownBody.tsx', import.meta.url),
-    'utf8',
-  );
-
-  assert.match(source, /className="[^"]*w-full[^"]*aspect-video/);
-});

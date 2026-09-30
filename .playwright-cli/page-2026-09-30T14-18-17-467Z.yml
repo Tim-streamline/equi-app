@@ -1,0 +1,323 @@
+- generic [ref=f2e3]:
+  - complementary [ref=f2e4]:
+    - generic [ref=f2e8]:
+      - generic [ref=f2e9]: EquiNova
+      - generic [ref=f2e10]: Admin console
+    - navigation [ref=f2e11]:
+      - link "Dashboard" [ref=f2e13] [cursor=pointer]:
+        - /url: http://localhost:81/admin
+      - generic [ref=f2e16]:
+        - generic [ref=f2e17]: Support
+        - link "Users" [ref=f2e18] [cursor=pointer]:
+          - /url: http://localhost:81/admin/users
+        - link "Horses" [ref=f2e21] [cursor=pointer]:
+          - /url: http://localhost:81/admin/horses
+        - link "Therapists" [ref=f2e24] [cursor=pointer]:
+          - /url: http://localhost:81/admin/therapists
+        - link "Intake bookings" [ref=f2e27] [cursor=pointer]:
+          - /url: http://localhost:81/admin/bookings
+        - link "Protocols" [ref=f2e30] [cursor=pointer]:
+          - /url: http://localhost:81/admin/protocols
+      - generic [ref=f2e33]:
+        - generic [ref=f2e34]: Content
+        - link "Ontdek Plus" [ref=f2e35] [cursor=pointer]:
+          - /url: http://localhost:81/admin/plus-page
+        - link "Library" [ref=f2e38] [cursor=pointer]:
+          - /url: http://localhost:81/admin/library
+        - link "Categories" [ref=f2e41] [cursor=pointer]:
+          - /url: http://localhost:81/admin/library-categories
+        - link "Seasonal tips" [ref=f2e44] [cursor=pointer]:
+          - /url: http://localhost:81/admin/seasonal-tips
+        - link "Nova chat" [ref=f2e47] [cursor=pointer]:
+          - /url: http://localhost:81/admin/nova
+      - generic [ref=f2e50]:
+        - generic [ref=f2e51]: Scanner
+        - link "Scan results" [ref=f2e52] [cursor=pointer]:
+          - /url: http://localhost:81/admin/scans
+        - link "Products" [ref=f2e55] [cursor=pointer]:
+          - /url: http://localhost:81/admin/products
+        - link "Ingredients" [ref=f2e58] [cursor=pointer]:
+          - /url: http://localhost:81/admin/ingredients
+      - generic [ref=f2e61]:
+        - generic [ref=f2e62]: Community
+        - link "Posts & replies" [ref=f2e63] [cursor=pointer]:
+          - /url: http://localhost:81/admin/community
+        - link "Reports" [ref=f2e66] [cursor=pointer]:
+          - /url: http://localhost:81/admin/reports
+      - generic [ref=f2e69]:
+        - generic [ref=f2e70]: Billing
+        - link "Plans" [ref=f2e71] [cursor=pointer]:
+          - /url: http://localhost:81/admin/plans
+        - link "Subscriptions" [ref=f2e74] [cursor=pointer]:
+          - /url: http://localhost:81/admin/subscriptions
+        - link "Payments" [ref=f2e77] [cursor=pointer]:
+          - /url: http://localhost:81/admin/payments
+        - link "Credits" [ref=f2e80] [cursor=pointer]:
+          - /url: http://localhost:81/admin/credits
+      - generic [ref=f2e83]:
+        - generic [ref=f2e84]: Operations
+        - link "Data exports" [ref=f2e85] [cursor=pointer]:
+          - /url: http://localhost:81/admin/exports
+        - link "Notifications" [ref=f2e88] [cursor=pointer]:
+          - /url: http://localhost:81/admin/notifications
+        - link "Sync health" [ref=f2e91] [cursor=pointer]:
+          - /url: http://localhost:81/admin/sync-health
+        - link "Audit log" [ref=f2e94] [cursor=pointer]:
+          - /url: http://localhost:81/admin/audit-log
+        - link "Intakevragen" [ref=f2e97] [cursor=pointer]:
+          - /url: http://localhost:81/admin/intake-questionnaire
+        - link "Protocol Templates" [ref=f2e100] [cursor=pointer]:
+          - /url: http://localhost:81/admin/protocol-settings
+        - link "Protocol Settings" [ref=f2e103] [cursor=pointer]:
+          - /url: http://localhost:81/admin/protocol-settings/advice
+        - link "Settings" [ref=f2e106] [cursor=pointer]:
+          - /url: http://localhost:81/admin/settings
+    - generic [ref=f2e110]:
+      - generic [ref=f2e111]: EO
+      - generic [ref=f2e112]:
+        - generic [ref=f2e113]: EquiNova Owner
+        - generic [ref=f2e114]: owner
+      - button "Log out" [ref=f2e115]
+  - generic [ref=f2e117]:
+    - banner [ref=f2e118]:
+      - heading "Nieuw protocol" [level=1] [ref=f2e119]
+    - main [ref=f2e120]:
+      - group [ref=f2e123]:
+        - generic [ref=f2e124]:
+          - generic [ref=f2e125]:
+            - link "Protocollen" [ref=f2e126] [cursor=pointer]:
+              - /url: http://localhost:81/admin/protocols
+            - generic [ref=f2e129]:
+              - generic [ref=f2e130]:
+                - generic [ref=f2e131]: Darm protocol · R
+                - generic [ref=f2e132]: Concept
+                - generic [ref=f2e211]: Niet opgeslagen
+              - generic [ref=f2e133]: Darm protocol
+            - button "Volledige preview" [ref=f2e134] [cursor=pointer]
+            - button "Opslaan" [ref=f2e136] [cursor=pointer]
+            - button "Publiceren" [ref=f2e138] [cursor=pointer]
+          - navigation "Protocolonderdelen" [ref=f2e140]:
+            - button "Basis" [ref=f2e141]
+            - button "Planning" [ref=f2e144]
+            - button "Voeding 0" [active] [ref=f2e146]:
+              - text: Voeding
+              - generic [ref=f2e148]: "0"
+            - button "Management 0" [ref=f2e149]:
+              - text: Management
+              - generic [ref=f2e151]: "0"
+            - button "Beweging 0" [ref=f2e152]:
+              - text: Beweging
+              - generic [ref=f2e154]: "0"
+            - button "Analyse" [ref=f2e155]
+            - button "Klantweergave" [ref=f2e157]
+        - generic [ref=f2e159]:
+          - complementary [ref=f2e160]:
+            - generic [ref=f2e161]:
+              - generic [ref=f2e162]: Paard
+              - combobox [ref=f2e163]:
+                - option "Kies een paard" [disabled]
+                - option "Nova · Shelley Meeuwsen"
+                - option "R · Shelley Meeuwsen" [selected]
+                - option "Rolo · Tim"
+                - option "Rolo · Shelley Rochelle Meeuwsen"
+            - generic [ref=f2e164]:
+              - generic [ref=f2e165]: Plan
+              - generic [ref=f2e166]:
+                - generic [ref=f2e167]:
+                  - term [ref=f2e168]: Fases
+                  - definition [ref=f2e169]: "3"
+                - generic [ref=f2e170]:
+                  - term [ref=f2e171]: Duur
+                  - definition [ref=f2e172]: 20 weken
+                - generic [ref=f2e173]:
+                  - term [ref=f2e174]: Huidige week
+                  - definition [ref=f2e175]: "1"
+                - generic [ref=f2e176]:
+                  - term [ref=f2e177]: Supplementen
+                  - definition [ref=f2e178]: "12"
+                - generic [ref=f2e179]:
+                  - term [ref=f2e180]: Adviezen
+                  - definition [ref=f2e181]: "0"
+          - main [ref=f2e182]:
+            - generic [ref=f2e213]:
+              - generic [ref=f2e214]:
+                - generic [ref=f2e215]:
+                  - generic [ref=f2e216]: Stap 3 · ProtocolVoedingAdvies
+                  - heading "Voeding" [level=2] [ref=f2e217]
+                  - paragraph [ref=f2e218]: Selecteer de voedingsadviezen die bij dit protocol horen.
+                - generic [ref=f2e219]: 0 geselecteerd
+              - generic [ref=f2e220]:
+                - heading "Ruwvoer voor dit paard" [level=3] [ref=f2e221]
+                - generic [ref=f2e222]:
+                  - generic [ref=f2e223]:
+                    - generic [ref=f2e224]:
+                      - generic [ref=f2e225]: Gewicht (kg)
+                      - spinbutton "Gewicht (kg)" [ref=f2e226]: "535"
+                    - generic [ref=f2e227]:
+                      - checkbox "Afwijkend streefgewicht gebruiken (bij onder- of overgewicht)" [ref=f2e228]
+                      - text: Afwijkend streefgewicht gebruiken (bij onder- of overgewicht)
+                  - generic [ref=f2e229]:
+                    - generic [ref=f2e230]: Suiker
+                    - textbox [ref=f2e231]: <7%
+                  - generic [ref=f2e232]:
+                    - generic [ref=f2e233]: Eiwit
+                    - textbox [ref=f2e234]: 6–9%
+                - paragraph [ref=f2e235]: 10,7–16,05 kg ruwvoer per dag. Kruiden en supplementen gebruiken uitsluitend het actuele gewicht; handmatige doseringen blijven behouden.
+                - generic [ref=f2e236]:
+                  - generic [ref=f2e237]:
+                    - generic [ref=f2e238]:
+                      - generic [ref=f2e239]: Afbeelding bij hooianalyse
+                      - combobox [ref=f2e240]:
+                        - option "Automatisch zoeken" [disabled] [selected]
+                        - option "De basics van hoefbevangenheid 1/2"
+                        - option "De basics van hoefbevangenheid 2/2"
+                        - option "Dit wil je weten als je voordroog voert"
+                        - option "Een passende kruidenapotheek voor je paard samenstellen"
+                        - option "Het suikergehalte van hooi zelf meten met een refractometer"
+                        - option "Kruiden drogen, bewaren en houdbaar houden"
+                        - option "Kruiden integreren in de dagelijkse zorg van je paard"
+                        - 'option "Masterclass: de apotheek van de herfst"'
+                        - 'option "Metformine bij insulinedysregulatie: heeft het zin?"'
+                        - 'option "Pijnstillers bij hoefbevangenheid: wel of niet?"'
+                        - 'option "Ruwvoer laten analyseren: welke analyse kies je?"'
+                        - 'option "Ruwvoeranalyse interpreteren: welke waarden wil je zien?"'
+                        - option "SGLT2-remmers bij insulinedysregulatie"
+                        - option "Tips bij acute hoefbevangenheid & hoe daarna verder?"
+                        - option "Veilig en duurzaam wildplukken + opdracht"
+                        - option "Verantwoord kruiden gebruiken bij paarden 1/3"
+                        - option "Verantwoord kruiden gebruiken bij paarden 2/3"
+                        - option "Verantwoord kruiden gebruiken bij paarden 3/3"
+                        - 'option "Waarom je je hooinetten wil wassen: vóór én tijdens gebruik"'
+                        - option "Wat er van de akkers overwaait"
+                        - option "Wilde kruiden herkennen en verzamelen"
+                        - option "Zelf gezonde kruidentraktaties maken voor je paard"
+                        - option "Zelfselectie bij paarden in de praktijk 2/3"
+                        - 'option "Zelfselectie bij paarden: het mineralenbuffet 3/3"'
+                        - 'option "Zelfselectie bij paarden: wat is het en hoe werkt het? 1/3"'
+                    - paragraph [ref=f2e241]: Dit item bepaalt alleen de afbeelding van de CTA. De knop opent altijd de vaste selectie met het artikel en de video over hooianalyse.
+                  - generic [ref=f2e242]:
+                    - generic [ref=f2e243]: Wateranalyse in de bibliotheek
+                    - combobox [ref=f2e244]:
+                      - option "Automatisch zoeken" [disabled] [selected]
+                      - option "De basics van hoefbevangenheid 1/2"
+                      - option "De basics van hoefbevangenheid 2/2"
+                      - option "Dit wil je weten als je voordroog voert"
+                      - option "Een passende kruidenapotheek voor je paard samenstellen"
+                      - option "Het suikergehalte van hooi zelf meten met een refractometer"
+                      - option "Kruiden drogen, bewaren en houdbaar houden"
+                      - option "Kruiden integreren in de dagelijkse zorg van je paard"
+                      - 'option "Masterclass: de apotheek van de herfst"'
+                      - 'option "Metformine bij insulinedysregulatie: heeft het zin?"'
+                      - 'option "Pijnstillers bij hoefbevangenheid: wel of niet?"'
+                      - 'option "Ruwvoer laten analyseren: welke analyse kies je?"'
+                      - 'option "Ruwvoeranalyse interpreteren: welke waarden wil je zien?"'
+                      - option "SGLT2-remmers bij insulinedysregulatie"
+                      - option "Tips bij acute hoefbevangenheid & hoe daarna verder?"
+                      - option "Veilig en duurzaam wildplukken + opdracht"
+                      - option "Verantwoord kruiden gebruiken bij paarden 1/3"
+                      - option "Verantwoord kruiden gebruiken bij paarden 2/3"
+                      - option "Verantwoord kruiden gebruiken bij paarden 3/3"
+                      - 'option "Waarom je je hooinetten wil wassen: vóór én tijdens gebruik"'
+                      - option "Wat er van de akkers overwaait"
+                      - option "Wilde kruiden herkennen en verzamelen"
+                      - option "Zelf gezonde kruidentraktaties maken voor je paard"
+                      - option "Zelfselectie bij paarden in de praktijk 2/3"
+                      - 'option "Zelfselectie bij paarden: het mineralenbuffet 3/3"'
+                      - 'option "Zelfselectie bij paarden: wat is het en hoe werkt het? 1/3"'
+                - heading "Actuele voerproducten uit de intake" [level=3] [ref=f2e245]
+                - generic [ref=f2e246]:
+                  - generic [ref=f2e247]: Metazo Esparcette · 1kg · 1 voerbeurten per dag
+                  - combobox "Beoordeling Metazo Esparcette" [ref=f2e248]:
+                    - option "Doorgaan"
+                    - option "Stoppen" [selected]
+                  - textbox "Persoonlijke toelichting" [ref=f2e249]
+                - generic [ref=f2e250]:
+                  - generic [ref=f2e251]: Dd Dd · Dd · Dd voerbeurten per dag
+                  - combobox "Beoordeling Dd Dd" [ref=f2e252]:
+                    - option "Doorgaan"
+                    - option "Stoppen" [selected]
+                  - textbox "Persoonlijke toelichting" [ref=f2e253]
+                - generic [ref=f2e254]:
+                  - generic [ref=f2e255]: gewone liksteen ·
+                  - combobox "Beoordeling gewone liksteen" [ref=f2e256]:
+                    - option "Doorgaan"
+                    - option "Stoppen" [selected]
+                  - textbox "Persoonlijke toelichting" [ref=f2e257]
+                - generic [ref=f2e258]:
+                  - generic [ref=f2e259]: Himalaya zoutsteen ·
+                  - combobox "Beoordeling Himalaya zoutsteen" [ref=f2e260]:
+                    - option "Doorgaan"
+                    - option "Stoppen" [selected]
+                  - textbox "Persoonlijke toelichting" [ref=f2e261]
+              - generic [ref=f2e262]:
+                - generic [ref=f2e263] [cursor=pointer]:
+                  - checkbox "Bij gewichtsverlies of gebitsproblemen selecteren" [ref=f2e264]
+                  - generic [ref=f2e265]:
+                    - generic [ref=f2e266]: Bij gewichtsverlies of gebitsproblemen
+                    - generic [ref=f2e268]: Kan je paard onvoldoende hooi eten of valt het af, dan kan geweekte, vezelrijke bijvoeding in een grotere hoeveelheid nodig zijn als aanvulling op of vervanging van ruwvoer. Bekijk hiervoor de video "Wat voer je bij gewichtsverlies of gebitsproblemen?"
+                - generic [ref=f2e271] [cursor=pointer]:
+                  - checkbox "Geef enkel zuivere bijvoeding selecteren" [ref=f2e272]
+                  - generic [ref=f2e273]:
+                    - generic [ref=f2e274]: Geef enkel zuivere bijvoeding
+                    - generic [ref=f2e276]: Gebruik alleen zoveel als nodig is om het protocol te laten eten, maximaal 60 tot 80 gram per 100 kg lichaamsgewicht per dag. Week het tot een slobber en bekijk de video 'Wat geef je dan wél?' voor geschikte opties. Nieuwe voeding opbouwen gedurende 7-10 dagen.
+                - generic [ref=f2e279] [cursor=pointer]:
+                  - checkbox "Geen fruit, wortels of snoepjes selecteren" [ref=f2e280]
+                  - generic [ref=f2e281]:
+                    - generic [ref=f2e282]: Geen fruit, wortels of snoepjes
+                    - generic [ref=f2e284]: Vervang door rozenbottel, hennep bite of komkommer
+                - generic [ref=f2e287] [cursor=pointer]:
+                  - checkbox "Geen gehakseld ruwvoer (fibermix) selecteren" [ref=f2e288]
+                  - generic [ref=f2e289]:
+                    - generic [ref=f2e290]: Geen gehakseld ruwvoer (fibermix)
+                    - generic [ref=f2e292]: Te kort om te kauwen, verstoort de dikke darm
+                - generic [ref=f2e295] [cursor=pointer]:
+                  - checkbox "Graszaadhooi beperken selecteren" [ref=f2e296]
+                  - generic [ref=f2e297]:
+                    - generic [ref=f2e298]: Graszaadhooi beperken
+                    - generic [ref=f2e300]: "Laat graszaadhooi maximaal een derde van het totale ruwvoerrantsoen vormen, omdat het eenzijdiger is dan passend weidehooi. Ga er niet automatisch van uit dat graszaadhooi suikerarm is: laat ook dit analyseren en beoordeel het binnen het volledige rantsoen."
+                - generic [ref=f2e303] [cursor=pointer]:
+                  - checkbox "Ruwvoer als basis selecteren" [ref=f2e304]
+                  - generic [ref=f2e305]:
+                    - generic [ref=f2e306]: Ruwvoer als basis
+                    - generic [ref=f2e308]: Laat het rantsoen hoofdzakelijk bestaan uit onverpakt hooi (uit touwtjes). Geef 2 tot 3 kg hooi per 100 kg (gewenst) lichaamsgewicht en periodes zonder ruwvoer >2u (inclusief de nacht).
+                - generic [ref=f2e311] [cursor=pointer]:
+                  - checkbox "Slowfeeders met kleine mazen selecteren" [ref=f2e312]
+                  - generic [ref=f2e313]:
+                    - generic [ref=f2e314]: Slowfeeders met kleine mazen
+                    - generic [ref=f2e316]: 3x3 cm, verlengt de eettijd · geleidelijk opbouwen als paard het niet gewend is, stress te allen tijde voorkomen
+                - generic [ref=f2e319] [cursor=pointer]:
+                  - checkbox "Stoppen met huidige bijvoeding selecteren" [ref=f2e320]
+                  - generic [ref=f2e321]:
+                    - generic [ref=f2e322]: Stoppen met huidige bijvoeding
+                    - generic [ref=f2e324]: Afbouwen gedurende 7-10 dagen.
+                - generic [ref=f2e327] [cursor=pointer]:
+                  - checkbox "Stoppen met voordroog selecteren" [ref=f2e328]
+                  - generic [ref=f2e329]:
+                    - generic [ref=f2e330]: Stoppen met voordroog
+                    - generic [ref=f2e332]: Vervang voordroog zo snel mogelijk door onverpakt schimmelvrij hooi. Voordroog wordt geconserveerd door fermentatie en bevat melkzuurbacteriën en melkzuren die de zuurgraad en bacteriële balans in de darmen kunnen verstoren. Droger voordroog kan daarnaast ongemerkt meer schimmels, gisten en ongewenste bacteriën bevatten.
+                - generic [ref=f2e335] [cursor=pointer]:
+                  - checkbox "Vers groen ter vrije selectie selecteren" [ref=f2e336]
+                  - generic [ref=f2e337]:
+                    - generic [ref=f2e338]: Vers groen ter vrije selectie
+                    - generic [ref=f2e340]: Wilgentakken, kleefkruid, weegbree, paardenbloem, brandnetel
+                - generic [ref=f2e343] [cursor=pointer]:
+                  - checkbox "Voerwissels geleidelijk doorvoeren selecteren" [ref=f2e344]
+                  - generic [ref=f2e345]:
+                    - generic [ref=f2e346]: Voerwissels geleidelijk doorvoeren
+                    - generic [ref=f2e348]: Oud en nieuw voer mengen over 7 tot 10 dagen
+                - generic [ref=f2e351] [cursor=pointer]:
+                  - checkbox "Waterkwaliteit controleren selecteren" [ref=f2e352]
+                  - generic [ref=f2e353]:
+                    - generic [ref=f2e354]: Waterkwaliteit controleren
+                    - generic [ref=f2e356]: Laat de waterkwaliteit regelmatig onderzoeken wanneer het paard regenwater, slootwater of grondwater drinkt. Dit water kan bacteriën, algen, zware metalen, landbouwstoffen of een ongunstige mineralensamenstelling bevatten, ook wanneer het helder oogt en normaal ruikt. Bekijk voor meer uitleg de gratis video over waterkwaliteit in de bibliotheek.
+                - generic [ref=f2e359] [cursor=pointer]:
+                  - checkbox "Zoutsteen ter vrije beschikking selecteren" [ref=f2e360]
+                  - generic [ref=f2e361]:
+                    - generic [ref=f2e362]: Zoutsteen ter vrije beschikking
+                    - generic [ref=f2e364]: "Bied een zoutsteen zonder melasse en organisch selenium aan, bijvoorbeeld een Himalaya-zoutsteen of PN-steen. Controleer altijd de samenstelling: ook andere zoutstenen kunnen geschikt zijn. De steen is bedoeld om af en toe aan te likken en hoort niet in korte tijd volledig te worden opgegeten."
+                - generic [ref=f2e367] [cursor=pointer]:
+                  - checkbox "Zuivere balancer geven selecteren" [ref=f2e368]
+                  - generic [ref=f2e369]:
+                    - generic [ref=f2e370]: Zuivere balancer geven
+                    - generic [ref=f2e372]: Vul het ruwvoer dagelijks aan met een meukvrije balancer met anorganische mineralen. Geef de dosering die past bij het lichaamsgewicht en het gekozen product. Bekijk voor meer uitleg de video "wat dan wel" in de bibliotheek.
+              - button "Naar Management" [ref=f2e376] [cursor=pointer]

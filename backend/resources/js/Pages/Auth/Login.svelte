@@ -12,7 +12,7 @@
     }
 </script>
 
-<svelte:head><title>Sign in · EquiNova Admin</title></svelte:head>
+<svelte:head><title>Sign in · Equi App Admin</title></svelte:head>
 
 <div class="flex min-h-screen items-center justify-center bg-secondary px-4">
     <div class="w-full max-w-sm">
@@ -21,7 +21,7 @@
                 <ShieldCheck class="size-6" />
             </div>
             <div class="text-center">
-                <div class="text-lg font-semibold">EquiNova Admin</div>
+                <div class="text-lg font-semibold">Equi App Admin</div>
                 <div class="text-sm text-muted-foreground">Back-office console</div>
             </div>
         </div>
@@ -49,8 +49,5 @@
                 </form>
             </CardContent>
         </Card>
-        <p class="mt-4 text-center text-xs text-muted-foreground">
-            Demo: admin@equinova.test · password
-        </p>
     </div>
 </div>

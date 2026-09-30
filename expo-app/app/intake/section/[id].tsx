@@ -4,13 +4,14 @@
 // section (or the submit screen on the last one).
 
 import { useMemo } from 'react';
-import { View, Text, ScrollView, KeyboardAvoidingView, Platform } from 'react-native';
+import { View, Text } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ChevronLeft, X } from 'lucide-react-native';
 
 import { Button } from '@/components/ui/Button';
 import { IconButton } from '@/components/ui/IconButton';
+import { IntakeScrollView } from '@/components/intake/IntakeScrollView';
 import { IntakeField } from '@/components/intake/IntakeField';
 import { useIntakeSchema } from '@/lib/intake/schema-provider';
 import { showField, answeredCount } from '@/lib/intake/logic';
@@ -94,19 +95,31 @@ export default function IntakeSectionScreen() {
           </View>
         </View>
 
-        <KeyboardAvoidingView
-          style={{ flex: 1 }}
-          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-          keyboardVerticalOffset={Platform.OS === 'ios' ? 8 : 0}
+        <IntakeScrollView footer={
+        <View
+          className="gap-2 px-5 pt-3"
+          style={{
+            backgroundColor: 'rgba(251,248,243,0.96)',
+            paddingBottom: insets.bottom + 16,
+          }}
         >
-          <ScrollView
-            contentContainerStyle={{
-              paddingHorizontal: 20,
-              paddingTop: 16,
-              paddingBottom: 140 + insets.bottom,
-            }}
-            keyboardShouldPersistTaps="handled"
-          >
+          <Button
+            title="Opslaan en terug naar overzicht"
+            variant="primary"
+            onPress={() => router.replace('/intake/overview' as any)}
+          />
+          <View className="flex-row items-center justify-center gap-1.5">
+            <View className="h-1.5 w-1.5 rounded-full bg-mint-500" />
+            <Text className="text-[11px] text-ink-50">
+              Automatisch opgeslagen ·{' '}
+              <Text className={allAnswered ? 'text-success' : 'text-danger'}>
+                {filled} / {total}
+              </Text>{' '}
+              vragen beantwoord
+            </Text>
+          </View>
+        </View>
+        }>
             {section.intro && (
               <Text className="mb-4 text-[13.5px] leading-[20px] text-ink-70">
                 {section.intro}
@@ -125,32 +138,7 @@ export default function IntakeSectionScreen() {
                 />
               );
             })}
-          </ScrollView>
-        </KeyboardAvoidingView>
-
-        <View
-          className="absolute bottom-0 left-0 right-0 gap-2 px-5 pt-3"
-          style={{
-            backgroundColor: 'rgba(251,248,243,0.96)',
-            paddingBottom: insets.bottom + 16,
-          }}
-        >
-          <Button
-            title="Terug naar overzicht"
-            variant="primary"
-            onPress={() => router.replace('/intake/overview' as any)}
-          />
-          <View className="flex-row items-center justify-center gap-1.5">
-            <View className="h-1.5 w-1.5 rounded-full bg-mint-500" />
-            <Text className="text-[11px] text-ink-50">
-              Automatisch opgeslagen ·{' '}
-              <Text className={allAnswered ? 'text-success' : 'text-danger'}>
-                {filled} / {total}
-              </Text>{' '}
-              vragen beantwoord
-            </Text>
-          </View>
-        </View>
+        </IntakeScrollView>
       </SafeAreaView>
     </View>
   );

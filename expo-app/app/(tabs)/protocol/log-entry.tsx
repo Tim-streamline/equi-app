@@ -1,5 +1,6 @@
+import { KeyboardViewport, KeyboardScrollView as ScrollView } from '@/components/ui/KeyboardForm';
 import { useState } from 'react';
-import { View, Text, ScrollView, Pressable } from 'react-native';
+import { View, Text, Pressable } from 'react-native';
 import { router } from 'expo-router';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Camera } from 'lucide-react-native';
@@ -7,7 +8,6 @@ import { SubHeader } from '@/components/ui/SubHeader';
 import { Field } from '@/components/ui/Field';
 import { SectionTitle } from '@/components/ui/SectionTitle';
 import { Bigchip } from '@/components/ui/Bigchip';
-import { StickyCTA } from '@/components/ui/StickyCTA';
 import { Button } from '@/components/ui/Button';
 import { TAB_BAR_BASE_HEIGHT } from '@/hooks/useTabBarPadding';
 import {
@@ -30,7 +30,6 @@ export default function LogEntryScreen() {
   const [score, setScore] = useState('B');
   const [note, setNote] = useState('');
   const insets = useSafeAreaInsets();
-  const padBottom = TAB_BAR_BASE_HEIGHT + insets.bottom + 96;
 
   const submit = () => {
     saveObservation({ horseId, authorId: userId, note, mood, stoolScore: score });
@@ -49,7 +48,7 @@ export default function LogEntryScreen() {
             </Pressable>
           }
         />
-        <ScrollView contentContainerStyle={{ padding: 20, paddingBottom: padBottom }}>
+        <KeyboardViewport style={{ flex: 1 }}><ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 20, paddingBottom: 24 }}>
           <Field
             label="WAT MERK JE OP?"
             rows={3}
@@ -98,9 +97,9 @@ export default function LogEntryScreen() {
             className="bg-mint-50 border-transparent"
           />
         </ScrollView>
-        <StickyCTA inTabs>
+        <View className="px-5 py-4" style={{ paddingBottom: TAB_BAR_BASE_HEIGHT + insets.bottom + 16 }}>
           <Button title="Observatie opslaan" onPress={submit} />
-        </StickyCTA>
+        </View></KeyboardViewport>
       </SafeAreaView>
     </View>
   );

@@ -25,6 +25,7 @@ export type LibraryFilters = {
   formats?: readonly string[];
   credits?: readonly CreditFilter[];
   accessibleOnly?: boolean;
+  excludeFree?: boolean;
   access?: LibraryAccess | null;
 };
 
@@ -76,6 +77,7 @@ export function filterLibraryItems<T extends LibraryFilterItem>(
     if (filters.savedOnly && !filters.savedIds?.includes(item.id)) return false;
     if (filters.formats?.length && !filters.formats.includes(item.format ?? 'article')) return false;
     const price = Number(item.creditCost) || 0;
+    if (filters.excludeFree && !item.isPlus && price === 0) return false;
     if (filters.credits?.length && (item.isPlus || !filters.credits.some(band =>
       band === 'free' ? price === 0 : band === '4+' ? price >= 4 : price === Number(band)))) return false;
     if (filters.accessibleOnly && (!filters.access || !(filters.access.unlockedIds.includes(item.id) || (item.isPlus ? filters.access.hasPlus : price === 0)))) return false;

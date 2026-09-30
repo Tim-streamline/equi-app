@@ -7,3 +7,12 @@ export function creditDate(value: string): string {
   const date = new Date(normalized);
   return Number.isNaN(date.getTime()) ? 'Datum onbekend' : date.toLocaleDateString('nl-NL', { day: 'numeric', month: 'long', year: 'numeric' });
 }
+
+export type CreditBundle = { id: string; label: string | null; credits: number; price_cents: number; currency: string };
+export type CreditSummary = {
+  balance: number; membership: number; purchased: number; other: number; membershipCap: number;
+  monthlyCredits: number; nextExpiry: string | null; nextRenewal: string | null; endsAt: string | null;
+  expiring: { credits: number; date: string; urgent: boolean }[];
+  hasBasic: boolean; checkoutAvailable: boolean; validityMonths: number; bundles: CreditBundle[];
+  history: { id: string; amount: number; type: string; description: string; created_at: string }[];
+};

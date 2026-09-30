@@ -1,7 +1,7 @@
 import { View, Text, ViewProps } from 'react-native';
 import { ReactNode } from 'react';
 
-type ChipVariant = 'default' | 'outline' | 'warn' | 'danger' | 'success' | 'tag' | 'deep' | 'filterActive';
+type ChipVariant = 'default' | 'outline' | 'warn' | 'danger' | 'success' | 'tag' | 'deep' | 'filterActive' | 'savedOutline';
 
 type Props = {
   label?: string;
@@ -13,6 +13,7 @@ type Props = {
 
 const styles: Record<ChipVariant, { box: string; text: string }> = {
   default: { box: 'bg-mint-50',           text: 'text-mint-700' },
+  savedOutline: { box: 'bg-transparent border border-teal-700', text: 'text-ink-70' },
   outline: { box: 'bg-transparent border border-ink-8', text: 'text-ink-70' },
   warn:    { box: 'bg-[#FBE9C6]',         text: 'text-[#8C6420]' },
   danger:  { box: 'bg-[#F4D6CF]',         text: 'text-[#8C3625]' },

@@ -1,12 +1,11 @@
+import { KeyboardScrollView as ScrollView, KeyboardTextInput as TextInput, KeyboardViewport as KeyboardAvoidingView } from '@/components/ui/KeyboardForm';
 // Welcome + login screen. Bypasses the old "screenCopy" table which used to
 // live in TinyBase — once we moved to PowerSync the brand strings became
 // hard-coded again. Auth credentials are sent to Laravel which mints a
 // PowerSync JWT; the provider then connects and starts syncing.
 
 import { useState } from 'react';
-import {
-  View, Text, Image, TextInput, Pressable, ActivityIndicator, KeyboardAvoidingView, Platform, ScrollView,
-} from 'react-native';
+import { View, Text, Image, Pressable, ActivityIndicator, Platform,  } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
@@ -69,7 +68,7 @@ export default function WelcomeScreen() {
               </View>
               <View>
                 <Text className="font-bold text-white" style={{ fontSize: 18, letterSpacing: 0.5 }}>
-                  EquiNova
+                  Equi App
                 </Text>
                 <Text
                   className="font-semi text-mint-200"

@@ -1,3 +1,4 @@
+import { KeyboardTextInput as TextInput, KeyboardViewport as KeyboardAvoidingView, KeyboardScrollView } from '@/components/ui/KeyboardForm';
 import { LibraryThumbnail } from "@/components/library/LibraryThumbnail";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import {
@@ -7,9 +8,7 @@ import {
   Pressable,
   Modal,
   ActivityIndicator,
-  TextInput,
   Alert,
-  KeyboardAvoidingView,
   Platform,
   useWindowDimensions,
 } from "react-native";
@@ -789,7 +788,7 @@ function Nutrition({
       {nutrition.feeds.length > 0 && (
         <Card>
           <Text className="mb-3 font-bold text-[16px] text-ink">
-            Bijvoeding
+            Actuele voerproducten
           </Text>
           <View className="gap-4">
             {nutrition.feeds.map((feed) => (
@@ -820,6 +819,12 @@ function Nutrition({
           </View>
         </Card>
       )}
+      {(nutrition.advice ?? []).map((advice) => (
+        <Card key={advice.id}>
+          <Text className="font-bold text-[16px] text-ink">{advice.title}</Text>
+          {!!advice.description && <Text className="mt-2 text-[13px] leading-[21px] text-ink-70">{advice.description}</Text>}
+        </Card>
+      ))}
       <Card>
         <Text className="font-bold text-[16px] text-ink">Water</Text>
         <Text className="mt-2 text-[13px] leading-[20px] text-ink-70">
@@ -964,8 +969,10 @@ function WeeklySheet({
       >
         <SafeAreaView
           edges={["bottom"]}
-          className="rounded-t-[28px] bg-canvas p-5"
+          style={{ maxHeight: '100%', flexShrink: 1 }}
+          className="rounded-t-[28px] bg-canvas"
         >
+          <KeyboardScrollView style={{ flexGrow: 0 }} contentContainerStyle={{ padding: 20 }}>
           <Text className="mb-3 font-bold text-[21px] text-ink">
             Weekupdate invullen
           </Text>
@@ -989,6 +996,7 @@ function WeeklySheet({
               Annuleren
             </Text>
           </Pressable>
+          </KeyboardScrollView>
         </SafeAreaView>
       </KeyboardAvoidingView>
     </Modal>

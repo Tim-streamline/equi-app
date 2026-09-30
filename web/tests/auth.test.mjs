@@ -53,16 +53,24 @@ test('failed CSRF fetch never submits credentials and failed logout remains retr
   assert.equal((await getSession()).user.id, 'first');
 });
 
-test('registration uses CSRF and creates a renewable browser session', async () => {
-  const { register } = await import('../db/auth.ts');
+test('only email confirmation creates a renewable browser session using fresh CSRF', async () => {
+  const { register, completeRegistration } = await import('../db/auth.ts');
   const requests = [];
   globalThis.fetch = async (url, options) => {
     requests.push({ url, options });
-    return response(url.endsWith('/csrf') ? { token: 'registration-csrf' } : session('new-user'), url.endsWith('/register') ? 201 : 200);
+    if(url.endsWith('/csrf')) return response({token:'registration-csrf'});
+    if(url.endsWith('/register')) return response({registration_token:'challenge',email:'new@example.test'},202);
+    if(url.endsWith('/token') && !requests.some(r=>r.url.endsWith('/complete'))) return response({},401);
+    return response(session('new-user'));
   };
   const input = { name: 'New Owner', email: 'new@example.test', password: 'test-password', password_confirmation: 'test-password' };
-  await register(input);
+  const pending = await register(input);
+  assert.equal(await getSession(), null, 'requesting a code does not authenticate');
+  await completeRegistration({registration_token:pending.registration_token});
   assert.equal((await getSession()).user.id, 'new-user');
+  const verify = requests.find(r=>r.url.endsWith('/complete'));
+  assert.equal(verify.options.headers['X-CSRF-TOKEN'],'registration-csrf');
+  assert.deepEqual(JSON.parse(verify.options.body),{registration_token:'challenge'});
   assert.equal(requests[1].url, '/web-session/register');
   assert.equal(requests[1].options.headers['X-CSRF-TOKEN'], 'registration-csrf');
   assert.deepEqual(JSON.parse(requests[1].options.body), input);
@@ -74,4 +82,20 @@ test('registration surfaces validation failures without creating a session', asy
   const { register } = await import('../db/auth.ts');
   globalThis.fetch = async url => response(url.endsWith('/csrf') ? { token: 'csrf' } : { errors: { email: ['Dit e-mailadres is al in gebruik.'] } }, url.endsWith('/csrf') ? 200 : 422);
   await assert.rejects(register({ name: 'Test', email: 'used@example.test', password: 'password', password_confirmation: 'password' }), /al in gebruik/);
+});
+
+
+test('checking email confirmation keeps the browser unauthenticated and sends no password', async () => {
+  const { checkRegistration } = await import('../db/auth.ts');
+  const requests=[];
+  globalThis.fetch = async (url,options)=>{
+    requests.push({url,options});
+    if(url.endsWith('/csrf')) return response({token:'csrf'});
+    if(url.endsWith('/status')) return response({status:'confirmed'});
+    return response({},401);
+  };
+  assert.deepEqual(await checkRegistration({registration_token:'private-token'}),{status:'confirmed'});
+  assert.equal(await getSession(),null);
+  assert.equal(requests[1].options.headers['X-CSRF-TOKEN'],'csrf');
+  assert.deepEqual(JSON.parse(requests[1].options.body),{registration_token:'private-token'});
 });

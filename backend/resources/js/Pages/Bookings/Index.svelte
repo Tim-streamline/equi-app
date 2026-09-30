@@ -6,7 +6,6 @@
     import StatCard from '$lib/components/StatCard.svelte';
     import { Link, router } from '@inertiajs/svelte';
     import { Card, CardContent, Select, Badge, Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '$lib/components/ui';
-    import { formatDateTime } from '$lib/utils.js';
     import { statusVariant } from '$lib/badges.js';
     import { CalendarClock, CalendarCheck } from '@lucide/svelte';
 
@@ -17,23 +16,23 @@
 </script>
 
 <AdminLayout title="Intake bookings">
-    <PageHeader title="Intake bookings" description="Therapist intake calendar" />
+    <PageHeader title="Intake bookings" description="Ingediende protocolintakes beoordelen" />
     <div class="mb-4 grid gap-4 sm:grid-cols-2">
-        <StatCard label="Pending" value={counts.pending} icon={CalendarClock} accent="warning" />
+        <StatCard label="Te beoordelen" value={counts.pending} icon={CalendarClock} accent="warning" />
         <StatCard label="Confirmed" value={counts.confirmed} icon={CalendarCheck} accent="success" />
     </div>
     <Card>
         <CardContent class="p-4">
             <div class="mb-4 flex flex-wrap gap-3">
                 <Select class="w-44" bind:value={status} onchange={apply} options={[
-                    { value: '', label: 'All statuses' }, { value: 'pending', label: 'Pending' },
+                    { value: '', label: 'All statuses' }, { value: 'pending', label: 'Te beoordelen' },
                     { value: 'confirmed', label: 'Confirmed' }, { value: 'done', label: 'Done' }, { value: 'cancelled', label: 'Cancelled' }]} />
                 <Select class="w-48" bind:value={therapist} onchange={apply} options={[{ value: '', label: 'All therapists' }, ...therapists.map((t) => ({ value: t.id, label: t.name }))]} />
             </div>
             <Table>
                 <TableHeader>
                     <TableRow>
-                        <TableHead>When</TableHead>
+                        <TableHead>Ingediend op</TableHead>
                         <TableHead>User</TableHead>
                         <TableHead>Horse</TableHead>
                         <TableHead>Therapist</TableHead>
@@ -44,11 +43,11 @@
                 <TableBody>
                     {#each bookings.data as b (b.id)}
                         <TableRow>
-                            <TableCell class="whitespace-nowrap"><Link href={`/admin/bookings/${b.id}`} class="font-medium hover:text-primary hover:underline">{b.scheduled_at ? formatDateTime(b.scheduled_at) : 'Nog niet ingepland'}</Link></TableCell>
+                            <TableCell class="whitespace-nowrap"><Link href={`/admin/bookings/${b.id}`} class="font-medium hover:text-primary hover:underline">{b.submitted_at_label}</Link></TableCell>
                             <TableCell>{b.user?.name}</TableCell>
                             <TableCell class="text-muted-foreground">{b.horse?.name ?? '—'}</TableCell>
                             <TableCell>{b.therapist?.name}</TableCell>
-                            <TableCell><Badge variant={statusVariant(b.status)}>{b.status}</Badge></TableCell>
+                            <TableCell><Badge variant={statusVariant(b.status)}>{b.status_label}</Badge></TableCell>
                             <TableCell><BookingDeleteAction booking={b} /></TableCell>
                         </TableRow>
                     {:else}

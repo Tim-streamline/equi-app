@@ -2,7 +2,6 @@
 
 namespace App\Http\Controllers\Admin;
 
-use App\Enums\SupplementDoseType;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\SaveProtocolRequest;
 use App\Models\BewegingAdvies;
@@ -20,7 +19,12 @@ use App\Models\Supplement;
 use App\Models\Therapist;
 use App\Models\VoedingAdvies;
 use App\Support\AuditLogger;
+use App\Support\ProtocolDayHistory;
+use App\Support\ProtocolDosage;
 use App\Support\ProtocolNutrition;
+use App\Support\ProtocolPreview;
+use Carbon\CarbonImmutable;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Arr;
@@ -61,6 +65,13 @@ class ProtocolController extends Controller
             'protocol' => null,
             ...$this->editorOptions($request->string('horse_id')->toString()),
         ]);
+    }
+
+    public function preview(SaveProtocolRequest $request, ?Protocol $protocol = null): JsonResponse
+    {
+        $options = $request->validate(['preview_week' => ['sometimes', 'integer', 'between:1,10400']]);
+
+        return response()->json(app(ProtocolPreview::class)->build($request->validated(), $protocol, $options['preview_week'] ?? 1));
     }
 
     public function store(SaveProtocolRequest $request): RedirectResponse
@@ -104,8 +115,8 @@ class ProtocolController extends Controller
         try {
             DB::transaction(function () use ($data, $protocol) {
                 $protocol = Protocol::query()->lockForUpdate()->findOrFail($protocol->id);
-                $history = app(\App\Support\ProtocolDayHistory::class);
-                $history->preserve($protocol, \Carbon\CarbonImmutable::now($history->timezone($protocol)));
+                $history = app(ProtocolDayHistory::class);
+                $history->preserve($protocol, CarbonImmutable::now($history->timezone($protocol)));
                 $attributes = $this->protocolAttributes($data);
                 if ($data['published'] && $protocol->published_at) {
                     $attributes['published_at'] = $protocol->published_at;
@@ -155,19 +166,16 @@ class ProtocolController extends Controller
     /** @return array<string, mixed> */
     private function editorOptions(?string $selectedHorseId = null, ?string $currentTherapistId = null): array
     {
+        $nutrition = app(ProtocolNutrition::class);
+        $horses = Horse::query()->where('status', 'active')->with('owner:id,name,email')->orderBy('name')->get(['id', 'owner_id', 'name', 'breed', 'age', 'sex', 'weight_kg', 'status']);
+        $answers = $horses->mapWithKeys(fn ($horse) => [$horse->id => $nutrition->answers($horse)]);
+
         return [
+            'intakeWeights' => $horses->mapWithKeys(fn ($horse) => [$horse->id => $nutrition->weight($answers[$horse->id]['gewicht'] ?? null) ?? $horse->weight_kg]),
             'selectedHorseId' => $selectedHorseId ?: null,
             'libraryItems' => LibraryItem::query()->whereNotNull('published_at')->orderBy('title')->get(['id', 'title']),
-            'intakeFeeds' => Horse::query()->where('status', 'active')->get()->mapWithKeys(function ($horse) {
-                $nutrition = app(ProtocolNutrition::class);
-
-                return [$horse->id => $nutrition->forProtocol(new Protocol, $nutrition->answers($horse))['feeds']];
-            }),
-            'horses' => Horse::query()
-                ->where('status', 'active')
-                ->with('owner:id,name,email')
-                ->orderBy('name')
-                ->get(['id', 'owner_id', 'name', 'breed', 'age', 'sex', 'weight_kg', 'status']),
+            'intakeFeeds' => $horses->mapWithKeys(fn ($horse) => [$horse->id => $nutrition->forProtocol(new Protocol, $answers[$horse->id])['feeds']]),
+            'horses' => $horses,
             'therapists' => Therapist::availableFor($currentTherapistId)
                 ->orderBy('name')
                 ->get(['id', 'name', 'title', 'archived_at']),
@@ -288,7 +296,9 @@ class ProtocolController extends Controller
      */
     private function withRequiredPhases(array $data): array
     {
-        $horseWeightKg = Horse::query()->whereKey($data['horse_id'])->value('weight_kg');
+        $horse = Horse::findOrFail($data['horse_id']);
+        $nutrition = app(ProtocolNutrition::class);
+        $horseWeightKg = $nutrition->actualWeight((new Protocol(['customer_settings' => $data['customer_settings'] ?? []]))->setRelation('horse', $horse), $nutrition->answers($horse));
         $definitions = ProtocolTemplatePhase::query()
             ->where('protocol_template_id', $data['protocol_template_id'])
             ->with('weeks', 'supplements.weeks')
@@ -332,6 +342,7 @@ class ProtocolController extends Controller
                     'id' => null,
                     'supplement_id' => $supplement->id,
                     'dosage' => $this->templateDosage($supplement, $horseWeightKg),
+                    'dosage_mode' => 'automatic',
                     'aantal_per_week' => $supplement->min_aantal_per_week,
                     'instructions' => $supplement->instructions,
                     'week_numbers' => $supplement->weeks->pluck('number')->values()->all(),
@@ -364,6 +375,9 @@ class ProtocolController extends Controller
     private function syncPhaseSupplements(ProtocolPhase $phase, array $supplements): void
     {
         $selectionIds = [];
+        $protocol = $phase->protocol;
+        $nutrition = app(ProtocolNutrition::class);
+        $weight = $nutrition->actualWeight($protocol, $nutrition->answers($protocol->horse));
 
         foreach ($supplements as $supplementData) {
             $isExisting = filled($supplementData['id'] ?? null);
@@ -378,7 +392,10 @@ class ProtocolController extends Controller
 
             $attributes = [
                 'protocol_phase_id' => $phase->id,
-                'dosage' => $this->nullableValue($supplementData['dosage'] ?? null),
+                'dosage_mode' => $supplementData['dosage_mode'] ?? 'manual',
+                'dosage' => ($supplementData['dosage_mode'] ?? 'manual') === 'automatic'
+                    ? app(ProtocolDosage::class)->calculate($catalogSupplement ?? $selection, $weight)
+                    : $this->nullableValue($supplementData['dosage'] ?? null),
                 'aantal_per_week' => $supplementData['aantal_per_week'] ?? null,
                 'instructions' => $this->nullableValue($supplementData['instructions'] ?? null),
             ];
@@ -606,25 +623,6 @@ class ProtocolController extends Controller
 
     private function templateDosage(Supplement $supplement, int|float|null $horseWeightKg): ?string
     {
-        if ($supplement->dosis === null || $supplement->dosis_type === null || $supplement->unit === null) {
-            return null;
-        }
-
-        if (in_array($supplement->dosis_type, [SupplementDoseType::PerKilogram, SupplementDoseType::Per600Kilograms], true)) {
-            if ($horseWeightKg === null || $horseWeightKg <= 0) {
-                return null;
-            }
-
-            $dose = $supplement->dosis * $horseWeightKg;
-            if ($supplement->dosis_type === SupplementDoseType::Per600Kilograms) {
-                $dose /= 600;
-            }
-        } else {
-            $dose = $supplement->dosis;
-        }
-
-        $amount = rtrim(rtrim(number_format($dose, 12, '.', ''), '0'), '.');
-
-        return "{$amount} {$supplement->unit->value}";
+        return app(ProtocolDosage::class)->calculate($supplement, $horseWeightKg);
     }
 }

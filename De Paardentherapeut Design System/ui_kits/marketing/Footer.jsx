@@ -6,9 +6,9 @@ function Footer() {
       <div className="container">
         <div>
           <div className="brand brand--on-deep" style={{ marginBottom: 16 }}>
-            <img src="assets/logo-equinova.svg" alt="Equinova" />
+            <img src="assets/logo-equi-app.svg" alt="Equi App" />
             <div className="brand-name">
-              <span className="word">Equinova</span>
+              <span className="word">Equi App</span>
               <small className="powered">powered by <em>De Paardentherapeut</em></small>
             </div>
           </div>
@@ -37,14 +37,14 @@ function Footer() {
         <div>
           <h4>Contact</h4>
           <ul>
-            <li><a>hallo@equinova.nl</a></li>
+            <li><a>contact@depaardentherapeut.nl</a></li>
             <li><a>+31 6 40062617</a></li>
             <li><a>3068 Rotterdam</a></li>
           </ul>
         </div>
         <div className="meta">
-          <span>Equinova is een product van De Paardentherapeut · KvK 65758900 · BTW NL002222756B64</span>
-          <span>© Equinova</span>
+          <span>Equi App is een product van De Paardentherapeut · KvK 65758900 · BTW NL002222756B64</span>
+          <span>© Equi App</span>
         </div>
       </div>
     </footer>

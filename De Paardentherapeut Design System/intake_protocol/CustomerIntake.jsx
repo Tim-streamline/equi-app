@@ -1,6 +1,6 @@
 /* global React, I, INTAKE_SECTIONS, FILLED_INTAKE, SubHeader, StatusBar, HomeIndicator */
 // CustomerIntake.jsx, mobile screens the paying customer goes through.
-// The intake is filled in entirely by the customer in the Equinova app
+// The intake is filled in entirely by the customer in the Equi App app
 // after they upgrade to a Protocol package.
 
 const { useState: useCS } = React;

@@ -25,7 +25,7 @@ The brand sits at the intersection of veterinary expertise and holistic, owner-e
 | **Locatiewissel Cursus** | Course on supporting horses through moves / shows / travel |
 | **Opleiding** | 8-month premium training to become a holistic horse therapist (`opleiding.depaardentherapeut.nl`) |
 
-> The original brief mentioned the working name **"EquiNova: Paardengezondheid van de toekomst"** — this design system uses the established public-facing brand **De Paardentherapeut** (the brand sheet, logo, domain, and email all key to it). If EquiNova is intended as a new sub-brand, the same primitives here can be re-skinned.
+> The original brief mentioned the working name **"Equi App: Paardengezondheid van de toekomst"** — this design system uses the established public-facing brand **De Paardentherapeut** (the brand sheet, logo, domain, and email all key to it). If Equi App is intended as a new sub-brand, the same primitives here can be re-skinned.
 
 ### Sources used to build this system
 

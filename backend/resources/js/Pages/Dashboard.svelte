@@ -21,7 +21,7 @@
         <StatCard label="MRR" value={formatCents(stats.mrr_cents)} hint={`${stats.subs_active} active subs`} icon={CreditCard} accent="success" />
         <StatCard label="Scans" value={formatNumber(stats.scans)} hint={`${stats.scans_week} this week`} icon={ScanLine} accent="muted" />
         <StatCard label="Community posts" value={formatNumber(stats.community_posts)} icon={MessagesSquare} accent="muted" />
-        <StatCard label="Pending bookings" value={formatNumber(stats.bookings_pending)} icon={CalendarClock} accent="warning" />
+        <StatCard label="Intakes te beoordelen" value={formatNumber(stats.bookings_pending)} icon={CalendarClock} accent="warning" />
         <StatCard label="Open reports" value={formatNumber(stats.reports_open)} icon={Flag} accent={stats.reports_open ? 'destructive' : 'muted'} />
     </div>
 

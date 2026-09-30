@@ -1,7 +1,7 @@
 {
   "expo": {
-    "name": "EquiNova",
-    "slug": "equinova-web",
+    "name": "Equi App",
+    "slug": "equi-app-web",
     "userInterfaceStyle": "light",
     "platforms": [
       "web"

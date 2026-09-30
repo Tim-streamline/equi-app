@@ -1,3 +1,4 @@
+import { notifyLibraryUnlock } from '@/lib/library-events';
 import { useCallback, useRef, useState } from 'react';
 import { useFocusEffect } from 'expo-router';
 import { getApiBaseUrl } from '@/db/auth';
@@ -31,6 +32,7 @@ export async function libraryRequest<T>(path: string, method = 'GET', signal?: A
     const data = await response.json();
     if (accountSession.revision !== sessionRevision) throw new Error('Je sessie is gewijzigd.');
     if (!response.ok) throw new Error(data.message || 'De wijziging kon niet worden opgeslagen. Probeer opnieuw.');
+    if (method === 'POST' && /^\/[^/]+\/unlock$/.test(path)) notifyLibraryUnlock(decodeURIComponent(path.split('/')[1]));
     return data;
   } catch (error) {
     if (error instanceof Error && error.name === 'AbortError') throw new Error('Verbinding onderbroken. Probeer opnieuw.');

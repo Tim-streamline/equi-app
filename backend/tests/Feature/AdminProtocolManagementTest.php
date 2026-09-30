@@ -446,7 +446,7 @@ class AdminProtocolManagementTest extends TestCase
         $this->assertDatabaseHas('protocol_phase_supplements', [
             'protocol_phase_id' => $requiredProtocolPhase->id,
             'supplement_id' => $this->defaultSupplement->id,
-            'dosage' => '176 g',
+            'dosage' => '180 g',
         ]);
         $this->assertDatabaseHas('protocol_phase_supplements', [
             'protocol_phase_id' => $requiredProtocolPhase->id,

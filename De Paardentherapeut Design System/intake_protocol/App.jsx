@@ -6,7 +6,7 @@
 
 function App() {
   return (
-    <div className="equinova">
+    <div className="equi-app">
       <DesignCanvas>
 
         {/* ============================================================
@@ -21,7 +21,7 @@ function App() {
               <div className="brief-tag">Voor de developer</div>
               <h1>Het Holistisch Herstelplan</h1>
               <p className="lede">
-                Eenmalig <em>€ 97</em> bovenop het Equinova-basisabonnement van <em>€ 19/m</em>. Een <em>3-maanden traject</em> waarin Shelley
+                Eenmalig <em>€ 97</em> bovenop het Equi App-basisabonnement van <em>€ 19/m</em>. Een <em>3-maanden traject</em> waarin Shelley
                 via de app op basis van de intake een op maat protocol bouwt en wekelijks bijstuurt. <em>Geen gesprek of videocall</em>, alle informatie waarmee Shelley werkt komt uit de in-app vragen + foto's.
               </p>
 
@@ -74,11 +74,11 @@ function App() {
         </DCSection>
 
         {/* ============================================================
-            KLANT-ZIJDE, MOBIEL (in Equinova-app)
+            KLANT-ZIJDE, MOBIEL (in Equi App-app)
            ============================================================ */}
         <DCSection
           id="customer"
-          title="Klant-zijde · Equinova mobiel"
+          title="Klant-zijde · Equi App mobiel"
           subtitle="7 schermen · gebeurt na betaling van Het Holistisch Herstelplan">
           <DCArtboard id="c1-welcome"   label="01 · Welkom" width={390} height={844}>
             <MobileWelcome />

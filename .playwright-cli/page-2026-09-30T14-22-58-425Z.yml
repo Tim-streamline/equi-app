@@ -1,0 +1,401 @@
+- generic [ref=f2e3]:
+  - complementary [ref=f2e4]:
+    - generic [ref=f2e8]:
+      - generic [ref=f2e9]: EquiNova
+      - generic [ref=f2e10]: Admin console
+    - navigation [ref=f2e11]:
+      - link "Dashboard" [ref=f2e13] [cursor=pointer]:
+        - /url: http://localhost:81/admin
+      - generic [ref=f2e16]:
+        - generic [ref=f2e17]: Support
+        - link "Users" [ref=f2e18] [cursor=pointer]:
+          - /url: http://localhost:81/admin/users
+        - link "Horses" [ref=f2e21] [cursor=pointer]:
+          - /url: http://localhost:81/admin/horses
+        - link "Therapists" [ref=f2e24] [cursor=pointer]:
+          - /url: http://localhost:81/admin/therapists
+        - link "Intake bookings" [ref=f2e27] [cursor=pointer]:
+          - /url: http://localhost:81/admin/bookings
+        - link "Protocols" [ref=f2e30] [cursor=pointer]:
+          - /url: http://localhost:81/admin/protocols
+      - generic [ref=f2e33]:
+        - generic [ref=f2e34]: Content
+        - link "Ontdek Plus" [ref=f2e35] [cursor=pointer]:
+          - /url: http://localhost:81/admin/plus-page
+        - link "Library" [ref=f2e38] [cursor=pointer]:
+          - /url: http://localhost:81/admin/library
+        - link "Categories" [ref=f2e41] [cursor=pointer]:
+          - /url: http://localhost:81/admin/library-categories
+        - link "Seasonal tips" [ref=f2e44] [cursor=pointer]:
+          - /url: http://localhost:81/admin/seasonal-tips
+        - link "Nova chat" [ref=f2e47] [cursor=pointer]:
+          - /url: http://localhost:81/admin/nova
+      - generic [ref=f2e50]:
+        - generic [ref=f2e51]: Scanner
+        - link "Scan results" [ref=f2e52] [cursor=pointer]:
+          - /url: http://localhost:81/admin/scans
+        - link "Products" [ref=f2e55] [cursor=pointer]:
+          - /url: http://localhost:81/admin/products
+        - link "Ingredients" [ref=f2e58] [cursor=pointer]:
+          - /url: http://localhost:81/admin/ingredients
+      - generic [ref=f2e61]:
+        - generic [ref=f2e62]: Community
+        - link "Posts & replies" [ref=f2e63] [cursor=pointer]:
+          - /url: http://localhost:81/admin/community
+        - link "Reports" [ref=f2e66] [cursor=pointer]:
+          - /url: http://localhost:81/admin/reports
+      - generic [ref=f2e69]:
+        - generic [ref=f2e70]: Billing
+        - link "Plans" [ref=f2e71] [cursor=pointer]:
+          - /url: http://localhost:81/admin/plans
+        - link "Subscriptions" [ref=f2e74] [cursor=pointer]:
+          - /url: http://localhost:81/admin/subscriptions
+        - link "Payments" [ref=f2e77] [cursor=pointer]:
+          - /url: http://localhost:81/admin/payments
+        - link "Credits" [ref=f2e80] [cursor=pointer]:
+          - /url: http://localhost:81/admin/credits
+      - generic [ref=f2e83]:
+        - generic [ref=f2e84]: Operations
+        - link "Data exports" [ref=f2e85] [cursor=pointer]:
+          - /url: http://localhost:81/admin/exports
+        - link "Notifications" [ref=f2e88] [cursor=pointer]:
+          - /url: http://localhost:81/admin/notifications
+        - link "Sync health" [ref=f2e91] [cursor=pointer]:
+          - /url: http://localhost:81/admin/sync-health
+        - link "Audit log" [ref=f2e94] [cursor=pointer]:
+          - /url: http://localhost:81/admin/audit-log
+        - link "Intakevragen" [ref=f2e97] [cursor=pointer]:
+          - /url: http://localhost:81/admin/intake-questionnaire
+        - link "Protocol Templates" [ref=f2e100] [cursor=pointer]:
+          - /url: http://localhost:81/admin/protocol-settings
+        - link "Protocol Settings" [ref=f2e103] [cursor=pointer]:
+          - /url: http://localhost:81/admin/protocol-settings/advice
+        - link "Settings" [ref=f2e106] [cursor=pointer]:
+          - /url: http://localhost:81/admin/settings
+    - generic [ref=f2e110]:
+      - generic [ref=f2e111]: EO
+      - generic [ref=f2e112]:
+        - generic [ref=f2e113]: EquiNova Owner
+        - generic [ref=f2e114]: owner
+      - button "Log out" [ref=f2e115]
+  - generic [ref=f2e117]:
+    - banner [ref=f2e118]:
+      - heading "Nieuw protocol" [level=1] [ref=f2e119]
+    - main [ref=f2e120]:
+      - generic [ref=f2e121]:
+        - group [ref=f2e123]:
+          - generic [ref=f2e124]:
+            - generic [ref=f2e125]:
+              - link "Protocollen" [ref=f2e126] [cursor=pointer]:
+                - /url: http://localhost:81/admin/protocols
+              - generic [ref=f2e129]:
+                - generic [ref=f2e130]:
+                  - generic [ref=f2e131]: Darm protocol · R
+                  - generic [ref=f2e132]: Concept
+                  - generic [ref=f2e211]: Niet opgeslagen
+                - generic [ref=f2e133]: Darm protocol
+              - button "Volledige preview" [ref=f2e134] [cursor=pointer]
+              - button "Opslaan" [ref=f2e136] [cursor=pointer]
+              - button "Publiceren" [ref=f2e138] [cursor=pointer]
+            - navigation "Protocolonderdelen" [ref=f2e140]:
+              - button "Basis" [ref=f2e141]
+              - button "Planning" [ref=f2e144]
+              - button "Voeding 0" [ref=f2e146]:
+                - text: Voeding
+                - generic [ref=f2e148]: "0"
+              - button "Management 0" [ref=f2e149]:
+                - text: Management
+                - generic [ref=f2e151]: "0"
+              - button "Beweging 0" [ref=f2e152]:
+                - text: Beweging
+                - generic [ref=f2e154]: "0"
+              - button "Analyse" [ref=f2e155]
+              - button "Klantweergave" [ref=f2e157]
+          - generic [ref=f2e159]:
+            - complementary [ref=f2e160]:
+              - generic [ref=f2e161]:
+                - generic [ref=f2e162]: Paard
+                - combobox [ref=f2e163]:
+                  - option "Kies een paard" [disabled]
+                  - option "Nova · Shelley Meeuwsen"
+                  - option "R · Shelley Meeuwsen" [selected]
+                  - option "Rolo · Tim"
+                  - option "Rolo · Shelley Rochelle Meeuwsen"
+              - generic [ref=f2e164]:
+                - generic [ref=f2e165]: Plan
+                - generic [ref=f2e166]:
+                  - generic [ref=f2e167]:
+                    - term [ref=f2e168]: Fases
+                    - definition [ref=f2e169]: "3"
+                  - generic [ref=f2e170]:
+                    - term [ref=f2e171]: Duur
+                    - definition [ref=f2e172]: 20 weken
+                  - generic [ref=f2e173]:
+                    - term [ref=f2e174]: Huidige week
+                    - definition [ref=f2e175]: "1"
+                  - generic [ref=f2e176]:
+                    - term [ref=f2e177]: Supplementen
+                    - definition [ref=f2e178]: "12"
+                  - generic [ref=f2e179]:
+                    - term [ref=f2e180]: Adviezen
+                    - definition [ref=f2e181]: "0"
+            - main [ref=f2e182]:
+              - generic [ref=f2e876]:
+                - generic [ref=f2e877]:
+                  - generic [ref=f2e878]:
+                    - generic [ref=f2e879]: Stap 2
+                    - heading "Planning" [level=2] [ref=f2e880]
+                    - paragraph [ref=f2e881]: Fases volgen de templatevolgorde; een fase kan starten terwijl de vorige fase nog loopt.
+                  - generic [ref=f2e882]:
+                    - combobox [ref=f2e883]:
+                      - option "Optionele fase" [disabled] [selected]
+                      - option "Maagondersteuning · 8 wk"
+                      - option "Darm reset · 1 wk"
+                      - option "Mineralen aanvullen – KPU · 3 wk"
+                      - option "Metabole ondersteuning - IR vermoedelijk · 8 wk"
+                      - option "Metabole ondersteuning - IR aangetoond · 12 wk"
+                      - option "Metabole ondersteuning - KPU aangetoond · 12 wk"
+                      - option "Verdere darmondersteuning · 4 wk"
+                      - option "Extra ondersteuning bij mestwater · 4 wk"
+                      - option "Lever en nieren ondersteunen - KPU · 12 wk"
+                    - button "Toevoegen" [disabled]
+                - generic [ref=f2e884]:
+                  - button "Darmrevalidatie Week 1–6 · Gepauzeerd" [ref=f2e885]:
+                    - generic [ref=f2e886]: Darmrevalidatie
+                    - generic [ref=f2e889]: Week 1–6 · Gepauzeerd
+                  - button "Mineralen aanvullen Week 1–8 · Gepauzeerd Start na 0 complete weken vorige fase" [ref=f2e890]:
+                    - generic [ref=f2e891]: Mineralen aanvullen
+                    - generic [ref=f2e894]: Week 1–8 · Gepauzeerd
+                    - generic [ref=f2e895]: Start na 0 complete weken vorige fase
+                  - button "Lever en nieren ondersteunen Week 9–20 · Gepland" [ref=f2e896]:
+                    - generic [ref=f2e897]: Lever en nieren ondersteunen
+                    - generic [ref=f2e900]: Week 9–20 · Gepland
+                - generic [ref=f2e901]:
+                  - generic [ref=f2e903]:
+                    - generic [ref=f2e904]:
+                      - heading "Darmrevalidatie" [level=3] [ref=f2e905]
+                      - generic [ref=f2e906]: Verplicht
+                    - paragraph [ref=f2e907]: Week 1–6 · Gepauzeerd
+                  - generic [ref=f2e908]:
+                    - generic [ref=f2e909]:
+                      - generic [ref=f2e910]: Templatefase
+                      - generic [ref=f2e911]: Darmrevalidatie
+                      - paragraph [ref=f2e912]: De naam en beschrijving zijn bij het aanmaken vanuit de template overgenomen.
+                    - generic [ref=f2e913]:
+                      - generic [ref=f2e914]:
+                        - generic [ref=f2e915]: Duur in weken
+                        - spinbutton [ref=f2e916]: "6"
+                      - paragraph [ref=f2e917]: "Template: 6 weken"
+                  - generic [ref=f2e918]:
+                    - generic [ref=f2e919]:
+                      - generic [ref=f2e920]:
+                        - heading "Kruiden & supplementen" [level=4] [ref=f2e921]
+                        - paragraph [ref=f2e922]: Selecteer middelen, frequentie en de concrete weken voor dit paard.
+                      - generic [ref=f2e923]: 4 geselecteerd
+                    - generic [ref=f2e924]:
+                      - generic [ref=f2e925]:
+                        - generic [ref=f2e926]:
+                          - switch "Verwijder Lapachoschors" [checked] [ref=f2e927]
+                          - generic [ref=f2e929]:
+                            - generic [ref=f2e930]:
+                              - generic [ref=f2e931]: Lapachoschors
+                              - generic [ref=f2e932]: Kruid
+                              - generic [ref=f2e933]: Standaard
+                            - paragraph [ref=f2e934]: Antimicrobieel, ondersteunt gezonde darmflora.
+                            - paragraph [ref=f2e935]: Min. 4×/week · max. 42 in fase · rust 2 weken
+                        - generic [ref=f2e936]:
+                          - generic [ref=f2e937]:
+                            - generic [ref=f2e938]:
+                              - generic [ref=f2e939]: Dosering voor dit paard
+                              - textbox "Bijv. 20 g per dag" [ref=f2e940]: 17 g persoonlijk
+                              - paragraph [ref=f2e941]: Handmatig aangepast — blijft behouden bij een gewichtsverandering.
+                              - button "Automatische dosering herstellen" [ref=f2e942]
+                            - paragraph [ref=f2e943]: "Berekend: 20 g per 600 kg × (600 / 600) = 20 g per toediening."
+                          - generic [ref=f2e944]:
+                            - generic [ref=f2e945]: Aantal per week
+                            - spinbutton [ref=f2e946]: "4"
+                          - generic [ref=f2e948]:
+                            - generic [ref=f2e949]: Instructies
+                            - textbox "Optionele instructie voor de klant" [ref=f2e950]: Door de geweekte bijvoeding mengen.
+                          - generic [ref=f2e951]:
+                            - generic [ref=f2e952]: Toedieningsweken binnen deze fase
+                            - generic [ref=f2e953]:
+                              - button "1" [pressed] [ref=f2e954]
+                              - button "2" [pressed] [ref=f2e955]
+                              - button "3" [pressed] [ref=f2e956]
+                              - button "4" [pressed] [ref=f2e957]
+                              - button "5" [pressed] [ref=f2e958]
+                              - button "6" [pressed] [ref=f2e959]
+                      - generic [ref=f2e960]:
+                        - generic [ref=f2e961]:
+                          - switch "Verwijder Paardenbloemblad" [checked] [ref=f2e962]
+                          - generic [ref=f2e964]:
+                            - generic [ref=f2e965]:
+                              - generic [ref=f2e966]: Paardenbloemblad
+                              - generic [ref=f2e967]: Kruid
+                              - generic [ref=f2e968]: Standaard
+                            - paragraph [ref=f2e969]: Ondersteunt de spijsvertering en vochtafvoer en levert van nature veel kalium en bitterstoffen. Stimuleert daarnaast mild de lever-, gal- en nierfunctie.
+                            - paragraph [ref=f2e970]: Min. 4×/week · max. 42 in fase · rust 2 weken
+                        - generic [ref=f2e971]:
+                          - generic [ref=f2e972]:
+                            - generic [ref=f2e973]:
+                              - generic [ref=f2e974]: Dosering voor dit paard
+                              - textbox "Bijv. 20 g per dag" [ref=f2e975]: 50 g
+                            - paragraph [ref=f2e976]: "Berekend: 50 g per 600 kg × (600 / 600) = 50 g per toediening."
+                          - generic [ref=f2e977]:
+                            - generic [ref=f2e978]: Aantal per week
+                            - spinbutton [ref=f2e979]: "4"
+                          - generic [ref=f2e981]:
+                            - generic [ref=f2e982]: Instructies
+                            - textbox "Optionele instructie voor de klant" [ref=f2e983]: Door de geweekte bijvoeding mengen.
+                          - generic [ref=f2e984]:
+                            - generic [ref=f2e985]: Toedieningsweken binnen deze fase
+                            - generic [ref=f2e986]:
+                              - button "1" [pressed] [ref=f2e987]
+                              - button "2" [pressed] [ref=f2e988]
+                              - button "3" [pressed] [ref=f2e989]
+                              - button "4" [pressed] [ref=f2e990]
+                              - button "5" [pressed] [ref=f2e991]
+                              - button "6" [pressed] [ref=f2e992]
+                      - generic [ref=f2e993]:
+                        - generic [ref=f2e994]:
+                          - switch "Verwijder Salie" [checked] [ref=f2e995]
+                          - generic [ref=f2e997]:
+                            - generic [ref=f2e998]:
+                              - generic [ref=f2e999]: Salie
+                              - generic [ref=f2e1000]: Kruid
+                              - generic [ref=f2e1001]: Standaard
+                            - paragraph [ref=f2e1002]: Ontstekingswerend, infectiewerend en krampwerend. Windverdrijvend bij darmgistingen.
+                            - paragraph [ref=f2e1003]: Min. 4×/week · max. 28 in fase · rust 2 weken
+                        - generic [ref=f2e1004]:
+                          - generic [ref=f2e1005]:
+                            - generic [ref=f2e1006]:
+                              - generic [ref=f2e1007]: Dosering voor dit paard
+                              - textbox "Bijv. 20 g per dag" [ref=f2e1008]: 10 g
+                            - paragraph [ref=f2e1009]: "Berekend: 10 g per 600 kg × (600 / 600) = 10 g per toediening."
+                          - generic [ref=f2e1010]:
+                            - generic [ref=f2e1011]: Aantal per week
+                            - spinbutton [ref=f2e1012]: "4"
+                          - generic [ref=f2e1014]:
+                            - generic [ref=f2e1015]: Instructies
+                            - textbox "Optionele instructie voor de klant" [ref=f2e1016]: "Door de geweekte bijvoeding mengen. Nooit langer dan 4 weken achter elkaar geven! Verse salie kan als alternatief: ong. 1 vers blad per 100 kg lichaamsgewicht."
+                          - generic [ref=f2e1017]:
+                            - generic [ref=f2e1018]: Toedieningsweken binnen deze fase
+                            - generic [ref=f2e1019]:
+                              - button "1" [pressed] [ref=f2e1020]
+                              - button "2" [pressed] [ref=f2e1021]
+                              - button "3" [pressed] [ref=f2e1022]
+                              - button "4" [pressed] [ref=f2e1023]
+                              - button "5" [ref=f2e1024]
+                              - button "6" [ref=f2e1025]
+                      - generic [ref=f2e1026]:
+                        - generic [ref=f2e1027]:
+                          - switch "Verwijder Smalle weegbree" [checked] [ref=f2e1028]
+                          - generic [ref=f2e1030]:
+                            - generic [ref=f2e1031]:
+                              - generic [ref=f2e1032]: Smalle weegbree
+                              - generic [ref=f2e1033]: Kruid
+                              - generic [ref=f2e1034]: Standaard
+                            - paragraph [ref=f2e1035]: Kalmeert en beschermt de darmwand, ondersteunt het herstel van het slijmvlies en helpt de ontlasting reguleren. Werkt daarnaast verzachtend, samentrekkend en bacterieremmend.
+                            - paragraph [ref=f2e1036]: Min. 4×/week · max. 42 in fase · rust 2 weken
+                        - generic [ref=f2e1037]:
+                          - generic [ref=f2e1038]:
+                            - generic [ref=f2e1039]:
+                              - generic [ref=f2e1040]: Dosering voor dit paard
+                              - textbox "Bijv. 20 g per dag" [ref=f2e1041]: 50 g
+                            - paragraph [ref=f2e1042]: "Berekend: 50 g per 600 kg × (600 / 600) = 50 g per toediening."
+                          - generic [ref=f2e1043]:
+                            - generic [ref=f2e1044]: Aantal per week
+                            - spinbutton [ref=f2e1045]: "4"
+                          - generic [ref=f2e1047]:
+                            - generic [ref=f2e1048]: Instructies
+                            - textbox "Optionele instructie voor de klant" [ref=f2e1049]: Door de geweekte bijvoeding mengen.
+                          - generic [ref=f2e1050]:
+                            - generic [ref=f2e1051]: Toedieningsweken binnen deze fase
+                            - generic [ref=f2e1052]:
+                              - button "1" [pressed] [ref=f2e1053]
+                              - button "2" [pressed] [ref=f2e1054]
+                              - button "3" [pressed] [ref=f2e1055]
+                              - button "4" [pressed] [ref=f2e1056]
+                              - button "5" [pressed] [ref=f2e1057]
+                              - button "6" [pressed] [ref=f2e1058]
+                - button "Naar voeding" [ref=f2e1060] [cursor=pointer]
+        - dialog "Volledige klantpreview" [ref=f2e1062]:
+          - generic [ref=f2e1063]:
+            - button "Preview sluiten" [ref=f2e1064]
+            - generic [ref=f2e1065]:
+              - generic [ref=f2e1066]:
+                - button "Terug naar bewerken" [ref=f2e1067]
+                - button "Preview sluiten" [ref=f2e1069]
+              - generic [ref=f2e1071]:
+                - generic [ref=f2e1072]: Preview · niet opgeslagen
+                - generic [ref=f2e1073]:
+                  - text: Bekijk week
+                  - combobox "Previewweek" [ref=f2e1074]:
+                    - option "1" [selected]
+                    - option "2"
+                    - option "3"
+                    - option "4"
+                    - option "5"
+                    - option "6"
+                    - option "7"
+                    - option "8"
+                    - option "9"
+                    - option "10"
+                    - option "11"
+                    - option "12"
+                    - option "13"
+                    - option "14"
+                    - option "15"
+                    - option "16"
+                    - option "17"
+                    - option "18"
+                    - option "19"
+                    - option "20"
+              - generic [ref=f2e1075]:
+                - paragraph [ref=f2e1076]: R
+                - heading "Darm protocol · R" [level=2] [ref=f2e1077]
+                - paragraph [ref=f2e1078]: Week 1 van 20 · Darmrevalidatie · Mineralen aanvullen
+              - navigation "Protocolonderdelen" [ref=f2e1079]:
+                - button "Vandaag" [ref=f2e1080]
+                - button "Kalender" [ref=f2e1081]
+                - button "Voeding" [active] [pressed] [ref=f2e1082]
+                - button "Zorg" [ref=f2e1083]
+                - button "Analyse" [ref=f2e1084]
+              - generic [ref=f2e1085]:
+                - generic [ref=f2e1157]:
+                  - generic [ref=f2e1158]: Ruwvoer, de basis
+                  - paragraph [ref=f2e1160]: 8 – 12 kg per 24 uur
+                  - paragraph [ref=f2e1161]: 2 tot 3 kg ruwvoer per 100 kg lichaamsgewicht. Bij een streefgewicht van 400 kg komt dat uit op 8 tot 12 kg per dag. Maximaal 1 uur leegstand inclusief de nachten, maar liever geen.
+                  - generic [ref=f2e1162]:
+                    - generic [ref=f2e1163]:
+                      - paragraph [ref=f2e1164]: Suiker
+                      - paragraph [ref=f2e1165]: <7%
+                    - generic [ref=f2e1166]:
+                      - paragraph [ref=f2e1167]: Eiwit
+                      - paragraph [ref=f2e1168]: 6–9%
+                - generic [ref=f2e1170]:
+                  - paragraph [ref=f2e1171]: Hooi laten analyseren of zelf testen
+                  - paragraph [ref=f2e1172]: Bekijk hoe je een monster neemt en de uitslag beoordeelt.
+                - generic [ref=f2e1174]:
+                  - heading "Actuele voerproducten" [level=3] [ref=f2e1175]
+                  - generic [ref=f2e1178]:
+                    - paragraph [ref=f2e1179]: Metazo Esparcette · 1kg · 1 voerbeurten per dag
+                    - paragraph [ref=f2e1180]: Stoppen
+                  - generic [ref=f2e1183]:
+                    - paragraph [ref=f2e1184]: Dd Dd · Dd · Dd voerbeurten per dag
+                    - paragraph [ref=f2e1185]: Stoppen
+                  - generic [ref=f2e1188]:
+                    - paragraph [ref=f2e1189]: gewone liksteen
+                    - paragraph [ref=f2e1190]: Doorgaan
+                    - paragraph [ref=f2e1191]: Persoonlijke instructie voor previewcontrole
+                  - generic [ref=f2e1194]:
+                    - paragraph [ref=f2e1195]: Himalaya zoutsteen
+                    - paragraph [ref=f2e1196]: Stoppen
+                - generic [ref=f2e1197]:
+                  - heading "Water" [level=3] [ref=f2e1198]
+                  - paragraph [ref=f2e1199]: Grondwater / bronwater
+                  - paragraph [ref=f2e1200]: Laat dit water analyseren. De kwaliteit en samenstelling van dit water kunnen variëren.
+                - generic [ref=f2e1202]:
+                  - paragraph [ref=f2e1203]: Water laten analyseren
+                  - paragraph [ref=f2e1204]: Bekijk de uitleg in de bibliotheek.

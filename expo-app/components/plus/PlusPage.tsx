@@ -61,7 +61,7 @@ export function PlusPage({ data, apiBaseUrl, onIntake }: { data: PlusPageData; a
       <View className="mx-4 gap-4 rounded-[24px] bg-[#0B4A49] p-5">
         <Text className="text-[10px] tracking-[2px] text-mint-200">PLUS</Text>{price}
         <View className="gap-3">{c.benefits.map((benefit, index) => <View key={index} className="flex-row items-start gap-3"><Check size={19} color="#5FD7CB" /><Text className="flex-1 text-[15px] leading-[21px] text-white">{benefit}</Text></View>)}</View>
-        <Button title={c.priceButton} className="rounded-full bg-white py-3 active:bg-mint-100" textClassName="text-teal-700" onPress={open} />
+        <Button title={c.priceButton} variant="light" className="rounded-full py-3" onPress={open} />
         <Text className="text-center text-[12px] text-white/75">{c.priceNote}</Text>
       </View>
 

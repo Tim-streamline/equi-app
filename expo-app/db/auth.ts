@@ -69,15 +69,27 @@ export async function login(email: string, password: string, signal?: AbortSigna
 }
 
 export type RegistrationInput = { name: string; email: string; password: string; password_confirmation: string };
-export async function register(input: RegistrationInput): Promise<LoginResponse> {
-  const response = await fetch(`${apiBaseUrl}/api/auth/register`, {
+export type RegistrationChallenge = { registration_token: string; email: string; expires_in: number };
+export type RegistrationCompletion = { registration_token: string };
+async function registrationRequest(path: string, input: RegistrationInput | RegistrationCompletion, signal?: AbortSignal) {
+  const response = await fetch(`${apiBaseUrl}/api/auth/${path}`, {
     method: 'POST', headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
-    body: JSON.stringify(input),
+    body: JSON.stringify(input), signal,
   });
   const data = await response.json().catch(() => ({}));
   if (!response.ok) {
     const messages = Object.values(data.errors ?? {}).flat();
-    throw new Error(response.status === 429 ? 'Te veel pogingen. Wacht een minuut en probeer opnieuw.' : String(messages[0] ?? 'Registreren is niet gelukt. Probeer opnieuw.'));
+    throw new Error(response.status === 429 ? 'Te veel pogingen. Wacht een minuut en probeer opnieuw.' : String(messages[0] ?? data.message ?? 'Registreren is niet gelukt. Probeer opnieuw.'));
   }
   return data;
+}
+export async function register(input: RegistrationInput): Promise<RegistrationChallenge> {
+  return registrationRequest('register', input);
+}
+export async function completeRegistration(input: RegistrationCompletion): Promise<LoginResponse> {
+  return registrationRequest('register/complete', input);
+}
+
+export async function checkRegistration(input: RegistrationCompletion, signal?: AbortSignal): Promise<{ status: 'pending' | 'confirmed' | 'expired' }> {
+  return registrationRequest('register/status', input, signal);
 }

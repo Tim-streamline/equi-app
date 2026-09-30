@@ -38,10 +38,12 @@ export function AttachmentField({ value, onChange, section, field, photo }: {
   value: string[]; onChange: (value: string[]) => void; section: string; field: string; photo: boolean;
 }) {
   const { ensureBooking, horseId } = useIntake();
+  const bloodTest = section === 'klacht' && field === 'bloedonderzoek';
+  const limitReached = bloodTest && value.filter(item => item.startsWith('attachment:')).length >= 5;
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   async function add() {
-    if (busy) return;
+    if (busy || limitReached) return;
     setBusy(true); setError('');
     try {
       // Open the browser's file chooser directly from the user gesture.
@@ -50,6 +52,8 @@ export function AttachmentField({ value, onChange, section, field, photo }: {
         : await DocumentPicker.getDocumentAsync({ type: ['application/pdf', 'image/jpeg', 'image/png', 'image/webp'], copyToCacheDirectory: true });
       if (picked.canceled || !picked.assets?.length) return;
       const asset = picked.assets[0];
+      const size = 'size' in asset ? asset.size : 'fileSize' in asset ? asset.fileSize : undefined;
+      if (size && size > 15 * 1024 * 1024) throw new Error('Het bestand is te groot. Maximaal 15 MB per bestand.');
       const id = await ensureBooking();
       const token = await getOrMintToken();
       if (!token) throw new Error('Meld je opnieuw aan om een bijlage toe te voegen.');
@@ -79,11 +83,11 @@ export function AttachmentField({ value, onChange, section, field, photo }: {
         <Pressable disabled={busy} accessibilityLabel="Bijlage verwijderen" onPress={() => onChange(value.filter((_, i) => i !== index))}><Trash2 size={18} color="#9b3f3f" /></Pressable>
       </View>)}
     </View>
-    <Pressable accessibilityRole="button" disabled={busy} onPress={() => void add()} className="flex-row items-center justify-center gap-2 rounded-xl border border-dashed border-ink-15 bg-white p-4">
+    <Pressable accessibilityRole="button" disabled={busy || limitReached} onPress={() => void add()} className="flex-row items-center justify-center gap-2 rounded-xl border border-dashed border-ink-15 bg-white p-4">
       {busy ? <ActivityIndicator color="#108a82"/> : photo ? <Camera size={20} color="#108a82"/> : <FileText size={20} color="#108a82"/>}
-      <Text className="font-semi text-mint-700">{busy ? 'Uploaden…' : photo ? 'Foto toevoegen' : 'Document toevoegen'}</Text>
+      <Text className="font-semi text-mint-700">{busy ? 'Uploaden…' : photo ? 'Foto toevoegen' : bloodTest ? 'Bloeduitslag toevoegen' : 'Document toevoegen'}</Text>
     </Pressable>
-    <Text className="mt-1 text-xs text-ink-50">{photo ? 'JPG, PNG of WebP' : 'PDF, JPG, PNG of WebP'} · maximaal 15 MB · internet nodig</Text>
+    <Text className="mt-1 text-xs text-ink-50">{bloodTest ? 'PDF, JPG, PNG of WebP · max. 5 bestanden · max. 15 MB per bestand' : `${photo ? 'JPG, PNG of WebP' : 'PDF, JPG, PNG of WebP'} · maximaal 15 MB · internet nodig`}</Text>
     {!!error && <Text accessibilityRole="alert" className="mt-2 text-sm text-red-700">{error}</Text>}
   </View>;
 }

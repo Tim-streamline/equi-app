@@ -57,7 +57,7 @@ export default function ConnectScreen() {
         )}
       </ScrollView>
       <StickyCTA>
-        <Button title="Plan intake & ga naar EquiNova" variant="deep" onPress={finish} />
+        <Button title="Plan intake & ga naar Equi App" variant="deep" onPress={finish} />
         <Button title="Sla over, ik kijk eerst rond" variant="ghost" onPress={finish} />
       </StickyCTA>
     </View>

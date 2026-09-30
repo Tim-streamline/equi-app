@@ -3,7 +3,9 @@
 namespace App\Http\Controllers;
 
 use App\Models;
+use App\Support\ProtocolDayHistory;
 use App\Support\SyncAccessPolicy;
+use Carbon\CarbonImmutable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -111,6 +113,7 @@ class SyncController extends Controller
         $policy = new SyncAccessPolicy;
 
         DB::transaction(function () use ($payload, &$applied, &$skipped, $policy, $userId) {
+            $newSubmissions = [];
             foreach ($payload['operations'] as $op) {
                 abort_if($op['type'] === 'intake_responses', 409, 'Werk de app bij om de intake te synchroniseren.');
                 $modelClass = self::TABLE_TO_MODEL[$op['type']] ?? null;
@@ -121,7 +124,11 @@ class SyncController extends Controller
                 }
                 $policy->authorize($userId, $op);
                 if ($op['type'] === 'intake_bookings') {
-                    // Clinical review is admin-only, even though it shares the booking table.
+                    $before = Models\IntakeBooking::query()->lockForUpdate()->find($op['id']);
+                    if ($op['op'] !== 'DELETE' && ! $before?->submitted_at && $before?->intake_status !== 'submitted') {
+                        $newSubmissions[] = $op['id'];
+                    }
+                    // Clinical review and mail delivery are server-managed.
                     $op['data'] = array_intersect_key($op['data'] ?? [], array_flip([
                         'user_id', 'horse_id', 'therapist_id', 'scheduled_at', 'slot_label',
                         'duration_minutes', 'status', 'notes', 'intake_status', 'started_at', 'submitted_at',
@@ -132,6 +139,19 @@ class SyncController extends Controller
                         'submitted_at' => ['sometimes', 'nullable', 'date'],
                         'started_at' => ['sometimes', 'nullable', 'date'],
                     ])->validate();
+                    if ($op['op'] !== 'DELETE') {
+                        if ($before?->submitted_at && $before->intake_status === 'submitted'
+                            && ($op['data']['intake_status'] ?? 'submitted') === 'submitted') {
+                            // Replayed client writes must not move the submission date or undo an admin review.
+                            $op['data']['submitted_at'] = $before->submitted_at;
+                            unset($op['data']['status']);
+                        }
+                        if (! empty($op['data']['submitted_at'])) {
+                            $op['data']['submitted_at'] = CarbonImmutable::parse($op['data']['submitted_at'])->utc();
+                        } elseif (($op['data']['intake_status'] ?? $before?->intake_status) === 'submitted' && ! $before?->submitted_at && $before?->intake_status !== 'submitted') {
+                            $op['data']['submitted_at'] = now();
+                        }
+                    }
                 }
 
                 if ($op['type'] === 'user_home_preferences') {
@@ -148,10 +168,17 @@ class SyncController extends Controller
                 $this->applyOp($modelClass, $op);
                 if ($historical) {
                     [$protocol, $date, $itemId, $done, $now] = $historical;
-                    app(\App\Support\ProtocolDayHistory::class)->setDone($protocol, $date, $itemId, $done, $now, false);
+                    app(ProtocolDayHistory::class)->setDone($protocol, $date, $itemId, $done, $now, false);
                 }
                 $applied++;
             }
+            // Persist the mail request with the complete successful upload. The scheduled
+            // sender only sees committed rows; drafts, rolled-back batches and replays do not send.
+            Models\IntakeBooking::query()->whereIn('id', array_unique($newSubmissions))
+                ->where('intake_status', 'submitted')->whereNotNull('submitted_at')->update(['status' => 'pending']);
+            Models\IntakeBooking::query()->whereIn('id', array_unique($newSubmissions))
+                ->where('intake_status', 'submitted')->whereNotNull('submitted_at')
+                ->whereNull('submission_email_status')->update(['submission_email_status' => 'pending']);
         });
 
         if ($skipped) {
@@ -179,9 +206,9 @@ class SyncController extends Controller
             }
         }
         $item = Models\ProtocolPhaseSupplement::findOrFail($data['protocol_phase_supplement_id']);
-        $history = app(\App\Support\ProtocolDayHistory::class);
+        $history = app(ProtocolDayHistory::class);
         $protocol = Models\Protocol::query()->lockForUpdate()->findOrFail($item->phase->protocol_id);
-        $now = \Carbon\CarbonImmutable::now($timezone ?? $history->timezone($protocol));
+        $now = CarbonImmutable::now($timezone ?? $history->timezone($protocol));
         abort_unless($protocol->published_at && $protocol->published_at->lte($now) && $protocol->status === 'active', 422);
         abort_unless($data['date'] >= $now->subDays(14)->toDateString() && $data['date'] <= $now->toDateString(), 422, 'Alleen vandaag en de afgelopen 14 dagen kunnen worden aangepast.');
         if ($data['date'] < $now->toDateString()) {
@@ -190,7 +217,7 @@ class SyncController extends Controller
 
             return [$protocol, $data['date'], $item->id, $op['op'] === 'DELETE' ? false : (bool) $data['done'], $now];
         }
-        $start = $protocol->started_at ? \Carbon\CarbonImmutable::parse($protocol->started_at->toDateString(), $now->timezone) : null;
+        $start = $protocol->started_at ? CarbonImmutable::parse($protocol->started_at->toDateString(), $now->timezone) : null;
         $week = $start ? (int) floor($start->diffInDays($now->startOfDay(), false) / 7) + 1 : 0;
         abort_unless($week > 0 && $item->weeks()->whereHas('protocolPhaseWeek', fn ($query) => $query->where('protocol_week_number', $week))->exists(), 422, 'Dit item staat vandaag niet gepland.');
 

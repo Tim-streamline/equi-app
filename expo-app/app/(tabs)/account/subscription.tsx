@@ -1,3 +1,4 @@
+import { BasicCancellation } from '@/components/credits/BasicCancellation';
 import { View, Text, ScrollView } from 'react-native';
 import { router } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -31,6 +32,7 @@ export default function SubscriptionScreen() {
       <View className="flex-1 bg-canvas">
         <SafeAreaView edges={['top']} style={{ flex: 1 }}>
           <SubHeader title="Abonnement" onBack={() => router.back()} />
+          <View className="px-5"><BasicCancellation /></View>
         </SafeAreaView>
       </View>
     );
@@ -112,8 +114,9 @@ export default function SubscriptionScreen() {
           </View>
 
           <View className="pt-5">
-            <Button title="Basic en credits beheren" variant="ghost" onPress={() => router.push('/(tabs)/account/credits')} />
+            <Button title="Credits bekijken" variant="ghost" onPress={() => router.push('/(tabs)/account/credits')} />
           </View>
+          <BasicCancellation />
         </ScrollView>
       </SafeAreaView>
     </View>

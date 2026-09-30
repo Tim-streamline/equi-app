@@ -1,0 +1,20 @@
+{"table": "account_settings", "remaining_target_rows": 0}
+{"table": "audit_logs", "remaining_target_rows": 0}
+{"table": "chat_messages", "remaining_target_rows": 0}
+{"table": "chat_sessions", "remaining_target_rows": 0}
+{"table": "credit_grants", "remaining_target_rows": 0}
+{"table": "credit_transactions", "remaining_target_rows": 0}
+{"table": "data_exports", "remaining_target_rows": 0}
+{"table": "horse_shares", "remaining_target_rows": 0}
+{"table": "horse_stats", "remaining_target_rows": 0}
+{"table": "horses", "remaining_target_rows": 0}
+{"table": "notification_preferences", "remaining_target_rows": 0}
+{"table": "observations", "remaining_target_rows": 0}
+{"table": "payments", "remaining_target_rows": 0}
+{"table": "scan_ingredients", "remaining_target_rows": 0}
+{"table": "scan_results", "remaining_target_rows": 0}
+{"table": "subscriptions", "remaining_target_rows": 0}
+{"table": "timeline_events", "remaining_target_rows": 0}
+{"table": "users", "remaining_target_rows": 0}
+{"remaining_users": [{"id": "019ff161-da01-72fa-b1f2-c9e587ec8d5f", "name": "Shelley Meeuwsen", "email": "shelleymeeuwsen@gmail.com"}, {"id": "01a0d52a-1f8e-702a-8f97-bd1a974fbfb4", "name": "Tim", "email": "timeversdijk@gmail.com"}, {"id": "01a0d52d-ed66-7132-b2dc-442d0a865a47", "name": "Shelley Rochelle Meeuwsen", "email": "shelleymeeuwsen+test@gmail.com"}]}
+{"audit_logs_still_referencing_removed_users": 0}

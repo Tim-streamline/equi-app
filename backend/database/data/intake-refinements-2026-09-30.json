@@ -1,0 +1,486 @@
+{
+  "sections": {
+    "klacht": {
+      "update": {
+        "bloedonderzoek": {
+          "label": "Upload, indien beschikbaar, de uitslag(en) van het bloedonderzoek",
+          "hint": "Je kunt meerdere uitslagen van de afgelopen 3 jaar toevoegen.",
+          "showIf": {
+            "bloedonderzoek-gedaan": "Ja"
+          }
+        }
+      },
+      "add": [
+        {
+          "after": "huidige-aanpak",
+          "field": {
+            "id": "bloedonderzoek-gedaan",
+            "label": "Is er in de afgelopen 3 jaar bloedonderzoek bij je paard gedaan?",
+            "type": "radio",
+            "required": true,
+            "options": [
+              "Ja",
+              "Nee"
+            ]
+          }
+        }
+      ],
+      "retire": []
+    },
+    "voer": {
+      "update": {
+        "analyse-suiker": {
+          "optional": false,
+          "required": true
+        },
+        "analyse-eiwit": {
+          "optional": false,
+          "required": true
+        },
+        "analyse-energie": {
+          "optional": false,
+          "required": true
+        },
+        "voordroog-type": {
+          "hint": "Klik alles aan wat van toepassing is.",
+          "options": [
+            "Hooi",
+            "Voordroog",
+            "Kuilvoer",
+            "Anders, namelijk",
+            "Weet ik niet"
+          ]
+        },
+        "voordroog-type-anders": {
+          "showIf": {
+            "voordroog-verleden": [
+              "Ja, incidenteel of kortdurend",
+              "Ja, enkele maanden",
+              "Ja, meerdere jaren",
+              "Ja, momenteel"
+            ],
+            "voordroog-type": "Anders, namelijk"
+          }
+        },
+        "huidige-bijvoeding": {
+          "label": "Welke bijvoeding krijgt je paard op dit moment?",
+          "hint": "Voeg ieder product apart toe.",
+          "showIf": {
+            "bijvoeding-nu": "Ja"
+          }
+        },
+        "bijvoeding-historie": {
+          "label": "Welke andere bijvoeding heeft je paard in die periode gekregen?",
+          "hint": "Voeg ieder product apart toe. Neem ook producten mee die maar tijdelijk zijn gevoerd.",
+          "sub": [
+            {
+              "id": "merk",
+              "label": "Merk",
+              "type": "text"
+            },
+            {
+              "id": "product",
+              "label": "Exacte productnaam",
+              "type": "text"
+            },
+            {
+              "id": "wanneer",
+              "label": "Wanneer ongeveer (jaartal/periode)",
+              "type": "text"
+            },
+            {
+              "id": "hoelang",
+              "label": "Hoe lang gevoerd",
+              "type": "text"
+            },
+            {
+              "id": "hoeveelheid",
+              "label": "Hoeveelheid per voerbeurt",
+              "type": "text"
+            },
+            {
+              "id": "voerbeurten",
+              "label": "Aantal voerbeurten per dag",
+              "type": "text"
+            }
+          ],
+          "showIf": {
+            "bijvoeding-eerder": "Ja"
+          }
+        },
+        "balancer": {
+          "label": "Welke mineralenvoeding of balancer krijgt je paard?",
+          "hint": "Voeg ieder product apart toe.",
+          "showIf": {
+            "balancer-nu": "Ja"
+          }
+        },
+        "huidig-extra": {
+          "label": "Welke supplementen krijgt je paard op dit moment?",
+          "hint": "Voeg ieder supplement apart toe.",
+          "showIf": {
+            "supplementen-nu": "Ja"
+          }
+        },
+        "historie-extra": {
+          "label": "Welke andere supplementen heeft je paard in die periode gekregen?",
+          "hint": "Voeg ieder supplement apart toe. Neem ook supplementen mee die maar tijdelijk zijn gegeven.",
+          "showIf": {
+            "supplementen-eerder": "Ja"
+          }
+        }
+      },
+      "add": [
+        {
+          "after": "voer-gewisseld-toelichting",
+          "field": {
+            "id": "bijvoeding-nu",
+            "label": "Krijgt je paard op dit moment bijvoeding?",
+            "type": "radio",
+            "required": true,
+            "options": [
+              "Ja",
+              "Nee"
+            ]
+          }
+        },
+        {
+          "after": "huidige-bijvoeding",
+          "field": {
+            "id": "bijvoeding-eerder",
+            "label": "Heeft je paard in de afgelopen 2–5 jaar andere bijvoeding gekregen dan wat je hierboven hebt ingevuld?",
+            "type": "radio",
+            "required": true,
+            "options": [
+              "Ja",
+              "Nee",
+              "Weet ik niet"
+            ]
+          }
+        },
+        {
+          "after": "bijvoeding-historie",
+          "field": {
+            "id": "balancer-nu",
+            "label": "Krijgt je paard op dit moment een mineralenvoeding of balancer?",
+            "type": "radio",
+            "required": true,
+            "options": [
+              "Ja",
+              "Nee"
+            ]
+          }
+        },
+        {
+          "after": "snacks-details",
+          "field": {
+            "id": "supplementen-nu",
+            "label": "Krijgt je paard op dit moment supplementen?",
+            "type": "radio",
+            "required": true,
+            "options": [
+              "Ja",
+              "Nee"
+            ]
+          }
+        },
+        {
+          "after": "huidig-extra",
+          "field": {
+            "id": "supplementen-eerder",
+            "label": "Heeft je paard in de afgelopen 2–5 jaar andere supplementen gekregen dan wat je hierboven hebt ingevuld?",
+            "type": "radio",
+            "required": true,
+            "options": [
+              "Ja",
+              "Nee",
+              "Weet ik niet"
+            ]
+          }
+        }
+      ],
+      "retire": []
+    },
+    "huisvesting": {
+      "update": {},
+      "add": [],
+      "retire": [
+        "paddock-water"
+      ]
+    },
+    "gedrag": {
+      "update": {
+        "training-freq": {
+          "label": "Hoe vaak per week train je met je paard?"
+        },
+        "discipline": {
+          "showIf": {
+            "training-freq": [
+              "1–2×",
+              "3–4×",
+              "5–7×"
+            ]
+          }
+        },
+        "training-knelpunten": {
+          "showIf": {
+            "training-freq": [
+              "1–2×",
+              "3–4×",
+              "5–7×"
+            ]
+          }
+        },
+        "training-overig": {
+          "showIf": {
+            "training-freq": [
+              "1–2×",
+              "3–4×",
+              "5–7×"
+            ]
+          }
+        },
+        "stress-symptomen": {
+          "options": [
+            "weven",
+            "ijsberen",
+            "luchtzuigen",
+            "kribbenbijten",
+            "Overmatig schuren, likken, kauwen, flehmen of ander repetitief gedrag",
+            "Geen van bovenstaande"
+          ]
+        },
+        "typisch-gedrag": {
+          "options": [
+            "Soppen van het hooi",
+            "Sterke voer gerichtheid",
+            "Voernijd",
+            "Gretigheid naar specifiek voer",
+            "Spanning of competitie rond voer, water of schuilplek",
+            "Moeite met rusten, slapen of gaan liggen",
+            "Overmatig agressief / beschermend naar iets of iemand toe (resource guarding)",
+            "Gevoeligheid rondom de buik",
+            "Narrigheid bij het aansingelen",
+            "Oren plat bij verzorging / opdoen van deken",
+            "Sterke speeksel productie (kauwen) zónder voedsel",
+            "Lange warming-up nodig in de training",
+            "Héél langzaam eten (met pauzes)",
+            "Vaak kleine beetje drinken (i.p.v. 1x goed met lange teugen)",
+            "Lopen met de handrem erop",
+            "Staakgedrag vertonen / weigeren",
+            "Kieskeurigheid rondom (nieuwe) voeding / moeilijke eter",
+            "Wisselende ontlasting",
+            "Wisselend mestwater",
+            "Opgeblazen buik",
+            "Geen grof ruwvoer willen eten of met mestwater reageren op grof ruwvoer",
+            "Algehele humeur / oogopslag is zwaar / narrig",
+            "Geen koud (bevroren geweest) water willen drinken",
+            "Geen van bovenstaande"
+          ]
+        },
+        "fysieke-signalen": {
+          "options": [
+            "Gevoeligheid van de (onder)rug, terwijl er met de rug zelf niks aan de hand lijkt te zijn",
+            "Gaskoliek gevoeligheid",
+            "Verstoppingskoliek gevoeligheid",
+            "Krampkoliek gevoeligheid",
+            "(Subklinisch) mestwater",
+            "Wisselende ontlasting",
+            "Moeite met buiging naar rechts",
+            "Winderigheid",
+            "Gevoeligheid voor weersveranderingen",
+            "Gevoeligheid bij plotselinge voer veranderingen",
+            "Geen van bovenstaande"
+          ]
+        }
+      },
+      "add": [
+        {
+          "after": "training-freq",
+          "field": {
+            "id": "training-duur",
+            "label": "Hoe lang duurt een gemiddelde training?",
+            "type": "number",
+            "required": true,
+            "unit": "minuten",
+            "showIf": {
+              "training-freq": [
+                "1–2×",
+                "3–4×",
+                "5–7×"
+              ]
+            }
+          }
+        },
+        {
+          "after": "training-duur",
+          "field": {
+            "id": "sec-training-opbouw",
+            "type": "sectionhead",
+            "label": "Hoe ziet een gemiddelde training er ongeveer uit?",
+            "hint": "Vul apart het aantal minuten in voor stap, draf en galop.",
+            "showIf": {
+              "training-freq": [
+                "1–2×",
+                "3–4×",
+                "5–7×"
+              ]
+            }
+          }
+        },
+        {
+          "after": "sec-training-opbouw",
+          "field": {
+            "id": "training-stap",
+            "label": "Stap",
+            "type": "number",
+            "required": true,
+            "unit": "minuten",
+            "showIf": {
+              "training-freq": [
+                "1–2×",
+                "3–4×",
+                "5–7×"
+              ]
+            }
+          }
+        },
+        {
+          "after": "training-stap",
+          "field": {
+            "id": "training-draf",
+            "label": "Draf",
+            "type": "number",
+            "required": true,
+            "unit": "minuten",
+            "showIf": {
+              "training-freq": [
+                "1–2×",
+                "3–4×",
+                "5–7×"
+              ]
+            }
+          }
+        },
+        {
+          "after": "training-draf",
+          "field": {
+            "id": "training-galop",
+            "label": "Galop",
+            "type": "number",
+            "required": true,
+            "unit": "minuten",
+            "showIf": {
+              "training-freq": [
+                "1–2×",
+                "3–4×",
+                "5–7×"
+              ]
+            }
+          }
+        },
+        {
+          "after": "training-galop",
+          "field": {
+            "id": "training-intensief",
+            "label": "Hoe vaak doet je paard een intensieve training?",
+            "type": "radio",
+            "required": true,
+            "options": [
+              "Nooit",
+              "Minder dan 1× per week",
+              "1× per week",
+              "2× per week",
+              "3× of vaker per week"
+            ],
+            "hint": "Denk bijvoorbeeld aan meer dan 15 minuten galop, intensief intervalwerk, zwaar springwerk of vergelijkbare belasting.",
+            "showIf": {
+              "training-freq": [
+                "1–2×",
+                "3–4×",
+                "5–7×"
+              ]
+            }
+          }
+        },
+        {
+          "after": "training-intensief",
+          "field": {
+            "id": "training-vormen",
+            "type": "multi",
+            "label": "Welke vorm(en) van beweging of training doe je met je paard?",
+            "required": true,
+            "hint": "Denk aan rijden, longeren, grondwerk, wandelen, mennen, rechtrichten aan de hand, etc.",
+            "options": [
+              "Rijden",
+              "Longeren",
+              "Grondwerk",
+              "Wandelen",
+              "Mennen",
+              "Rechtrichten aan de hand",
+              "Anders, namelijk"
+            ],
+            "showIf": {
+              "training-freq": [
+                "1–2×",
+                "3–4×",
+                "5–7×"
+              ]
+            }
+          }
+        },
+        {
+          "after": "training-vormen",
+          "field": {
+            "id": "training-vormen-anders",
+            "type": "text",
+            "label": "Anders, namelijk",
+            "showIf": {
+              "training-freq": [
+                "1–2×",
+                "3–4×",
+                "5–7×"
+              ],
+              "training-vormen": "Anders, namelijk"
+            }
+          }
+        },
+        {
+          "after": "discipline",
+          "field": {
+            "id": "training-veranderd",
+            "label": "Is de training in de afgelopen maanden duidelijk veranderd?",
+            "type": "radio",
+            "required": true,
+            "options": [
+              "Ja",
+              "Nee"
+            ]
+          }
+        },
+        {
+          "after": "training-veranderd",
+          "field": {
+            "id": "training-veranderd-details",
+            "type": "textarea",
+            "label": "Wat is er veranderd en sinds wanneer?",
+            "required": true,
+            "hint": "Denk aan vaker of minder vaak trainen, langere trainingen, meer galop, zwaarder werk, een andere discipline of juist een periode van rust.",
+            "showIf": {
+              "training-veranderd": "Ja"
+            }
+          }
+        }
+      ],
+      "retire": [
+        "beweging-arbeid",
+        "training-intensiteit"
+      ],
+      "move_after": {
+        "discipline": "training-vormen-anders",
+        "training-veranderd": "discipline",
+        "training-veranderd-details": "training-veranderd"
+      }
+    }
+  }
+}

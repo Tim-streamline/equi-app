@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import { onLibraryUnlock } from "@/lib/library-events";
 import { AppState } from "react-native";
 import { useFocusEffect } from "expo-router";
 import AsyncStorage from "@react-native-async-storage/async-storage";
@@ -51,7 +52,7 @@ export async function dashboardRequest(path: string, body?: object) {
 export function useHorseDashboard(month?: string) {
   const horseId = useCurrentHorseId();
   const { currentUserId, syncStatus } = useDb();
-  const key = `horse-dashboard:v2:${currentUserId}:${horseId}:${month ?? "today"}`;
+  const key = `horse-dashboard:v3:${currentUserId}:${horseId}:${month ?? "today"}`;
   const [snapshot, setSnapshot] = useState<{
     key: string;
     data: HorseDashboard;
@@ -83,11 +84,19 @@ export function useHorseDashboard(month?: string) {
     }
   }, [horseId, currentUserId, month, key]);
 
+  useEffect(() => onLibraryUnlock(itemId => {
+    setSnapshot(previous => previous?.key === key ? { ...previous, data: {
+      ...previous.data, recommendations: previous.data.recommendations.filter(item => item.id !== itemId),
+    } } : previous);
+    void AsyncStorage.removeItem(key);
+    void refresh();
+  }), [key, refresh]);
+
   useEffect(() => {
     let active = true;
     setError(null);
     // Remove unrestricted snapshots written by older app versions.
-    void AsyncStorage.getAllKeys().then((keys) => AsyncStorage.multiRemove(keys.filter((item) => item.startsWith('horse-dashboard:v1:'))));
+    void AsyncStorage.getAllKeys().then((keys) => AsyncStorage.multiRemove(keys.filter((item) => /^horse-dashboard:v[12]:/.test(item))));
     AsyncStorage.getItem(key).then((raw) => {
       if (active && raw) {
         try {

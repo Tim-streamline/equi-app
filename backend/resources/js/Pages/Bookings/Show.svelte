@@ -16,7 +16,7 @@
     async function exportPdf() {
         const target = window.open('', '_blank');
         if (!reviewComponent || await reviewComponent.flush()) {
-            const url = `/admin/bookings/${booking.id}?print=1`;
+            const url = `/admin/bookings/${booking.id}/answers.pdf`;
             if (target) target.location.href = url;
             else window.location.assign(url);
         } else target?.close();
@@ -28,13 +28,17 @@
             window.print();
         })();
     });
+    const mailStatus = {
+        pending: 'In afwachting', sending: 'Verzending gestart',
+        sent: 'Verzonden', failed: 'Mislukt, controleer de verzending',
+    };
     function setStatus(status) { router.post(`/admin/bookings/${booking.id}/status`, { status }); }
 </script>
 
 {#if printMode}
     <main class="mx-auto max-w-5xl p-8 print:p-0">
         <h1 class="mb-2 text-2xl font-semibold">Intake · {booking.horse?.name || 'Paard niet gekoppeld'}</h1>
-        <p class="mb-6">{booking.user?.name} · {booking.submitted_at ? `Ingevuld op ${formatDateTime(booking.submitted_at)}` : 'Nog niet ingestuurd'} · {booking.id}</p>
+        <p class="mb-6">{booking.user?.name} · {`Ingediend op: ${booking.submitted_at_label}`} · {booking.id}</p>
         <a href={`/admin/bookings/${booking.id}`} class="mb-4 mr-6 inline-block text-primary underline print:hidden">Terug naar intake</a>
         <button class="mb-4 text-primary underline print:hidden" onclick={() => window.print()}>Afdrukken / opslaan als PDF</button>
         <IntakeReview {booking} {review} printMode={true}/>
@@ -44,9 +48,10 @@
     <Link href="/admin/bookings" class="mb-4 inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground">
         <ArrowLeft class="size-4" /> Terug naar intake bookings
     </Link>
-    <PageHeader title={`Intake · ${booking.horse?.name || 'Paard niet gekoppeld'}`} description={`${booking.user?.name} · ${booking.submitted_at ? `Ingevuld op ${formatDateTime(booking.submitted_at)}` : 'Nog niet ingestuurd'} · ${booking.id}`}>
+    <PageHeader title={`Intake · ${booking.horse?.name || 'Paard niet gekoppeld'}`} description={`${booking.user?.name} · Ingediend op: ${booking.submitted_at_label} · ${booking.id}`}>
         {#snippet actions()}
             <Badge>{booking.submitted_at ? 'Intake ingevuld' : 'Intake in concept'}</Badge>
+            <Badge variant={statusVariant(booking.status)}>{booking.status_label}</Badge>
             <Button variant="outline" onclick={exportPdf}>Exporteer PDF</Button>
             {#if booking.horse_id}<Link href={`/admin/protocols/create?horse_id=${booking.horse_id}`} class="inline-flex h-11 items-center rounded-full bg-primary px-5 font-semibold text-white">Protocol opstellen</Link>{/if}
         {/snippet}
@@ -68,6 +73,9 @@
                 <div class="flex justify-between"><span class="text-muted-foreground">Horse</span><span>{booking.horse?.name ?? '—'}</span></div>
                 <div class="flex justify-between"><span class="text-muted-foreground">Duration</span><span>{booking.duration_minutes} min</span></div>
                 <div class="flex justify-between"><span class="text-muted-foreground">Slot</span><span>{booking.slot_label ?? '—'}</span></div>
+                <div class="flex justify-between gap-4"><span class="text-muted-foreground">Melding nieuwe intake</span><span>{mailStatus[booking.submission_email_status] ?? 'Niet aangevraagd'}</span></div>
+                {#if booking.submission_email_sent_at}<p>Melding verzonden op {formatDateTime(booking.submission_email_sent_at)}</p>{/if}
+                {#if booking.submission_email_error}<p class="text-destructive">{booking.submission_email_error}</p>{/if}
                 {#if booking.notes}<p class="pt-2 text-muted-foreground">{booking.notes}</p>{/if}
             </CardContent>
         </Card>
@@ -76,7 +84,7 @@
             <CardContent class="flex flex-wrap gap-2">
                 <Button variant="outline" onclick={() => setStatus('confirmed')}>Confirm</Button>
                 <Button variant="outline" onclick={() => setStatus('done')}>Mark done</Button>
-                <Button variant="outline" onclick={() => setStatus('pending')}>Set pending</Button>
+                <Button variant="outline" onclick={() => setStatus('pending')}>Te beoordelen</Button>
                 <Button variant="destructive" onclick={() => setStatus('cancelled')}>Cancel</Button>
             </CardContent>
         </Card>

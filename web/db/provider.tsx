@@ -5,7 +5,7 @@ import { PowerSyncContext } from '@powersync/react';
 import type { SyncStatus as PsSyncStatus } from '@powersync/common';
 import { AppSchema } from '@/db/powersync-schema';
 import { accountSession } from '@/lib/account-session';
-import { getSession, login as signIn, register as signUp, type RegistrationInput, logout as signOut, forgetSession, type LoginResponse } from './auth';
+import { getSession, login as signIn, register as signUp, type RegistrationInput, type RegistrationChallenge, type RegistrationCompletion, completeRegistration as confirmSignUp, logout as signOut, forgetSession, type LoginResponse } from './auth';
 import { LaravelConnector } from './connector';
 import { databaseName } from './database-name';
 import { loginDestination } from './login-destination';
@@ -14,7 +14,7 @@ type SyncStatus = 'idle' | 'connecting' | 'syncing' | 'connected' | 'error';
 type DbContextValue = {
   powersync: PowerSyncDatabase; isLoggedIn: boolean; isConnected: boolean;
   syncStatus: SyncStatus; currentUserId: string | null; selectedHorseId: string | null;
-  selectHorse: (id: string) => void; login: (email: string, password: string) => Promise<void>; register: (input: RegistrationInput) => Promise<void>; logout: () => Promise<void>;
+  selectHorse: (id: string) => void; login: (email: string, password: string) => Promise<void>; register: (input: RegistrationInput) => Promise<RegistrationChallenge>; completeRegistration: (input: RegistrationCompletion, password: string) => Promise<void>; logout: () => Promise<void>;
 };
 const DbContext = createContext<DbContextValue | null>(null);
 function mapStatus(status: PsSyncStatus): SyncStatus {
@@ -120,8 +120,9 @@ export function DbProvider({ children }: { children: ReactNode }) {
     // Keeping this as a document navigation preserves the requested deep link.
     window.location.replace(destination);
   });
-  const register = (input: RegistrationInput) => accountSession.transition(async () => {
-    await signUp(input);
+  const register = signUp;
+  const completeRegistration = (input: RegistrationCompletion) => accountSession.transition(async () => {
+    await confirmSignUp(input);
     channel.current?.postMessage('changed');
     window.location.replace('/onboarding/add-horse');
   });
@@ -135,7 +136,7 @@ export function DbProvider({ children }: { children: ReactNode }) {
     <Pressable accessibilityRole="button" onPress={() => { setError(null); setAttempt(value => value + 1); }}><Text>Opnieuw proberen</Text></Pressable>
   </View>;
   if (!database) return <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}><ActivityIndicator accessibilityLabel="App laden" color="#127A79" /></View>;
-  return <PowerSyncContext.Provider value={database}><DbContext.Provider value={{ powersync: database, isLoggedIn: !!userId, isConnected: syncStatus === 'connected', syncStatus, currentUserId: userId, selectedHorseId, selectHorse, login, register, logout }}>
+  return <PowerSyncContext.Provider value={database}><DbContext.Provider value={{ powersync: database, isLoggedIn: !!userId, isConnected: syncStatus === 'connected', syncStatus, currentUserId: userId, selectedHorseId, selectHorse, login, register, completeRegistration, logout }}>
     {children}
   </DbContext.Provider></PowerSyncContext.Provider>;
 }

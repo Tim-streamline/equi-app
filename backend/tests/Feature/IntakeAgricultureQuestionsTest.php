@@ -58,6 +58,6 @@ class IntakeAgricultureQuestionsTest extends TestCase
         $this->assertSame('Eigen tekst van beheerder', $existing->fresh()->label);
         $this->assertFalse($existing->fresh()->active);
         $this->assertSame('Aangepaste landbouwvraag', $new->fresh()->label);
-        $this->assertDatabaseCount('intake_fields', 359);
+        $this->assertDatabaseCount('intake_fields', 382);
     }
 }

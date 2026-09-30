@@ -81,5 +81,5 @@ server.on('upgrade', (req, socket, head) => {
   upstream.on('response', response => { response.resume(); socket.destroy(); });
   upstream.on('error', () => socket.destroy()); upstream.end();
 });
-server.listen(port, host, () => console.log(`EquiNova web: http://${host}:${port}`));
+server.listen(port, host, () => console.log(`Equi App web: http://${host}:${port}`));
 for (const signal of ['SIGINT', 'SIGTERM']) process.on(signal, () => { child?.kill(signal); server.close(); process.exit(); });

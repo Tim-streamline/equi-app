@@ -16,21 +16,24 @@ function screen() {
     { id: 'plus', title: 'Plus les', format: 'audio', creditCost: 0, isPlus: true },
   ];
   const bookmarks = { itemIds: ['paid'], pendingIds: [], error: null };
+  let refreshes = 0;
+  const resource = { data: { hasPlus: false, unlockedIds: [], credits: 7 }, error: null, refresh: () => refreshes++ };
   const jsx = (type, props) => typeof type === 'function' ? type(props) : ({ type, props });
   const modules = {
+    '@/components/ui/KeyboardForm': { KeyboardViewport: 'KeyboardAvoidingView', KeyboardScrollView: 'ScrollView', KeyboardTextInput: 'TextInput' },
     'react/jsx-runtime': { jsx, jsxs: jsx, Fragment: 'Fragment' },
     react: {
       useState(initial) { const index = cursor++; if (!(index in values)) values[index] = initial; return [values[index], value => { values[index] = typeof value === 'function' ? value(values[index]) : value; }]; },
-      useEffect() {}, useMemo: fn => fn(), useRef: () => ({ current: { focus: () => focused++ } }),
+      useEffect() {}, useMemo: fn => fn(), useRef: () => ({ current: { focus: () => focused++, measureInWindow: fn => fn(20, 160, 120, 44) } }),
     },
-    'react-native': Object.fromEntries(['View', 'Text', 'ScrollView', 'Pressable', 'TextInput', 'ActivityIndicator'].map(name => [name, name])),
+    'react-native': { ...Object.fromEntries(['View', 'Text', 'ScrollView', 'Pressable', 'TextInput', 'ActivityIndicator', 'Modal'].map(name => [name, name])), useWindowDimensions: () => ({ width: 400, height: 800 }) },
     'react-native-safe-area-context': { SafeAreaView: 'SafeAreaView' },
     'expo-router': { useLocalSearchParams: () => ({}) },
-    'lucide-react-native': { Search: 'Search', SlidersHorizontal: 'SlidersHorizontal', X: 'X' },
+    'lucide-react-native': { Search: 'Search', ChevronDown: 'ChevronDown', Check: 'Check', X: 'X' },
     '@/components/library/LibraryCard': { LibraryCard: 'LibraryCard' },
     '@/components/ui/Chip': { Chip: 'Chip' },
     '@/hooks/useTabBarPadding': { useTabBarPadding: () => 76 },
-    '@/hooks/useLibraryResource': { useLibraryResource: () => ({ data: { hasPlus: false, unlockedIds: [] } }) },
+    '@/hooks/useLibraryResource': { useLibraryResource: () => resource },
     '@/hooks/useLibraryBookmarks': { useLibraryBookmarks: () => bookmarks },
     '@/lib/library': library, '@/lib/library-filter': filters,
     '@/db/hooks': {
@@ -47,13 +50,18 @@ function screen() {
   const render = () => { cursor = 0; return flatten(exports.default()); };
   const press = label => { const node = render().find(node => node.type === 'Pressable' && node.props.accessibilityLabel === label); assert.ok(node, label); node.props.onPress(); };
   const ids = () => render().filter(node => node.type === 'LibraryCard').map(node => node.props.item.id);
-  return { render, press, ids, bookmarks, focused: () => focused };
+  const select = label => {
+    render().find(node => node.type === 'Pressable' && node.props.accessibilityLabel?.startsWith('Bibliotheekfilter:')).props.onPress();
+    press(label);
+    assert.ok(!render().some(node => node.type === 'Modal'));
+  };
+  return { render, press, select, ids, bookmarks, resource, refreshes: () => refreshes, focused: () => focused };
 }
 
 test('actual Library screen composes saved, category and search; X preserves filters and focus', () => {
   const app = screen();
   assert.deepEqual(app.ids(), ['free', 'paid', 'plus']);
-  app.press('Opgeslagen'); app.press('Hooi');
+  app.select('Opgeslagen'); app.press('Hooi');
   assert.deepEqual(app.ids(), ['paid']);
   app.render().find(node => node.type === 'TextInput').props.onChangeText('missing');
   assert.deepEqual(app.ids(), []);
@@ -66,15 +74,88 @@ test('actual Library screen composes saved, category and search; X preserves fil
   assert.ok(app.render().some(node => node.props.children === 'Nog niets opgeslagen'));
 });
 
-test('Alles clears saved and category filters and the navigation is one horizontal row', () => {
-  const app = screen(); app.press('Opgeslagen'); app.press('Hooi');
+test('the dropdown has exactly four choices and Alles preserves category and search filters', () => {
+  const app = screen();
+  assert.ok(!app.render().some(n => n.props.accessibilityRole === 'radio'));
+  app.press('Bibliotheekfilter: Alles');
+  const choices = app.render().filter(n => n.props.accessibilityRole === 'radio');
+  assert.deepEqual(choices.map(n => n.props.accessibilityLabel), ['Alles', 'Mijn items', 'Opgeslagen', 'Gratis']);
+  assert.deepEqual(choices.map(n => n.props.accessibilityState.checked), [true, false, false, false]);
+  app.press('Bibliotheekfilter sluiten');
+  assert.ok(!app.render().some(n => n.type === 'Modal'));
+  app.select('Opgeslagen'); app.press('Hooi');
+  app.render().find(node => node.type === 'TextInput').props.onChangeText('meten');
+  app.select('Alles');
   assert.deepEqual(app.ids(), ['paid']);
-  app.press('Alles');
+  app.press('Zoekterm wissen');
+  assert.deepEqual(app.ids(), ['free', 'paid']);
+  app.press('Hooi');
   assert.deepEqual(app.ids(), ['free', 'paid', 'plus']);
-  const nodes = app.render();
-  assert.ok(!nodes.some(node => node.props.accessibilityLabel === 'Filters'));
-  const rows = nodes.filter(node => node.type === 'ScrollView' && node.props.horizontal);
-  assert.equal(rows.length, 1);
-  assert.ok(rows[0].props.children.flat().some(node => node?.props?.accessibilityLabel === 'Alles'));
-  assert.ok(rows[0].props.children.flat().some(node => node?.props?.accessibilityLabel === 'Hooi'));
+  app.press('Bibliotheekfilter: Alles');
+  app.render().find(n => n.type === 'Modal').props.onRequestClose();
+  assert.ok(!app.render().some(n => n.type === 'Modal'));
+});
+
+test('Mijn items excludes free items while retaining purchases and eligible Plus content', () => {
+  const app = screen();
+  app.select('Mijn items');
+  assert.deepEqual(app.ids(), [], 'credits alone do not unlock paid items');
+  app.resource.data.unlockedIds = ['free', 'paid'];
+  assert.deepEqual(app.ids(), ['paid'], 'even previously unlocked free items belong under Gratis');
+  app.resource.data.hasPlus = true;
+  assert.deepEqual(app.ids(), ['paid', 'plus']);
+  app.resource.data.hasPlus = false;
+  app.resource.data.unlockedIds = ['paid', 'plus'];
+  assert.deepEqual(app.ids(), ['paid', 'plus'], 'a prior purchase keeps Plus-only content available');
+  app.press('Hooi');
+  assert.deepEqual(app.ids(), ['paid']);
+  app.render().find(node => node.type === 'TextInput').props.onChangeText('missing');
+  assert.deepEqual(app.ids(), []);
+  app.press('Zoekterm wissen');
+  assert.deepEqual(app.ids(), ['paid']);
+});
+
+test('Gratis shows only free non-Plus items and composes with search and categories', () => {
+  const app = screen();
+  app.resource.data.hasPlus = true;
+  app.resource.data.unlockedIds = ['paid', 'plus'];
+  app.select('Gratis');
+  assert.deepEqual(app.ids(), ['free'], 'purchased and Plus content is not free');
+  app.press('Hooi');
+  assert.deepEqual(app.ids(), ['free']);
+  app.render().find(node => node.type === 'TextInput').props.onChangeText('meten');
+  assert.deepEqual(app.ids(), []);
+  app.press('Zoekterm wissen');
+  assert.deepEqual(app.ids(), ['free']);
+  app.resource.data = null;
+  app.resource.error = 'Verbinding niet beschikbaar.';
+  assert.deepEqual(app.ids(), ['free'], 'free filtering does not depend on loading access');
+  app.select('Alles');
+  assert.deepEqual(app.ids(), ['free', 'paid']);
+  app.bookmarks.itemIds = ['free'];
+  app.select('Opgeslagen');
+  assert.deepEqual(app.ids(), ['free'], 'saved free items remain in Opgeslagen');
+});
+
+test('Mijn items waits for access and offers retry after a failed load', () => {
+  const app = screen();
+  app.resource.data = null;
+  app.select('Mijn items');
+  assert.deepEqual(app.ids(), []);
+  assert.ok(app.render().some(n => n.type === 'ActivityIndicator'));
+  assert.ok(!app.render().some(n => n.props.children === 'Geen bibliotheekitems gevonden.'));
+  app.resource.error = 'Verbinding niet beschikbaar.';
+  assert.ok(!app.render().some(n => n.type === 'ActivityIndicator'));
+  const retry = app.render().find(n => n.type === 'Pressable' && Array.isArray(n.props.children?.props?.children) && n.props.children.props.children.includes(app.resource.error));
+  assert.ok(retry);
+  app.bookmarks.refresh = () => {};
+  retry.props.onPress();
+  assert.equal(app.refreshes(), 1);
+  app.select('Alles');
+  assert.deepEqual(app.ids(), ['free', 'paid', 'plus']);
+});
+
+test('library retains the current credit balance', () => {
+  const app = screen();
+  assert.ok(app.render().some(n => n.type === 'Text' && Array.isArray(n.props.children) && n.props.children.join('') === 'Je credits: 7'));
 });

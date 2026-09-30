@@ -1,0 +1,141 @@
+- generic [ref=e27]:
+  - complementary [ref=e28]:
+    - generic [ref=e32]:
+      - generic [ref=e33]: EquiNova
+      - generic [ref=e34]: Admin console
+    - navigation [ref=e35]:
+      - link "Dashboard" [ref=e37] [cursor=pointer]:
+        - /url: http://localhost:81/admin
+      - generic [ref=e40]:
+        - generic [ref=e41]: Support
+        - link "Users" [ref=e42] [cursor=pointer]:
+          - /url: http://localhost:81/admin/users
+        - link "Horses" [ref=e45] [cursor=pointer]:
+          - /url: http://localhost:81/admin/horses
+        - link "Therapists" [ref=e48] [cursor=pointer]:
+          - /url: http://localhost:81/admin/therapists
+        - link "Intake bookings" [ref=e51] [cursor=pointer]:
+          - /url: http://localhost:81/admin/bookings
+        - link "Protocols" [ref=e54] [cursor=pointer]:
+          - /url: http://localhost:81/admin/protocols
+      - generic [ref=e57]:
+        - generic [ref=e58]: Content
+        - link "Ontdek Plus" [ref=e59] [cursor=pointer]:
+          - /url: http://localhost:81/admin/plus-page
+        - link "Library" [ref=e62] [cursor=pointer]:
+          - /url: http://localhost:81/admin/library
+        - link "Categories" [ref=e65] [cursor=pointer]:
+          - /url: http://localhost:81/admin/library-categories
+        - link "Seasonal tips" [ref=e68] [cursor=pointer]:
+          - /url: http://localhost:81/admin/seasonal-tips
+        - link "Nova chat" [ref=e71] [cursor=pointer]:
+          - /url: http://localhost:81/admin/nova
+      - generic [ref=e74]:
+        - generic [ref=e75]: Scanner
+        - link "Scan results" [ref=e76] [cursor=pointer]:
+          - /url: http://localhost:81/admin/scans
+        - link "Products" [ref=e79] [cursor=pointer]:
+          - /url: http://localhost:81/admin/products
+        - link "Ingredients" [ref=e82] [cursor=pointer]:
+          - /url: http://localhost:81/admin/ingredients
+      - generic [ref=e85]:
+        - generic [ref=e86]: Community
+        - link "Posts & replies" [ref=e87] [cursor=pointer]:
+          - /url: http://localhost:81/admin/community
+        - link "Reports" [ref=e90] [cursor=pointer]:
+          - /url: http://localhost:81/admin/reports
+      - generic [ref=e93]:
+        - generic [ref=e94]: Billing
+        - link "Plans" [ref=e95] [cursor=pointer]:
+          - /url: http://localhost:81/admin/plans
+        - link "Subscriptions" [ref=e98] [cursor=pointer]:
+          - /url: http://localhost:81/admin/subscriptions
+        - link "Payments" [ref=e101] [cursor=pointer]:
+          - /url: http://localhost:81/admin/payments
+        - link "Credits" [ref=e104] [cursor=pointer]:
+          - /url: http://localhost:81/admin/credits
+      - generic [ref=e107]:
+        - generic [ref=e108]: Operations
+        - link "Data exports" [ref=e109] [cursor=pointer]:
+          - /url: http://localhost:81/admin/exports
+        - link "Notifications" [ref=e112] [cursor=pointer]:
+          - /url: http://localhost:81/admin/notifications
+        - link "Sync health" [ref=e115] [cursor=pointer]:
+          - /url: http://localhost:81/admin/sync-health
+        - link "Audit log" [ref=e118] [cursor=pointer]:
+          - /url: http://localhost:81/admin/audit-log
+        - link "Intakevragen" [ref=e121] [cursor=pointer]:
+          - /url: http://localhost:81/admin/intake-questionnaire
+        - link "Protocol Templates" [ref=e124] [cursor=pointer]:
+          - /url: http://localhost:81/admin/protocol-settings
+        - link "Protocol Settings" [ref=e127] [cursor=pointer]:
+          - /url: http://localhost:81/admin/protocol-settings/advice
+        - link "Settings" [ref=e130] [cursor=pointer]:
+          - /url: http://localhost:81/admin/settings
+    - generic [ref=e134]:
+      - generic [ref=e135]: EO
+      - generic [ref=e136]:
+        - generic [ref=e137]: EquiNova Owner
+        - generic [ref=e138]: owner
+      - button "Log out" [ref=e139]
+  - generic [ref=e141]:
+    - banner [ref=e142]:
+      - heading "Protocols" [level=1] [ref=e143]
+    - main [ref=e144]:
+      - generic [ref=e145]:
+        - generic [ref=e146]:
+          - heading "Protocols" [level=2] [ref=e147]
+          - paragraph [ref=e148]: 3 protocols assigned to horses
+        - link "New protocol" [ref=e150] [cursor=pointer]:
+          - /url: /admin/protocols/create
+      - generic [ref=e153]:
+        - generic [ref=e154]:
+          - textbox "Search protocol template or horse…" [ref=e156]
+          - combobox [ref=e157]:
+            - option "All" [selected]
+            - option "Active"
+            - option "Paused"
+            - option "Completed"
+        - table [ref=e159]:
+          - rowgroup [ref=e160]:
+            - row [ref=e161]:
+              - columnheader "Protocol template" [ref=e162]
+              - columnheader "Horse" [ref=e163]
+              - columnheader "Owner" [ref=e164]
+              - columnheader "Therapist" [ref=e165]
+              - columnheader "Week" [ref=e166]
+              - columnheader "Current phase" [ref=e167]
+              - columnheader "State" [ref=e168]
+              - columnheader "Publication" [ref=e169]
+              - columnheader "Open" [ref=e170]
+          - rowgroup [ref=e172]:
+            - row [ref=e173] [cursor=pointer]:
+              - cell "Darm protocol" [ref=e174]
+              - cell "R" [ref=e175]
+              - cell "Shelley Meeuwsen" [ref=e176]
+              - cell "—" [ref=e177]
+              - cell "1/22" [ref=e178]
+              - cell "Maagondersteuning" [ref=e179]
+              - cell "paused" [ref=e180]
+              - cell "Draft" [ref=e182]
+              - cell [ref=e184]
+            - row [ref=e186] [cursor=pointer]:
+              - cell "Darm protocol" [ref=e187]
+              - cell "Nova" [ref=e188]
+              - cell "Shelley Meeuwsen" [ref=e189]
+              - cell "Shelley Meeuwsen" [ref=e190]
+              - cell "1/38" [ref=e191]
+              - cell "Darmrevalidatie" [ref=e192]
+              - cell "active" [ref=e193]
+              - cell "Published" [ref=e195]
+              - cell [ref=e197]
+            - row [ref=e199] [cursor=pointer]:
+              - cell "Darm protocol" [ref=e200]
+              - cell "Nova" [ref=e201]
+              - cell "Shelley Meeuwsen" [ref=e202]
+              - cell "Shelley Meeuwsen" [ref=e203]
+              - cell "4/8" [ref=e204]
+              - cell "Fase 1 — Darmen" [ref=e205]
+              - cell "active" [ref=e206]
+              - cell "Draft" [ref=e208]
+              - cell [ref=e210]

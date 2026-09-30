@@ -32,6 +32,12 @@
       "expo-router",
       "expo-notifications",
       [
+        "expo-video",
+        {
+          "supportsBackgroundPlayback": true
+        }
+      ],
+      [
         "expo-image-picker",
         {
           "photosPermission": "Selecteer foto’s en video’s voor je Community-bericht.",

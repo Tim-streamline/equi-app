@@ -1,5 +1,6 @@
+import { KeyboardScrollView as ScrollView, KeyboardTextInput as TextInput, KeyboardViewport as KeyboardAvoidingView } from '@/components/ui/KeyboardForm';
 import { useEffect, useRef, useState } from 'react';
-import { Alert, Image, KeyboardAvoidingView, Platform, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
+import { Alert, Image, Platform, Pressable, Text, View } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useNavigation, usePreventRemove } from '@react-navigation/native';
 import { SafeAreaView } from 'react-native-safe-area-context';

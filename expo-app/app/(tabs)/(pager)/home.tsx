@@ -1,3 +1,4 @@
+import { IntakeEntryCard } from "@/components/intake/IntakeEntryCard";
 import { LibraryCard } from "@/components/library/LibraryCard";
 import { useState } from "react";
 import {
@@ -105,6 +106,7 @@ export default function HomeScreen() {
             <ChevronDown size={14} color="#536C6B" />
           </Pressable>
         </View>
+        {data?.hasPlus && !data.protocol && <IntakeEntryCard />}
         {!!error && (
           <Pressable
             onPress={() => void refresh()}
@@ -130,11 +132,7 @@ export default function HomeScreen() {
               <Text className="flex-1 font-semi text-[10px] uppercase tracking-[1.2px] text-ink-70">
                 Ontdek in de bibliotheek
               </Text>
-              {data.variant === "basic" && (
-                <Text className="rounded-full bg-mint-50 px-2.5 py-1 font-semi text-[11px] text-mint-700">
-                  {data.credits} credits
-                </Text>
-              )}
+
             </View>
             <View className="flex-row flex-wrap justify-between gap-y-3">
               {data.recommendations.map((item) => (

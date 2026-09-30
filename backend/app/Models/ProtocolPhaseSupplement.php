@@ -25,6 +25,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
     'min_aantal_per_week',
     'rust_periode_in_weken',
     'dosage',
+    'dosage_mode',
     'aantal_per_week',
     'instructions',
 ])]

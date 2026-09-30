@@ -24,6 +24,7 @@ function harness(fetch) {
   };
   const modules = {
     '@react-native-async-storage/async-storage': { default: storage },
+    '@/lib/library-events': {},
     react: {}, 'react-native': {}, 'expo-router': {},
     '@/lib/account-session': { accountSession: new AccountSessionQueue() },
     '@/db/provider': {}, '@/db/hooks': {}, '@/lib/horse-dashboard': {},

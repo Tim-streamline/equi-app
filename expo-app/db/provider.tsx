@@ -31,7 +31,10 @@ import {
   loadCredentials,
   login as loginRequest,
   register as registerRequest,
+  completeRegistration as completeRegistrationRequest,
   type RegistrationInput,
+  type RegistrationChallenge,
+  type RegistrationCompletion,
   saveCredentials,
   type LoginResponse,
 } from './auth';
@@ -60,7 +63,8 @@ type DbContextValue = {
   selectedHorseId: string | null;
   selectHorse: (id: string) => void;
   login: (email: string, password: string) => Promise<void>;
-  register: (input: RegistrationInput) => Promise<void>;
+  register: (input: RegistrationInput) => Promise<RegistrationChallenge>;
+  completeRegistration: (input: RegistrationCompletion, password: string) => Promise<void>;
   logout: () => Promise<void>;
 };
 
@@ -150,10 +154,11 @@ export function DbProvider({ children }: { children: ReactNode }) {
     [powersync, connectToBackend],
   );
 
-  const register = useCallback((input: RegistrationInput) => accountSession.transition(async () => {
+  const register = registerRequest;
+  const completeRegistration = useCallback((input: RegistrationCompletion, password: string) => accountSession.transition(async () => {
     if (!powersync) throw new Error('Database not ready');
-    const res = await registerRequest(input);
-    await saveCredentials({ email: res.user.email, password: input.password, userId: String(res.user.id), endpoint: res.endpoint });
+    const res = await completeRegistrationRequest(input);
+    await saveCredentials({ email: res.user.email, password, userId: String(res.user.id), endpoint: res.endpoint });
     setCurrentUserId(String(res.user.id));
     selectHorse(null);
     setIsLoggedIn(true);
@@ -194,9 +199,10 @@ export function DbProvider({ children }: { children: ReactNode }) {
       selectHorse,
       login,
       register,
+      completeRegistration,
       logout,
     };
-  }, [powersync, isLoggedIn, syncStatus, currentUserId, selectedHorseId, login, register, logout]);
+  }, [powersync, isLoggedIn, syncStatus, currentUserId, selectedHorseId, login, register, completeRegistration, logout]);
 
   if (!powersync || !value) {
     return (

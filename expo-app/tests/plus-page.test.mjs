@@ -46,3 +46,9 @@ test('supplied content, shallow hero, horizontal reviews and no-activation discl
   for (const review of content.reviews) assert.ok(tree.includes(review.name));
   page.press(content.heroButton); assert.ok(page.render().includes('Je start hiermee je intake. Je abonnement wordt nog niet geactiveerd.'));
 });
+
+test('pricing CTA uses the dedicated light button without conflicting text classes', () => {
+  const button = screen().render().find(n => n?.type === 'Button' && n.props.title === content.priceButton);
+  assert.equal(button.props.variant, 'light');
+  assert.equal(button.props.textClassName, undefined);
+});

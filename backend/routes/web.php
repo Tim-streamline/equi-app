@@ -23,7 +23,10 @@ Route::get('/.well-known/jwks.json', [PowerSyncAuthController::class, 'jwks']);
 
 // Token mint endpoint hit by the Expo client from BackendConnector.fetchCredentials().
 // CSRF is disabled globally for `api/*` paths in bootstrap/app.php.
-Route::post('/api/auth/register', [RegistrationController::class, 'store'])->middleware('throttle:5,1');
+Route::post('/api/auth/register', [RegistrationController::class, 'store'])->middleware('throttle:5,1,registration-start:');
+Route::get('/registration/confirm/{uid}', [RegistrationController::class, 'confirm'])->whereUuid('uid')->middleware('throttle:60,1,registration-link:');
+Route::post('/api/auth/register/status', [RegistrationController::class, 'status'])->middleware('throttle:60,1,registration-status:');
+Route::post('/api/auth/register/complete', [RegistrationController::class, 'complete'])->middleware('throttle:10,1,registration-complete:');
 Route::post('/api/auth/login', [PowerSyncAuthController::class, 'login']);
 
 // Write-back endpoint hit by BackendConnector.uploadData() — applies a batch
@@ -73,7 +76,9 @@ Route::middleware(AuthenticatePowerSyncJwt::class)->prefix('api/library')->contr
 
 // Browser sessions intentionally live outside api/* so Laravel enforces CSRF.
 Route::prefix('web-session')->controller(WebSessionController::class)->group(function () {
-    Route::post('/register', [RegistrationController::class, 'store'])->name('web-session.register')->middleware('throttle:5,1');
+    Route::post('/register', [RegistrationController::class, 'store'])->name('web-session.register')->middleware('throttle:5,1,registration-start:');
+    Route::post('/register/status', [RegistrationController::class, 'status'])->middleware('throttle:60,1,registration-status:');
+    Route::post('/register/complete', [RegistrationController::class, 'complete'])->name('web-session.register.complete')->middleware('throttle:10,1,registration-complete:');
     Route::get('/csrf', 'csrf');
     Route::post('/login', 'login')->middleware('throttle:10,1');
     Route::post('/token', 'token');

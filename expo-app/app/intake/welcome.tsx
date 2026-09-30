@@ -67,7 +67,7 @@ export default function IntakeWelcome() {
               Belangrijk vooraf
             </Text>
             <Text className="mb-3 text-[12.5px] leading-[19px] text-white/80">
-              Binnen 5 werkdagen ontvang je jouw protocol.
+              Binnen 5 werkdagen ontvang je de eerste fase van je protocol.
             </Text>
             <Text className="text-[12.5px] leading-[19px] text-white/80">
               {disclaimerBody}

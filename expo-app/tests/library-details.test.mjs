@@ -49,10 +49,10 @@ test('failed access lookup keeps public preview and retry without offering an un
   assert.ok(nodes.includes(item.title)); assert.ok(nodes.includes(item.description));
   assert.ok(nodes.some(node => node?.props?.title === 'Opnieuw proberen')); assert.ok(!nodes.includes('Ontgrendel dit item'));
 });
-test('insufficient credits disables purchase and displays the shortfall', () => {
+test('insufficient credits shows only top-up and the shortfall', () => {
   const page = screen({ ...locked, access: { ...locked.access, credits: 1 } });
-  assert.equal(page.button('Ontgrendel voor 2 credits').props.disabled, true);
-  assert.ok(page.render().includes('Je hebt nog 1 credit nodig om dit item te ontgrendelen.'));
+  assert.equal(page.button('Ontgrendel voor 2 credits'), undefined);
+  assert.ok(page.render().includes('Je hebt nog 1 credit nodig'));
   const button = page.render().find(node => node?.type === 'TemporaryCreditButton'); assert.ok(button); assert.equal(typeof button.props.onAdded, 'function'); assert.equal(page.calls.length, 0);
 });
 test('purchase requires confirmation, supports cancellation, ignores duplicate submits, then displays content', async () => {
@@ -62,7 +62,7 @@ test('purchase requires confirmation, supports cancellation, ignores duplicate s
   page.press('Annuleren'); assert.equal(page.calls.length, 0);
   page.press('Ontgrendel voor 2 credits');
   assert.ok(page.render().includes('Daarna heb je nog 1 credit.'));
-  assert.ok(page.render().includes('Dit item blijft daarna ontgrendeld in je bibliotheek.'));
+  assert.ok(!page.render().includes('Dit item blijft daarna ontgrendeld in je bibliotheek.'));
   const confirm = page.button('Bevestig: 2 credits gebruiken'); confirm.props.onPress(); confirm.props.onPress();
   assert.equal(page.calls.length, 1); assert.deepEqual(page.calls[0][3], { credits: 2 });
   finish({ ...locked, canRead: true, body: 'Paid content', access: { ...locked.access, credits: 1, unlockedIds: ['lesson'] } });
@@ -91,8 +91,9 @@ test('metadata omits invalid duration values and uses each actual content type',
   assert.equal(library.libraryMetadata({ ...item, durationLabel: '6 min' }), 'Artikel · door Shelley');
   for (const format of ['video','audio','podcast']) assert.equal(library.libraryMetadata({ ...item, format, durationLabel: '6 min' }), `${library.libraryFormat(format)} · 6 min · door Shelley`);
 });
-function requests(getToken, session = { revision: 0 }) {
-  return load(requestCode, { react: {}, 'expo-router': {}, '@/db/auth': { getApiBaseUrl: () => 'https://api.example.test' }, '@/db/connector': { getOrMintToken: getToken }, '@/db/provider': {}, '@/lib/account-session': { accountSession: session } }).libraryRequest;
+function requests(getToken, session = { revision: 0 }, notifyLibraryUnlock = () => {}) {
+  return load(requestCode, { react: {}, 'expo-router': {}, '@/db/auth': { getApiBaseUrl: () => 'https://api.example.test' }, '@/db/connector': { getOrMintToken: getToken }, '@/db/provider': {}, '@/lib/library-events': { notifyLibraryUnlock },
+    '@/lib/account-session': { accountSession: session } }).libraryRequest;
 }
 test('library request renews an expired token once before retrying the original purchase', async t => {
   const tokens = [], sends = [];
@@ -114,6 +115,7 @@ test('native token renewal preserves credentials offline and clears only rejecte
   let clears = 0, fail = new Error('Network request failed');
   const connector = load(connectorCode, {
     './auth': { loadCredentials: async () => ({ userId: 'owner' }), getApiBaseUrl: () => 'https://example.test', login: async () => { throw fail; }, clearCredentials: async () => { clears++; } },
+    '@/lib/library-events': { notifyLibraryUnlock() {} },
     '@/lib/account-session': { accountSession: { revision: 0, forSession: async (_revision, action) => action() } },
   });
   await assert.rejects(connector.getOrMintToken(), /Verbinding niet beschikbaar/); assert.equal(clears, 0);
@@ -141,4 +143,30 @@ test('overview cards show only the content type even when duration exists, inclu
       assert.ok(!nodes.some(node => typeof node === 'string' && node.includes('16 min')));
     }
   }
+});
+
+test('sufficient and exactly sufficient credits show unlock without top-up', () => {
+  for (const credits of [2, 5]) {
+    const page = screen({ ...locked, access: { ...locked.access, credits } });
+    assert.ok(page.button('Ontgrendel voor 2 credits'));
+    assert.ok(!page.render().some(node => node?.type === 'TemporaryCreditButton'));
+  }
+});
+
+
+test('only successful same-session purchases notify recommendation listeners', async t => {
+  const unlocked = [], session = { revision: 0 };
+  const request = requests(async () => 'token', session, id => unlocked.push(id));
+  let status = 422;
+  t.mock.method(globalThis, 'fetch', async () => new Response('{}', { status }));
+  await assert.rejects(request('/lesson/unlock', 'POST'));
+  assert.deepEqual(unlocked, []);
+  status = 200;
+  await request('/lesson');
+  assert.deepEqual(unlocked, []);
+  await request('/lesson/unlock', 'POST');
+  assert.deepEqual(unlocked, ['lesson']);
+  t.mock.method(globalThis, 'fetch', async () => { session.revision++; return new Response('{}'); });
+  await assert.rejects(request('/other/unlock', 'POST'), /sessie is gewijzigd/);
+  assert.deepEqual(unlocked, ['lesson']);
 });

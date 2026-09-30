@@ -116,7 +116,7 @@ class HorseSeeder extends Seeder
             ['vandaag', 'Brandnetel toegevoegd aan protocol (mei-seizoenstip)', true, 'protocol_change'],
             ['3 dagen geleden', 'Foto van mest geüpload - Score B+', false, 'observation'],
             ['2 weken geleden', 'Intake met Shelley · jeukklachten + spijsvertering', false, 'intake'],
-            ['3 weken geleden', 'Nova toegevoegd aan EquiNova', false, 'horse_added'],
+            ['3 weken geleden', 'Nova toegevoegd aan Equi App', false, 'horse_added'],
         ];
         foreach ($timeline as $i => [$when, $msg, $now, $kind]) {
             TimelineEvent::create([

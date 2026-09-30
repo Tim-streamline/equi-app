@@ -31,6 +31,11 @@ class User extends Authenticatable
     /** @use HasFactory<UserFactory> */
     use HasFactory, HasUuids, Notifiable;
 
+    protected static function booted(): void
+    {
+        static::created(fn (User $user) => app(\App\Support\MonthlyTestCredits::class)->grant($user));
+    }
+
     protected function casts(): array
     {
         return [

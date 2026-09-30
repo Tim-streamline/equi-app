@@ -1,10 +1,12 @@
 <script>
+    import ProtocolCustomerPreview from '$lib/components/ProtocolCustomerPreview.svelte';
     import AdminLayout from '../../Layouts/AdminLayout.svelte';
     import Field from '$lib/components/Field.svelte';
     import {
         defaultProtocolSupplementDosage,
         defaultProtocolSupplementInstructions,
         templateDosage,
+        recalculateProtocolDosages,
     } from '$lib/protocolDosage.js';
     import { protocolPhaseRanges, totalProtocolWeeks } from '$lib/protocolPhasePlanning.js';
     import { Link, router, useForm } from '@inertiajs/svelte';
@@ -41,6 +43,7 @@
         bewegingAdviezen,
         selectedHorseId = null,
         intakeFeeds = {},
+        intakeWeights = {},
         weeklyUpdates = [],
         libraryItems = [],
     } = $props();
@@ -103,6 +106,7 @@
             min_aantal_per_week: supplement.min_aantal_per_week,
             rust_periode_in_weken: supplement.rust_periode_in_weken,
             dosage: templateDosage(supplement, horseWeightKg),
+            dosage_mode: 'automatic',
             aantal_per_week: supplement.min_aantal_per_week ?? 0,
             instructions: supplement.instructions ?? '',
             week_numbers: (supplement.week_numbers ?? []).filter((number) => number <= weekCount),
@@ -130,12 +134,14 @@
     const initialProtocolTemplateId = initialProtocol?.protocol_template_id ?? initialProtocolTemplates[0]?.id ?? '';
     const initialCurrentTemplate = initialProtocolTemplates.find((template) => template.id === initialProtocolTemplateId);
     const initialHorse = initialHorses.find((horse) => horse.id === (initialProtocol?.horse_id ?? initialSelectedHorseId));
+    const initialIntakeWeights = untrack(() => intakeWeights);
+    const initialWeight = initialProtocol?.customer_settings?.weight_kg ?? initialIntakeWeights[initialHorse?.id] ?? initialHorse?.weight_kg ?? '';
     const initialTemplate = catalogFromTemplate(initialCurrentTemplate);
     const initialPhaseRows = initialProtocol?.phases?.length
         ? initialProtocol.phases
         : (initialTemplate?.phases ?? [])
             .filter((phase) => phase.required)
-            .map((phase) => phaseFromDefinition(phase, initialHorse?.weight_kg));
+            .map((phase) => phaseFromDefinition(phase, initialWeight));
     const initialPhases = initialPhaseRows.map((phase) => {
         const definition = initialTemplate?.phases?.find(
             (candidate) => candidate.id === phase.protocol_template_phase_id,
@@ -168,7 +174,8 @@
                     max_aantal_in_fase: selection.max_aantal_in_fase ?? supplement?.max_aantal_in_fase ?? null,
                     min_aantal_per_week: selection.min_aantal_per_week ?? supplement?.min_aantal_per_week ?? 0,
                     rust_periode_in_weken: selection.rust_periode_in_weken ?? supplement?.rust_periode_in_weken ?? 0,
-                    dosage: defaultProtocolSupplementDosage(selection.dosage, selection, initialHorse?.weight_kg),
+                    dosage: selection.dosage_mode === 'automatic' ? templateDosage(selection, initialWeight) : defaultProtocolSupplementDosage(selection.dosage, selection, initialWeight),
+                    dosage_mode: selection.dosage_mode ?? (selection.dosage ? 'manual' : 'automatic'),
                     aantal_per_week: selection.aantal_per_week ?? selection.supplement?.min_aantal_per_week ?? 0,
                     instructions: defaultProtocolSupplementInstructions(selection.instructions, selection),
                     week_numbers: (selection.week_numbers ?? selection.weeks?.map((week) => week.protocol_phase_week?.number) ?? [])
@@ -202,6 +209,8 @@
         customer_settings: {
             hay_library_item_id: initialProtocol?.customer_settings?.hay_library_item_id ?? '',
             water_library_item_id: initialProtocol?.customer_settings?.water_library_item_id ?? '',
+            weight_kg: initialWeight,
+            use_target_weight: initialProtocol?.customer_settings?.use_target_weight ?? Boolean(initialProtocol?.customer_settings?.target_weight_kg),
             target_weight_kg: initialProtocol?.customer_settings?.target_weight_kg ?? '',
             sugar: initialProtocol?.customer_settings?.sugar ?? '<7%',
             protein: initialProtocol?.customer_settings?.protein ?? '6–9%',
@@ -285,6 +294,8 @@
         { value: 'completed', label: 'Afgerond' },
     ];
     const selectedHorse = $derived(horses.find((horse) => horse.id === $form.horse_id));
+    const actualWeight = $derived($form.customer_settings.weight_kg);
+    const roughageWeight = $derived(Number($form.customer_settings.use_target_weight ? $form.customer_settings.target_weight_kg : actualWeight));
     const activePhaseIndex = $derived($form.phases.findIndex((phase) => phase.client_key === activePhaseKey));
     const activePhase = $derived(activePhaseIndex >= 0 ? $form.phases[activePhaseIndex] : null);
     const activeDefinition = $derived(workingTemplate?.phases?.find(
@@ -427,7 +438,7 @@
         $form.protocol_template_id = pendingProtocolTemplateId;
         $form.phases = (workingTemplate?.phases ?? [])
             .filter((phase) => phase.required)
-            .map((phase) => phaseFromDefinition(phase, selectedHorse?.weight_kg));
+            .map((phase) => phaseFromDefinition(phase, actualWeight));
         $form.title = [workingTemplate?.name, selectedHorse?.name].filter(Boolean).join(' · ');
         activePhaseKey = $form.phases[0]?.client_key ?? null;
         phaseToAddId = '';
@@ -440,29 +451,35 @@
             $form.title = [workingTemplate?.name, selectedHorse?.name].filter(Boolean).join(' · ');
         }
 
+        $form.customer_settings.weight_kg = intakeWeights[$form.horse_id] ?? selectedHorse?.weight_kg ?? '';
+        $form.customer_settings.use_target_weight = false;
+        $form.customer_settings.target_weight_kg = '';
+        $form.customer_settings.feed_overrides = [];
         recalculateHorseDosages();
     }
 
     function recalculateHorseDosages() {
-        $form.phases = $form.phases.map((phase) => {
-            return {
-                ...phase,
-                supplements: phase.supplements.map((selection) => {
-                    if (!['per_kg', 'per_600_kg'].includes(selection.dosis_type)) return selection;
+        $form.phases = recalculateProtocolDosages($form.phases, $form.customer_settings.weight_kg);
+    }
 
-                    return {
-                        ...selection,
-                        dosage: templateDosage(selection, selectedHorse?.weight_kg),
-                    };
-                }),
-            };
+    function changeWeight(value) {
+        $form.customer_settings.weight_kg = value;
+        recalculateHorseDosages();
+    }
+
+    function changeDosage(index, value, automatic = false) {
+        $form.phases = $form.phases.map((phase, phaseIndex) => phaseIndex !== activePhaseIndex ? phase : {
+            ...phase, supplements: phase.supplements.map((selection, selectionIndex) => selectionIndex !== index ? selection : {
+                ...selection, dosage_mode: automatic ? 'automatic' : 'manual',
+                dosage: automatic ? templateDosage(selection, actualWeight) : value,
+            }),
         });
     }
 
     function addPhase() {
         const definition = availablePhaseDefinitions.find((phase) => phase.id === phaseToAddId);
         if (!definition) return;
-        const phase = phaseFromDefinition(definition, selectedHorse?.weight_kg);
+        const phase = phaseFromDefinition(definition, actualWeight);
         $form.phases = sortPhasesByTemplate([...$form.phases, phase]);
         activePhaseKey = phase.client_key;
         phaseToAddId = '';
@@ -543,7 +560,7 @@
             : [...activePhase.supplements, selectionFromSupplement(
                 supplement,
                 Number(activePhase.week_count || 0),
-                selectedHorse?.weight_kg,
+                actualWeight,
             )];
         $form.phases = $form.phases.map((phase, index) => index === activePhaseIndex
             ? { ...phase, supplements }
@@ -736,7 +753,7 @@
                         {:else}
                             <div class="text-base font-bold">{selectedHorse?.name}</div>
                             <div class="mt-1 text-xs leading-5 text-[#1B2A2A]/50">
-                                {[selectedHorse?.breed, sexLabel(selectedHorse?.sex), selectedHorse?.age ? `${selectedHorse.age} jaar` : null, selectedHorse?.weight_kg ? `${selectedHorse.weight_kg} kg` : null].filter(Boolean).join(' · ')}
+                                {[selectedHorse?.breed, sexLabel(selectedHorse?.sex), selectedHorse?.age ? `${selectedHorse.age} jaar` : null, actualWeight ? `${actualWeight} kg` : null].filter(Boolean).join(' · ')}
                             </div>
                             {#if selectedHorse?.owner}<div class="mt-2 text-xs text-[#1B2A2A]/60">Eigenaar: <strong>{selectedHorse.owner.name}</strong></div>{/if}
                         {/if}
@@ -933,18 +950,19 @@
                                                         <div class="ml-[54px] mt-4 grid gap-3 md:grid-cols-2">
                                                             <div>
                                                                 <Field label="Dosering voor dit paard" error={errorFor(`phases.${activePhaseIndex}.supplements.${selectionIndex}.dosage`)}>
-                                                                    <Input bind:value={$form.phases[activePhaseIndex].supplements[selectionIndex].dosage} placeholder="Bijv. 20 g per dag" />
+                                                                    <Input value={selection.dosage} oninput={(e) => changeDosage(selectionIndex, e.currentTarget.value)} placeholder="Bijv. 20 g per dag" />
+                                                                    {#if selection.dosage_mode === 'manual'}<p class="mt-1 text-xs text-[#A06A1B]">Handmatig aangepast — blijft behouden bij een gewichtsverandering.</p><button type="button" class="mt-1 text-xs underline" onclick={() => changeDosage(selectionIndex, '', true)}>Automatische dosering herstellen</button>{/if}
                                                                 </Field>
                                                                 {#if displaySupplement.dosis_type === 'per_kg' || displaySupplement.dosis_type === 'per_600_kg'}
                                                                     <p class="mt-1 text-[10px] text-[#1B2A2A]/45">
-                                                                        {#if selectedHorse?.weight_kg}
+                                                                        {#if actualWeight}
                                                                             {#if displaySupplement.dosis_type === 'per_kg'}
-                                                                                Automatisch: {displaySupplement.dosis} {displaySupplement.unit}/kg × {selectedHorse.weight_kg} kg.
+                                                                                Berekend: {displaySupplement.dosis} {displaySupplement.unit}/kg × {actualWeight} kg = {templateDosage(displaySupplement, actualWeight)} per toediening.
                                                                             {:else}
-                                                                                Automatisch: {displaySupplement.dosis} {displaySupplement.unit} per 600 kg × ({selectedHorse.weight_kg} / 600).
+                                                                                Berekend: {displaySupplement.dosis} {displaySupplement.unit} per 600 kg × ({actualWeight} / 600) = {templateDosage(displaySupplement, actualWeight)} per toediening.
                                                                             {/if}
                                                                         {:else}
-                                                                            Automatische berekening niet mogelijk: het paard heeft geen gewicht.
+                                                                            Automatische berekening niet mogelijk: vul het actuele gewicht in bij Voeding.
                                                                         {/if}
                                                                     </p>
                                                                 {/if}
@@ -1003,20 +1021,24 @@
                                 <div class="space-y-5 border-b p-6">
                                     <h3 class="font-bold">Ruwvoer voor dit paard</h3>
                                     <div class="grid gap-4 md:grid-cols-3">
-                                        <Field label="Streefgewicht (kg)" error={$form.errors['customer_settings.target_weight_kg']}><Input type="number" min="1" max="2000" bind:value={$form.customer_settings.target_weight_kg} /></Field>
+                                        <div class="space-y-3">
+                                            <Field label="Gewicht (kg)" error={$form.errors['customer_settings.weight_kg']}><Input aria-label="Gewicht (kg)" type="number" min="1" max="2000" step="any" value={actualWeight} oninput={(e) => changeWeight(e.currentTarget.value)} /></Field>
+                                            <label class="flex items-start gap-2 text-xs"><input type="checkbox" bind:checked={$form.customer_settings.use_target_weight} /> Afwijkend streefgewicht gebruiken (bij onder- of overgewicht)</label>
+                                            {#if $form.customer_settings.use_target_weight}<Field label="Streefgewicht (kg)" error={$form.errors['customer_settings.target_weight_kg']}><Input aria-label="Streefgewicht (kg)" type="number" min="1" max="2000" step="any" bind:value={$form.customer_settings.target_weight_kg} /></Field>{/if}
+                                        </div>
                                         <Field label="Suiker"><Input bind:value={$form.customer_settings.sugar} /></Field>
                                         <Field label="Eiwit"><Input bind:value={$form.customer_settings.protein} /></Field>
                                     </div>
-                                    <p class="text-xs text-muted-foreground">De backend berekent 2–3 kg ruwvoer per 100 kg streefgewicht. Zonder streefgewicht verschijnt geen hoeveelheid.</p>
+                                    <p class="text-xs text-muted-foreground">{#if roughageWeight > 0}{Number((roughageWeight * .02).toFixed(2)).toLocaleString('nl-NL')}–{Number((roughageWeight * .03).toFixed(2)).toLocaleString('nl-NL')} kg ruwvoer per dag.{:else}Vul een gewicht in om de ruwvoerhoeveelheid te berekenen.{/if} Kruiden en supplementen gebruiken uitsluitend het actuele gewicht; handmatige doseringen blijven behouden.</p>
                                     <div class="grid gap-4 md:grid-cols-2">
                                         <div class="space-y-2"><Field label="Afbeelding bij hooianalyse"><Select bind:value={$form.customer_settings.hay_library_item_id} placeholder="Automatisch zoeken" options={libraryItems.map((item) => ({ value: item.id, label: item.title }))} /></Field>
                                         <p class="text-xs text-muted-foreground">Dit item bepaalt alleen de afbeelding van de CTA. De knop opent altijd de vaste selectie met het artikel en de video over hooianalyse.</p></div>
                                         <Field label="Wateranalyse in de bibliotheek"><Select bind:value={$form.customer_settings.water_library_item_id} placeholder="Automatisch zoeken" options={libraryItems.map((item) => ({ value: item.id, label: item.title }))} /></Field>
                                     </div>
-                                    <h3 class="font-bold">Bijvoeding uit de intake</h3>
+                                    <h3 class="font-bold">Actuele voerproducten uit de intake</h3>
                                     {#each intakeFeeds[$form.horse_id] ?? [] as feed (feed.id)}
                                         <div class="space-y-2 rounded-xl border p-4">
-                                            <div class="font-semibold">{feed.name} · {feed.dosage}</div>
+                                            <div class="font-semibold">{feed.name}{feed.dosage ? ` · ${feed.dosage}` : ''}</div>
                                             <select class="rounded border p-2" value={feedSetting(feed).status} onchange={(e) => updateFeed(feed, 'status', e.currentTarget.value)} aria-label={`Beoordeling ${feed.name}`}><option value="continue">Doorgaan</option><option value="stop">Stoppen</option></select>
                                             <Textarea value={feedSetting(feed).note ?? ''} oninput={(e) => updateFeed(feed, 'note', e.currentTarget.value)} placeholder="Persoonlijke toelichting" />
                                         </div>
@@ -1183,18 +1205,7 @@
         </form>
 
         {#if overviewOpen}
-            <div class="fixed inset-0 z-50 flex justify-end bg-[#0B4A49]/45">
-                <button type="button" class="absolute inset-0 cursor-default" aria-label="Preview sluiten" onclick={() => (overviewOpen = false)}></button>
-                <div class="relative h-full w-full max-w-xl overflow-y-auto bg-[#FBF8F3] p-6 shadow-2xl" role="dialog" aria-modal="true" aria-label="Volledige klantpreview">
-                    <div class="flex items-start justify-between gap-3"><div><div class="text-xs font-bold uppercase tracking-[0.12em] text-[#108A82]">Volledig protocol</div><h2 class="mt-1 text-xl font-bold">{$form.title}</h2><p class="mt-1 text-sm text-[#1B2A2A]/55">{selectedHorse?.name} · {totalWeeks} weken</p></div><Button type="button" variant="ghost" size="icon" onclick={() => (overviewOpen = false)} aria-label="Preview sluiten"><X class="size-5" /></Button></div>
-                    <div class="mt-7 space-y-7">
-                        {#each $form.phases as phase, index (phase.client_key)}
-                            {@const range = phaseRange(index)}
-                            <section><div class="flex items-baseline justify-between gap-3"><h3 class="font-bold">{phase.title}</h3><span class="text-xs text-[#1B2A2A]/45">{range.start ? `Week ${range.start}–${range.end}` : 'Geen weken'}</span></div>{#if phase.supplements.length}<div class="mt-3 flex flex-wrap gap-1.5">{#each phase.supplements as supplement (supplement.id ?? supplement.supplement_id)}<span class="rounded-full bg-[#EAFBF9] px-2.5 py-1 text-xs font-semibold text-[#0E6F69]">{supplement.name}</span>{/each}</div>{/if}</section>
-                        {/each}
-                    </div>
-                </div>
-            </div>
+            <ProtocolCustomerPreview payload={$form.data()} protocolId={initialProtocol?.id ?? null} onclose={() => (overviewOpen = false)} />
         {/if}
 
         {#if typeChangeDialogOpen}

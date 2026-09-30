@@ -3,7 +3,6 @@
     import { router } from '@inertiajs/svelte';
     import { Button } from '$lib/components/ui';
     import { Trash2 } from '@lucide/svelte';
-    import { formatDateTime } from '$lib/utils.js';
 
     let { booking } = $props();
     const id = $props.id();
@@ -40,7 +39,7 @@
     });
 </script>
 
-<Button size="sm" variant="destructive" aria-label={`Verwijderen booking ${booking.user?.name ?? ''} ${formatDateTime(booking.scheduled_at)}`} onclick={open}>
+<Button size="sm" variant="destructive" aria-label={`Verwijderen booking ${booking.user?.name ?? ''} ${booking.submitted_at_label}`} onclick={open}>
     <Trash2 class="size-4" /> Verwijderen
 </Button>
 
@@ -48,7 +47,7 @@
     class="m-auto w-[calc(100%-2rem)] max-w-lg rounded-xl border bg-card p-0 text-card-foreground shadow-xl backdrop:bg-black/50">
     <div class="border-b px-6 py-4">
         <h2 id={`${id}-title`} class="text-lg font-semibold">Booking verwijderen</h2>
-        <p class="mt-1 text-sm text-muted-foreground">{booking.user?.name} · {formatDateTime(booking.scheduled_at)}</p>
+        <p class="mt-1 text-sm text-muted-foreground">{booking.user?.name} · {booking.submitted_at_label}</p>
         <p class="mt-1 text-sm text-muted-foreground">{booking.therapist?.name}{booking.horse?.name ? ` · ${booking.horse.name}` : ''}</p>
     </div>
     <div class="space-y-4 px-6 py-5 text-sm">

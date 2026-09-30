@@ -9,7 +9,7 @@
 
 /*
  * shadcn-svelte design tokens. Teal-accented neutral palette to match the
- * EquiNova brand. Light + dark are both defined; the admin shell renders in
+ * Equi App brand. Light + dark are both defined; the admin shell renders in
  * light by default and toggles `.dark` on <html>.
  */
 :root {

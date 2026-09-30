@@ -2,7 +2,7 @@ import { Pressable, Text, View, PressableProps } from 'react-native';
 import { cssInterop } from 'nativewind';
 import { ReactNode } from 'react';
 
-type Variant = 'primary' | 'deep' | 'ghost' | 'text';
+type Variant = 'primary' | 'deep' | 'light' | 'ghost' | 'text';
 
 type Props = {
   title?: string;
@@ -31,6 +31,7 @@ export function Button({
   const variants: Record<Variant, string> = {
     primary: 'bg-mint-500 active:bg-mint-700 shadow-sm',
     deep: 'bg-teal-700 active:bg-teal-800',
+    light: 'bg-white active:bg-mint-100',
     ghost: 'bg-transparent border border-ink-8 active:bg-ink-8',
     text: 'bg-transparent py-2',
   };
@@ -38,6 +39,7 @@ export function Button({
   const textVariants: Record<Variant, string> = {
     primary: 'text-white',
     deep: 'text-canvas',
+    light: 'text-teal-700',
     ghost: 'text-ink',
     text: 'text-mint-700',
   };

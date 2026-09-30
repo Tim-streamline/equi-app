@@ -195,6 +195,38 @@ class HorseDashboardTest extends TestCase
         $this->getJson($url)->assertJsonPath('variant', 'basic')->assertJsonCount(2, 'recommendations');
     }
 
+    public function test_recommendations_exclude_accessible_items_and_replace_a_new_unlock(): void
+    {
+        $items = collect(range(1, 6))->map(fn ($i) => LibraryItem::create([
+            'title' => 'Paid '.$i, 'slug' => 'paid-'.$i, 'format' => 'video', 'credit_cost' => 2,
+            'published_at' => now()->subDay(),
+        ]));
+        $free = LibraryItem::create(['title' => 'Free', 'slug' => 'free', 'format' => 'article', 'credit_cost' => 0, 'published_at' => now()->subDay()]);
+        $plus = LibraryItem::create(['title' => 'Plus', 'slug' => 'plus-only', 'format' => 'audio', 'is_plus' => true, 'published_at' => now()->subDay()]);
+        $plan = Plan::create(['slug' => 'plus', 'name' => 'Plus', 'label' => 'Plus', 'price_cents' => 100, 'interval' => 'month']);
+        $subscription = $this->owner->subscriptions()->create(['plan_id' => $plan->id, 'status' => 'active', 'price_cents' => 100, 'interval' => 'month', 'paid_through' => now()->addMonth()]);
+        DB::table('library_unlocks')->insert(['user_id' => $this->owner->id, 'item_id' => $items[0]->id]);
+        // Another account's ownership must not exclude an otherwise locked item.
+        DB::table('library_unlocks')->insert(['user_id' => User::factory()->create()->id, 'item_id' => $items[1]->id]);
+        $url = '/api/horses/'.$this->horse->id.'/dashboard';
+        $before = $this->getJson($url)->assertOk()->assertJsonCount(4, 'recommendations')->json('recommendations');
+        foreach ([$free->id, $plus->id, $items[0]->id] as $id) $this->assertNotContains($id, array_column($before, 'id'));
+        app(\App\Support\CreditLedger::class)->grant($this->owner, 10, 'adjustment');
+        $purchased = $before[0]['id'];
+        $this->postJson('/api/library/'.$purchased.'/unlock', ['credits' => 2])->assertOk();
+        $after = $this->getJson($url)->assertOk()->assertJsonCount(4, 'recommendations')->json('recommendations');
+        $this->assertNotContains($purchased, array_column($after, 'id'));
+        $this->assertCount(1, array_diff(array_column($after, 'id'), array_column($before, 'id')));
+        $this->getJson('/api/library/'.$purchased)->assertOk()->assertJsonPath('canRead', true);
+        foreach ($items as $item) DB::table('library_unlocks')->updateOrInsert(['user_id' => $this->owner->id, 'item_id' => $item->id]);
+        $this->getJson($url)->assertJsonCount(0, 'recommendations');
+        $subscription->update(['paid_through' => now()->subMinute()]);
+        $this->getJson($url)->assertJsonCount(1, 'recommendations')->assertJsonPath('recommendations.0.id', $plus->id);
+        // A permanent purchase survives a later Plus-only classification.
+        DB::table('library_unlocks')->insert(['user_id' => $this->owner->id, 'item_id' => $plus->id]);
+        $this->getJson($url)->assertJsonCount(0, 'recommendations');
+    }
+
     public function test_backend_calculates_progress_next_phase_and_calendar_from_dates(): void
     {
         $this->getJson('/api/horses/'.$this->horse->id.'/dashboard?timezone=Europe/Amsterdam')
@@ -236,7 +268,7 @@ class HorseDashboardTest extends TestCase
         $this->getJson('/api/horses/'.$this->horse->id.'/dashboard')->assertOk()->assertJsonPath('protocol', null);
     }
 
-    public function test_nutrition_uses_target_not_current_weight_and_horse_intake(): void
+    public function test_nutrition_uses_target_when_set_and_falls_back_to_current_weight(): void
     {
         $this->protocol->update(['customer_settings' => ['target_weight_kg' => 400, 'sugar' => '<6%', 'protein' => '7–10%']]);
         $response = IntakeBooking::create(['user_id' => $this->owner->id, 'horse_id' => $this->horse->id, 'intake_status' => 'submitted', 'submitted_at' => now()]);
@@ -253,7 +285,7 @@ class HorseDashboardTest extends TestCase
         $key = $data->json('protocol.nutrition.feeds.1.id');
         $this->protocol->update(['customer_settings' => ['feed_overrides' => [['id' => $key, 'status' => 'continue', 'note' => 'Therapist decision']]]]);
         $this->getJson('/api/horses/'.$this->horse->id.'/dashboard')->assertOk()
-            ->assertJsonPath('protocol.nutrition.roughage.minimumKg', null)
+            ->assertJsonPath('protocol.nutrition.roughage.minimumKg', 12)
             ->assertJsonPath('protocol.nutrition.feeds.1.status', 'continue')
             ->assertJsonPath('protocol.nutrition.feeds.1.note', 'Therapist decision');
     }
@@ -373,7 +405,7 @@ class HorseDashboardTest extends TestCase
         SeasonalTip::create(['month' => 'juli', 'month_order' => 7, 'body' => 'Outdated text', 'active' => true]);
         $this->getJson('/api/horses/'.$this->horse->id.'/dashboard')->assertOk()->assertJsonPath('variant', 'basic')
             ->assertJsonPath('credits', 9)->assertJsonPath('showPlusUpsell', true)
-            ->assertJsonPath('seasonalTip.body', 'Managed seasonal text')->assertJsonPath('recommendations.0.unlocked', true);
+            ->assertJsonPath('seasonalTip.body', 'Managed seasonal text')->assertJsonCount(0, 'recommendations')->assertJsonPath('seasonalTip.item.id', $item->id);
         $plan = Plan::create(['slug' => 'plus', 'label' => 'Plus', 'name' => 'Plus', 'price_cents' => 100, 'currency' => 'EUR', 'interval' => 'month']);
         $plan->benefits()->create(['label' => 'Persoonlijk protocol', 'order' => 1]);
         $this->getJson('/api/horses/'.$this->horse->id.'/dashboard')->assertOk()

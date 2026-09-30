@@ -1,0 +1,3 @@
+[   34850ms] TypeError: f.defaults is not a function
+    at HTMLButtonElement.p (http://localhost:81/build/assets/app-cTMsW4jD.js:93:57297)
+    at HTMLDivElement.gi (http://localhost:81/build/assets/app-cTMsW4jD.js:2:32487)

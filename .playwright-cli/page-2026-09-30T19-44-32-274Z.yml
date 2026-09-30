@@ -1,0 +1,598 @@
+- generic [ref=e3]:
+  - complementary [ref=e4]:
+    - generic [ref=e5]:
+      - img [ref=e7]
+      - generic [ref=e8]:
+        - generic [ref=e9]: Equi App
+        - generic [ref=e10]: Admin console
+    - navigation [ref=e11]:
+      - link "Dashboard" [ref=e13] [cursor=pointer]:
+        - /url: http://localhost:81/admin
+        - img [ref=e14]
+        - generic [ref=e15]: Dashboard
+      - generic [ref=e16]:
+        - generic [ref=e17]: Support
+        - link "Users" [ref=e18] [cursor=pointer]:
+          - /url: http://localhost:81/admin/users
+          - img [ref=e19]
+          - generic [ref=e20]: Users
+        - link "Horses" [ref=e21] [cursor=pointer]:
+          - /url: http://localhost:81/admin/horses
+          - img [ref=e22]
+          - generic [ref=e23]: Horses
+        - link "Therapists" [ref=e24] [cursor=pointer]:
+          - /url: http://localhost:81/admin/therapists
+          - img [ref=e25]
+          - generic [ref=e26]: Therapists
+        - link "Intake bookings" [ref=e27] [cursor=pointer]:
+          - /url: http://localhost:81/admin/bookings
+          - img [ref=e28]
+          - generic [ref=e29]: Intake bookings
+        - link "Protocols" [ref=e30] [cursor=pointer]:
+          - /url: http://localhost:81/admin/protocols
+          - img [ref=e31]
+          - generic [ref=e32]: Protocols
+      - generic [ref=e33]:
+        - generic [ref=e34]: Content
+        - link "Ontdek Plus" [ref=e35] [cursor=pointer]:
+          - /url: http://localhost:81/admin/plus-page
+          - img [ref=e36]
+          - generic [ref=e37]: Ontdek Plus
+        - link "Library" [ref=e38] [cursor=pointer]:
+          - /url: http://localhost:81/admin/library
+          - img [ref=e39]
+          - generic [ref=e40]: Library
+        - link "Categories" [ref=e41] [cursor=pointer]:
+          - /url: http://localhost:81/admin/library-categories
+          - img [ref=e42]
+          - generic [ref=e43]: Categories
+        - link "Seasonal tips" [ref=e44] [cursor=pointer]:
+          - /url: http://localhost:81/admin/seasonal-tips
+          - img [ref=e45]
+          - generic [ref=e46]: Seasonal tips
+        - link "Nova chat" [ref=e47] [cursor=pointer]:
+          - /url: http://localhost:81/admin/nova
+          - img [ref=e48]
+          - generic [ref=e49]: Nova chat
+      - generic [ref=e50]:
+        - generic [ref=e51]: Scanner
+        - link "Scan results" [ref=e52] [cursor=pointer]:
+          - /url: http://localhost:81/admin/scans
+          - img [ref=e53]
+          - generic [ref=e54]: Scan results
+        - link "Products" [ref=e55] [cursor=pointer]:
+          - /url: http://localhost:81/admin/products
+          - img [ref=e56]
+          - generic [ref=e57]: Products
+        - link "Ingredients" [ref=e58] [cursor=pointer]:
+          - /url: http://localhost:81/admin/ingredients
+          - img [ref=e59]
+          - generic [ref=e60]: Ingredients
+      - generic [ref=e61]:
+        - generic [ref=e62]: Community
+        - link "Posts & replies" [ref=e63] [cursor=pointer]:
+          - /url: http://localhost:81/admin/community
+          - img [ref=e64]
+          - generic [ref=e65]: Posts & replies
+        - link "Reports" [ref=e66] [cursor=pointer]:
+          - /url: http://localhost:81/admin/reports
+          - img [ref=e67]
+          - generic [ref=e68]: Reports
+      - generic [ref=e69]:
+        - generic [ref=e70]: Billing
+        - link "Plans" [ref=e71] [cursor=pointer]:
+          - /url: http://localhost:81/admin/plans
+          - img [ref=e72]
+          - generic [ref=e73]: Plans
+        - link "Subscriptions" [ref=e74] [cursor=pointer]:
+          - /url: http://localhost:81/admin/subscriptions
+          - img [ref=e75]
+          - generic [ref=e76]: Subscriptions
+        - link "Payments" [ref=e77] [cursor=pointer]:
+          - /url: http://localhost:81/admin/payments
+          - img [ref=e78]
+          - generic [ref=e79]: Payments
+        - link "Credits" [ref=e80] [cursor=pointer]:
+          - /url: http://localhost:81/admin/credits
+          - img [ref=e81]
+          - generic [ref=e82]: Credits
+      - generic [ref=e83]:
+        - generic [ref=e84]: Operations
+        - link "Data exports" [ref=e85] [cursor=pointer]:
+          - /url: http://localhost:81/admin/exports
+          - img [ref=e86]
+          - generic [ref=e87]: Data exports
+        - link "Notifications" [ref=e88] [cursor=pointer]:
+          - /url: http://localhost:81/admin/notifications
+          - img [ref=e89]
+          - generic [ref=e90]: Notifications
+        - link "Sync health" [ref=e91] [cursor=pointer]:
+          - /url: http://localhost:81/admin/sync-health
+          - img [ref=e92]
+          - generic [ref=e93]: Sync health
+        - link "Audit log" [ref=e94] [cursor=pointer]:
+          - /url: http://localhost:81/admin/audit-log
+          - img [ref=e95]
+          - generic [ref=e96]: Audit log
+        - link "Intakevragen" [ref=e97] [cursor=pointer]:
+          - /url: http://localhost:81/admin/intake-questionnaire
+          - img [ref=e98]
+          - generic [ref=e99]: Intakevragen
+        - link "Protocol Templates" [ref=e100] [cursor=pointer]:
+          - /url: http://localhost:81/admin/protocol-settings
+          - img [ref=e101]
+          - generic [ref=e102]: Protocol Templates
+        - link "Protocol Settings" [ref=e103] [cursor=pointer]:
+          - /url: http://localhost:81/admin/protocol-settings/advice
+          - img [ref=e104]
+          - generic [ref=e105]: Protocol Settings
+        - link "Settings" [ref=e106] [cursor=pointer]:
+          - /url: http://localhost:81/admin/settings
+          - img [ref=e107]
+          - generic [ref=e108]: Settings
+    - generic [ref=e110]:
+      - generic [ref=e111]: EO
+      - generic [ref=e112]:
+        - generic [ref=e113]: Equi App Owner
+        - generic [ref=e114]: owner
+      - button "Log out" [ref=e115]:
+        - img [ref=e116]
+  - generic [ref=e117]:
+    - banner [ref=e118]:
+      - heading "Products" [level=1] [ref=e119]
+    - generic [ref=e497]: Product added.
+    - main [ref=e120]:
+      - generic [ref=e121]:
+        - generic [ref=e122]:
+          - heading "Product catalog" [level=2] [ref=e123]
+          - paragraph [ref=e124]: 23 products · 0 need review
+        - button "New product" [ref=e126] [cursor=pointer]:
+          - img [ref=e127]
+          - text: New product
+      - generic [ref=e129]:
+        - generic [ref=e130]:
+          - generic [ref=e131]:
+            - img
+            - textbox "Search brand, name, barcode…" [ref=e132]
+          - generic [ref=e133]:
+            - checkbox "Needs review only" [ref=e134]
+            - text: Needs review only
+        - table [ref=e136]:
+          - rowgroup [ref=e137]:
+            - row "Brand / name Barcode Category Ingredients Scans" [ref=e138]:
+              - columnheader "Brand / name" [ref=e139]
+              - columnheader "Barcode" [ref=e140]
+              - columnheader "Category" [ref=e141]
+              - columnheader "Ingredients" [ref=e142]
+              - columnheader "Scans" [ref=e143]
+              - columnheader [ref=e144]
+          - rowgroup [ref=e145]:
+            - row "Cavalor Cavalor FiberForce 8106381645624 feed 0 0 Edit Cavalor Cavalor FiberForce" [ref=e146]:
+              - cell "Cavalor Cavalor FiberForce" [ref=e147]:
+                - generic [ref=e148]: Cavalor Cavalor FiberForce
+              - cell "8106381645624" [ref=e149]
+              - cell "feed" [ref=e150]:
+                - generic [ref=e151]: feed
+              - cell "0" [ref=e152]
+              - cell "0" [ref=e153]
+              - cell "Edit Cavalor Cavalor FiberForce" [ref=e154]:
+                - button "Edit Cavalor Cavalor FiberForce" [ref=e155] [cursor=pointer]:
+                  - img [ref=e156]
+                - button [ref=e157] [cursor=pointer]:
+                  - img [ref=e158]
+            - row "Cavalor Cavalor Free Breath 2113605134686 supplement 0 0 Edit Cavalor Cavalor Free Breath" [ref=e159]:
+              - cell "Cavalor Cavalor Free Breath" [ref=e160]:
+                - generic [ref=e161]: Cavalor Cavalor Free Breath
+              - cell "2113605134686" [ref=e162]
+              - cell "supplement" [ref=e163]:
+                - generic [ref=e164]: supplement
+              - cell "0" [ref=e165]
+              - cell "0" [ref=e166]
+              - cell "Edit Cavalor Cavalor Free Breath" [ref=e167]:
+                - button "Edit Cavalor Cavalor Free Breath" [ref=e168] [cursor=pointer]:
+                  - img [ref=e169]
+                - button [ref=e170] [cursor=pointer]:
+                  - img [ref=e171]
+            - row "Cavalor Cavalor Strucomash 6514152712079 feed 0 0 Edit Cavalor Cavalor Strucomash" [ref=e172]:
+              - cell "Cavalor Cavalor Strucomash" [ref=e173]:
+                - generic [ref=e174]: Cavalor Cavalor Strucomash
+              - cell "6514152712079" [ref=e175]
+              - cell "feed" [ref=e176]:
+                - generic [ref=e177]: feed
+              - cell "0" [ref=e178]
+              - cell "0" [ref=e179]
+              - cell "Edit Cavalor Cavalor Strucomash" [ref=e180]:
+                - button "Edit Cavalor Cavalor Strucomash" [ref=e181] [cursor=pointer]:
+                  - img [ref=e182]
+                - button [ref=e183] [cursor=pointer]:
+                  - img [ref=e184]
+            - row "Cavalor Cavalor Vitaflora 1329613348446 supplement 0 0 Edit Cavalor Cavalor Vitaflora" [ref=e185]:
+              - cell "Cavalor Cavalor Vitaflora" [ref=e186]:
+                - generic [ref=e187]: Cavalor Cavalor Vitaflora
+              - cell "1329613348446" [ref=e188]
+              - cell "supplement" [ref=e189]:
+                - generic [ref=e190]: supplement
+              - cell "0" [ref=e191]
+              - cell "0" [ref=e192]
+              - cell "Edit Cavalor Cavalor Vitaflora" [ref=e193]:
+                - button "Edit Cavalor Cavalor Vitaflora" [ref=e194] [cursor=pointer]:
+                  - img [ref=e195]
+                - button [ref=e196] [cursor=pointer]:
+                  - img [ref=e197]
+            - row "Equifirst Equifirst Hooicobs 1293976941692 feed 0 0 Edit Equifirst Equifirst Hooicobs" [ref=e198]:
+              - cell "Equifirst Equifirst Hooicobs" [ref=e199]:
+                - generic [ref=e200]: Equifirst Equifirst Hooicobs
+              - cell "1293976941692" [ref=e201]
+              - cell "feed" [ref=e202]:
+                - generic [ref=e203]: feed
+              - cell "0" [ref=e204]
+              - cell "0" [ref=e205]
+              - cell "Edit Equifirst Equifirst Hooicobs" [ref=e206]:
+                - button "Edit Equifirst Equifirst Hooicobs" [ref=e207] [cursor=pointer]:
+                  - img [ref=e208]
+                - button [ref=e209] [cursor=pointer]:
+                  - img [ref=e210]
+            - row "Equilin Equilin Brandnetel Pluksel 4668605411599 herb 0 1 Edit Equilin Equilin Brandnetel Pluksel" [ref=e211]:
+              - cell "Equilin Equilin Brandnetel Pluksel" [ref=e212]:
+                - generic [ref=e213]: Equilin Equilin Brandnetel Pluksel
+              - cell "4668605411599" [ref=e214]
+              - cell "herb" [ref=e215]:
+                - generic [ref=e216]: herb
+              - cell "0" [ref=e217]
+              - cell "1" [ref=e218]
+              - cell "Edit Equilin Equilin Brandnetel Pluksel" [ref=e219]:
+                - button "Edit Equilin Equilin Brandnetel Pluksel" [ref=e220] [cursor=pointer]:
+                  - img [ref=e221]
+                - button [ref=e222] [cursor=pointer]:
+                  - img [ref=e223]
+            - row "Equilin Equilin Hoefsupport 7380657143972 supplement 0 0 Edit Equilin Equilin Hoefsupport" [ref=e224]:
+              - cell "Equilin Equilin Hoefsupport" [ref=e225]:
+                - generic [ref=e226]: Equilin Equilin Hoefsupport
+              - cell "7380657143972" [ref=e227]
+              - cell "supplement" [ref=e228]:
+                - generic [ref=e229]: supplement
+              - cell "0" [ref=e230]
+              - cell "0" [ref=e231]
+              - cell "Edit Equilin Equilin Hoefsupport" [ref=e232]:
+                - button "Edit Equilin Equilin Hoefsupport" [ref=e233] [cursor=pointer]:
+                  - img [ref=e234]
+                - button [ref=e235] [cursor=pointer]:
+                  - img [ref=e236]
+            - row "Equilin Equilin Magnesium 9427391444649 supplement 0 0 Edit Equilin Equilin Magnesium" [ref=e237]:
+              - cell "Equilin Equilin Magnesium" [ref=e238]:
+                - generic [ref=e239]: Equilin Equilin Magnesium
+              - cell "9427391444649" [ref=e240]
+              - cell "supplement" [ref=e241]:
+                - generic [ref=e242]: supplement
+              - cell "0" [ref=e243]
+              - cell "0" [ref=e244]
+              - cell "Edit Equilin Equilin Magnesium" [ref=e245]:
+                - button "Edit Equilin Equilin Magnesium" [ref=e246] [cursor=pointer]:
+                  - img [ref=e247]
+                - button [ref=e248] [cursor=pointer]:
+                  - img [ref=e249]
+            - row "Hartog Hartog Compleet Senior 6730053486141 feed 0 1 Edit Hartog Hartog Compleet Senior" [ref=e250]:
+              - cell "Hartog Hartog Compleet Senior" [ref=e251]:
+                - generic [ref=e252]: Hartog Hartog Compleet Senior
+              - cell "6730053486141" [ref=e253]
+              - cell "feed" [ref=e254]:
+                - generic [ref=e255]: feed
+              - cell "0" [ref=e256]
+              - cell "1" [ref=e257]
+              - cell "Edit Hartog Hartog Compleet Senior" [ref=e258]:
+                - button "Edit Hartog Hartog Compleet Senior" [ref=e259] [cursor=pointer]:
+                  - img [ref=e260]
+                - button [ref=e261] [cursor=pointer]:
+                  - img [ref=e262]
+            - row "Hartog Hartog Easy Mix 7445347610643 feed 0 0 Edit Hartog Hartog Easy Mix" [ref=e263]:
+              - cell "Hartog Hartog Easy Mix" [ref=e264]:
+                - generic [ref=e265]: Hartog Hartog Easy Mix
+              - cell "7445347610643" [ref=e266]
+              - cell "feed" [ref=e267]:
+                - generic [ref=e268]: feed
+              - cell "0" [ref=e269]
+              - cell "0" [ref=e270]
+              - cell "Edit Hartog Hartog Easy Mix" [ref=e271]:
+                - button "Edit Hartog Hartog Easy Mix" [ref=e272] [cursor=pointer]:
+                  - img [ref=e273]
+                - button [ref=e274] [cursor=pointer]:
+                  - img [ref=e275]
+            - row "Hippo Hippo Lijnzaad Geplet 5216982812912 herb 0 0 Edit Hippo Hippo Lijnzaad Geplet" [ref=e276]:
+              - cell "Hippo Hippo Lijnzaad Geplet" [ref=e277]:
+                - generic [ref=e278]: Hippo Hippo Lijnzaad Geplet
+              - cell "5216982812912" [ref=e279]
+              - cell "herb" [ref=e280]:
+                - generic [ref=e281]: herb
+              - cell "0" [ref=e282]
+              - cell "0" [ref=e283]
+              - cell "Edit Hippo Hippo Lijnzaad Geplet" [ref=e284]:
+                - button "Edit Hippo Hippo Lijnzaad Geplet" [ref=e285] [cursor=pointer]:
+                  - img [ref=e286]
+                - button [ref=e287] [cursor=pointer]:
+                  - img [ref=e288]
+            - row "Hippo Hippo Mineral Mix 5196082559477 supplement 0 0 Edit Hippo Hippo Mineral Mix" [ref=e289]:
+              - cell "Hippo Hippo Mineral Mix" [ref=e290]:
+                - generic [ref=e291]: Hippo Hippo Mineral Mix
+              - cell "5196082559477" [ref=e292]
+              - cell "supplement" [ref=e293]:
+                - generic [ref=e294]: supplement
+              - cell "0" [ref=e295]
+              - cell "0" [ref=e296]
+              - cell "Edit Hippo Hippo Mineral Mix" [ref=e297]:
+                - button "Edit Hippo Hippo Mineral Mix" [ref=e298] [cursor=pointer]:
+                  - img [ref=e299]
+                - button [ref=e300] [cursor=pointer]:
+                  - img [ref=e301]
+            - row "Pavo Pavo Care 4 Life — supplement 6530715930308 supplement 0 0 Edit Pavo Pavo Care 4 Life — supplement" [ref=e302]:
+              - cell "Pavo Pavo Care 4 Life — supplement" [ref=e303]:
+                - generic [ref=e304]: Pavo Pavo Care 4 Life — supplement
+              - cell "6530715930308" [ref=e305]
+              - cell "supplement" [ref=e306]:
+                - generic [ref=e307]: supplement
+              - cell "0" [ref=e308]
+              - cell "0" [ref=e309]
+              - cell "Edit Pavo Pavo Care 4 Life — supplement" [ref=e310]:
+                - button "Edit Pavo Pavo Care 4 Life — supplement" [ref=e311] [cursor=pointer]:
+                  - img [ref=e312]
+                - button [ref=e313] [cursor=pointer]:
+                  - img [ref=e314]
+            - row "Pavo Pavo Slobber Mash 5670278559750 feed 0 0 Edit Pavo Pavo Slobber Mash" [ref=e315]:
+              - cell "Pavo Pavo Slobber Mash" [ref=e316]:
+                - generic [ref=e317]: Pavo Pavo Slobber Mash
+              - cell "5670278559750" [ref=e318]
+              - cell "feed" [ref=e319]:
+                - generic [ref=e320]: feed
+              - cell "0" [ref=e321]
+              - cell "0" [ref=e322]
+              - cell "Edit Pavo Pavo Slobber Mash" [ref=e323]:
+                - button "Edit Pavo Pavo Slobber Mash" [ref=e324] [cursor=pointer]:
+                  - img [ref=e325]
+                - button [ref=e326] [cursor=pointer]:
+                  - img [ref=e327]
+            - row "Pavo Pavo SpeediBeet 6349954838647 feed 0 2 Edit Pavo Pavo SpeediBeet" [ref=e328]:
+              - cell "Pavo Pavo SpeediBeet" [ref=e329]:
+                - generic [ref=e330]: Pavo Pavo SpeediBeet
+              - cell "6349954838647" [ref=e331]
+              - cell "feed" [ref=e332]:
+                - generic [ref=e333]: feed
+              - cell "0" [ref=e334]
+              - cell "2" [ref=e335]
+              - cell "Edit Pavo Pavo SpeediBeet" [ref=e336]:
+                - button "Edit Pavo Pavo SpeediBeet" [ref=e337] [cursor=pointer]:
+                  - img [ref=e338]
+                - button [ref=e339] [cursor=pointer]:
+                  - img [ref=e340]
+            - row "Pavo Pavo Vital 7317477472555 supplement 0 0 Edit Pavo Pavo Vital" [ref=e341]:
+              - cell "Pavo Pavo Vital" [ref=e342]:
+                - generic [ref=e343]: Pavo Pavo Vital
+              - cell "7317477472555" [ref=e344]
+              - cell "supplement" [ref=e345]:
+                - generic [ref=e346]: supplement
+              - cell "0" [ref=e347]
+              - cell "0" [ref=e348]
+              - cell "Edit Pavo Pavo Vital" [ref=e349]:
+                - button "Edit Pavo Pavo Vital" [ref=e350] [cursor=pointer]:
+                  - img [ref=e351]
+                - button [ref=e352] [cursor=pointer]:
+                  - img [ref=e353]
+            - row "Reverdy Reverdy Pro-Senior 9524168582662 feed 0 0 Edit Reverdy Reverdy Pro-Senior" [ref=e354]:
+              - cell "Reverdy Reverdy Pro-Senior" [ref=e355]:
+                - generic [ref=e356]: Reverdy Reverdy Pro-Senior
+              - cell "9524168582662" [ref=e357]
+              - cell "feed" [ref=e358]:
+                - generic [ref=e359]: feed
+              - cell "0" [ref=e360]
+              - cell "0" [ref=e361]
+              - cell "Edit Reverdy Reverdy Pro-Senior" [ref=e362]:
+                - button "Edit Reverdy Reverdy Pro-Senior" [ref=e363] [cursor=pointer]:
+                  - img [ref=e364]
+                - button [ref=e365] [cursor=pointer]:
+                  - img [ref=e366]
+            - row "Royal Horse Royal Horse A50 3282147632338 feed 0 0 Edit Royal Horse Royal Horse A50" [ref=e367]:
+              - cell "Royal Horse Royal Horse A50" [ref=e368]:
+                - generic [ref=e369]: Royal Horse Royal Horse A50
+              - cell "3282147632338" [ref=e370]
+              - cell "feed" [ref=e371]:
+                - generic [ref=e372]: feed
+              - cell "0" [ref=e373]
+              - cell "0" [ref=e374]
+              - cell "Edit Royal Horse Royal Horse A50" [ref=e375]:
+                - button "Edit Royal Horse Royal Horse A50" [ref=e376] [cursor=pointer]:
+                  - img [ref=e377]
+                - button [ref=e378] [cursor=pointer]:
+                  - img [ref=e379]
+            - row "Sectolin Sectolin Mariadistel 4151235843811 herb 0 1 Edit Sectolin Sectolin Mariadistel" [ref=e380]:
+              - cell "Sectolin Sectolin Mariadistel" [ref=e381]:
+                - generic [ref=e382]: Sectolin Sectolin Mariadistel
+              - cell "4151235843811" [ref=e383]
+              - cell "herb" [ref=e384]:
+                - generic [ref=e385]: herb
+              - cell "0" [ref=e386]
+              - cell "1" [ref=e387]
+              - cell "Edit Sectolin Sectolin Mariadistel" [ref=e388]:
+                - button "Edit Sectolin Sectolin Mariadistel" [ref=e389] [cursor=pointer]:
+                  - img [ref=e390]
+                - button [ref=e391] [cursor=pointer]:
+                  - img [ref=e392]
+            - row "Sectolin Sectolin Probiotica 3860036775634 supplement 0 1 Edit Sectolin Sectolin Probiotica" [ref=e393]:
+              - cell "Sectolin Sectolin Probiotica" [ref=e394]:
+                - generic [ref=e395]: Sectolin Sectolin Probiotica
+              - cell "3860036775634" [ref=e396]
+              - cell "supplement" [ref=e397]:
+                - generic [ref=e398]: supplement
+              - cell "0" [ref=e399]
+              - cell "1" [ref=e400]
+              - cell "Edit Sectolin Sectolin Probiotica" [ref=e401]:
+                - button "Edit Sectolin Sectolin Probiotica" [ref=e402] [cursor=pointer]:
+                  - img [ref=e403]
+                - button [ref=e404] [cursor=pointer]:
+                  - img [ref=e405]
+            - row "Sectolin Sectolin Spirulina 8493595615780 supplement 0 0 Edit Sectolin Sectolin Spirulina" [ref=e406]:
+              - cell "Sectolin Sectolin Spirulina" [ref=e407]:
+                - generic [ref=e408]: Sectolin Sectolin Spirulina
+              - cell "8493595615780" [ref=e409]
+              - cell "supplement" [ref=e410]:
+                - generic [ref=e411]: supplement
+              - cell "0" [ref=e412]
+              - cell "0" [ref=e413]
+              - cell "Edit Sectolin Sectolin Spirulina" [ref=e414]:
+                - button "Edit Sectolin Sectolin Spirulina" [ref=e415] [cursor=pointer]:
+                  - img [ref=e416]
+                - button [ref=e417] [cursor=pointer]:
+                  - img [ref=e418]
+            - row "Twydil Twydil Stomacare 3349355918576 supplement 0 0 Edit Twydil Twydil Stomacare" [ref=e419]:
+              - cell "Twydil Twydil Stomacare" [ref=e420]:
+                - generic [ref=e421]: Twydil Twydil Stomacare
+              - cell "3349355918576" [ref=e422]
+              - cell "supplement" [ref=e423]:
+                - generic [ref=e424]: supplement
+              - cell "0" [ref=e425]
+              - cell "0" [ref=e426]
+              - cell "Edit Twydil Twydil Stomacare" [ref=e427]:
+                - button "Edit Twydil Twydil Stomacare" [ref=e428] [cursor=pointer]:
+                  - img [ref=e429]
+                - button [ref=e430] [cursor=pointer]:
+                  - img [ref=e431]
+            - row "ZZ UI verification Ingredient management test — uncategorised 2 0 Edit ZZ UI verification Ingredient management test" [ref=e498]:
+              - cell "ZZ UI verification Ingredient management test" [ref=e499]:
+                - generic [ref=e500]: ZZ UI verification Ingredient management test
+              - cell "—" [ref=e501]
+              - cell "uncategorised" [ref=e502]:
+                - generic [ref=e503]: uncategorised
+              - cell "2" [ref=e504]
+              - cell "0" [ref=e505]
+              - cell "Edit ZZ UI verification Ingredient management test" [ref=e506]:
+                - button "Edit ZZ UI verification Ingredient management test" [active] [ref=e507] [cursor=pointer]:
+                  - img [ref=e508]
+                - button [ref=e509] [cursor=pointer]:
+                  - img [ref=e510]
+      - generic [ref=e512]:
+        - generic [ref=e513]:
+          - heading "Edit product" [level=3] [ref=e515]
+          - button "Close" [ref=e516]:
+            - img [ref=e517]
+        - generic [ref=e519]:
+          - generic [ref=e520]:
+            - generic [ref=e521]:
+              - generic [ref=e522]: Brand
+              - textbox [ref=e523]: ZZ UI verification
+            - generic [ref=e524]:
+              - generic [ref=e525]: Name
+              - textbox [ref=e526]: Ingredient management test
+          - generic [ref=e527]:
+            - generic [ref=e528]: Barcode
+            - textbox [ref=e529]
+          - generic [ref=e530]:
+            - generic [ref=e531]: Category
+            - textbox [ref=e532]
+          - generic [ref=e533]:
+            - checkbox "Flag for expert review" [ref=e534]
+            - text: Flag for expert review
+          - region "Product ingredients" [ref=e535]:
+            - generic [ref=e536]:
+              - heading "Ingredients" [level=4] [ref=e537]
+              - button "Add ingredient" [ref=e538] [cursor=pointer]:
+                - img [ref=e539]
+                - text: Add ingredient
+            - paragraph [ref=e540]: Use the arrows to set the order. Amount can include a unit, e.g. 250 mg or 12%.
+            - generic [ref=e541]:
+              - generic [ref=e542]:
+                - generic [ref=e543]: Order 1
+                - generic [ref=e544]:
+                  - button "Move ingredient 1 up" [disabled]:
+                    - img
+                  - button "Move ingredient 1 down" [ref=e545] [cursor=pointer]:
+                    - img [ref=e546]
+                  - button "Remove ingredient 1" [ref=e547] [cursor=pointer]:
+                    - img [ref=e548]
+              - generic [ref=e549]:
+                - generic [ref=e550]:
+                  - generic [ref=e551]: Ingredient
+                  - combobox "Ingredient 1" [ref=e552]:
+                    - option "Select ingredient…"
+                    - option "Bierdrab"
+                    - option "Brandnetel"
+                    - option "Chia-zaad"
+                    - option "Citroenzuur (E330)"
+                    - option "E-anti-oxidant (E321)"
+                    - option "Echinacea"
+                    - option "Glucose-siroop"
+                    - option "IJzersulfaat"
+                    - option "Kelp (zeewier)"
+                    - option "Knoflook (gedroogd)"
+                    - option "Kunstmatige kleurstof (E124)"
+                    - option "Kurkuma"
+                    - option "Luzerne"
+                    - option "Magnesium-oxide"
+                    - option "Mariadistel"
+                    - option "Maïs"
+                    - option "Melasse"
+                    - option "Mout-extract"
+                    - option "Natriumchloride"
+                    - option "Probiotica-mengsel"
+                    - option "Saccharose (E473)"
+                    - option "Selenium-gist"
+                    - option "Sojameel"
+                    - option "Spirulina"
+                    - option "Suikerbietpulp (ongemelasseerd)"
+                    - option "Tarwe (gemoffeld)"
+                    - option "Vit. C (synth.)" [selected]
+                    - option "Vitamine E (natuurlijk)"
+                    - option "Zonnebloemolie"
+                - generic [ref=e553]:
+                  - generic [ref=e554]: Amount (optional)
+                  - textbox "Amount for ingredient 1" [ref=e555]:
+                    - /placeholder: e.g. 250 mg
+                    - text: 250 mg
+            - generic [ref=e556]:
+              - generic [ref=e557]:
+                - generic [ref=e558]: Order 2
+                - generic [ref=e559]:
+                  - button "Move ingredient 2 up" [ref=e560] [cursor=pointer]:
+                    - img [ref=e561]
+                  - button "Move ingredient 2 down" [disabled]:
+                    - img
+                  - button "Remove ingredient 2" [ref=e562] [cursor=pointer]:
+                    - img [ref=e563]
+              - generic [ref=e564]:
+                - generic [ref=e565]:
+                  - generic [ref=e566]: Ingredient
+                  - combobox "Ingredient 2" [ref=e567]:
+                    - option "Select ingredient…"
+                    - option "Bierdrab"
+                    - option "Brandnetel"
+                    - option "Chia-zaad"
+                    - option "Citroenzuur (E330)"
+                    - option "E-anti-oxidant (E321)"
+                    - option "Echinacea"
+                    - option "Glucose-siroop"
+                    - option "IJzersulfaat"
+                    - option "Kelp (zeewier)"
+                    - option "Knoflook (gedroogd)"
+                    - option "Kunstmatige kleurstof (E124)"
+                    - option "Kurkuma"
+                    - option "Lijnzaad" [selected]
+                    - option "Luzerne"
+                    - option "Magnesium-oxide"
+                    - option "Mariadistel"
+                    - option "Maïs"
+                    - option "Melasse"
+                    - option "Mout-extract"
+                    - option "Natriumchloride"
+                    - option "Probiotica-mengsel"
+                    - option "Saccharose (E473)"
+                    - option "Selenium-gist"
+                    - option "Sojameel"
+                    - option "Spirulina"
+                    - option "Suikerbietpulp (ongemelasseerd)"
+                    - option "Tarwe (gemoffeld)"
+                    - option "Vitamine E (natuurlijk)"
+                    - option "Zonnebloemolie"
+                - generic [ref=e568]:
+                  - generic [ref=e569]: Amount (optional)
+                  - textbox "Amount for ingredient 2" [ref=e570]:
+                    - /placeholder: e.g. 250 mg
+                    - text: 12%
+        - generic [ref=e571]:
+          - button "Cancel" [ref=e572] [cursor=pointer]
+          - button "Save" [ref=e573] [cursor=pointer]

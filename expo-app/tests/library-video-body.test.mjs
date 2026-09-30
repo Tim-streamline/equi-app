@@ -9,6 +9,7 @@ const sources = await Promise.all([
   '../app/(tabs)/library/video/[id].tsx',
   '../app/(tabs)/library/article/[id].tsx',
   '../components/library/LibraryContent.tsx',
+  '../components/library/LibraryMedia.tsx',
 ].map(async (path) => ts.transpileModule(await readFile(new URL(path, import.meta.url), 'utf8'), {
   compilerOptions: { jsx: ts.JsxEmit.ReactJSX, module: ts.ModuleKind.CommonJS },
 }).outputText));
@@ -21,16 +22,17 @@ function renderScreen(format, body, chapters = [], canRead = true) {
   const modules = {
     '@/components/credits/TemporaryCreditButton': { TemporaryCreditButton: 'TemporaryCreditButton' },
     'react/jsx-runtime': { jsx, jsxs: jsx, Fragment: 'Fragment' },
-    react: { useMemo: (fn) => fn(), useRef: (value) => ({ current: value }), useState: (value) => [value, () => {}] },
-    'react-native': Object.fromEntries(['View', 'Text', 'ScrollView', 'Image', 'Pressable'].map((name) => [name, name])),
+    expo: { useEvent: (_player, _name, initial) => initial ?? null },
+    react: { useEffect: () => {}, useCallback: fn => fn, useMemo: (fn) => fn(), useRef: (value) => ({ current: value }), useState: (value) => [value, () => {}] },
+    'react-native': { ...Object.fromEntries(['View', 'Text', 'ScrollView', 'Image', 'Pressable'].map((name) => [name, name])), Platform: { OS: 'android' } },
     'expo-video': {
       VideoView: 'VideoView',
-      useVideoPlayer: (url) => { videoSources.push(url); return { url }; },
+      useVideoPlayer: (source, setup) => { videoSources.push(source.uri); const player = { url: source.uri }; setup(player); return player; },
     },
     'expo-web-browser': { openBrowserAsync: () => {} },
-    'expo-router': { router: { back: () => {} }, useLocalSearchParams: () => ({ id: 'video-item' }) },
+    'expo-router': { useFocusEffect: () => {}, router: { back: () => {} }, useLocalSearchParams: () => ({ id: 'video-item' }) },
     'react-native-safe-area-context': { SafeAreaView: 'SafeAreaView' },
-    'lucide-react-native': { Bookmark: 'Bookmark', ExternalLink: 'ExternalLink', Headphones: 'Headphones' },
+    'lucide-react-native': { Play: 'Play', Pause: 'Pause', RotateCcw: 'RotateCcw', RotateCw: 'RotateCw', Bookmark: 'Bookmark', ExternalLink: 'ExternalLink', Headphones: 'Headphones' },
     '@/lib/library': library,
     './LibraryAttachments': { LibraryAttachments: 'LibraryAttachments' },
     './LibraryThumbnail': { LibraryThumbnail: 'LibraryThumbnail' },
@@ -56,6 +58,7 @@ function renderScreen(format, body, chapters = [], canRead = true) {
     }, exports);
     return exports;
   }
+  modules['./LibraryMedia'] = load(sources[4]);
   modules['@/components/library/MarkdownBody'] = load(sources[0]);
   modules['./MarkdownBody'] = modules['@/components/library/MarkdownBody'];
   modules['@/components/library/LibraryContent'] = load(sources[3]);
@@ -110,6 +113,16 @@ for (const format of ['video', 'article']) {
     assert.deepEqual(videoSources, []);
     assert.equal(flatten(tree).includes('Before the video.'), false);
     assert.equal(flatten(tree).includes('Private chapter'), false);
-    assert.ok(flatten(tree).some(node => node?.type === 'Button' && node.props.title === 'Ontgrendel voor 1 credit' && node.props.disabled));
+    assert.ok(!flatten(tree).some(node => node?.type === 'Button' && node.props.title === 'Ontgrendel voor 1 credit'));
+    assert.ok(flatten(tree).some(node => node?.type === 'TemporaryCreditButton'));
   });
 }
+
+
+test('CMS audio reaches the in-app player with item metadata instead of opening a browser', () => {
+  const audio = 'https://media.example.test/lesson.mp3';
+  const { tree, videoSources } = renderScreen('article', `<audio src="${audio}" controls></audio>`);
+  assert.deepEqual(videoSources, [audio]);
+  assert.ok(flatten(tree).some(node => node?.props?.accessibilityLabel === 'Audio afspelen'));
+  assert.ok(!flatten(tree).some(node => node?.props?.accessibilityRole === 'link'));
+});

@@ -1,4 +1,5 @@
-import { View, Text, TextInput, TextInputProps } from 'react-native';
+import { KeyboardTextInput as TextInput } from '@/components/ui/KeyboardForm';
+import { View, Text, TextInputProps } from 'react-native';
 
 type Props = TextInputProps & { label?: string; rows?: number };
 
