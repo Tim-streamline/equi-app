@@ -15,6 +15,7 @@ function screen() {
     { id: 'paid', title: 'Hooi meten', format: 'video', creditCost: 2 },
     { id: 'plus', title: 'Plus les', format: 'audio', creditCost: 0, isPlus: true },
   ];
+  const localAccess = { grants: [], isLoading: true };
   const bookmarks = { itemIds: ['paid'], pendingIds: [], error: null };
   let refreshes = 0;
   const resource = { data: { hasPlus: false, unlockedIds: [], credits: 7 }, error: null, refresh: () => refreshes++ };
@@ -33,6 +34,7 @@ function screen() {
     '@/components/library/LibraryCard': { LibraryCard: 'LibraryCard' },
     '@/components/ui/Chip': { Chip: 'Chip' },
     '@/hooks/useTabBarPadding': { useTabBarPadding: () => 76 },
+    '@/hooks/useLibraryAccessRecords': { useLibraryAccessRecords: () => localAccess },
     '@/hooks/useLibraryResource': { useLibraryResource: () => resource },
     '@/hooks/useLibraryBookmarks': { useLibraryBookmarks: () => bookmarks },
     '@/lib/library': library, '@/lib/library-filter': filters,
@@ -55,7 +57,7 @@ function screen() {
     press(label);
     assert.ok(!render().some(node => node.type === 'Modal'));
   };
-  return { render, press, select, ids, bookmarks, resource, refreshes: () => refreshes, focused: () => focused };
+  return { render, press, select, ids, bookmarks, resource, localAccess, refreshes: () => refreshes, focused: () => focused };
 }
 
 test('actual Library screen composes saved, category and search; X preserves filters and focus', () => {
@@ -158,4 +160,18 @@ test('Mijn items waits for access and offers retry after a failed load', () => {
 test('library retains the current credit balance', () => {
   const app = screen();
   assert.ok(app.render().some(n => n.type === 'Text' && Array.isArray(n.props.children) && n.props.children.join('') === 'Je credits: 7'));
+});
+
+
+test('Mijn items uses synced grants offline and removes revoked access even if HTTP is stale', () => {
+  const app = screen();
+  app.localAccess.isLoading = false;
+  app.localAccess.grants = [{ item_id: 'paid', reason: 'unlocked' }, { item_id: 'plus', reason: 'plus' }];
+  app.resource.data = null;
+  app.resource.error = 'Offline';
+  app.select('Mijn items');
+  assert.deepEqual(app.ids(), ['paid', 'plus']);
+  app.resource.data = { hasPlus: true, unlockedIds: ['paid'], credits: 7 };
+  app.localAccess.grants = [];
+  assert.deepEqual(app.ids(), []);
 });

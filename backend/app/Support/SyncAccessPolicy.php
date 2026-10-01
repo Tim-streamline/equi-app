@@ -24,6 +24,8 @@ class SyncAccessPolicy
         'library_chapters',
         'library_item_categories',
         'library_items',
+        'library_item_access',
+        'library_contents',
         'nova_fallback_replies',
         'payments',
         'plan_benefits',

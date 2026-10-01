@@ -11,6 +11,8 @@ Artisan::command('inspire', function () {
 
 Schedule::command('media:prune-chunks')->hourly();
 
+Schedule::command('library:refresh-access')->everyMinute()->withoutOverlapping();
+
 Schedule::command('protocols:send-phase-reminders')->everyMinute()->withoutOverlapping();
 
 Schedule::command('credits:maintain')->hourly()->withoutOverlapping();

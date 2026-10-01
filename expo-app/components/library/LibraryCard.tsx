@@ -10,6 +10,9 @@ export function LibraryCard({ item, access, compact = false, showBookmark = fals
 }) {
   const Icon = item.format === 'video' ? Play : ['audio', 'podcast'].includes(item.format ?? '') ? Headphones : BookOpen;
   const state = libraryAccessLabel(item, access);
+  const creditLocked = state.locked && !item.isPlus;
+  const unlocked = access?.unlockedIds.includes(item.id);
+  const free = !item.isPlus && (Number(item.creditCost) || 0) === 0;
   return <View style={{ width: '48.5%' }} className="overflow-hidden rounded-2xl border border-ink-8 bg-white">
     <Pressable accessibilityRole="link" accessibilityLabel={`${item.title}, ${libraryFormat(item.format)}${state.locked ? ', Vergrendeld' : ''}${state.label ? `, ${state.label}` : ''}`}
       onPress={() => router.push(libraryPath(item) as any)} className="flex-1 p-2">
@@ -24,8 +27,8 @@ export function LibraryCard({ item, access, compact = false, showBookmark = fals
         <Text className="font-semi text-[14px] leading-[19px] text-ink" style={{ minHeight: 38 }} numberOfLines={2} ellipsizeMode="tail">{item.title}</Text>
         {!compact && <Text className="mt-1 text-[12px] leading-[17px] text-ink-70" style={{ minHeight: 51 }} numberOfLines={3} ellipsizeMode="tail">{item.description ?? ''}</Text>}
         {!!state.label && <View className="mt-2 flex-row items-center gap-1">
-          {state.locked && <LockKeyhole size={11} color="#127A79" />}
-          <Text className="text-[11px] text-ink-50">{state.label}</Text>
+          {state.locked && <LockKeyhole size={11} color={creditLocked ? '#DC2626' : '#127A79'} />}
+          <Text className={`text-[11px] ${creditLocked ? 'text-red-600' : unlocked || free ? 'text-teal-400' : 'text-ink-50'}`}>{state.label}</Text>
         </View>}
       </View>
     </Pressable>

@@ -80,7 +80,7 @@ export function filterLibraryItems<T extends LibraryFilterItem>(
     if (filters.excludeFree && !item.isPlus && price === 0) return false;
     if (filters.credits?.length && (item.isPlus || !filters.credits.some(band =>
       band === 'free' ? price === 0 : band === '4+' ? price >= 4 : price === Number(band)))) return false;
-    if (filters.accessibleOnly && (!filters.access || !(filters.access.unlockedIds.includes(item.id) || (item.isPlus ? filters.access.hasPlus : price === 0)))) return false;
+    if (filters.accessibleOnly && (!filters.access || !(filters.access.allowedIds ? filters.access.allowedIds.includes(item.id) : filters.access.unlockedIds.includes(item.id) || (item.isPlus ? filters.access.hasPlus : price === 0)))) return false;
     if (!normalizedQuery) return true;
 
     return normalizeSearchText(`${item.title ?? ''} ${item.description ?? ''}`)

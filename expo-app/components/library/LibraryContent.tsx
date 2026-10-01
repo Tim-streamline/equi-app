@@ -2,7 +2,8 @@ import { TemporaryCreditButton } from '@/components/credits/TemporaryCreditButto
 import { useRef, useState } from 'react';
 import { ActivityIndicator, Text, View } from 'react-native';
 import { router } from 'expo-router';
-import { libraryRequest, useLibraryResource } from '@/hooks/useLibraryResource';
+import { libraryRequest } from '@/hooks/useLibraryResource';
+import { useLibraryContent } from '@/hooks/useLibraryContent';
 import { libraryMetadata, type LibraryAccess, type LibraryCardItem } from '@/lib/library';
 import { MarkdownBody } from './MarkdownBody';
 import { LibraryAttachments, type LibraryAttachment } from './LibraryAttachments';
@@ -14,7 +15,7 @@ import { Button } from '@/components/ui/Button';
 type Content = { item: LibraryCardItem; access: LibraryAccess; canRead: boolean; body: string | null; attachments: LibraryAttachment[]; chapters: { id: string; title: string; startLabel: string }[] };
 
 export function LibraryContent({ itemId, preview }: { itemId: string; preview?: LibraryCardItem }) {
-  const { data, error, refresh, update } = useLibraryResource<Content>(`/${encodeURIComponent(itemId)}`);
+  const { data, error, refresh, update, pendingContent, isConnected } = useLibraryContent(itemId);
   const pending = useRef(false);
   const [busy, setBusy] = useState(false);
   const [confirmedCost, setConfirmedCost] = useState<number | null>(null);
@@ -48,7 +49,10 @@ export function LibraryContent({ itemId, preview }: { itemId: string; preview?: 
     {!data ? <View className="p-5 gap-3">{error
       ? <><Text accessibilityRole="alert" className="text-ink-70">{error}</Text><Button title="Opnieuw proberen" variant="ghost" onPress={() => void refresh()} /></>
       : <ActivityIndicator accessibilityLabel="Toegang controleren" color="#127A79" />}</View>
-      : !data.canRead && data.item.isPlus ? <View className="mx-5 mt-5 gap-3 rounded-2xl bg-mint-50 p-5">
+      : pendingContent ? <View className="p-5 gap-3">
+        {isConnected && <ActivityIndicator accessibilityLabel="Inhoud downloaden" color="#127A79" />}
+        <Text className="text-ink-70">{isConnected ? 'Inhoud wordt gedownload…' : 'Deze inhoud is nog niet gedownload. Maak verbinding om het item offline te kunnen lezen.'}</Text>
+      </View> : !data.canRead && data.item.isPlus ? <View className="mx-5 mt-5 gap-3 rounded-2xl bg-mint-50 p-5">
         <Text className="font-bold text-[20px] text-ink">Alleen voor Plus</Text>
         <Text className="text-[15px] text-ink-70">Dit item is beschikbaar met actief Plus. Je kunt het niet met credits ontgrendelen.</Text>
         <Button title="Bekijk Plus" onPress={() => router.push('/(tabs)/(pager)/protocol')} />

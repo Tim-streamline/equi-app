@@ -277,6 +277,21 @@ const library_chapters = new Table({
   start_sec: column.integer,
 }, { indexes: { byItem: ['item_id'] } });
 
+const library_item_access = new Table({
+  user_id: column.text,
+  item_id: column.text,
+  reason: column.text,
+  expires_at: column.text,
+  updated_at: column.text,
+}, { indexes: { byUserItem: ['user_id', 'item_id'] } });
+
+const library_contents = new Table({
+  body: column.text,
+  chapters: column.text,
+  attachments: column.text,
+  updated_at: column.text,
+});
+
 const library_article_sections = new Table({
   item_id: column.text,
   order: column.integer,
@@ -578,6 +593,8 @@ export const AppSchema = new Schema({
   scan_results,
   scan_ingredients,
   library_items,
+  library_item_access,
+  library_contents,
   library_chapters,
   library_article_sections,
   library_categories,

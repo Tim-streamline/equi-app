@@ -6,6 +6,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Search, X, ChevronDown, Check } from 'lucide-react-native';
 import { LibraryCard } from '@/components/library/LibraryCard';
 import { useLibraryResource } from '@/hooks/useLibraryResource';
+import { useLibraryAccessRecords } from '@/hooks/useLibraryAccessRecords';
 import { useLibraryBookmarks } from '@/hooks/useLibraryBookmarks';
 import { type LibraryAccess } from '@/lib/library';
 import { Chip } from '@/components/ui/Chip';
@@ -25,7 +26,13 @@ export default function LibraryScreen() {
   const padBottom = useTabBarPadding();
   const categories = useLibraryCategories();
   const list = useLibraryItems();
-  const { data: access, error: accessError, refresh: refreshAccess } = useLibraryResource<LibraryAccess>('/access');
+  const { data: liveAccess, error: accessError, refresh: refreshAccess } = useLibraryResource<LibraryAccess>('/access');
+  const { grants, isLoading: accessLoading } = useLibraryAccessRecords();
+  const access: LibraryAccess | null = accessLoading ? liveAccess : {
+    hasPlus: liveAccess?.hasPlus ?? false, credits: liveAccess?.credits,
+    unlockedIds: grants.filter(g => g.reason === 'unlocked').map(g => g.item_id),
+    allowedIds: grants.map(g => g.item_id),
+  };
   const bookmarks = useLibraryBookmarks();
   const itemCategories = useLibraryItemCategories();
   const placeholder = useValue('librarySearchPlaceholder') as string;
@@ -54,7 +61,7 @@ export default function LibraryScreen() {
   const toggleCategory = (categoryId: string) => setActiveCategoryIds(current => toggleLibraryCategory(current, categoryId));
   const clearFilters = () => { setActiveCategoryIds([]); setScope('all'); };
   const waiting = (savedOnly && !bookmarks.itemIds) || (accessibleOnly && !access);
-  const filterError = savedOnly ? bookmarks.error : accessibleOnly ? accessError : null;
+  const filterError = savedOnly ? bookmarks.error : accessibleOnly && !access ? accessError : null;
   const emptySaved = savedOnly && bookmarks.itemIds?.length === 0;
   return <View className="flex-1">
     <SafeAreaView edges={['top']} style={{ flex: 1 }}>
@@ -62,7 +69,7 @@ export default function LibraryScreen() {
         <View className="px-5 pb-3 pt-1.5">
           <View className="mb-3 flex-row items-center justify-between">
             <Text accessibilityRole="header" className="font-bold text-[22px] text-ink">Bibliotheek</Text>
-            {access ? <Text accessibilityLiveRegion="polite" className="font-semi text-[15px] text-teal-700">Je credits: {access.credits}</Text>
+            {liveAccess ? <Text accessibilityLiveRegion="polite" className="font-semi text-[15px] text-teal-700">Je credits: {liveAccess.credits}</Text>
               : accessError ? <Pressable accessibilityRole="button" onPress={() => void refreshAccess()}><Text className="text-[13px] text-teal-700">Saldo opnieuw laden</Text></Pressable>
               : <ActivityIndicator accessibilityLabel="Credits laden" color="#127A79" />}
           </View>

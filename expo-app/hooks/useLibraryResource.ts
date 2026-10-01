@@ -44,7 +44,7 @@ export async function libraryRequest<T>(path: string, method = 'GET', signal?: A
   }
 }
 
-export function useLibraryResource<T>(path: string) {
+export function useLibraryResource<T>(path: string, enabled = true) {
   const { currentUserId } = useDb();
   const key = `${currentUserId}:${path}`;
   const [snapshot, setSnapshot] = useState<{ key: string; data: T } | null>(null);
@@ -53,18 +53,18 @@ export function useLibraryResource<T>(path: string) {
   const update = useCallback((data: T) => { generation.current++; setSnapshot({ key, data }); setFailure(null); }, [key]);
   const refresh = useCallback(async (signal?: AbortSignal) => {
     const version = ++generation.current;
-    if (!currentUserId) return;
+    if (!currentUserId || !enabled) return;
     try {
       const data = await libraryRequest<T>(path, 'GET', signal);
       if (!signal?.aborted && generation.current === version) update(data);
     } catch (error) {
       if (!signal?.aborted && generation.current === version) { setSnapshot(null); setFailure({ key, message: error instanceof Error ? error.message : 'Verbinding niet beschikbaar.' }); }
     }
-  }, [currentUserId, key, path, update]);
+  }, [currentUserId, key, path, update, enabled]);
   useFocusEffect(useCallback(() => {
     const controller = new AbortController();
     void refresh(controller.signal);
     return () => { generation.current++; controller.abort(); };
   }, [refresh]));
-  return { data: snapshot?.key === key ? snapshot.data : null, error: failure?.key === key ? failure.message : null, refresh, update };
+  return { data: enabled && snapshot?.key === key ? snapshot.data : null, error: enabled && failure?.key === key ? failure.message : null, refresh, update };
 }

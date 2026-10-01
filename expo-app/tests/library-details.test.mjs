@@ -26,6 +26,7 @@ function screen(data = structuredClone(locked), error = null, request) {
     },
     'react-native': { Text: 'Text', View: 'View', ActivityIndicator: 'ActivityIndicator' },
     'expo-router': { router: { push: path => calls.push(path) } }, '@/lib/library': library,
+    '@/hooks/useLibraryContent': { useLibraryContent: () => resource },
     '@/hooks/useLibraryResource': { useLibraryResource: () => resource, libraryRequest: async (...args) => { calls.push(args); return request ? request(...args) : { ...locked, canRead: true, body: 'Paid content' }; } },
     './MarkdownBody': { MarkdownBody: 'MarkdownBody' }, './LibraryAttachments': { LibraryAttachments: 'LibraryAttachments' },
     './LibraryThumbnail': { LibraryThumbnail: 'LibraryThumbnail' },

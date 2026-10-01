@@ -19,6 +19,7 @@ import {
   SourceSans3_600SemiBold_Italic,
 } from '@expo-google-fonts/source-sans-3';
 import { LibraryThumbnailPreloader } from '@/components/library/LibraryThumbnailPreloader';
+import { LibraryContentSync } from '@/components/library/LibraryContentSync';
 import { ProtocolNotifications } from '@/components/notifications/ProtocolNotifications';
 import { DbProvider } from '@/db/provider';
 import { IntakeProvider } from '@/lib/intake/store';
@@ -64,6 +65,7 @@ export default function RootLayout() {
       <SafeAreaProvider>
         <DbProvider>
           <LibraryThumbnailPreloader />
+          <LibraryContentSync />
           <ProtocolNotifications />
           <IntakeSchemaProvider>
             <IntakeProvider>

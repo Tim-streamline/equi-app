@@ -115,6 +115,7 @@ class SyncController extends Controller
         DB::transaction(function () use ($payload, &$applied, &$skipped, $policy, $userId) {
             $newSubmissions = [];
             foreach ($payload['operations'] as $op) {
+                abort_if(in_array($op['type'], ['library_item_access', 'library_contents'], true), 403, 'Library access and content are server-managed.');
                 abort_if($op['type'] === 'intake_responses', 409, 'Werk de app bij om de intake te synchroniseren.');
                 $modelClass = self::TABLE_TO_MODEL[$op['type']] ?? null;
                 if (! $modelClass) {
