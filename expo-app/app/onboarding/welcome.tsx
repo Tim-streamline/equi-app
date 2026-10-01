@@ -13,14 +13,11 @@ import { ArrowRight, Eye, EyeOff } from 'lucide-react-native';
 import { Button } from '@/components/ui/Button';
 import { useDb } from '@/db/provider';
 
-const DEFAULT_EMAIL = Platform.OS === 'web' ? '' : 'marit@voorbeeld.nl';
-const DEFAULT_PASSWORD = Platform.OS === 'web' ? '' : 'password';
-
 export default function WelcomeScreen() {
   const { communityPost } = useLocalSearchParams<{ communityPost?: string }>();
   const { login } = useDb();
-  const [email, setEmail] = useState(DEFAULT_EMAIL);
-  const [password, setPassword] = useState(DEFAULT_PASSWORD);
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [passwordVisible, setPasswordVisible] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -91,7 +88,7 @@ export default function WelcomeScreen() {
                 <TextInput
                   value={email}
                   onChangeText={setEmail}
-                  placeholder="Email"
+                  placeholder="email"
                   accessibilityLabel="E-mailadres"
                   autoComplete="email"
                   placeholderTextColor="rgba(255,255,255,0.5)"
@@ -104,7 +101,7 @@ export default function WelcomeScreen() {
                 <TextInput
                   value={password}
                   onChangeText={setPassword}
-                  placeholder="Wachtwoord"
+                  placeholder="wachtwoord"
                   accessibilityLabel="Wachtwoord"
                   autoComplete="current-password"
                   onSubmitEditing={() => { if (!busy) void submit(); }}

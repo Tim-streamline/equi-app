@@ -12,15 +12,25 @@ function harness(platform = 'android') {
     react: { useMemo: fn => fn(), useCallback: fn => fn, useEffect: fn => cleanups.push(fn()) },
     'react/jsx-runtime': { jsx, jsxs: jsx },
     'react-native': { View: 'View', Text: 'Text', Pressable: 'Pressable', Platform: { OS: platform } },
-    'expo-router': { useFocusEffect: fn => blurs.push(fn()) },
+    'expo-router': { useFocusEffect: fn => { const cleanup = fn(); blurs.push(cleanup); cleanups.push(cleanup); } },
     expo: { useEvent: (_p, name, initial) => name === 'timeUpdate' ? { currentTime: current.currentTime } : name === 'sourceLoad' ? { duration: current.duration } : initial },
     'expo-video': { VideoView: 'VideoView', useVideoPlayer: (source, setup) => {
       const listeners = new Set();
+      let released = false, notification = false;
+      const assertLive = () => {
+        if (released) throw Object.assign(new Error('Cannot use shared object that was already released'), { code: 'ERR_USING_RELEASED_SHARED_OBJECT' });
+      };
       current = { playing: false, status: 'readyToPlay', currentTime: 40, duration: 1200,
         addListener: (_name, fn) => { listeners.add(fn); return { remove: () => listeners.delete(fn) }; },
         play() { this.playing = true; listeners.forEach(fn => fn({ isPlaying: true })); },
-        pause() { this.playing = false; listeners.forEach(fn => fn({ isPlaying: false })); },
+        pause() { assertLive(); this.playing = false; listeners.forEach(fn => fn({ isPlaying: false })); },
+        release() { released = true; this.playing = false; notification = false; listeners.clear(); },
+        get showNowPlayingNotification() { return notification; },
+        set showNowPlayingNotification(value) { assertLive(); notification = value; },
       };
+      // Expo's useVideoPlayer registers release before our focus cleanup.
+      const player = current;
+      cleanups.push(() => player.release());
       setup(current); players.push(current); sources.push(source); return current;
     } },
     'lucide-react-native': Object.fromEntries(['Pause', 'Play', 'RotateCcw', 'RotateCw'].map(n => [n, n])),
@@ -52,5 +62,28 @@ for (const platform of ['android', 'ios', 'web']) test(`${platform}: media metad
   button('Audio afspelen').props.onPress(); assert.equal(audio.currentTime, 0); assert.equal(audio.playing, true);
   if (platform === 'web') assert.ok(nodes.some(n => n?.type === 'VideoView'), 'web audio requires a mounted HTML media element');
   h.blurs[1](); assert.equal(audio.playing, false); assert.equal(audio.showNowPlayingNotification, false);
+  h.close();
+});
+
+test('popping a reader survives Expo releasing its player before focus cleanup', () => {
+  const h = harness();
+  h.render();
+  h.players[0].play();
+  assert.doesNotThrow(() => h.close());
+  assert.equal(h.players[0].playing, false);
+  assert.equal(h.players[0].showNowPlayingNotification, false);
+});
+
+test('replaced players tolerate late blur, while unexpected player errors remain visible', () => {
+  const h = harness();
+  h.render();
+  h.players[0].release();
+  assert.doesNotThrow(() => h.blurs[0]());
+  h.render();
+  const failure = Object.assign(new Error('Unexpected native failure'), { code: 'ERR_OTHER' });
+  const pause = h.players[1].pause;
+  h.players[1].pause = () => { throw failure; };
+  assert.throws(() => h.blurs[1](), error => error === failure);
+  h.players[1].pause = pause;
   h.close();
 });

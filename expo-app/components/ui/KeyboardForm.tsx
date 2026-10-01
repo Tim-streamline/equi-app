@@ -91,7 +91,12 @@ export function KeyboardTextInput({ ref, style, onLayout, ...props }: TextInputP
       maxHeight: maxInputHeight,
       ...(naturalHeight > maxInputHeight ? { minHeight: maxInputHeight } : {}),
     } : null]}
-    onLayout={event => { setNaturalHeight(previous => Math.max(previous, event.nativeEvent.layout.height)); onLayout?.(event); }}
+    onLayout={event => {
+      // Native events are pooled; capture the measurement before a deferred update.
+      const height = event.nativeEvent.layout.height;
+      setNaturalHeight(previous => Math.max(previous, height));
+      onLayout?.(event);
+    }}
     onFocus={event => { props.onFocus?.(event); reveal(input.current); }}
     onSelectionChange={event => { props.onSelectionChange?.(event); reveal(input.current); }} />;
 }

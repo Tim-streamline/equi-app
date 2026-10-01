@@ -40,7 +40,16 @@ export function LibraryMedia({ url, audio = false, metadata }: { url: string; au
   // Navigating away ends this item's session. Backgrounding the app does not blur the route.
   useFocusEffect(useCallback(() => {
     player.showNowPlayingNotification = true;
-    return () => { player.pause(); player.showNowPlayingNotification = false; };
+    return () => {
+      try {
+        player.pause();
+        player.showNowPlayingNotification = false;
+      } catch (error) {
+        // On a native-stack pop (or source replacement), useVideoPlayer can
+        // release first. Release already stops playback and removes the session.
+        if ((error as { code?: string })?.code !== 'ERR_USING_RELEASED_SHARED_OBJECT') throw error;
+      }
+    };
   }, [player]));
   const { isPlaying } = useEvent(player, 'playingChange', { isPlaying: player.playing });
   const { status, error } = useEvent(player, 'statusChange', { status: player.status });

@@ -3,14 +3,18 @@ import { readFileSync } from 'node:fs';
 import test from 'node:test';
 import ts from 'typescript';
 
-function harness(platform) {
+function harness(platform, { deferState = false } = {}) {
   const env = { context: null, focused: null, hooks: new Map(), listeners: {}, cleanups: [], frames: new Map(), key: '', index: 0 };
+  const stateUpdates = [];
   const jsx = (type, props) => ({ type, props });
   const slot = initial => { const slots = env.hooks.get(env.key); const i = env.index++; return [slots[i] ??= { value: initial }, i]; };
   const react = {
     createContext: () => ({ Provider: 'Provider' }), useContext: () => env.context,
     useRef: value => slot({ current: value })[0].value,
-    useState: initial => { const [s] = slot(initial); return [s.value, v => { s.value = typeof v === 'function' ? v(s.value) : v; }]; },
+    useState: initial => { const [s] = slot(initial); return [s.value, v => {
+      const update = () => { s.value = typeof v === 'function' ? v(s.value) : v; };
+      if (deferState) stateUpdates.push(update); else update();
+    }]; },
     useCallback: fn => slot(fn)[0].value,
     useEffect: fn => { const [s] = slot(false); if (!s.value) { s.value = true; env.cleanups.push(fn()); } },
   };
@@ -26,10 +30,30 @@ function harness(platform) {
     env, exports,
     render(name, props = {}, instance = name) { env.key = instance; env.index = 0; if (!env.hooks.has(instance)) env.hooks.set(instance, []); return exports[name](props); },
     flush() { const frames = [...env.frames.values()]; env.frames.clear(); frames.forEach(fn => fn()); },
+    flushState() { while (stateUpdates.length) stateUpdates.shift()(); },
     emit(name, screenY) { for (const fn of env.listeners[name] ?? []) fn({ endCoordinates: { screenY } }); },
     close() { env.cleanups.forEach(fn => fn?.()); },
   };
 }
+
+for (const platform of ['android', 'ios']) test(`${platform}: input layout survives pooled events and deferred state updates`, () => {
+  const h = harness(platform, { deferState: true });
+  h.env.context = { reveal() {}, maxInputHeight: 100 };
+  const forwarded = [];
+  const props = { multiline: true, onLayout: event => forwarded.push(event.nativeEvent.layout.height) };
+  const input = h.render('KeyboardTextInput', props);
+  for (const height of [180, 90]) {
+    const event = { nativeEvent: { layout: { height } } };
+    input.props.onLayout(event);
+    // React Native pools the layout event after the handler returns, before
+    // React necessarily evaluates the functional state updater.
+    event.nativeEvent = null;
+  }
+  assert.deepEqual(forwarded, [180, 90]);
+  assert.doesNotThrow(() => h.flushState());
+  assert.deepEqual(h.render('KeyboardTextInput', props).props.style[1], { maxHeight: 100, minHeight: 100 });
+  h.close();
+});
 
 for (const platform of ['android', 'ios']) {
   for (const screenHeight of [568, 667, 844]) {
