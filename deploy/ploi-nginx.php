@@ -3,18 +3,21 @@
 /** Ploi API integration; token is supplied only through the deployment environment. */
 final class PloiNginx
 {
-    private const SITE = '/servers/121767/sites/406977';
-    private const HOST = 'equi-app.staging.optimize-it.nl';
+    public function __construct(private Closure $request, private Closure $readConfig, private Closure $probeRevision, private Closure $wait,
+        private string $serverId = '121767', private string $siteId = '406977', private string $host = 'equi-app.online') {}
 
-    public function __construct(private Closure $request, private Closure $readConfig, private Closure $probeRevision, private Closure $wait) {}
+    private function sitePath(): string
+    {
+        return '/servers/'.$this->serverId.'/sites/'.$this->siteId;
+    }
 
     public function snapshot(string $path): void
     {
-        $site = ($this->request)('GET', self::SITE, null);
-        if (($site['data']['domain'] ?? null) !== self::HOST) {
-            throw new RuntimeException('Ploi site identity does not match the staging hostname.');
+        $site = ($this->request)('GET', $this->sitePath(), null);
+        if (($site['data']['domain'] ?? null) !== $this->host) {
+            throw new RuntimeException('Ploi site identity does not match the selected hostname.');
         }
-        $current = ($this->request)('GET', self::SITE.'/nginx-configuration', null)['content'] ?? null;
+        $current = ($this->request)('GET', $this->sitePath().'/nginx-configuration', null)['content'] ?? null;
         if (! is_string($current) || trim($current) === '') {
             throw new RuntimeException('Ploi returned an empty Nginx configuration.');
         }
@@ -32,12 +35,12 @@ final class PloiNginx
         $config = str_replace('__EQUI_NGINX_REVISION__', hash('sha256', $config), $config);
         preg_match('/add_header X-Equi-Nginx-Revision "([^"]+)" always;/', $config, $marker);
         $revision = $marker[1] ?? '';
-        ($this->request)('PATCH', self::SITE.'/nginx-configuration', ['content' => $config]);
+        ($this->request)('PATCH', $this->sitePath().'/nginx-configuration', ['content' => $config]);
         // Ploi queues operations: wait for the server file, not just an HTTP 2xx from its API.
         $this->until(fn () => trim(($this->readConfig)()) === trim($config), 'Ploi did not install the requested Nginx file.');
         // Nginx gracefully validates and loads the new configuration; a failed reload
         // keeps old workers serving. The response marker proves the new workers loaded it.
-        ($this->request)('POST', '/servers/121767/services/nginx/reload', null);
+        ($this->request)('POST', '/servers/'.$this->serverId.'/services/nginx/reload', null);
         $this->until(fn () => ($this->probeRevision)() === $revision, 'Nginx did not activate the requested HTTPS configuration.');
     }
 
@@ -58,11 +61,18 @@ final class PloiNginx
         if (! is_string($token) || $token === '' || strpbrk($token, "\r\n") !== false) {
             throw new RuntimeException('Set PLOI_API_TOKEN with Manage sites and Manage servers permissions.');
         }
+        $host = getenv('DEPLOY_HOSTNAME') ?: '';
+        $serverId = getenv('DEPLOY_PLOI_SERVER_ID') ?: '';
+        $siteId = getenv('DEPLOY_PLOI_SITE_ID') ?: '';
+        if (! preg_match('/\A[a-z0-9]+(?:[.-][a-z0-9]+)*\z/', $host)
+            || ! preg_match('/\A[1-9][0-9]*\z/', $serverId) || ! preg_match('/\A[1-9][0-9]*\z/', $siteId)) {
+            throw new RuntimeException('Set the selected Ploi hostname, server ID and site ID.');
+        }
         $request = static function (string $method, string $path, ?array $body) use ($token): array {
             $curl = curl_init('https://ploi.io/api'.$path);
             curl_setopt_array($curl, [
                 CURLOPT_RETURNTRANSFER => true, CURLOPT_CUSTOMREQUEST => $method,
-                // The deployment token is allowlisted to the staging server's IPv4 address.
+                // Use the IPv4 address expected by the deployment token allowlist.
                 CURLOPT_IPRESOLVE => CURL_IPRESOLVE_V4,
                 CURLOPT_CONNECTTIMEOUT => 15, CURLOPT_TIMEOUT => 60,
                 CURLOPT_HTTPHEADER => ['Accept: application/json', 'Content-Type: application/json', 'Authorization: Bearer '.$token],
@@ -79,18 +89,18 @@ final class PloiNginx
 
             return json_decode($response, true, flags: JSON_THROW_ON_ERROR);
         };
-        $read = static function (): string {
-            $path = '/etc/nginx/sites-available/'.self::HOST;
+        $read = static function () use ($host): string {
+            $path = '/etc/nginx/sites-available/'.$host;
             clearstatcache(true, $path);
 
             return (string) file_get_contents($path);
         };
-        $probe = static function (): ?string {
+        $probe = static function () use ($host): ?string {
             $headers = [];
-            $curl = curl_init('https://'.self::HOST.'/up');
+            $curl = curl_init('https://'.$host.'/up');
             curl_setopt_array($curl, [
                 CURLOPT_RETURNTRANSFER => true, CURLOPT_CONNECTTIMEOUT => 2, CURLOPT_TIMEOUT => 5,
-                CURLOPT_RESOLVE => [self::HOST.':443:127.0.0.1'], CURLOPT_PROXY => '',
+                CURLOPT_RESOLVE => [$host.':443:127.0.0.1'], CURLOPT_PROXY => '',
                 CURLOPT_HEADERFUNCTION => static function ($curl, string $line) use (&$headers): int {
                     if (str_contains($line, ':')) {
                         [$key, $value] = explode(':', $line, 2);
@@ -107,7 +117,7 @@ final class PloiNginx
             return $headers['x-equi-nginx-revision'] ?? '';
         };
 
-        return new self($request, $read, $probe, static fn () => sleep(2));
+        return new self($request, $read, $probe, static fn () => sleep(2), $serverId, $siteId, $host);
     }
 }
 

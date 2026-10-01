@@ -37,8 +37,8 @@ class ProtocolController extends Controller
 {
     public function index(Request $request): Response
     {
-        $protocols = Protocol::query()
-            ->when($request->string('status')->toString(), fn ($query, $s) => $query->where('status', $s))
+        $query = Protocol::query()
+            ->when($request->string('status')->toString(), fn ($query, $s) => $query->where('status', $s), fn ($query) => $query->where('status', '!=', 'archived'))
             ->when($request->string('q')->toString(), fn ($query, $q) => $query->where(fn ($search) => $search
                 ->where('protocol_template_name', 'ilike', "%{$q}%")
                 ->orWhereHas('horse', fn ($horse) => $horse->where('name', 'ilike', "%{$q}%"))))
@@ -49,14 +49,51 @@ class ProtocolController extends Controller
                 'therapist:id,name',
                 'currentPhase:id,protocol_id,title,state,order',
             )
-            ->latest()
-            ->paginate(20)
-            ->withQueryString();
+            ->latest();
+        $selectionIds = (clone $query)->pluck('id');
+        $protocols = $query->paginate(20)->withQueryString();
 
         return Inertia::render('Protocols/Index', [
             'protocols' => $protocols,
+            'selectionIds' => $selectionIds,
             'filters' => $request->only('status', 'q'),
         ]);
+    }
+
+    public function bulk(Request $request): RedirectResponse
+    {
+        $data = $request->validate([
+            'action' => ['required', 'in:archive,restore,delete'],
+            'ids' => ['required', 'array', 'min:1', 'max:10000'],
+            'ids.*' => ['required', 'uuid', 'distinct', 'exists:protocols,id'],
+            'confirmed' => ['required_if:action,delete', 'accepted_if:action,delete'],
+        ]);
+        DB::transaction(function () use ($data) {
+            $protocols = Protocol::whereIn('id', $data['ids'])->orderBy('id')->lockForUpdate()->get();
+            abort_unless($protocols->count() === count($data['ids']), 409, 'De selectie is gewijzigd. Vernieuw het overzicht.');
+            foreach ($protocols as $protocol) {
+                if ($data['action'] === 'delete') {
+                    AuditLogger::deleted($protocol, 'Bulk verwijderen');
+                    $protocol->delete();
+
+                    continue;
+                }
+                $before = $protocol->only(['status', 'archived_previous_status']);
+                if ($data['action'] === 'archive' && $protocol->status !== 'archived') {
+                    $protocol->archived_previous_status = $protocol->status;
+                    $protocol->status = 'archived';
+                } elseif ($data['action'] === 'restore' && $protocol->status === 'archived') {
+                    $protocol->status = $protocol->archived_previous_status ?? 'paused';
+                    $protocol->archived_previous_status = null;
+                } else {
+                    continue;
+                }
+                $protocol->save();
+                AuditLogger::updated($protocol, $before, 'Bulk '.$data['action']);
+            }
+        });
+
+        return back()->with('success', count($data['ids']).' protocollen verwerkt.');
     }
 
     public function create(Request $request): Response
@@ -111,10 +148,16 @@ class ProtocolController extends Controller
     public function update(SaveProtocolRequest $request, Protocol $protocol): RedirectResponse
     {
         $data = $request->validated();
+        if ($protocol->status === 'archived') {
+            $data['status'] = 'archived';
+        }
 
         try {
             DB::transaction(function () use ($data, $protocol) {
                 $protocol = Protocol::query()->lockForUpdate()->findOrFail($protocol->id);
+                if ($protocol->status === 'archived') {
+                    $data['status'] = 'archived';
+                }
                 $history = app(ProtocolDayHistory::class);
                 $history->preserve($protocol, CarbonImmutable::now($history->timezone($protocol)));
                 $attributes = $this->protocolAttributes($data);
@@ -155,10 +198,14 @@ class ProtocolController extends Controller
     public function updateStatus(Request $request, Protocol $protocol): RedirectResponse
     {
         $status = $request->validate(['status' => ['required', 'in:active,paused,completed']])['status'];
-        $before = $protocol->only('status');
-        $protocol->update(['status' => $status]);
-        $this->synchronizeProtocolTiming($protocol);
-        AuditLogger::updated($protocol, $before, $request->input('reason'));
+        DB::transaction(function () use ($protocol, $status, $request) {
+            $protocol = Protocol::whereKey($protocol->id)->lockForUpdate()->firstOrFail();
+            abort_if($protocol->status === 'archived', 422, 'Herstel het protocol eerst vanuit het archief.');
+            $before = $protocol->only('status');
+            $protocol->update(['status' => $status]);
+            $this->synchronizeProtocolTiming($protocol);
+            AuditLogger::updated($protocol, $before, $request->input('reason'));
+        });
 
         return back()->with('success', "Protocol gemarkeerd als {$status}.");
     }

@@ -15,7 +15,7 @@ import unittest
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 DEPLOY = Path(__file__).resolve().parent
-HOST = 'equi-app.staging.optimize-it.nl'
+HOST = 'equi-app.online'
 SITE = '/home/ploi/' + HOST
 
 
@@ -167,13 +167,31 @@ class NginxTest(unittest.TestCase):
     def test_acme_is_available_over_http(self):
         self.assertEqual(self.request('/.well-known/acme-challenge/token', secure=False)[::2], (200, 'challenge'))
 
+    def test_renamed_site_aliases_preserve_api_and_redirects(self):
+        path = '/api/auth/forgot-password'
+        status, _, body = self.request(path, method='POST', body='email=customer%40example.test',
+                                       headers={'Host': 'api.' + HOST})
+        self.assertEqual(status, 200)
+        data = json.loads(body)
+        self.assertEqual(data['uri'], path)
+        self.assertEqual(data['method'], 'POST')
+        self.assertEqual(data['body'], 'email=customer%40example.test')
+        for alias in ['api.', 'www.']:
+            status, headers, _ = self.request(path + '?next=login', secure=False,
+                                              headers={'Host': alias + HOST})
+            self.assertEqual(status, 308)
+            self.assertEqual(headers['Location'], 'https://' + HOST + path + '?next=login')
+        status, headers, _ = self.request('/onboarding/welcome', headers={'Host': 'www.' + HOST})
+        self.assertEqual(status, 308)
+        self.assertEqual(headers['Location'], 'https://' + HOST + '/onboarding/welcome')
+
     def test_web_entry_and_deep_links(self):
         for path in ['/', '/protocol', '/library/selection/hay-analysis', '/onboarding/welcome']:
             status, _, body = self.request(path)
             self.assertEqual((status, body), (200, '<html>customer SPA</html>'))
 
     def test_laravel_routes_keep_uri_method_body_and_https(self):
-        for path in ['/admin/login?next=orders', '/api/horses/test/dashboard', '/.well-known/jwks.json', '/up', '/web-session/token']:
+        for path in ['/admin/login?next=orders', '/api/horses/test/dashboard', '/.well-known/jwks.json', '/up', '/web-session/token', '/registration/confirm/00000000-0000-4000-8000-000000000000']:
             status, _, body = self.request(path, method='POST', body='hello=world')
             self.assertEqual(status, 200)
             data = json.loads(body)
@@ -199,6 +217,10 @@ class NginxTest(unittest.TestCase):
             self.assertIn(status, (403, 404))
             self.assertNotIn('SECRET', body)
             self.assertNotIn('private code', body)
+
+    def test_sync_json_endpoints_are_proxied_instead_of_served_as_assets(self):
+        for path in ['/write-checkpoint2.json?client_id=browser-test', '/write-checkpoint.json?client_id=browser-test']:
+            self.assertEqual(self.request('/powersync' + path)[::2], (200, 'sync:' + path))
 
     def test_sync_strips_prefix_and_supports_websocket_upgrade(self):
         self.assertEqual(self.request('/powersync/checkpoint?client=web')[::2], (200, 'sync:/checkpoint?client=web'))

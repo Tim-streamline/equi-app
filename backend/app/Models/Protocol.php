@@ -23,6 +23,7 @@ use Illuminate\Database\Eloquent\Relations\HasOne;
     'current_week',
     'started_at',
     'status',
+    'archived_previous_status',
     'published_at',
 ])]
 class Protocol extends Model

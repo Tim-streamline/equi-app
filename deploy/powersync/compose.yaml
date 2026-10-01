@@ -1,0 +1,37 @@
+name: equi-staging-sync
+services:
+  mongo:
+    image: mongo@sha256:4b5bf3c2bb7516164f6dcb44acce4fdcb428abfe5771a1128304a0f34ab9ff7c
+    restart: unless-stopped
+    command: [mongod, --replSet, rs0, --bind_ip_all, --wiredTigerCacheSizeGB, '0.25']
+    volumes:
+      - mongo:/data/db
+    healthcheck:
+      test: [CMD, mongosh, --quiet, --eval, 'db.adminCommand({ping:1}).ok || quit(1)']
+      interval: 5s
+      timeout: 5s
+      retries: 30
+  powersync:
+    image: journeyapps/powersync-service@sha256:66e7d37ccf384c5cb8dc0d1c0a9e77a84032897ad27f06c93f258ccd3a0f2459
+    restart: unless-stopped
+    depends_on:
+      mongo:
+        condition: service_healthy
+    env_file: runtime.env
+    environment:
+      POWERSYNC_CONFIG_PATH: /config/service.yaml
+    volumes:
+      - ./service.yaml:/config/service.yaml:ro
+      - ./sync_rules.yaml:/config/sync_rules.yaml:ro
+    ports:
+      - '127.0.0.1:8080:8080'
+      - '127.0.0.1:9090:9090'
+    extra_hosts:
+      - 'host.docker.internal:host-gateway'
+networks:
+  default:
+    ipam:
+      config:
+        - subnet: 172.28.77.0/24
+volumes:
+  mongo:

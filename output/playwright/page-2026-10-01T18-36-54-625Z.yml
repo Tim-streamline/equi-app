@@ -1,0 +1,9 @@
+- generic [ref=e56]:
+  - generic [ref=e57]: Wachtwoord vergeten?
+  - generic [ref=e58]: Vul je geregistreerde e-mailadres in. We sturen je een link om een nieuw wachtwoord in te stellen.
+  - textbox "E-mailadres" [ref=e59]:
+    - /placeholder: e-mailadres
+  - button "Verstuur resetlink" [ref=e60] [cursor=pointer]:
+    - generic [ref=e61]: Verstuur resetlink
+  - button "Terug naar inloggen" [ref=e62] [cursor=pointer]:
+    - generic [ref=e63]: Terug naar inloggen

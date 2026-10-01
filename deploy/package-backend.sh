@@ -9,3 +9,7 @@ rsync -a --safe-links --exclude='cache/*' --exclude='build/' --exclude='hot' --e
     --exclude='*.sqlite*' --exclude='*.db' --exclude='*.dump' --exclude='*.pem' --exclude='*.key' \
     "$source_dir/"{app,bootstrap,config,database,public,resources,routes,artisan,composer.json,composer.lock,package.json,package-lock.json,vite.config.js} \
     "$destination/"
+
+# Sync-health reads the same non-secret rules shipped to the sync service.
+mkdir -p "$destination/powersync"
+cp "$source_dir/powersync/sync_rules.yaml" "$destination/powersync/sync_rules.yaml"

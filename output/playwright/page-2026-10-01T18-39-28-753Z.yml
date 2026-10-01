@@ -1,0 +1,320 @@
+- generic [ref=e26]:
+  - complementary [ref=e27]:
+    - generic [ref=e28]:
+      - img [ref=e30]
+      - generic [ref=e31]:
+        - generic [ref=e32]: Equi App
+        - generic [ref=e33]: Admin console
+    - navigation [ref=e34]:
+      - link "Dashboard" [ref=e36] [cursor=pointer]:
+        - /url: http://127.0.0.1:81/admin
+        - img [ref=e37]
+        - generic [ref=e38]: Dashboard
+      - generic [ref=e39]:
+        - generic [ref=e40]: Support
+        - link "Users" [ref=e41] [cursor=pointer]:
+          - /url: http://127.0.0.1:81/admin/users
+          - img [ref=e42]
+          - generic [ref=e43]: Users
+        - link "Horses" [ref=e44] [cursor=pointer]:
+          - /url: http://127.0.0.1:81/admin/horses
+          - img [ref=e45]
+          - generic [ref=e46]: Horses
+        - link "Therapists" [ref=e47] [cursor=pointer]:
+          - /url: http://127.0.0.1:81/admin/therapists
+          - img [ref=e48]
+          - generic [ref=e49]: Therapists
+        - link "Intake bookings" [ref=e50] [cursor=pointer]:
+          - /url: http://127.0.0.1:81/admin/bookings
+          - img [ref=e51]
+          - generic [ref=e52]: Intake bookings
+        - link "Protocols" [ref=e53] [cursor=pointer]:
+          - /url: http://127.0.0.1:81/admin/protocols
+          - img [ref=e54]
+          - generic [ref=e55]: Protocols
+      - generic [ref=e56]:
+        - generic [ref=e57]: Content
+        - link "Ontdek Plus" [ref=e58] [cursor=pointer]:
+          - /url: http://127.0.0.1:81/admin/plus-page
+          - img [ref=e59]
+          - generic [ref=e60]: Ontdek Plus
+        - link "Library" [ref=e61] [cursor=pointer]:
+          - /url: http://127.0.0.1:81/admin/library
+          - img [ref=e62]
+          - generic [ref=e63]: Library
+        - link "Categories" [ref=e64] [cursor=pointer]:
+          - /url: http://127.0.0.1:81/admin/library-categories
+          - img [ref=e65]
+          - generic [ref=e66]: Categories
+        - link "Seasonal tips" [ref=e67] [cursor=pointer]:
+          - /url: http://127.0.0.1:81/admin/seasonal-tips
+          - img [ref=e68]
+          - generic [ref=e69]: Seasonal tips
+        - link "Nova chat" [ref=e70] [cursor=pointer]:
+          - /url: http://127.0.0.1:81/admin/nova
+          - img [ref=e71]
+          - generic [ref=e72]: Nova chat
+      - generic [ref=e73]:
+        - generic [ref=e74]: Scanner
+        - link "Scan results" [ref=e75] [cursor=pointer]:
+          - /url: http://127.0.0.1:81/admin/scans
+          - img [ref=e76]
+          - generic [ref=e77]: Scan results
+        - link "Products" [ref=e78] [cursor=pointer]:
+          - /url: http://127.0.0.1:81/admin/products
+          - img [ref=e79]
+          - generic [ref=e80]: Products
+        - link "Ingredients" [ref=e81] [cursor=pointer]:
+          - /url: http://127.0.0.1:81/admin/ingredients
+          - img [ref=e82]
+          - generic [ref=e83]: Ingredients
+      - generic [ref=e84]:
+        - generic [ref=e85]: Community
+        - link "Posts & replies" [ref=e86] [cursor=pointer]:
+          - /url: http://127.0.0.1:81/admin/community
+          - img [ref=e87]
+          - generic [ref=e88]: Posts & replies
+        - link "Reports" [ref=e89] [cursor=pointer]:
+          - /url: http://127.0.0.1:81/admin/reports
+          - img [ref=e90]
+          - generic [ref=e91]: Reports
+      - generic [ref=e92]:
+        - generic [ref=e93]: Billing
+        - link "Plans" [ref=e94] [cursor=pointer]:
+          - /url: http://127.0.0.1:81/admin/plans
+          - img [ref=e95]
+          - generic [ref=e96]: Plans
+        - link "Subscriptions" [ref=e97] [cursor=pointer]:
+          - /url: http://127.0.0.1:81/admin/subscriptions
+          - img [ref=e98]
+          - generic [ref=e99]: Subscriptions
+        - link "Payments" [ref=e100] [cursor=pointer]:
+          - /url: http://127.0.0.1:81/admin/payments
+          - img [ref=e101]
+          - generic [ref=e102]: Payments
+        - link "Credits" [ref=e103] [cursor=pointer]:
+          - /url: http://127.0.0.1:81/admin/credits
+          - img [ref=e104]
+          - generic [ref=e105]: Credits
+      - generic [ref=e106]:
+        - generic [ref=e107]: Operations
+        - link "Data exports" [ref=e108] [cursor=pointer]:
+          - /url: http://127.0.0.1:81/admin/exports
+          - img [ref=e109]
+          - generic [ref=e110]: Data exports
+        - link "Notifications" [ref=e111] [cursor=pointer]:
+          - /url: http://127.0.0.1:81/admin/notifications
+          - img [ref=e112]
+          - generic [ref=e113]: Notifications
+        - link "Sync health" [ref=e114] [cursor=pointer]:
+          - /url: http://127.0.0.1:81/admin/sync-health
+          - img [ref=e115]
+          - generic [ref=e116]: Sync health
+        - link "Audit log" [ref=e117] [cursor=pointer]:
+          - /url: http://127.0.0.1:81/admin/audit-log
+          - img [ref=e118]
+          - generic [ref=e119]: Audit log
+        - link "Intakevragen" [ref=e120] [cursor=pointer]:
+          - /url: http://127.0.0.1:81/admin/intake-questionnaire
+          - img [ref=e121]
+          - generic [ref=e122]: Intakevragen
+        - link "Protocol Templates" [ref=e123] [cursor=pointer]:
+          - /url: http://127.0.0.1:81/admin/protocol-settings
+          - img [ref=e124]
+          - generic [ref=e125]: Protocol Templates
+        - link "Protocol Settings" [ref=e126] [cursor=pointer]:
+          - /url: http://127.0.0.1:81/admin/protocol-settings/advice
+          - img [ref=e127]
+          - generic [ref=e128]: Protocol Settings
+        - link "Settings" [ref=e129] [cursor=pointer]:
+          - /url: http://127.0.0.1:81/admin/settings
+          - img [ref=e130]
+          - generic [ref=e131]: Settings
+    - generic [ref=e133]:
+      - generic [ref=e134]: EO
+      - generic [ref=e135]:
+        - generic [ref=e136]: Equi App Owner
+        - generic [ref=e137]: owner
+      - button "Log out" [ref=e138]:
+        - img [ref=e139]
+  - generic [ref=e140]:
+    - banner [ref=e141]:
+      - heading "Dashboard" [level=1] [ref=e142]
+    - main [ref=e143]:
+      - generic [ref=e144]:
+        - generic [ref=e146]:
+          - img [ref=e148]
+          - generic [ref=e149]:
+            - generic [ref=e150]: "4"
+            - generic [ref=e151]: Total users
+            - generic [ref=e152]: 3 new this week
+        - generic [ref=e154]:
+          - img [ref=e156]
+          - generic [ref=e157]:
+            - generic [ref=e158]: "4"
+            - generic [ref=e159]: Active horses
+        - generic [ref=e161]:
+          - img [ref=e163]
+          - generic [ref=e164]:
+            - generic [ref=e165]: "2"
+            - generic [ref=e166]: Active protocols
+        - generic [ref=e168]:
+          - img [ref=e170]
+          - generic [ref=e171]:
+            - generic [ref=e172]: € 12,00
+            - generic [ref=e173]: MRR
+            - generic [ref=e174]: 1 active subs
+        - generic [ref=e176]:
+          - img [ref=e178]
+          - generic [ref=e179]:
+            - generic [ref=e180]: "6"
+            - generic [ref=e181]: Scans
+            - generic [ref=e182]: 0 this week
+        - generic [ref=e184]:
+          - img [ref=e186]
+          - generic [ref=e187]:
+            - generic [ref=e188]: "0"
+            - generic [ref=e189]: Community posts
+        - generic [ref=e191]:
+          - img [ref=e193]
+          - generic [ref=e194]:
+            - generic [ref=e195]: "2"
+            - generic [ref=e196]: Intakes te beoordelen
+        - generic [ref=e198]:
+          - img [ref=e200]
+          - generic [ref=e201]:
+            - generic [ref=e202]: "0"
+            - generic [ref=e203]: Open reports
+      - generic [ref=e204]:
+        - generic [ref=e205]:
+          - heading "Signups — last 12 weeks" [level=3] [ref=e207]
+          - generic [ref=e209]:
+            - generic [ref=e210]:
+              - generic "0 signups" [ref=e212]
+              - generic [ref=e213]: 13/07
+            - generic [ref=e214]:
+              - generic "0 signups" [ref=e216]
+              - generic [ref=e217]: 20/07
+            - generic [ref=e218]:
+              - generic "0 signups" [ref=e220]
+              - generic [ref=e221]: 27/07
+            - generic [ref=e222]:
+              - generic "0 signups" [ref=e224]
+              - generic [ref=e225]: 03/08
+            - generic [ref=e226]:
+              - generic "0 signups" [ref=e228]
+              - generic [ref=e229]: 10/08
+            - generic [ref=e230]:
+              - generic "0 signups" [ref=e232]
+              - generic [ref=e233]: 17/08
+            - generic [ref=e234]:
+              - generic "0 signups" [ref=e236]
+              - generic [ref=e237]: 24/08
+            - generic [ref=e238]:
+              - generic "0 signups" [ref=e240]
+              - generic [ref=e241]: 31/08
+            - generic [ref=e242]:
+              - generic "0 signups" [ref=e244]
+              - generic [ref=e245]: 07/09
+            - generic [ref=e246]:
+              - generic "0 signups" [ref=e248]
+              - generic [ref=e249]: 14/09
+            - generic [ref=e250]:
+              - generic "2 signups" [ref=e252]
+              - generic [ref=e253]: 21/09
+            - generic [ref=e254]:
+              - generic "1 signups" [ref=e256]
+              - generic [ref=e257]: 28/09
+        - generic [ref=e258]:
+          - heading "Active plans" [level=3] [ref=e260]
+          - generic [ref=e263]:
+            - generic [ref=e264]: Equi App Plus
+            - generic [ref=e265]: "1"
+      - generic [ref=e268]:
+        - generic [ref=e269]:
+          - heading "Recent signups" [level=3] [ref=e271]
+          - generic [ref=e272]:
+            - link "Test tim timeversdijk+test@gmail.com pending" [ref=e273] [cursor=pointer]:
+              - /url: http://127.0.0.1:81/admin/users/01a0f4f6-6105-7037-be55-347e0a0ce581
+              - generic [ref=e274]:
+                - generic [ref=e275]: Test tim
+                - generic [ref=e276]: timeversdijk+test@gmail.com
+              - generic [ref=e277]: pending
+            - link "Shelley Rochelle Meeuwsen shelleymeeuwsen+test@gmail.com pending" [ref=e278] [cursor=pointer]:
+              - /url: http://127.0.0.1:81/admin/users/01a0d52d-ed66-7132-b2dc-442d0a865a47
+              - generic [ref=e279]:
+                - generic [ref=e280]: Shelley Rochelle Meeuwsen
+                - generic [ref=e281]: shelleymeeuwsen+test@gmail.com
+              - generic [ref=e282]: pending
+            - link "Tim timeversdijk@gmail.com pending" [ref=e283] [cursor=pointer]:
+              - /url: http://127.0.0.1:81/admin/users/01a0d52a-1f8e-702a-8f97-bd1a974fbfb4
+              - generic [ref=e284]:
+                - generic [ref=e285]: Tim
+                - generic [ref=e286]: timeversdijk@gmail.com
+              - generic [ref=e287]: pending
+            - link "Shelley Meeuwsen shelleymeeuwsen@gmail.com pending" [ref=e288] [cursor=pointer]:
+              - /url: http://127.0.0.1:81/admin/users/019ff161-da01-72fa-b1f2-c9e587ec8d5f
+              - generic [ref=e289]:
+                - generic [ref=e290]: Shelley Meeuwsen
+                - generic [ref=e291]: shelleymeeuwsen@gmail.com
+              - generic [ref=e292]: pending
+        - generic [ref=e293]:
+          - heading "Recent scans" [level=3] [ref=e295]
+          - generic [ref=e296]:
+            - generic [ref=e297]:
+              - generic [ref=e298]:
+                - generic [ref=e299]: Pavo SpeediBeet
+                - generic [ref=e300]: Pavo · Shelley Meeuwsen
+              - generic [ref=e301]: "54"
+            - generic [ref=e302]:
+              - generic [ref=e303]:
+                - generic [ref=e304]: Sectolin Probiotica
+                - generic [ref=e305]: Sectolin · Shelley Meeuwsen
+              - generic [ref=e306]: "62"
+            - generic [ref=e307]:
+              - generic [ref=e308]:
+                - generic [ref=e309]: Pavo SpeediBeet
+                - generic [ref=e310]: Pavo · Shelley Meeuwsen
+              - generic [ref=e311]: "92"
+            - generic [ref=e312]:
+              - generic [ref=e313]:
+                - generic [ref=e314]: Sectolin Mariadistel
+                - generic [ref=e315]: Sectolin · Shelley Meeuwsen
+              - generic [ref=e316]: "32"
+            - generic [ref=e317]:
+              - generic [ref=e318]:
+                - generic [ref=e319]: Hartog Compleet Senior
+                - generic [ref=e320]: Hartog · Shelley Meeuwsen
+              - generic [ref=e321]: "25"
+            - generic [ref=e322]:
+              - generic [ref=e323]:
+                - generic [ref=e324]: Equilin Brandnetel Pluksel
+                - generic [ref=e325]: Equilin · Shelley Meeuwsen
+              - generic [ref=e326]: "89"
+        - generic [ref=e327]:
+          - heading "Recent admin activity" [level=3] [ref=e329]
+          - generic [ref=e330]:
+            - generic [ref=e331]:
+              - text: login · contact@depaardentherapeut.nl
+              - generic [ref=e332]: Equi App Owner · 01 okt, 20:39
+            - generic [ref=e333]:
+              - text: login · eversdijk@optimize-it.nl
+              - generic [ref=e334]: Content Editor · 01 okt, 20:38
+            - generic [ref=e335]:
+              - text: updated · De 5 grootste stressoren voor paarden
+              - generic [ref=e336]: Equi App Owner · 01 okt, 11:36
+            - generic [ref=e337]:
+              - text: updated · De 5 grootste stressoren voor paarden
+              - generic [ref=e338]: Equi App Owner · 01 okt, 11:36
+            - generic [ref=e339]:
+              - text: created · M2 grootste stressoren.mp4
+              - generic [ref=e340]: Equi App Owner · 01 okt, 11:35
+            - generic [ref=e341]:
+              - text: deleted · stressoren-top5-foto-4x3.png
+              - generic [ref=e342]: Equi App Owner · 01 okt, 11:33
+            - generic [ref=e343]:
+              - text: created · De 5 grootste stressoren voor paarden
+              - generic [ref=e344]: Equi App Owner · 01 okt, 11:33
+            - generic [ref=e345]:
+              - text: created · stressoren-top5-foto-4x3.png
+              - generic [ref=e346]: Equi App Owner · 01 okt, 11:32

@@ -89,6 +89,7 @@ export default function RegisterScreen() {
           </View>}
         </> : <>
           <Text className="mb-2 font-bold text-[28px] text-ink">Welkom bij Equi App.</Text>
+          <Text className="mb-3 font-bold text-[15px] text-ink">Maak je account aan en ontdek wat EquiApp voor jou en je paard kan betekenen.</Text>
           <Text className="mb-6 text-[15px] text-ink-50">We controleren eerst je e-mailadres via een link in de bevestigingsmail. Daarna kun je je paard toevoegen, of dat later doen.</Text>
           <Field label="Naam" accessibilityLabel="Naam" value={name} onChangeText={setName} autoComplete="name" editable={!locked} maxLength={255} />
           <Field label="E-mailadres" accessibilityLabel="E-mailadres" value={email} onChangeText={setEmail} autoComplete="email" autoCapitalize="none" autoCorrect={false} keyboardType="email-address" editable={!locked} maxLength={255} />

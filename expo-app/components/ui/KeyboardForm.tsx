@@ -31,12 +31,16 @@ export function KeyboardScrollView({ ref, children, onScroll, onLayout, onConten
     if (frame.current !== null) cancelAnimationFrame(frame.current);
     frame.current = requestAnimationFrame(() => {
       frame.current = null;
-      const input = TextInput.State.currentlyFocusedInput();
+      // React Native Web exposes focus on the input ref, not the native State API.
+      const currentInput = () => Platform.OS === 'web'
+        ? (focused.current?.isFocused() ? focused.current : null)
+        : TextInput.State.currentlyFocusedInput();
+      const input = currentInput();
       const viewport = scroll.current;
       if (!input || !viewport || input !== focused.current) return;
       viewport.getNativeScrollRef()?.measureInWindow((_x, top, _width, viewportHeight) => {
         input.measureInWindow((_ix, inputTop, _iw, inputHeight) => {
-          if (scroll.current !== viewport || TextInput.State.currentlyFocusedInput() !== input) return;
+          if (scroll.current !== viewport || currentInput() !== input) return;
           const browserBottom = Platform.OS === 'web' && typeof window !== 'undefined' && window.visualViewport
             ? window.visualViewport.height + window.visualViewport.offsetTop : Infinity;
           const bottom = Math.min(top + viewportHeight, keyboardTop.current ?? Infinity, browserBottom) - 16;

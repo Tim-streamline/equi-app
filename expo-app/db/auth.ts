@@ -93,3 +93,13 @@ export async function completeRegistration(input: RegistrationCompletion): Promi
 export async function checkRegistration(input: RegistrationCompletion, signal?: AbortSignal): Promise<{ status: 'pending' | 'confirmed' | 'expired' }> {
   return registrationRequest('register/status', input, signal);
 }
+
+export async function requestPasswordReset(email: string): Promise<{ message: string }> {
+  const response = await fetch(`${apiBaseUrl}/api/auth/forgot-password`, {
+    method: 'POST', headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+    body: JSON.stringify({ email: email.trim() }),
+  });
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok) throw new Error(response.status === 429 ? 'Te veel pogingen. Wacht een minuut en probeer opnieuw.' : String(Object.values(data.errors ?? {}).flat()[0] ?? 'De resetlink kon niet worden aangevraagd. Probeer opnieuw.'));
+  return data;
+}

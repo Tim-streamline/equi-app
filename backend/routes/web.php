@@ -1,9 +1,13 @@
 <?php
 
 use App\Http\Controllers\CommunityController;
+use App\Http\Controllers\CreditController;
 use App\Http\Controllers\HorseDashboardController;
 use App\Http\Controllers\IntakeAttachmentController;
+use App\Http\Controllers\LibraryAttachmentController;
 use App\Http\Controllers\LibraryController;
+use App\Http\Controllers\PasswordResetController;
+use App\Http\Controllers\PlusPageController;
 use App\Http\Controllers\PowerSyncAuthController;
 use App\Http\Controllers\PushTokenController;
 use App\Http\Controllers\RegistrationController;
@@ -27,6 +31,10 @@ Route::post('/api/auth/register', [RegistrationController::class, 'store'])->mid
 Route::get('/registration/confirm/{uid}', [RegistrationController::class, 'confirm'])->whereUuid('uid')->middleware('throttle:60,1,registration-link:');
 Route::post('/api/auth/register/status', [RegistrationController::class, 'status'])->middleware('throttle:60,1,registration-status:');
 Route::post('/api/auth/register/complete', [RegistrationController::class, 'complete'])->middleware('throttle:10,1,registration-complete:');
+Route::post('/api/auth/forgot-password', [PasswordResetController::class, 'requestLink'])->middleware('throttle:5,1,password-reset:');
+Route::get('/web-session/password/reset/{token}', [PasswordResetController::class, 'show'])->name('password.reset');
+Route::post('/web-session/password/reset', [PasswordResetController::class, 'reset'])->middleware('throttle:10,1,password-reset-submit:')->name('password.update');
+
 Route::post('/api/auth/login', [PowerSyncAuthController::class, 'login']);
 
 // Write-back endpoint hit by BackendConnector.uploadData() — applies a batch
@@ -70,7 +78,7 @@ Route::middleware(AuthenticatePowerSyncJwt::class)->prefix('api/library')->contr
     Route::get('/{library}', 'show')->whereUuid('library');
     Route::post('/{library}/unlock', 'unlock')->whereUuid('library')->middleware('throttle:60,1');
     Route::get('/{library}/related', 'related')->whereUuid('library');
-    Route::post('/{library}/attachments/{attachment}/open', [\App\Http\Controllers\LibraryAttachmentController::class, 'open'])->whereUuid(['library', 'attachment']);
+    Route::post('/{library}/attachments/{attachment}/open', [LibraryAttachmentController::class, 'open'])->whereUuid(['library', 'attachment']);
     Route::match(['get', 'put', 'delete'], '/{library}/bookmark', 'bookmark')->whereUuid('library');
 });
 
@@ -79,6 +87,7 @@ Route::prefix('web-session')->controller(WebSessionController::class)->group(fun
     Route::post('/register', [RegistrationController::class, 'store'])->name('web-session.register')->middleware('throttle:5,1,registration-start:');
     Route::post('/register/status', [RegistrationController::class, 'status'])->middleware('throttle:60,1,registration-status:');
     Route::post('/register/complete', [RegistrationController::class, 'complete'])->name('web-session.register.complete')->middleware('throttle:10,1,registration-complete:');
+    Route::post('/forgot-password', [PasswordResetController::class, 'requestLink'])->middleware('throttle:5,1,password-reset:');
     Route::get('/csrf', 'csrf');
     Route::post('/login', 'login')->middleware('throttle:10,1');
     Route::post('/token', 'token');
@@ -87,7 +96,7 @@ Route::prefix('web-session')->controller(WebSessionController::class)->group(fun
         ->whereUuid('media')->middleware(AuthenticateWebAppSession::class);
 });
 
-Route::middleware(AuthenticatePowerSyncJwt::class)->prefix('api/library/credits')->controller(\App\Http\Controllers\CreditController::class)->group(function () {
+Route::middleware(AuthenticatePowerSyncJwt::class)->prefix('api/library/credits')->controller(CreditController::class)->group(function () {
     Route::get('/', 'index');
     Route::post('/purchase', 'purchase')->middleware('throttle:15,1');
     Route::post('/temporary-top-up', 'temporaryTopUp')->middleware('throttle:15,1');
@@ -95,8 +104,8 @@ Route::middleware(AuthenticatePowerSyncJwt::class)->prefix('api/library/credits'
     Route::post('/cancel-basic', 'cancel');
 });
 
-Route::get('/api/library-attachments/{attachment}', [\App\Http\Controllers\LibraryAttachmentController::class, 'show'])
+Route::get('/api/library-attachments/{attachment}', [LibraryAttachmentController::class, 'show'])
     ->whereUuid('attachment')->middleware('signed')->name('library.attachment');
 
-Route::get('/api/plus-page', [\App\Http\Controllers\PlusPageController::class, 'show']);
-Route::get('/api/plus-page/images/{kind}', [\App\Http\Controllers\PlusPageController::class, 'image'])->where('kind', 'hero|portrait');
+Route::get('/api/plus-page', [PlusPageController::class, 'show']);
+Route::get('/api/plus-page/images/{kind}', [PlusPageController::class, 'image'])->where('kind', 'hero|portrait');

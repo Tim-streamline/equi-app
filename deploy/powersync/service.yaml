@@ -1,0 +1,24 @@
+telemetry:
+  disable_telemetry_sharing: true
+  prometheus_port: 9090
+replication:
+  connections:
+    - type: postgresql
+      uri: !env PS_DATA_SOURCE_URI
+      sslmode: disable
+storage:
+  type: mongodb
+  uri: !env PS_MONGO_URI
+port: 8080
+sync_config:
+  path: sync_rules.yaml
+client_auth:
+  jwks_uri: !env PS_JWKS_URL
+  audience: ['equinova']
+api:
+  tokens:
+    - !env PS_API_TOKEN
+system:
+  logging:
+    level: info
+    format: json

@@ -1,2 +1,6 @@
 /deploy/lib-assets/
 /deploy/builds/
+/deploy/backups/
+/deploy/staging.env
+/deploy/production.env
+/deploy/powersync/runtime.env

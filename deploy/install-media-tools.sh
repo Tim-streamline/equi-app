@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Run on opt-staging as ploi. Uses Ubuntu packages without changing the system.
 set -euo pipefail
-site=/home/ploi/equi-app.staging.optimize-it.nl
+site=/home/ploi/equi-app.online
 [[ "$(id -un)" == ploi && -d "$site/shared" ]] || { echo 'Run on opt-staging as ploi' >&2; exit 1; }
 tools_dir="$site/shared/tools"
 packages="$tools_dir/ffmpeg-packages"

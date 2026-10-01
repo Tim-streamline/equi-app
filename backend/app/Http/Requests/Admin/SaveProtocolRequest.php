@@ -28,7 +28,7 @@ class SaveProtocolRequest extends FormRequest
             'therapist_id' => ['nullable', 'uuid', Therapist::assignmentRule($this->route('protocol')?->therapist_id)],
             'title' => ['required', 'string', 'max:255'],
             'started_at' => ['nullable', 'date'],
-            'status' => ['required', 'in:active,paused,completed'],
+            'status' => ['required', $this->route('protocol')?->status === 'archived' ? 'in:archived' : 'in:active,paused,completed'],
             'published' => ['required', 'boolean'],
 
             'customer_settings' => ['sometimes', 'array:weight_kg,use_target_weight,target_weight_kg,sugar,protein,weekly_update_day,feed_overrides,management,hay_library_item_id,water_library_item_id'],

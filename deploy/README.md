@@ -1,3 +1,63 @@
+# Deployment environments
+
+The private runtime files are `deploy/staging.env` and `deploy/production.env`.
+Both are ignored by Git and must have mode `600`. The staging file was copied
+from Ploi's existing `shared/.env`; production starts as an unconfigured template.
+The staging site was renamed to `equi-app.online`; `./deploy-to staging` and
+`./deploy-staging` now target `/home/ploi/equi-app.online` on the same Ploi site
+(`406977`). The rename retains `APP_ENV=staging` and the staging database.
+Nginx retains the `api.equi-app.online` alias and redirects `www` to the main domain.
+Keep `APP_KEY`, database credentials, and mail credentials in their environment's
+file. Never copy staging's keys or credentials into production.
+
+Alongside the Laravel settings, configure these local deployment settings:
+
+```dotenv
+DEPLOY_SSH_HOST=ploi@server-address
+DEPLOY_SITE_PATH=/home/ploi/your-domain
+DEPLOY_PLOI_SERVER_ID=123
+DEPLOY_PLOI_SITE_ID=456
+```
+
+`APP_ENV` must match the selected environment; `APP_URL` must be the HTTPS domain
+of that Ploi site. Set `APP_DEBUG=false` and `SESSION_SECURE_COOKIE=true`.
+Production requires its own target, application key, database credentials, and
+service settings before it can deploy. The destination must already have the
+Ploi site, TLS certificate, PostgreSQL database, PHP 8.5, and the shared/release
+directory layout used by staging.
+
+Run from the repository root:
+
+```bash
+./deploy-to staging --check
+./deploy-to staging
+./deploy-to production --check
+./deploy-to production
+```
+
+`./deploy-staging` and `./deploy-production` are shortcuts for the same commands.
+The existing `--build-only`, `--artifact`, `--with-library`, `--seed-catalog`, and
+`--rollback RELEASE_ID` options remain available. Build-only needs no runtime
+credentials and produces a portable artifact. Rebuild artifacts created before
+environment selection was added; they lack the new activation helper.
+
+The selected env file is parsed as data, not sourced as shell code. Deployment
+metadata is removed from the uploaded Laravel file. Runtime secrets transfer
+separately over SSH and are never included in build archives. Activation validates
+the candidate environment and actual PostgreSQL database before migration, backs
+up the old `.env`, then atomically installs the candidate into `shared/.env` when
+switching releases. Failed activation restores both the previous code and `.env`;
+database migrations are not reversed. Explicit code rollback retains the current
+server `.env` and does not upload local changes.
+
+Supply `PLOI_API_TOKEN` through the shell/CI environment or the private mode-600
+file `~/.config/equi-app/ploi-api-token`. It needs permissions and an IP allowlist
+covering the selected server. Do not put it in either Laravel env file.
+
+Mail settings are not inherited from the local backend: edit the selected deploy
+file. Use `MAIL_SCHEME=smtp` with port `587` (STARTTLS), or `smtps` with port `465`.
+Deploying regenerates Laravel's configuration cache and reloads PHP-FPM.
+
 # Staging deployment
 
 Run from the repository root. The script automatically reads a token stored in `${XDG_CONFIG_HOME:-~/.config}/equi-app/ploi-api-token`, which must be owned by your user with permissions `600`. This file contains only the raw token, outside the repository. An explicit `PLOI_API_TOKEN` environment variable takes precedence.
@@ -13,11 +73,11 @@ export PLOI_API_TOKEN
 unset PLOI_API_TOKEN
 ```
 
-This builds the current working tree's backend inside the local Sail PHP 8.5 Docker image, including locked production Composer dependencies and compiled Svelte/Vite assets. It also builds the customer web app with its shared Expo sources in an isolated Node 24 container. It uploads a checksummed release to **`ploi@37.97.209.204` (`opt-staging`)** and activates it at **https://equi-app.staging.optimize-it.nl**. Uncommitted application changes are included; the Git revision and working-tree status are recorded in the artifact.
+This builds the current working tree's backend inside the local Sail PHP 8.5 Docker image, including locked production Composer dependencies and compiled Svelte/Vite assets. It also builds the customer web app with its shared Expo sources in an isolated Node 24 container. It uploads a checksummed release to **`ploi@37.97.209.204` (`opt-staging`)** and activates it at **https://equi-app.online**. Uncommitted application changes are included; the Git revision and working-tree status are recorded in the artifact.
 
 Nginx serves the customer web app at `/` and the admin panel at `/admin`, both over HTTPS on port **443**. HTTP port **80** redirects to HTTPS, preserving the path and query; ACME certificate-validation requests remain available over HTTP. Compiled web files are served directly, so no production Node server or public ports 3000/81 are needed. Those ports remain part of local development.
 
-Local requirements: Docker, Bash, Git, rsync, tar, sha256sum and working SSH-key access as `ploi`. No host PHP, Composer or Node is needed. The existing `sail-8.5/app` image is used; if missing, the script builds it from `backend/compose.yaml` (which requires the local Sail dependency). Builds use a disposable directory, so local `vendor`, `node_modules`, `.env`, storage and the running Sail app are untouched.
+Local requirements: Docker, Python 3, Bash, Git, rsync, tar, sha256sum and working SSH-key access as `ploi`. No host PHP, Composer or Node is needed. The existing `sail-8.5/app` image is used; if missing, the script builds it from `backend/compose.yaml` (which requires the local Sail dependency). Builds use a disposable directory, so local `vendor`, `node_modules`, `.env`, storage and the running Sail app are untouched.
 
 ```bash
 ./deploy-staging --build-only            # Save a release without connecting to staging
@@ -30,7 +90,7 @@ Local requirements: Docker, Bash, Git, rsync, tar, sha256sum and working SSH-key
 
 `RELEASE_ID` is the timestamp, Git revision and random suffix printed by the build. Build archives and the library bundle are excluded from Git. The first media transfer is 7.49 GiB; rsync retains interrupted files for retry and subsequent transfers send only changed files. Library import is optional and must finish checksum validation before records are changed. Default code deployments do not transfer media or overwrite catalog edits.
 
-The deployment acquires a server-side lock, validates the staging environment and database identity, backs up Nginx configuration and PostgreSQL, briefly enables maintenance mode for migrations, refreshes Laravel caches, and switches `current`. It reloads PHP-FPM, installs the release's Nginx configuration through Ploi, waits for the installed file, then requests a graceful Nginx reload. An HTTPS response marker confirms the configuration was loaded. Checks cover Laravel health, admin login, customer deep links, browser-session routing and HTTP redirects. A failed activation attempts to restore the previous code and Nginx configuration, reporting any restoration failure. Rollback does **not** reverse migrations or restore database contents; migrations must remain compatible with the previous release. Database backups and old releases are retained for explicit cleanup.
+The deployment acquires a server-side lock, validates the selected environment and database identity, backs up Nginx configuration and PostgreSQL, briefly enables maintenance mode for migrations, refreshes Laravel caches, and switches `current`. It reloads PHP-FPM, installs the release's Nginx configuration through Ploi, waits for the installed file, then requests a graceful Nginx reload. An HTTPS response marker confirms the configuration was loaded. Checks cover Laravel health, admin login, customer deep links, browser-session routing and HTTP redirects. A failed activation attempts to restore the previous code, environment file and Nginx configuration, reporting any restoration failure. Rollback does **not** reverse migrations or restore database contents; migrations must remain compatible with the previous release. Database backups and old releases are retained for explicit cleanup.
 
 Deployments and rollbacks require `PLOI_API_TOKEN` with server and site **Read/Create** scopes (the Ploi API uses these for configuration changes and service reloads). Delete scopes and MCP access are unnecessary. `--build-only` requires neither a token nor staging access. Supply the token through the private local token file, invoking environment or CI secret storage, never through a command-line argument or a committed file. The dedicated local key allows requests only from the staging server IP `37.97.209.204`; API requests run on that server over SSH and explicitly use IPv4 to match the allowlist. The key created on 2026-09-28 expires on 2028-09-28; renew it before then. The script sends it to staging through encrypted SSH stdin and uses it only in the deployment process environment. Do not add it to Laravel's `.env` or the release archive.
 
@@ -41,16 +101,16 @@ New artifacts contain `.deploy/nginx-staging.conf`. For a retained release built
 Configured through the Ploi MCP:
 
 - Server `opt-staging`: **121767**, PHP 8.5 and PostgreSQL 18.
-- Site `equi-app.staging.optimize-it.nl`: **406977**, user `ploi`, project root `/current`, web directory `/current/public`.
+- Site `equi-app.online`: **406977**, user `ploi`, project root `/current`, web directory `/current/public`.
 - Dedicated database and user `equi_app_staging` (database **420490**).
 - Let's Encrypt certificate, Nginx upload limit 100 MB, PHP upload limit 100 MB, PHP execution limited to the front controller, and search-engine exclusion.
 - Laravel scheduler every minute and a non-overlapping, bounded database queue worker every minute. A queued job can wait up to a minute before a worker starts. Ploi stores these in `/etc/crontab` and captures output in `~/.ploi/scheduled-333490.log` and `~/.ploi/scheduled-333491.log`.
 
-Ploi manages the site environment; `.env` at the site root is a symlink into `shared`. Secrets were generated specifically for staging. Mail uses the log driver. The normal demo `DatabaseSeeder` and its default-password accounts are never run. Create an admin account with a unique password explicitly before signing in; no local customer or admin accounts are copied.
+`deploy/staging.env` is now the staging configuration source; deployments install it into `shared/.env`. Ploi's site `.env` remains a symlink into `shared`. Update the local deployment file to keep later deployments from overwriting manual server changes. Secrets were generated specifically for staging. Mail uses the log driver. The normal demo `DatabaseSeeder` and its default-password accounts are never run. Create an admin account with a unique password explicitly before signing in; no local customer or admin accounts are copied.
 
 There is no Git repository attached in Ploi and quick deploy is disabled. Run `./deploy-staging` locally; the Ploi Deploy button is deliberately disabled with an explanatory script because it cannot build the local artifact.
 
-Server layout under `/home/ploi/equi-app.staging.optimize-it.nl`:
+Server layout under `/home/ploi/equi-app.online`:
 
 ```text
 .env -> shared/.env
@@ -58,8 +118,9 @@ current -> releases/RELEASE_ID
 releases/RELEASE_ID/          # Backend, vendor, admin assets, .env/storage symlinks
 releases/RELEASE_ID/web-dist/ # Compiled customer app, workers and WASM
 releases/RELEASE_ID/.deploy/  # Release checks and versioned Nginx configuration
-incoming/                   # Uploaded archives and SHA-256 checksums
-shared/.env                 # Persistent staging configuration, mode 0600
+incoming/                   # Uploaded archives, SHA-256 checksums and transient env files
+shared/.env                 # Active environment configuration, mode 0600
+shared/env-releases/         # Candidate env files and previous env backups, private
 shared/storage/             # Uploads, sessions, compiled views, logs and signing keys
 shared/backups/             # PostgreSQL and Nginx backup files, mode 0600
 shared/nginx-releases/      # Saved Nginx configurations for legacy rollback
@@ -71,7 +132,7 @@ Storage and signing keys survive deployments and code rollback. Back up `shared/
 
 FFmpeg 8.0.1 is installed under `shared/tools` for new-video thumbnail generation, using official Ubuntu packages extracted into a project-local runtime. `FFMPEG_BINARY` points to its wrapper. System packages are not changed. To refresh this runtime on opt-staging, run `ssh ploi@37.97.209.204 bash -s < deploy/install-media-tools.sh`, then refresh the Ploi environment/config cache if its path changed. The installer verifies a real JPEG encode before activating the runtime and retains package/version records. It is separate from routine code deployments.
 
-`staging.env.example` documents the Laravel environment without secrets; `nginx-staging.conf` is applied on every deployment. Ploi owns the included TLS configuration and certificate renewal. The template retains Ploi's `server` and `after` includes, but owns the HTTP and `www` redirects itself: including Ploi's existing `before/ssl-redirect.conf` would create duplicate virtual hosts. Preserve this distinction when customizing the site.
+`staging.env.example` documents the Laravel environment without secrets; `nginx-staging.conf` is rendered for the selected hostname and applied on every deployment. Ploi owns the included TLS configuration and certificate renewal. The template retains Ploi's `server` and `after` includes, but owns the HTTP and `www` redirects itself: including Ploi's existing `before/ssl-redirect.conf` would create duplicate virtual hosts. Preserve this distinction when customizing the site.
 
 Deployment regression checks:
 
@@ -79,8 +140,10 @@ Deployment regression checks:
 python3 deploy/test-deployment.py
 python3 deploy/test-nginx.py # Real Nginx container with isolated TLS and mock upstreams
 docker run --rm --volume "$PWD/deploy:/tests:ro" --entrypoint php sail-8.5/app /tests/test-ploi-nginx.php
-bash -n deploy-staging deploy/*.sh
+bash -n deploy-to deploy-staging deploy-production deploy/*.sh
 ./deploy-staging --build-only
+# With the local Sail database running, verify the real helpers in that artifact:
+python3 deploy/test-release-environments.py deploy/builds/RELEASE_ID.tar.gz
 ```
 
 ## Library deployment

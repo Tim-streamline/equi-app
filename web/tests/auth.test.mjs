@@ -1,6 +1,6 @@
 import { test, afterEach } from 'node:test';
 import assert from 'node:assert/strict';
-import { forgetSession, getSession, login, logout } from '../db/auth.ts';
+import { forgetSession, getSession, login, logout, requestPasswordReset } from '../db/auth.ts';
 const originalFetch = globalThis.fetch;
 afterEach(() => { globalThis.fetch = originalFetch; forgetSession(); });
 const response = (body, status = 200) => new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json' } });
@@ -98,4 +98,19 @@ test('checking email confirmation keeps the browser unauthenticated and sends no
   assert.equal(await getSession(),null);
   assert.equal(requests[1].options.headers['X-CSRF-TOKEN'],'csrf');
   assert.deepEqual(JSON.parse(requests[1].options.body),{registration_token:'private-token'});
+});
+
+
+test('password recovery uses the browser session CSRF transport without signing in', async () => {
+  const requests = [];
+  globalThis.fetch = async (url, options) => {
+    requests.push({ url, options });
+    return response(url.endsWith('/csrf') ? { token: 'csrf-reset' } : { message: 'Controleer je e-mail.' });
+  };
+  assert.deepEqual(await requestPasswordReset(' owner@example.test '), { message: 'Controleer je e-mail.' });
+  assert.deepEqual(requests.map(r => r.url), ['/web-session/csrf', '/web-session/forgot-password']);
+  assert.equal(requests[1].options.headers['X-CSRF-TOKEN'], 'csrf-reset');
+  assert.equal(requests[1].options.body, JSON.stringify({ email: 'owner@example.test' }));
+  globalThis.fetch = async url => response(url.endsWith('/csrf') ? { token: 'csrf' } : {}, url.endsWith('/csrf') ? 200 : 429);
+  await assert.rejects(requestPasswordReset('owner@example.test'), /Te veel pogingen/);
 });

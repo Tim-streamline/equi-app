@@ -19,7 +19,7 @@ function harness(platform, { deferState = false } = {}) {
     useEffect: fn => { const [s] = slot(false); if (!s.value) { s.value = true; env.cleanups.push(fn()); } },
   };
   const native = { KeyboardAvoidingView: 'KeyboardAvoidingView', ScrollView: 'ScrollView', View: 'View', Platform: { OS: platform },
-    TextInput: Object.assign(() => {}, { State: { currentlyFocusedInput: () => env.focused } }),
+    TextInput: Object.assign(() => {}, { State: platform === 'web' ? {} : { currentlyFocusedInput: () => env.focused } }),
     Keyboard: { addListener: (name, fn) => { (env.listeners[name] ??= new Set()).add(fn); return { remove: () => env.listeners[name].delete(fn) }; } },
   };
   const modules = { react, 'react/jsx-runtime': { jsx, jsxs: jsx }, 'react-native': native };
@@ -118,4 +118,21 @@ test('opening a modal does not scroll a previously focused background form', () 
   const before = backgroundScrolls; h.env.focused = second;
   h.emit('keyboardDidShow', 400); h.flush();
   assert.equal(backgroundScrolls, before); h.close();
+});
+
+// React Native Web intentionally has no TextInput.State.currentlyFocusedInput.
+test('web: focusing and blurring a form uses the input ref without native focus APIs', () => {
+  const h = harness('web');
+  const scrolls = [];
+  const tree = h.render('KeyboardScrollView'); h.env.context = tree.props.value;
+  tree.props.children.props.ref({ getNativeScrollRef: () => ({ measureInWindow: fn => fn(0, 0, 360, 400) }), scrollTo: options => scrolls.push(options) });
+  let focused = true;
+  const field = { isFocused: () => focused, measureInWindow: fn => fn(0, 450, 300, 50) };
+  const input = h.render('KeyboardTextInput'); input.props.ref(field);
+  input.props.onFocus({});
+  assert.doesNotThrow(() => h.flush());
+  assert.deepEqual(scrolls, [{ y: 116, animated: true }]);
+  focused = false; input.props.onSelectionChange({}); h.flush();
+  assert.equal(scrolls.length, 1, 'blurred inputs must not move the viewport');
+  h.close();
 });

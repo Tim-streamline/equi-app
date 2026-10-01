@@ -1,0 +1,399 @@
+- generic [ref=e3]:
+  - complementary [ref=e4]:
+    - generic [ref=e5]:
+      - img [ref=e7]
+      - generic [ref=e8]:
+        - generic [ref=e9]: Equi App
+        - generic [ref=e10]: Admin console
+    - navigation [ref=e11]:
+      - link "Dashboard" [ref=e13] [cursor=pointer]:
+        - /url: http://127.0.0.1:81/admin
+        - img [ref=e14]
+        - generic [ref=e15]: Dashboard
+      - generic [ref=e16]:
+        - generic [ref=e17]: Support
+        - link "Users" [ref=e18] [cursor=pointer]:
+          - /url: http://127.0.0.1:81/admin/users
+          - img [ref=e19]
+          - generic [ref=e20]: Users
+        - link "Horses" [ref=e21] [cursor=pointer]:
+          - /url: http://127.0.0.1:81/admin/horses
+          - img [ref=e22]
+          - generic [ref=e23]: Horses
+        - link "Therapists" [ref=e24] [cursor=pointer]:
+          - /url: http://127.0.0.1:81/admin/therapists
+          - img [ref=e25]
+          - generic [ref=e26]: Therapists
+        - link "Intake bookings" [ref=e27] [cursor=pointer]:
+          - /url: http://127.0.0.1:81/admin/bookings
+          - img [ref=e28]
+          - generic [ref=e29]: Intake bookings
+        - link "Protocols" [ref=e30] [cursor=pointer]:
+          - /url: http://127.0.0.1:81/admin/protocols
+          - img [ref=e31]
+          - generic [ref=e32]: Protocols
+      - generic [ref=e33]:
+        - generic [ref=e34]: Content
+        - link "Ontdek Plus" [ref=e35] [cursor=pointer]:
+          - /url: http://127.0.0.1:81/admin/plus-page
+          - img [ref=e36]
+          - generic [ref=e37]: Ontdek Plus
+        - link "Library" [ref=e38] [cursor=pointer]:
+          - /url: http://127.0.0.1:81/admin/library
+          - img [ref=e39]
+          - generic [ref=e40]: Library
+        - link "Categories" [ref=e41] [cursor=pointer]:
+          - /url: http://127.0.0.1:81/admin/library-categories
+          - img [ref=e42]
+          - generic [ref=e43]: Categories
+        - link "Seasonal tips" [ref=e44] [cursor=pointer]:
+          - /url: http://127.0.0.1:81/admin/seasonal-tips
+          - img [ref=e45]
+          - generic [ref=e46]: Seasonal tips
+        - link "Nova chat" [ref=e47] [cursor=pointer]:
+          - /url: http://127.0.0.1:81/admin/nova
+          - img [ref=e48]
+          - generic [ref=e49]: Nova chat
+      - generic [ref=e50]:
+        - generic [ref=e51]: Scanner
+        - link "Scan results" [ref=e52] [cursor=pointer]:
+          - /url: http://127.0.0.1:81/admin/scans
+          - img [ref=e53]
+          - generic [ref=e54]: Scan results
+        - link "Products" [ref=e55] [cursor=pointer]:
+          - /url: http://127.0.0.1:81/admin/products
+          - img [ref=e56]
+          - generic [ref=e57]: Products
+        - link "Ingredients" [ref=e58] [cursor=pointer]:
+          - /url: http://127.0.0.1:81/admin/ingredients
+          - img [ref=e59]
+          - generic [ref=e60]: Ingredients
+      - generic [ref=e61]:
+        - generic [ref=e62]: Community
+        - link "Posts & replies" [ref=e63] [cursor=pointer]:
+          - /url: http://127.0.0.1:81/admin/community
+          - img [ref=e64]
+          - generic [ref=e65]: Posts & replies
+        - link "Reports" [ref=e66] [cursor=pointer]:
+          - /url: http://127.0.0.1:81/admin/reports
+          - img [ref=e67]
+          - generic [ref=e68]: Reports
+      - generic [ref=e69]:
+        - generic [ref=e70]: Billing
+        - link "Plans" [ref=e71] [cursor=pointer]:
+          - /url: http://127.0.0.1:81/admin/plans
+          - img [ref=e72]
+          - generic [ref=e73]: Plans
+        - link "Subscriptions" [ref=e74] [cursor=pointer]:
+          - /url: http://127.0.0.1:81/admin/subscriptions
+          - img [ref=e75]
+          - generic [ref=e76]: Subscriptions
+        - link "Payments" [ref=e77] [cursor=pointer]:
+          - /url: http://127.0.0.1:81/admin/payments
+          - img [ref=e78]
+          - generic [ref=e79]: Payments
+        - link "Credits" [ref=e80] [cursor=pointer]:
+          - /url: http://127.0.0.1:81/admin/credits
+          - img [ref=e81]
+          - generic [ref=e82]: Credits
+      - generic [ref=e83]:
+        - generic [ref=e84]: Operations
+        - link "Data exports" [ref=e85] [cursor=pointer]:
+          - /url: http://127.0.0.1:81/admin/exports
+          - img [ref=e86]
+          - generic [ref=e87]: Data exports
+        - link "Notifications" [ref=e88] [cursor=pointer]:
+          - /url: http://127.0.0.1:81/admin/notifications
+          - img [ref=e89]
+          - generic [ref=e90]: Notifications
+        - link "Sync health" [ref=e91] [cursor=pointer]:
+          - /url: http://127.0.0.1:81/admin/sync-health
+          - img [ref=e92]
+          - generic [ref=e93]: Sync health
+        - link "Audit log" [ref=e94] [cursor=pointer]:
+          - /url: http://127.0.0.1:81/admin/audit-log
+          - img [ref=e95]
+          - generic [ref=e96]: Audit log
+        - link "Intakevragen" [ref=e97] [cursor=pointer]:
+          - /url: http://127.0.0.1:81/admin/intake-questionnaire
+          - img [ref=e98]
+          - generic [ref=e99]: Intakevragen
+        - link "Protocol Templates" [ref=e100] [cursor=pointer]:
+          - /url: http://127.0.0.1:81/admin/protocol-settings
+          - img [ref=e101]
+          - generic [ref=e102]: Protocol Templates
+        - link "Protocol Settings" [ref=e103] [cursor=pointer]:
+          - /url: http://127.0.0.1:81/admin/protocol-settings/advice
+          - img [ref=e104]
+          - generic [ref=e105]: Protocol Settings
+        - link "Settings" [ref=e106] [cursor=pointer]:
+          - /url: http://127.0.0.1:81/admin/settings
+          - img [ref=e107]
+          - generic [ref=e108]: Settings
+    - generic [ref=e110]:
+      - generic [ref=e111]: EO
+      - generic [ref=e112]:
+        - generic [ref=e113]: Equi App Owner
+        - generic [ref=e114]: owner
+      - button "Log out" [ref=e115]:
+        - img [ref=e116]
+  - generic [ref=e117]:
+    - banner [ref=e118]:
+      - heading "Protocol bewerken" [level=1] [ref=e119]
+    - main [ref=e120]:
+      - group [ref=e123]:
+        - generic [ref=e124]:
+          - generic [ref=e125]:
+            - link "Protocollen" [ref=e126] [cursor=pointer]:
+              - /url: http://127.0.0.1:81/admin/protocols
+              - img [ref=e127]
+              - text: Protocollen
+            - generic [ref=e129]:
+              - generic [ref=e130]:
+                - generic [ref=e131]: Darm protocol · R
+                - generic [ref=e132]: Concept
+              - generic [ref=e133]: Darm protocol
+            - button "Volledige preview" [ref=e134] [cursor=pointer]:
+              - img [ref=e135]
+              - text: Volledige preview
+            - button "Opslaan" [ref=e136] [cursor=pointer]:
+              - img [ref=e137]
+              - text: Opslaan
+            - button "Publiceren" [ref=e138] [cursor=pointer]:
+              - img [ref=e139]
+              - text: Publiceren
+          - navigation "Protocolonderdelen" [ref=e140]:
+            - button "Basis" [ref=e141]:
+              - img [ref=e142]
+              - text: Basis
+            - button "Planning" [ref=e143]:
+              - img [ref=e144]
+              - text: Planning
+            - button "Voeding 3" [ref=e146]:
+              - img [ref=e147]
+              - text: Voeding
+              - generic [ref=e148]: "3"
+            - button "Management 3" [ref=e149]:
+              - img [ref=e150]
+              - text: Management
+              - generic [ref=e151]: "3"
+            - button "Beweging 0" [ref=e152]:
+              - img [ref=e153]
+              - text: Beweging
+              - generic [ref=e154]: "0"
+            - button "Analyse" [ref=e155]:
+              - img [ref=e156]
+              - text: Analyse
+            - button "Klantweergave" [ref=e157]:
+              - img [ref=e158]
+              - text: Klantweergave
+        - generic [ref=e159]:
+          - complementary [ref=e160]:
+            - generic [ref=e161]:
+              - generic [ref=e162]: Paard
+              - generic [ref=e163]: R
+              - generic [ref=e164]: D · ruin · 5 jaar · 535 kg
+              - generic [ref=e165]:
+                - text: "Eigenaar:"
+                - strong [ref=e166]: Shelley Meeuwsen
+            - generic [ref=e167]:
+              - generic [ref=e168]: Plan
+              - generic [ref=e169]:
+                - generic [ref=e170]:
+                  - term [ref=e171]: Fases
+                  - definition [ref=e172]: "4"
+                - generic [ref=e173]:
+                  - term [ref=e174]: Duur
+                  - definition [ref=e175]: 22 weken
+                - generic [ref=e176]:
+                  - term [ref=e177]: Huidige week
+                  - definition [ref=e178]: "1"
+                - generic [ref=e179]:
+                  - term [ref=e180]: Supplementen
+                  - definition [ref=e181]: "15"
+                - generic [ref=e182]:
+                  - term [ref=e183]: Adviezen
+                  - definition [ref=e184]: "6"
+          - main [ref=e185]:
+            - generic [ref=e186]:
+              - generic [ref=e187]:
+                - generic [ref=e188]:
+                  - generic [ref=e189]: Stap 2
+                  - heading "Planning" [level=2] [ref=e190]
+                  - paragraph [ref=e191]: Fases volgen de templatevolgorde; een fase kan starten terwijl de vorige fase nog loopt.
+                - generic [ref=e192]:
+                  - combobox [ref=e193]:
+                    - option "Optionele fase" [disabled] [selected]
+                    - option "Darm reset · 1 wk"
+                    - option "Mineralen aanvullen – KPU · 3 wk"
+                    - option "Metabole ondersteuning - IR vermoedelijk · 8 wk"
+                    - option "Metabole ondersteuning - IR aangetoond · 12 wk"
+                    - option "Metabole ondersteuning - KPU aangetoond · 12 wk"
+                    - option "Verdere darmondersteuning · 4 wk"
+                    - option "Extra ondersteuning bij mestwater · 4 wk"
+                    - option "Lever en nieren ondersteunen - KPU · 12 wk"
+                  - button "Toevoegen" [disabled]:
+                    - img
+                    - text: Toevoegen
+              - generic [ref=e194]:
+                - button "Maagondersteuning Week 1–8 · Gepauzeerd" [ref=e195]:
+                  - generic [ref=e197]: Maagondersteuning
+                  - generic [ref=e198]: Week 1–8 · Gepauzeerd
+                - button "Darmrevalidatie Week 3–8 · Gepland Start na 2 complete weken vorige fase" [ref=e199]:
+                  - generic [ref=e200]:
+                    - generic [ref=e201]: Darmrevalidatie
+                    - img [ref=e202]
+                  - generic [ref=e203]: Week 3–8 · Gepland
+                  - generic [ref=e204]: Start na 2 complete weken vorige fase
+                - button "Mineralen aanvullen Week 3–10 · Gepland Start na 0 complete weken vorige fase" [ref=e205]:
+                  - generic [ref=e206]:
+                    - generic [ref=e207]: Mineralen aanvullen
+                    - img [ref=e208]
+                  - generic [ref=e209]: Week 3–10 · Gepland
+                  - generic [ref=e210]: Start na 0 complete weken vorige fase
+                - button "Lever en nieren ondersteunen Week 11–22 · Gepland" [ref=e211]:
+                  - generic [ref=e212]:
+                    - generic [ref=e213]: Lever en nieren ondersteunen
+                    - img [ref=e214]
+                  - generic [ref=e215]: Week 11–22 · Gepland
+              - generic [ref=e216]:
+                - generic [ref=e217]:
+                  - generic [ref=e218]:
+                    - heading "Maagondersteuning" [level=3] [ref=e220]
+                    - paragraph [ref=e221]: Week 1–8 · Gepauzeerd
+                  - button "Fase verwijderen" [ref=e222] [cursor=pointer]:
+                    - img [ref=e223]
+                    - text: Fase verwijderen
+                - generic [ref=e224]:
+                  - generic [ref=e225]:
+                    - generic [ref=e226]: Templatefase
+                    - generic [ref=e227]: Maagondersteuning
+                    - paragraph [ref=e228]: De naam en beschrijving zijn bij het aanmaken vanuit de template overgenomen.
+                  - generic [ref=e229]:
+                    - generic [ref=e230]:
+                      - generic [ref=e231]: Duur in weken
+                      - spinbutton [ref=e232]: "8"
+                    - paragraph [ref=e233]: "Template: 8 weken"
+                - generic [ref=e234]:
+                  - generic [ref=e235]:
+                    - generic [ref=e236]:
+                      - heading "Kruiden & supplementen" [level=4] [ref=e237]
+                      - paragraph [ref=e238]: Selecteer middelen, frequentie en de concrete weken voor dit paard.
+                    - generic [ref=e239]: 3 geselecteerd
+                  - generic [ref=e240]:
+                    - generic [ref=e241]:
+                      - generic [ref=e242]:
+                        - switch "Verwijder Gekookt (bio) lijnzaad" [checked] [ref=e243]
+                        - generic [ref=e245]:
+                          - generic [ref=e246]:
+                            - generic [ref=e247]: Gekookt (bio) lijnzaad
+                            - generic [ref=e248]: Kruid
+                            - generic [ref=e249]: Standaard
+                          - paragraph [ref=e250]: Ondersteunt en beschermt het maagslijmvlies.
+                          - paragraph [ref=e251]: Min. 5×/week · max. 56 in fase · rust 2 weken
+                      - generic [ref=e252]:
+                        - generic [ref=e253]:
+                          - generic [ref=e254]:
+                            - generic [ref=e255]: Dosering voor dit paard
+                            - textbox "Bijv. 20 g per dag" [ref=e256]: 9 g
+                            - paragraph [ref=e257]: Handmatig aangepast — blijft behouden bij een gewichtsverandering.
+                            - button "Automatische dosering herstellen" [ref=e258]
+                          - paragraph [ref=e259]: "Berekend: 100 g per 600 kg × (535 / 600) = 90 g per toediening."
+                        - generic [ref=e260]:
+                          - generic [ref=e261]: Aantal per week
+                          - spinbutton [ref=e262]: "5"
+                        - generic [ref=e264]:
+                          - generic [ref=e265]: Instructies
+                          - textbox "Optionele instructie voor de klant" [ref=e266]: Kook met ruim water tot een slijmerige massa en laat afkoelen tot kamertemp. Geef de dosering bij voorkeur 2× daags. Bij 2× daags geef je dus tweemaal de volledige hoeveelheid. Steeds vers bereiden en max. 8–12u gekoeld bewaren.
+                        - generic [ref=e267]:
+                          - generic [ref=e268]: Toedieningsweken binnen deze fase
+                          - generic [ref=e269]:
+                            - button "1" [pressed] [ref=e270]
+                            - button "2" [pressed] [ref=e271]
+                            - button "3" [pressed] [ref=e272]
+                            - button "4" [pressed] [ref=e273]
+                            - button "5" [pressed] [ref=e274]
+                            - button "6" [pressed] [ref=e275]
+                            - button "7" [pressed] [ref=e276]
+                            - button "8" [pressed] [ref=e277]
+                    - generic [ref=e278]:
+                      - generic [ref=e279]:
+                        - switch "Verwijder Heemstwortel" [checked] [ref=e280]
+                        - generic [ref=e282]:
+                          - generic [ref=e283]:
+                            - generic [ref=e284]: Heemstwortel
+                            - generic [ref=e285]: Kruid
+                            - generic [ref=e286]: Standaard
+                          - paragraph [ref=e287]: Vormt een beschermend slijmlaagje, verzacht irritatie in maag en darmen en helpt maagzuur en galzouten te neutraliseren.
+                          - paragraph [ref=e288]: Min. 4×/week · max. 42 in fase · rust 2 weken
+                      - generic [ref=e289]:
+                        - generic [ref=e290]:
+                          - generic [ref=e291]:
+                            - generic [ref=e292]: Dosering voor dit paard
+                            - textbox "Bijv. 20 g per dag" [ref=e293]: 1.35 g
+                            - paragraph [ref=e294]: Handmatig aangepast — blijft behouden bij een gewichtsverandering.
+                            - button "Automatische dosering herstellen" [ref=e295]
+                          - paragraph [ref=e296]: "Berekend: 15 g per 600 kg × (535 / 600) = 15 g per toediening."
+                        - generic [ref=e297]:
+                          - generic [ref=e298]: Aantal per week
+                          - spinbutton [ref=e299]: "4"
+                        - generic [ref=e301]:
+                          - generic [ref=e302]: Instructies
+                          - textbox "Optionele instructie voor de klant" [ref=e303]: Laat samen met het kaasjeskruid 20–30 minuten trekken in circa 200 ml heet, niet-kokend water. Regelmatig roeren en alles door het voer mengen. Geef 1× of bij voorkeur 2× daags steeds de volledige berekende hoeveelheid.
+                        - generic [ref=e304]:
+                          - generic [ref=e305]: Toedieningsweken binnen deze fase
+                          - generic [ref=e306]:
+                            - button "1" [pressed] [ref=e307]
+                            - button "2" [pressed] [ref=e308]
+                            - button "3" [pressed] [ref=e309]
+                            - button "4" [pressed] [ref=e310]
+                            - button "5" [pressed] [ref=e311]
+                            - button "6" [pressed] [ref=e312]
+                            - button "7" [ref=e313]
+                            - button "8" [ref=e314]
+                    - generic [ref=e315]:
+                      - generic [ref=e316]:
+                        - switch "Verwijder Kaasjeskruid bloemen (Malva Sylvestris)" [checked] [ref=e317]
+                        - generic [ref=e319]:
+                          - generic [ref=e320]:
+                            - generic [ref=e321]: Kaasjeskruid bloemen (Malva Sylvestris)
+                            - generic [ref=e322]: Kruid
+                            - generic [ref=e323]: Standaard
+                          - paragraph [ref=e324]: Verzacht en ondersteunt de slijmvliezen van de spijsvertering.
+                          - paragraph [ref=e325]: Min. 4×/week · max. 42 in fase · rust 2 weken
+                      - generic [ref=e326]:
+                        - generic [ref=e327]:
+                          - generic [ref=e328]:
+                            - generic [ref=e329]: Dosering voor dit paard
+                            - textbox "Bijv. 20 g per dag" [ref=e330]: 1.35 g
+                            - paragraph [ref=e331]: Handmatig aangepast — blijft behouden bij een gewichtsverandering.
+                            - button "Automatische dosering herstellen" [ref=e332]
+                          - paragraph [ref=e333]: "Berekend: 15 g per 600 kg × (535 / 600) = 15 g per toediening."
+                        - generic [ref=e334]:
+                          - generic [ref=e335]: Aantal per week
+                          - spinbutton [ref=e336]: "4"
+                        - generic [ref=e338]:
+                          - generic [ref=e339]: Instructies
+                          - textbox "Optionele instructie voor de klant" [ref=e340]: Laat de berekende hoeveelheid 20–30 minuten trekken in circa 200 ml heet, niet-kokend water. Regelmatig roeren en alles door het voer mengen. Geef de dosering bij voorkeur 2× daags. Bij 2× daags geef je dus tweemaal de volledige hoeveelheid.
+                        - generic [ref=e341]:
+                          - generic [ref=e342]: Toedieningsweken binnen deze fase
+                          - generic [ref=e343]:
+                            - button "1" [pressed] [ref=e344]
+                            - button "2" [pressed] [ref=e345]
+                            - button "3" [pressed] [ref=e346]
+                            - button "4" [pressed] [ref=e347]
+                            - button "5" [pressed] [ref=e348]
+                            - button "6" [pressed] [ref=e349]
+                            - button "7" [ref=e350]
+                            - button "8" [ref=e351]
+                    - generic [ref=e353]:
+                      - switch "Voeg toe Psyliumzaad (bio)" [ref=e354]
+                      - generic [ref=e356]:
+                        - generic [ref=e357]:
+                          - generic [ref=e358]: Psyliumzaad (bio)
+                          - generic [ref=e359]: Kruid
+                        - paragraph [ref=e360]: Ondersteunt en beschermt het maagslijmvlies en heeft een stabiliserend effect op de bloedsuikerspiegel.
+                        - paragraph [ref=e361]: Min. 5×/week · max. 56 in fase · rust 2 weken
+              - button "Naar voeding" [ref=e363] [cursor=pointer]:
+                - text: Naar voeding
+                - img [ref=e364]

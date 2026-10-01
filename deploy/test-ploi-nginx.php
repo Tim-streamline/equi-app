@@ -32,7 +32,7 @@ try {
     $reloadPending = false;
     $request = function ($method, $path, $body) use (&$calls, &$pending, &$installed, &$reloadPending) {
         $calls[] = [$method, $path, $body];
-        if ($method === 'GET' && str_ends_with($path, '/406977')) return ['data' => ['domain' => 'equi-app.staging.optimize-it.nl']];
+        if ($method === 'GET' && str_ends_with($path, '/406977')) return ['data' => ['domain' => 'equi-app.online']];
         if ($method === 'GET') return ['content' => $installed];
         if ($method === 'PATCH') $pending = $body['content'];
         if ($method === 'POST') $reloadPending = true;
@@ -65,7 +65,37 @@ try {
     fails(fn () => $noReload->apply($directory.'/desired'), 'did not activate');
     putenv('PLOI_API_TOKEN');
     fails(fn () => PloiNginx::live(), 'PLOI_API_TOKEN');
-    echo "Ploi tests passed: identity, backup, delayed apply/reload, restoration, timeouts, missing token.\n";
+    $productionCalls = [];
+    $production = new PloiNginx(function ($method, $path, $body) use (&$productionCalls) {
+        $productionCalls[] = [$method, $path];
+        if ($path === '/servers/123/sites/456') return ['data' => ['domain' => 'app.example.test']];
+        return ['content' => 'old configuration'];
+    }, fn () => str_replace('__EQUI_NGINX_REVISION__', hash('sha256', $desired), $desired),
+        fn () => hash('sha256', $desired), fn () => null, '123', '456', 'app.example.test');
+    $production->snapshot($directory.'/production-backup');
+    $production->apply($directory.'/desired');
+    check(in_array(['PATCH', '/servers/123/sites/456/nginx-configuration'], $productionCalls), 'Selected production site');
+    check(in_array(['POST', '/servers/123/services/nginx/reload'], $productionCalls), 'Selected production server');
+
+    foreach (['staging' => 'equi-app.online', 'production' => 'app.example.test'] as $environment => $host) {
+        $output = $directory.'/'.$environment.'.conf';
+        $process = proc_open([PHP_BINARY, __DIR__.'/render-nginx.php', __DIR__.'/nginx-staging.conf', $output, '/home/ploi/'.$host],
+            [STDIN, STDOUT, STDERR], $pipes, null, [...getenv(), 'DEPLOY_ENVIRONMENT' => $environment, 'DEPLOY_HOSTNAME' => $host]);
+        check(is_resource($process) && proc_close($process) === 0, 'Render selected Nginx environment');
+        $rendered = file_get_contents($output);
+        check(str_contains($rendered, '/home/ploi/'.$host.'/current/public'), 'Selected document root');
+        check(str_contains($rendered, '/etc/nginx/ssl/'.$host), 'Selected TLS include');
+        check(str_contains($rendered, 'https://'.$host.'$request_uri'), 'Selected redirects');
+        if ($environment === 'staging') {
+            check($rendered === file_get_contents(__DIR__.'/nginx-staging.conf'), 'Staging rendering retains tested layout');
+            check(str_contains($rendered, 'server_name equi-app.online api.equi-app.online;'), 'Renamed site retains API alias');
+        } else {
+            check(! str_contains($rendered, 'equi-app.online'), 'Production has no staging paths');
+            check(! str_contains($rendered, 'api.app.example.test'), 'Other sites do not inherit the staging API alias');
+            check(! str_contains($rendered, 'X-Robots-Tag'), 'Production does not inherit staging noindex');
+        }
+    }
+    echo "Ploi tests passed: identity, backup, delayed apply/reload, restoration, timeouts, selected production IDs and environment rendering.\n";
 } finally {
     foreach (glob($directory.'/*') as $file) unlink($file);
     rmdir($directory);

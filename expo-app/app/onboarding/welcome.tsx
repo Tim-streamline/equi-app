@@ -14,7 +14,7 @@ import { Button } from '@/components/ui/Button';
 import { useDb } from '@/db/provider';
 
 export default function WelcomeScreen() {
-  const { communityPost } = useLocalSearchParams<{ communityPost?: string }>();
+  const { communityPost, passwordReset } = useLocalSearchParams<{ communityPost?: string; passwordReset?: string }>();
   const { login } = useDb();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -77,18 +77,15 @@ export default function WelcomeScreen() {
             </View>
 
             <View>
-              <Text className="font-semi-italic text-mint-200 mb-3" style={{ fontSize: 14 }}>
-                Paardengezondheid van de toekomst.
-              </Text>
-              <Text className="font-bold text-white mb-5" style={{ fontSize: 38, lineHeight: 42 }}>
-                Ken je paard.{'\n'}Van binnenuit.
+              <Text className="font-bold text-white mb-5" style={{ fontSize: 28, lineHeight: 34 }}>
+                Welkom bij EquiApp!
               </Text>
 
               <View className="gap-2 mb-3">
                 <TextInput
                   value={email}
                   onChangeText={setEmail}
-                  placeholder="email"
+                  placeholder="e-mailadres"
                   accessibilityLabel="E-mailadres"
                   autoComplete="email"
                   placeholderTextColor="rgba(255,255,255,0.5)"
@@ -114,6 +111,10 @@ export default function WelcomeScreen() {
                 </Pressable>
                 </View>
               </View>
+              <Pressable accessibilityRole="link" onPress={() => router.push('/onboarding/forgot-password')} className="self-end py-2">
+                <Text className="font-semi text-[14px] text-mint-200">Wachtwoord vergeten?</Text>
+              </Pressable>
+              {passwordReset === '1' ? <Text accessibilityRole="alert" className="mt-2 text-[14px] text-mint-200">Je wachtwoord is gewijzigd. Je kunt nu inloggen.</Text> : null}
               {error ? (
                 <Text className="font-semi text-[12px]" style={{ color: '#FCA5A5' }}>
                   {error}

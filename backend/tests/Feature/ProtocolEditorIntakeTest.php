@@ -64,6 +64,28 @@ class ProtocolEditorIntakeTest extends TestCase
         $this->actingAs($admin, 'admin');
     }
 
+    public function test_archived_protocol_can_be_edited_without_returning_to_the_customer_dashboard(): void
+    {
+        $payload = $this->payload;
+        $payload['published'] = true;
+        $this->post('/admin/protocols', $payload)->assertRedirect();
+        $protocol = Protocol::firstOrFail();
+        $this->post('/admin/protocols/bulk', ['action' => 'archive', 'ids' => [$protocol->id]])->assertRedirect();
+        $payload['phases'][0]['id'] = $protocol->phases->first()->id;
+        foreach ($protocol->phases->first()->supplements as $i => $item) {
+            $payload['phases'][0]['supplements'][$i]['id'] = $item->id;
+        }
+        $payload['status'] = 'archived';
+        $payload['title'] = 'Edited in archive';
+        $this->put('/admin/protocols/'.$protocol->id, $payload)->assertRedirect()->assertSessionHasNoErrors();
+        $this->assertSame('archived', $protocol->fresh()->status);
+        $this->assertSame('Edited in archive', $protocol->fresh()->title);
+        $this->assertSame('active', $protocol->fresh()->archived_previous_status);
+        $dashboard = app(HorseDashboard::class)->build($this->horse->owner, $this->horse, CarbonImmutable::now());
+        $this->assertNull($dashboard['protocol']);
+        $this->postJson('/admin/protocols/'.$protocol->id.'/status', ['status' => 'active'])->assertUnprocessable();
+    }
+
     private function answer(string $field, mixed $value): void
     {
         $this->intake->answers()->updateOrCreate(['field_id' => $field], ['section_id' => $field === 'gewicht' ? 'paard' : 'voeding', 'value' => json_encode($value)]);

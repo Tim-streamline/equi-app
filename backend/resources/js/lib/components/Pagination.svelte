@@ -3,7 +3,7 @@
     import { cn } from '$lib/utils.js';
 
     // Expects a Laravel paginator object: { links: [{url,label,active}], from, to, total }
-    let { paginator } = $props();
+    let { paginator, preserveState = false } = $props();
 </script>
 
 {#if paginator?.links?.length > 3}
@@ -17,6 +17,7 @@
                     <Link
                         href={link.url}
                         preserveScroll
+                        {preserveState}
                         class={cn(
                             'inline-flex h-8 min-w-8 items-center justify-center rounded-md border px-2 text-sm',
                             link.active ? 'border-primary bg-primary text-primary-foreground' : 'bg-background hover:bg-accent',

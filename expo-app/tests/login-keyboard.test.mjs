@@ -10,7 +10,7 @@ const { outputText } = ts.transpileModule(source, {
 
 // Inspect the rendered layout contract without loading native modules in Node.
 // Actual keyboard visibility is verified separately on Android.
-function renderLogin(platform, params = {}, replace = () => {}) {
+function renderLogin(platform, params = {}, replace = () => {}, push = () => {}) {
   const jsx = (type, props) => ({ type, props });
   const modules = {
     '@/components/ui/KeyboardForm': { KeyboardViewport: 'KeyboardAvoidingView', KeyboardScrollView: 'ScrollView', KeyboardTextInput: 'TextInput' },
@@ -18,12 +18,12 @@ function renderLogin(platform, params = {}, replace = () => {}) {
     react: { useState: (initial) => [initial, () => {}] },
     'react-native': {
       ...Object.fromEntries([
-        'View', 'Text', 'Image', 'TextInput', 'ActivityIndicator',
+        'View', 'Text', 'Image', 'TextInput', 'ActivityIndicator', 'Pressable',
         'KeyboardAvoidingView', 'ScrollView',
       ].map((name) => [name, name])),
       Platform: { OS: platform },
     },
-    'expo-router': { router: { replace }, useLocalSearchParams: () => params },
+    'expo-router': { router: { replace, push }, useLocalSearchParams: () => params },
     'react-native-safe-area-context': { SafeAreaView: 'SafeAreaView' },
     'expo-status-bar': { StatusBar: 'StatusBar' },
     'lucide-react-native': { ArrowRight: 'ArrowRight' },
@@ -78,3 +78,14 @@ for (const [platform, behavior] of [['android', 'height'], ['ios', 'padding']]) 
     assert.ok(find(scroll, 'Button'), 'Login must remain reachable with the keyboard open');
   });
 }
+
+
+test('password recovery is reachable from the login screen and email uses the supplied placeholder', () => {
+  let destination;
+  const screen = renderLogin('web', {}, () => {}, route => { destination = route; });
+  assert.equal(find(screen, 'TextInput', props => props.autoComplete === 'email').props.placeholder, 'e-mailadres');
+  const link = find(screen, 'Pressable', props => props.accessibilityRole === 'link');
+  assert.equal(find(link, 'Text').props.children, 'Wachtwoord vergeten?');
+  link.props.onPress();
+  assert.equal(destination, '/onboarding/forgot-password');
+});

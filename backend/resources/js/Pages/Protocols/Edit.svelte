@@ -292,6 +292,7 @@
         { value: 'paused', label: 'Gepauzeerd' },
         { value: 'active', label: 'Actief' },
         { value: 'completed', label: 'Afgerond' },
+        ...(protocol?.status === 'archived' ? [{ value: 'archived', label: 'Gearchiveerd' }] : []),
     ];
     const selectedHorse = $derived(horses.find((horse) => horse.id === $form.horse_id));
     const actualWeight = $derived($form.customer_settings.weight_kg);
@@ -796,7 +797,7 @@
                                 <Field label="Protocolnaam" error={$form.errors.title}><Input bind:value={$form.title} /></Field>
                                 <Field label="Behandelaar" error={$form.errors.therapist_id}><Select bind:value={$form.therapist_id} placeholder="Geen behandelaar" options={therapistOptions} /></Field>
                                 <Field label="Startdatum" error={$form.errors.started_at}><Input type="date" bind:value={$form.started_at} /></Field>
-                                <Field label="Levenscyclus" error={$form.errors.status}><Select bind:value={$form.status} options={statusOptions} /></Field>
+                                <Field label="Levenscyclus" error={$form.errors.status}><Select bind:value={$form.status} options={statusOptions} disabled={protocol?.status === 'archived'} /></Field>
                                 <div class="rounded-2xl bg-[#EAFBF9] p-4 text-sm text-[#0E6F69]">
                                     <div class="font-bold">Automatisch berekend</div>
                                     <div class="mt-1 text-xs leading-5">{totalWeeks} weken · huidige week {currentWeek || '—'} · fase-statussen en klantlabels volgen uit de planning.</div>
