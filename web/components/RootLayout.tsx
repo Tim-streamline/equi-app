@@ -1,5 +1,6 @@
 import '../global.css';
 import './browser-alerts';
+import { ErrorBoundary } from '@sentry/react';
 import { Stack, router, usePathname, useRootNavigationState } from 'expo-router';
 import { useEffect } from 'react';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
@@ -15,7 +16,7 @@ import { LibraryContentSync } from '@/components/library/LibraryContentSync';
 export default function RootLayout() {
   const [loaded, error] = useFonts({ SourceSans3_400Regular, SourceSans3_500Medium, SourceSans3_600SemiBold, SourceSans3_700Bold, SourceSans3_400Regular_Italic, SourceSans3_600SemiBold_Italic });
   if (!loaded && !error) return null;
-  return <GestureHandlerRootView style={{ flex: 1 }}>
+  return <ErrorBoundary><GestureHandlerRootView style={{ flex: 1 }}>
     <SafeAreaProvider>
       <View style={{ flex: 1, width: '100%', maxWidth: 1100, alignSelf: 'center', backgroundColor: '#FBF8F3' }}>
         <DbProvider><IntakeSchemaProvider><IntakeProvider>
@@ -24,7 +25,7 @@ export default function RootLayout() {
         </IntakeProvider></IntakeSchemaProvider></DbProvider>
       </View>
     </SafeAreaProvider>
-  </GestureHandlerRootView>;
+  </GestureHandlerRootView></ErrorBoundary>;
 }
 
 function Navigation() {

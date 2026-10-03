@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "Equi App",
+    "name": "EquiApp",
     "slug": "equi-app-web",
     "userInterfaceStyle": "light",
     "platforms": [
@@ -8,7 +8,8 @@
     ],
     "web": {
       "output": "single",
-      "favicon": "../expo-app/assets/images/favicon.png"
+      "favicon": "./public/favicon-32x32.png",
+      "themeColor": "#093536"
     },
     "plugins": [
       "expo-router"

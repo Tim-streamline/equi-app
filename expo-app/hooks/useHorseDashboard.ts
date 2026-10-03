@@ -62,7 +62,7 @@ export function useHorseDashboard(month?: string) {
   const [clock, setClock] = useState(() => new Date());
   const refresh = useCallback(async () => {
     setClock(new Date());
-    if (!horseId || !currentUserId) return;
+    if (!currentUserId) return;
     const request = ++generation.current;
     try {
       const params = new URLSearchParams({
@@ -70,7 +70,7 @@ export function useHorseDashboard(month?: string) {
         ...(month ? { month } : {}),
       });
       const data = (await dashboardRequest(
-        `/api/horses/${horseId}/dashboard?${params}`,
+        horseId ? `/api/horses/${horseId}/dashboard?${params}` : `/api/home?${params}`,
       )) as HorseDashboard;
       if (request !== generation.current) return;
       setSnapshot({ key, data });
@@ -131,5 +131,5 @@ export function useHorseDashboard(month?: string) {
   }, [syncStatus, refresh]);
   const data =
     snapshot?.key === key ? dashboardForHorse(dashboardAtTime(snapshot.data, clock), horseId) : null;
-  return { data, error, refresh, horseId, loading: !!horseId && !!currentUserId && !data && !error };
+  return { data, error, refresh, horseId, loading: !!currentUserId && !data && !error };
 }

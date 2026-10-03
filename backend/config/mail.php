@@ -1,5 +1,7 @@
 <?php
 
+use App\Support\Brand;
+
 return [
 
     /*
@@ -112,7 +114,7 @@ return [
 
     'from' => [
         'address' => env('MAIL_FROM_ADDRESS', 'hello@example.com'),
-        'name' => env('MAIL_FROM_NAME', env('APP_NAME', 'Laravel')),
+        'name' => Brand::normalize(env('MAIL_FROM_NAME', Brand::NAME)),
     ],
 
 ];

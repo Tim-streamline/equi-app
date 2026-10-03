@@ -15,7 +15,7 @@ import { Button } from '@/components/ui/Button';
 type Content = { item: LibraryCardItem; access: LibraryAccess; canRead: boolean; body: string | null; attachments: LibraryAttachment[]; chapters: { id: string; title: string; startLabel: string }[] };
 
 export function LibraryContent({ itemId, preview }: { itemId: string; preview?: LibraryCardItem }) {
-  const { data, error, refresh, update, pendingContent, isConnected } = useLibraryContent(itemId);
+  const { data, error, refresh, update, pendingContent, isConnected, unavailable } = useLibraryContent(itemId);
   const pending = useRef(false);
   const [busy, setBusy] = useState(false);
   const [confirmedCost, setConfirmedCost] = useState<number | null>(null);
@@ -38,6 +38,11 @@ export function LibraryContent({ itemId, preview }: { itemId: string; preview?: 
       await refresh();
     } finally { pending.current = false; setBusy(false); }
   }
+
+  if (unavailable) return <View className="p-5 gap-3">
+    <Text accessibilityRole="alert" className="text-ink-70">Dit bibliotheekitem is niet beschikbaar.</Text>
+    <Button title="Terug naar de bibliotheek" variant="ghost" onPress={() => router.replace('/(tabs)/(pager)/library')} />
+  </View>;
 
   return <>
     <View className="px-5 pt-5">

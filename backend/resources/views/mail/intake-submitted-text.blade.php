@@ -4,4 +4,6 @@ Paard: {{ $horseName }}
 Gebruiker: {{ $userName }}
 Ingediend op: {{ $submittedAt }}
 
-Bekijk intake in backend: {{ $url }}
+Bekijk intake in backend:
+
+{{ $url }}

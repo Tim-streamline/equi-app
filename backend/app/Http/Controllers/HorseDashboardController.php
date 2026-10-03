@@ -5,12 +5,21 @@ namespace App\Http\Controllers;
 use App\Models\Horse;
 use App\Models\User;
 use App\Support\HorseDashboard;
+use App\Support\ProtocolDayHistory;
 use Carbon\CarbonImmutable;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
 class HorseDashboardController extends Controller
 {
+    public function home(Request $request, HorseDashboard $dashboard)
+    {
+        $user = User::query()->whereNull('disabled_at')->findOrFail($request->attributes->get('powersync_user_id'));
+        $data = $request->validate(['timezone' => ['sometimes', 'timezone']]);
+
+        return response()->json($dashboard->build($user, null, CarbonImmutable::now($data['timezone'] ?? config('app.timezone'))));
+    }
+
     public function show(Request $request, Horse $horse, HorseDashboard $dashboard)
     {
         $user = $this->owner($request, $horse);
@@ -34,7 +43,7 @@ class HorseDashboardController extends Controller
         return response()->json(['saved' => true]);
     }
 
-    public function day(Request $request, Horse $horse, \App\Support\ProtocolDayHistory $history)
+    public function day(Request $request, Horse $horse, ProtocolDayHistory $history)
     {
         $this->owner($request, $horse);
         $data = $request->validate([

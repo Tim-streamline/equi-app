@@ -33,6 +33,19 @@ while (($#)); do
     shift
 done
 ssh_options=(-o BatchMode=yes -o ConnectTimeout=15)
+if [[ -z "${SENTRY_AUTH_TOKEN:-}" && -f "$repo_dir/deploy/betterstack.env" ]]; then
+    # Parse the upload token as data; never execute a private dotenv file.
+    SENTRY_AUTH_TOKEN="$(python3 - "$repo_dir/deploy/betterstack.env" <<'PY'
+import re, sys
+from pathlib import Path
+match = re.search(r'^SENTRY_AUTH_TOKEN=([A-Za-z0-9_-]+)$', Path(sys.argv[1]).read_text(), re.MULTILINE)
+if not match:
+    raise SystemExit('Invalid Better Stack upload token configuration')
+print(match.group(1))
+PY
+)"
+    export SENTRY_AUTH_TOKEN
+fi
 workspace=
 runtime_env=
 cleanup() {
@@ -127,14 +140,21 @@ if [[ -z "$artifact" ]]; then
     docker run --rm --user "$(id -u):$(id -g)" --entrypoint bash \
         --env COMPOSER_HOME=/tmp/equi-composer --env npm_config_cache=/tmp/equi-npm \
         --env XDEBUG_MODE=off --volume "$workspace/app:/build" \
+        --env VITE_BETTER_STACK_ENVIRONMENT="$environment" --env VITE_BETTER_STACK_RELEASE="$release" \
+        --env SENTRY_AUTH_TOKEN \
         --volume "$workspace/frontend/expo-app/lib:/expo-app/lib:ro" --workdir /build \
         "$image" .deploy/build-backend.sh
     echo 'Building the customer web app in an isolated Node 24 container...'
+    web_image=equi-app/web-build:node24
+    # Read only the Dockerfile through stdin; no runtime secrets enter its context.
+    docker build --tag "$web_image" - < "$repo_dir/deploy/Dockerfile.web"
     cp "$repo_dir/deploy/build-web.sh" "$workspace/frontend/build-web.sh"
     docker run --rm --user "$(id -u):$(id -g)" --entrypoint bash \
         --env npm_config_cache=/tmp/equi-npm --env EXPO_NO_TELEMETRY=1 \
+        --env EXPO_PUBLIC_BETTER_STACK_ENVIRONMENT="$environment" --env EXPO_PUBLIC_BETTER_STACK_RELEASE="$release" \
+        --env SENTRY_AUTH_TOKEN \
         --volume "$workspace/frontend:/build" --workdir /build/web \
-        node:24-bookworm-slim /build/build-web.sh
+        "$web_image" /build/build-web.sh
     mv "$workspace/frontend/web/dist" "$workspace/app/web-dist"
     artifact="$repo_dir/deploy/builds/$release.tar.gz"
     tar -czf "$artifact" -C "$workspace/app" .

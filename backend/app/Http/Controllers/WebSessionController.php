@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\User;
+use App\Support\WebLogin;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -21,25 +22,28 @@ class WebSessionController extends Controller
         }
         $credentials = $request->validate(['email' => 'required|email', 'password' => 'required|string']);
         $credentials['email'] = User::whereRaw('lower(email) = ?', [$credentials['email']])->value('email') ?? $credentials['email'];
-        if (! Auth::guard('web')->attempt([...$credentials, 'disabled_at' => null])) {
+        if (! Auth::guard('web')->setRememberDuration(WebLogin::MINUTES)->attempt([...$credentials, 'disabled_at' => null], true)) {
             return response()->json(['message' => 'Invalid credentials'], 401);
         }
         $request->session()->regenerate();
+        app(WebLogin::class)->start($request, Auth::guard('web')->user());
 
         return $this->token($request);
     }
 
     public function token(Request $request): JsonResponse
     {
-        $user = Auth::guard('web')->user();
-        abort_unless($user && ! $user->disabled_at, 401);
+        $login = app(WebLogin::class);
+        $user = $login->user($request);
+        abort_unless($user, 401);
 
-        return app(PowerSyncAuthController::class)->tokenResponse($user)->header('Cache-Control', 'no-store');
+        return app(PowerSyncAuthController::class)->tokenResponse($user, $login->expiresAt($request))->header('Cache-Control', 'no-store');
     }
 
     public function logout(Request $request): JsonResponse
     {
         Auth::guard('web')->logout();
+        app(WebLogin::class)->forget($request);
         // Preserve the independent admin guard, while invalidating this session ID.
         $request->session()->migrate(true);
         $request->session()->regenerateToken();

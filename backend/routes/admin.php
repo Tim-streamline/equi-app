@@ -98,6 +98,7 @@ Route::middleware('auth:admin')->group(function () {
         Route::post('library/media', [MediaAssetController::class, 'store'])->name('library.media.store');
         Route::delete('library/media/{medium}', [MediaAssetController::class, 'destroy'])->name('library.media.destroy');
         Route::get('library/attachments/{attachment}', [LibraryAttachmentController::class, 'admin'])->whereUuid('attachment')->name('library.attachments.show');
+        Route::post('library/{library}/unpublish', [LibraryItemController::class, 'unpublish'])->whereUuid('library')->name('library.unpublish');
         Route::resource('library', LibraryItemController::class)->except('show');
         Route::resource('library-categories', LibraryCategoryController::class)->only(['index', 'store', 'update', 'destroy']);
         Route::resource('seasonal-tips', SeasonalTipController::class)->only(['index', 'store', 'update', 'destroy']);

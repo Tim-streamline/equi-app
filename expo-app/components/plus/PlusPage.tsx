@@ -1,3 +1,4 @@
+import { BRAND_NAME } from '@/constants/brand';
 import { useState } from 'react';
 import { Modal, Pressable, ScrollView, Text, View, useWindowDimensions } from 'react-native';
 import { Image } from 'expo-image';
@@ -21,7 +22,7 @@ export function PlusPage({ data, apiBaseUrl, onIntake }: { data: PlusPageData; a
       <View className="mx-4 mt-2 overflow-hidden rounded-[24px] bg-[#0B4A49]">
         <Image source={{ uri: apiBaseUrl + data.heroImageUrl }} accessibilityLabel="Een vrouw met haar paard" contentFit="cover" contentPosition={{ top: '40%', left: '50%' }} transition={180} style={{ width: '100%', height: 140 }} />
         <View className="gap-3 p-[18px]">
-          <Text className="font-semi text-[10px] tracking-[2px] text-mint-200">EQUI · APP · PLUS</Text>
+          <Text className="font-semi text-[10px] tracking-[2px] text-mint-200">{BRAND_NAME} · PLUS</Text>
           <Text accessibilityRole="header" className="font-bold text-[27px] leading-[29px] text-white">{c.heroTitle}</Text>
           <Text className="text-[15px] leading-[21px] text-white/90">{c.heroBody}</Text>
           {price}
@@ -74,7 +75,7 @@ export function PlusPage({ data, apiBaseUrl, onIntake }: { data: PlusPageData; a
           {faq === index && <Text className="pt-3 text-[15px] leading-[23px] text-ink-70">{item.answer}</Text>}
         </View>)}
       </View>
-      <View className="items-center gap-4 px-9 pb-3 pt-10"><Text className="text-[11px] tracking-[3px] text-teal-500">EQUI · APP</Text><Text className="text-center font-bold text-[24px] leading-[27px] text-teal-500">{c.closingTitle}</Text><Text className="mt-2 text-center text-[10px] tracking-[1px] text-ink-50">POWERED BY <Text className="font-semi text-teal-500">De Paardentherapeut</Text></Text></View>
+      <View className="items-center gap-4 px-9 pb-3 pt-10"><Text className="text-[11px] tracking-[3px] text-teal-500">{BRAND_NAME}</Text><Text className="text-center font-bold text-[24px] leading-[27px] text-teal-500">{c.closingTitle}</Text><Text className="mt-2 text-center text-[10px] tracking-[1px] text-ink-50">POWERED BY <Text className="font-semi text-teal-500">De Paardentherapeut</Text></Text></View>
     </ScrollView>
 
     <Modal visible={sheet !== null} transparent animationType="slide" onRequestClose={close}>

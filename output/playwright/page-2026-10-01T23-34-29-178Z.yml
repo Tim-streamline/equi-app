@@ -1,0 +1,34 @@
+- generic [ref=e803]:
+  - generic [ref=e804]:
+    - button [ref=e805] [cursor=pointer]:
+      - img [ref=e806]
+    - generic [ref=e808]: Paard toevoegen
+  - generic [ref=e810]:
+    - generic [ref=e811]: Vertel me over je paard.
+    - generic [ref=e812]: Alleen de naam is verplicht. Je kunt deze stap overslaan en later een paard toevoegen via Mijn paarden.
+    - generic [ref=e813]:
+      - generic [ref=e814]: Naam van je paard
+      - textbox "Naam van je paard" [ref=e815]
+    - generic [ref=e816]:
+      - generic [ref=e817]: Ras (optioneel)
+      - textbox "Ras" [ref=e818]
+    - generic [ref=e819]:
+      - generic [ref=e821]:
+        - generic [ref=e822]: Leeftijd in jaren
+        - textbox "Leeftijd in jaren" [ref=e823]
+      - generic [ref=e825]:
+        - generic [ref=e826]: Gewicht in kg
+        - textbox "Gewicht in kg" [ref=e827]
+    - generic [ref=e828]: Geslacht (optioneel)
+    - generic [ref=e829]:
+      - button "merrie" [ref=e831] [cursor=pointer]:
+        - generic [ref=e832]: merrie
+      - button "ruin" [ref=e834] [cursor=pointer]:
+        - generic [ref=e835]: ruin
+      - button "hengst" [ref=e837] [cursor=pointer]:
+        - generic [ref=e838]: hengst
+    - generic [ref=e839]:
+      - button "Paard toevoegen" [ref=e840] [cursor=pointer]:
+        - generic [ref=e841]: Paard toevoegen
+      - button "Nu overslaan" [ref=e842] [cursor=pointer]:
+        - generic [ref=e843]: Nu overslaan

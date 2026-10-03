@@ -1,3 +1,4 @@
+import { BRAND_NAME } from '@/constants/brand';
 import { useCallback, useEffect, useMemo } from 'react';
 import { Platform, Pressable, Text, View } from 'react-native';
 import { useEvent } from 'expo';
@@ -27,7 +28,7 @@ const clock = (seconds: number) => {
 export function LibraryMedia({ url, audio = false, metadata }: { url: string; audio?: boolean; metadata?: LibraryMediaMetadata }) {
   const source = useMemo(() => ({ uri: url, metadata: {
     title: metadata?.title || (audio ? 'Bibliotheekaudio' : 'Bibliotheekvideo'),
-    artist: metadata?.artist || 'Equi App',
+    artist: metadata?.artist || BRAND_NAME,
     ...(metadata?.artwork ? { artwork: metadata.artwork } : {}),
   } }), [url, audio, metadata?.title, metadata?.artist, metadata?.artwork]);
   const player = useVideoPlayer(source, value => {

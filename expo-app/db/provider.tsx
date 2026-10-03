@@ -24,6 +24,7 @@ import { PowerSyncContext } from '@powersync/react';
 import { OPSqliteOpenFactory } from '@powersync/op-sqlite';
 
 import { accountSession } from '@/lib/account-session';
+import { captureException } from '@/lib/error-tracking';
 import { AppSchema } from './powersync-schema';
 import { LaravelConnector } from './connector';
 import {
@@ -113,6 +114,7 @@ export function DbProvider({ children }: { children: ReactNode }) {
         }
       } catch (err) {
         console.error('[provider] boot failed', err);
+        captureException(err, { tags: { operation: 'database.boot' } });
       }
     })();
     return () => {
@@ -132,6 +134,7 @@ export function DbProvider({ children }: { children: ReactNode }) {
       setSyncStatus(mapStatus(ps.currentStatus));
     } catch (err) {
       console.error('[provider] connect failed', err);
+      captureException(err, { tags: { operation: 'database.connect' } });
       setSyncStatus('error');
       connectedRef.current = false;
     }

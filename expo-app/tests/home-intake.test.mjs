@@ -30,6 +30,7 @@ function screen() {
   const routes = [];
   const jsx = (type, props) => typeof type === 'function' ? type(props) : ({ type, props });
   const modules = {
+    '@/constants/brand': { BRAND_NAME: 'EquiApp' },
     'react/jsx-runtime': { jsx, jsxs: jsx, Fragment: 'Fragment' },
     react: { useState: value => [value, () => {}] },
     'react-native': Object.fromEntries(['View', 'Text', 'ScrollView', 'Pressable', 'Modal', 'ActivityIndicator', 'RefreshControl', 'Alert'].map(name => [name, name])),
@@ -37,13 +38,14 @@ function screen() {
     'expo-router': { router: { push: path => routes.push(path) } },
     'lucide-react-native': Object.fromEntries(['ChevronDown', 'Sparkles', 'UserRound', 'ClipboardList', 'ArrowRight', 'Check'].map(name => [name, name])),
     '@/db/hooks': {
+      useCurrentUser: () => ({ name: 'Tim' }),
       useHorse: () => horses.find(horse => horse.id === selected) ?? {},
       useHorsesByOwner: () => horses,
       useActiveProtocolForHorse: () => delivered ? { id: 'protocol' } : null,
     },
     '@/db/provider': { useDb: () => ({ selectHorse: id => { selected = id; } }) },
     '@/hooks/useHorseDashboard': { useHorseDashboard: () => ({
-      data: ready && selected ? { horse: { id: selected }, greeting: 'Welkom, Tim', hasPlus: selected !== 'basic', recommendations: [], protocol: null } : null,
+      data: ready ? { horse: { id: selected }, greeting: selected ? 'Welkom, Tim' : 'Goedemorgen, Tim', hasPlus: !!selected && selected !== 'basic', recommendations: selected ? [] : [1, 2, 3, 4].map(id => ({ id: `item-${id}`, title: `Item ${id}` })), protocol: null } : null,
       loading: !ready, refresh() {},
     }) },
     '@/hooks/useTabBarPadding': { useTabBarPadding: () => 76 },
@@ -68,7 +70,7 @@ function screen() {
     row.props.onPress();
   };
   return { render, entry, select, routes, intakes, card: () => card.IntakeEntryCard({ variant: 'standalone' }),
-    set ready(value) { ready = value; }, set delivered(value) { delivered = value; }, clearHorse() { selected = ''; },
+    set ready(value) { ready = value; }, set delivered(value) { delivered = value; }, clearHorse() { selected = ''; }, withoutHorse() { selected = ''; horses.length = 0; }, addHorse(id) { horses.push({ id, name: id, status: 'active' }); selected = id; },
   };
 }
 
@@ -130,4 +132,31 @@ test('Protocol standalone retains its copy, route and submission behavior', () =
   assert.deepEqual(app.routes, ['/intake']);
   app.select('submitted');
   assert.equal(app.card(), null);
+});
+
+
+test('an account without a horse has personal greeting, both add actions, and four library items without protocol tasks', () => {
+  const app = screen();
+  app.withoutHorse();
+  const tree = app.render();
+  assert.ok(tree.includes('Goedemorgen, Tim'));
+  assert.ok(tree.includes('+ Paard toevoegen'));
+  assert.ok(text(tree).includes('Je paard toevoegen aan EquiApp?'));
+  assert.ok(tree.includes('Voeg je paard toe aan je account, zodat je alle gegevens op één plek kunt bewaren.'));
+  assert.equal(tree.filter(node => node?.type === 'LibraryCard').length, 4);
+  assert.ok(tree.includes('Ontdek in de bibliotheek'));
+  assert.equal(app.entry(), undefined);
+  assert.ok(!tree.some(node => node?.props?.accessibilityLabel === 'Wissel paard'));
+  for (const copy of ['+ Paard toevoegen', 'Paard toevoegen →']) {
+    const action = tree.find(node => node?.type === 'Pressable' && text(node) === copy);
+    assert.ok(action);
+    action.props.onPress();
+  }
+  assert.deepEqual(app.routes, ['/onboarding/add-horse', '/onboarding/add-horse']);
+  app.addHorse('basic');
+  assert.ok(app.render().some(node => node?.props?.accessibilityLabel === 'Wissel paard'));
+  assert.ok(!text(app.render()).includes('Je paard toevoegen aan EquiApp?'));
+  assert.equal(app.entry(), undefined);
+  app.addHorse('plus');
+  assert.ok(app.entry(), 'Adding a Plus horse immediately uses its intake variant');
 });

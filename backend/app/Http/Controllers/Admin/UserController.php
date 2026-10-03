@@ -119,7 +119,9 @@ class UserController extends Controller
     public function resetPassword(User $user): RedirectResponse
     {
         $temp = Str::password(16);
-        $user->update(['password' => Hash::make($temp)]);
+        $user->password = Hash::make($temp);
+        $user->remember_token = Str::random(60);
+        $user->save();
         AuditLogger::log('reset_password', $user);
 
         // In production this would dispatch a reset email; for the console we

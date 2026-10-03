@@ -1,5 +1,7 @@
 <?php
 
+use App\Support\Brand;
+
 return [
 
     /*
@@ -13,7 +15,8 @@ return [
     |
     */
 
-    'name' => env('APP_NAME', 'Equi App'),
+    'name' => Brand::normalize(env('APP_NAME', Brand::NAME)),
+    'brand_name' => Brand::NAME,
 
     /*
     |--------------------------------------------------------------------------

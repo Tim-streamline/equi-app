@@ -125,7 +125,7 @@ export type HorseDashboard = {
   horse: { id: string; name: string };
   hasPlus: boolean;
   showPlusUpsell: boolean;
-  variant: "basic" | "plus";
+  variant: "basic" | "plus" | "without-horse";
   credits: number;
   plusOffer: {
     name: string;

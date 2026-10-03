@@ -20,17 +20,22 @@ import {
 } from "lucide-react-native";
 import { useTabBarPadding } from "@/hooks/useTabBarPadding";
 import { useHorseDashboard } from "@/hooks/useHorseDashboard";
-import { useHorse, useHorsesByOwner } from "@/db/hooks";
+import { useCurrentUser, useHorse, useHorsesByOwner } from "@/db/hooks";
 import { useDb } from "@/db/provider";
 import { libraryPath, type HorseDashboard } from "@/lib/horse-dashboard";
 import { SeasonalTipCard } from "@/components/home/SeasonalTipCard";
 import { useHomePreferences } from "@/hooks/useHomePreferences";
 import { seasonalTipVisible } from "@/lib/home-preferences";
 import { ConnectionStatus } from "@/components/ui/ConnectionStatus";
+import { BRAND_NAME } from "@/constants/brand";
 
 export default function HomeScreen() {
   const { data, error, refresh, loading } = useHorseDashboard();
   const horse = useHorse();
+  const user = useCurrentUser();
+  const hasHorse = !!horse.id;
+  const hour = new Date().getHours();
+  const greeting = `${hour < 12 ? 'Goedemorgen' : hour < 18 ? 'Goedemiddag' : 'Goedenavond'}${user.name ? `, ${String(user.name).trim().split(/\s+/)[0]}` : ''}`;
   const horses = useHorsesByOwner().filter((item) => item.status === "active");
   const { selectHorse } = useDb();
   const [pickerOpen, setPickerOpen] = useState(false);
@@ -39,7 +44,7 @@ export default function HomeScreen() {
   const seasonal = data?.seasonalTip;
   const { preferences, ready: preferencesReady, saving, save } = useHomePreferences();
   const openLibrary = () => router.push("/(tabs)/(pager)/library");
-  const seasonalCard = preferencesReady && seasonal && seasonalTipVisible(seasonal, preferences) && (
+  const seasonalCard = hasHorse && preferencesReady && seasonal && seasonalTipVisible(seasonal, preferences) && (
     <SeasonalTipCard
       tip={seasonal}
       dismissing={saving}
@@ -69,7 +74,7 @@ export default function HomeScreen() {
       >
         <View className="mb-5 mt-2 flex-row items-center justify-between">
           <Text className="font-semi text-[12px] tracking-[2px] text-mint-700">
-            EQUI·APP
+            {BRAND_NAME}
           </Text>
           <View className="flex-row items-center gap-4">
             <ConnectionStatus />
@@ -84,9 +89,9 @@ export default function HomeScreen() {
         </View>
         <View className="mb-5 flex-row items-center justify-between gap-3">
           <Text className="flex-1 font-bold text-[25px] leading-[29px] text-ink">
-            {data?.greeting ?? "Welkom"}
+            {data?.greeting ?? greeting}
           </Text>
-          <Pressable
+          {hasHorse ? <Pressable
             accessibilityRole="button"
             accessibilityLabel="Wissel paard"
             onPress={() => setPickerOpen(true)}
@@ -104,9 +109,16 @@ export default function HomeScreen() {
               {horse.name ?? "Kies paard"}
             </Text>
             <ChevronDown size={14} color="#536C6B" />
-          </Pressable>
+          </Pressable> : <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Paard toevoegen"
+            onPress={() => router.push('/onboarding/add-horse')}
+            className="rounded-full bg-white px-3 py-2"
+          >
+            <Text className="font-semi text-[13px] text-mint-700">+ Paard toevoegen</Text>
+          </Pressable>}
         </View>
-        {data?.hasPlus && !data.protocol && <IntakeEntryCard />}
+        {hasHorse && data?.hasPlus && !data.protocol && <IntakeEntryCard />}
         {!!error && (
           <Pressable
             onPress={() => void refresh()}
@@ -118,15 +130,15 @@ export default function HomeScreen() {
             </Text>
           </Pressable>
         )}
-        {!horse.id && !loading && <View className="mb-5 rounded-2xl bg-white p-5">
-          <Text className="mb-2 font-semi text-[20px] text-ink">Voeg je paard toe wanneer je wilt</Text>
-          <Text className="mb-4 text-[14px] text-ink-50">Je kunt alvast rondkijken in de bibliotheek en de community.</Text>
-          <Pressable accessibilityRole="button" onPress={() => router.push('/onboarding/add-horse')} className="rounded-xl bg-teal-700 p-4"><Text className="text-center font-semi text-white">Paard toevoegen</Text></Pressable>
+        {!hasHorse && <View className="mb-5 rounded-2xl bg-white p-5">
+          <Text className="mb-2 font-semi text-[20px] text-ink">Je paard toevoegen aan {BRAND_NAME}?</Text>
+          <Text className="mb-4 text-[14px] text-ink-50">Voeg je paard toe aan je account, zodat je alle gegevens op één plek kunt bewaren.</Text>
+          <Pressable accessibilityRole="button" onPress={() => router.push('/onboarding/add-horse')} className="rounded-xl bg-teal-700 p-4"><Text className="text-center font-semi text-white">Paard toevoegen →</Text></Pressable>
         </View>}
         {loading && <ActivityIndicator color="#18BAB0" />}
         {data && (
           <>
-            {data.protocol && <ProtocolCard data={data} />}
+            {hasHorse && data.protocol && <ProtocolCard data={data} />}
             {seasonalCard}
             <View className="mb-3 mt-2 flex-row items-center justify-between gap-2">
               <Text className="flex-1 font-semi text-[10px] uppercase tracking-[1.2px] text-ink-70">
@@ -147,7 +159,7 @@ export default function HomeScreen() {
                 Bekijk de hele bibliotheek →
               </Text>
             </Pressable>
-            {data.showPlusUpsell && (
+            {hasHorse && data.showPlusUpsell && (
               <Pressable
                 accessibilityRole="link"
                 onPress={() => router.push("/plus")}
@@ -176,7 +188,7 @@ export default function HomeScreen() {
         <Sparkles size={24} color="#FFFFFF" />
       </Pressable>
       <Modal
-        visible={pickerOpen}
+        visible={hasHorse && pickerOpen}
         transparent
         animationType="slide"
         onRequestClose={() => setPickerOpen(false)}

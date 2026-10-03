@@ -4,11 +4,11 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="referrer" content="no-referrer">
-    <title>{{ $confirmed ? 'E-mailadres bevestigd' : 'Bevestigingslink verlopen' }} | Equi App</title>
+    <title>{{ $confirmed ? 'E-mailadres bevestigd' : 'Bevestigingslink verlopen' }} | {{ config('app.brand_name') }}</title>
 </head>
 <body style="margin: 0; padding: 24px; background: #fbf8f3; color: #183333; font-family: sans-serif; line-height: 1.6;">
     <main style="max-width: 520px; margin: 12vh auto;">
-        <p style="color: #127a79; font-weight: bold;">Equi App</p>
+        <p style="color: #127a79; font-weight: bold;">{{ config('app.brand_name') }}</p>
         @if ($confirmed)
             <h1>Je e-mailadres is bevestigd</h1>
             <p>Ga terug naar het registratiescherm in de app of browser. Je wordt daar automatisch ingelogd.</p>

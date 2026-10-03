@@ -3,6 +3,7 @@
   "compilerOptions": {
     "strict": true,
     "paths": {
+      "@/lib/error-tracking": ["./components/error-tracking"],
       "@/db/provider": [
         "./db/provider"
       ],

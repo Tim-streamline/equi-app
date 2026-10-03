@@ -5,11 +5,13 @@ namespace Tests\Feature;
 use App\Mail\RegistrationConfirmation;
 use App\Models\User;
 use App\Support\CreditLedger;
+use App\Support\WebLogin;
 use Firebase\JWT\JWT;
 use Firebase\JWT\Key;
 use Illuminate\Foundation\Http\Middleware\PreventRequestForgery;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Mail\MailManager;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
@@ -141,6 +143,7 @@ class RegistrationTest extends TestCase
 
     public function test_web_registration_requires_csrf_rotates_session_and_can_renew(): void
     {
+        $this->freezeTime();
         $this->postJson('/web-session/register', $this->account())->assertStatus(419);
         $csrf = $this->getJson('/web-session/csrf')->json('token');
         $this->withHeader('X-CSRF-TOKEN', $csrf);
@@ -151,6 +154,11 @@ class RegistrationTest extends TestCase
         $this->postJson('/web-session/register/status', $verification)->assertOk()->assertJsonPath('status', 'confirmed');
         $this->withHeader('X-CSRF-TOKEN', 'invalid')->postJson('/web-session/register/complete', $verification)->assertStatus(419);
         $registered = $this->withHeader('X-CSRF-TOKEN', $csrf)->postJson('/web-session/register/complete', $verification)->assertCreated();
+        foreach ([Auth::guard('web')->getRecallerName(), app(WebLogin::class)->cookieName()] as $name) {
+            $cookie = $registered->getCookie($name);
+            $this->assertNotNull($cookie);
+            $this->assertSame(now()->addDays(30)->timestamp, $cookie->getExpiresTime());
+        }
         $this->assertAuthenticatedAs(User::findOrFail($registered->json('user.id')), 'web');
         $this->assertNotSame($csrf, session()->token());
         $this->postJson('/web-session/token')->assertStatus(419);
@@ -251,13 +259,11 @@ class RegistrationTest extends TestCase
     {
         $proof = $this->beginRegistration();
         $mail = Mail::sent(RegistrationConfirmation::class)->last();
-        $this->assertSame('Bevestig je e-mailadres | Equi App', $mail->envelope()->subject);
-        $mail->assertSeeInHtml('Hallo New Owner,');
-        $mail->assertSeeInHtml($mail->confirmationUrl);
-        $mail->assertSeeInHtml('Bevestig mijn e-mailadres');
+        $this->assertSame('Bevestig je e-mailadres | EquiApp', $mail->envelope()->subject);
+        $mail->assertSeeInText('Hallo New Owner,');
+        $mail->assertSeeInText('Klik op de onderstaande link om je e-mailadres te bevestigen:');
         $mail->assertSeeInText('De link is 15 minuten geldig.');
         $mail->assertSeeInText($mail->confirmationUrl);
-        $mail->assertDontSeeInHtml($proof['registration_token']);
         $mail->assertDontSeeInText($proof['registration_token']);
     }
 
@@ -271,8 +277,13 @@ class RegistrationTest extends TestCase
         $this->assertCount(1, $messages);
         $message = $messages->first()->getOriginalMessage();
         $this->assertSame('new.owner@example.test', $message->getTo()[0]->getAddress());
-        $this->assertSame('Bevestig je e-mailadres | Equi App', $message->getSubject());
-        $this->assertStringContainsString('Bevestig mijn e-mailadres', $message->getHtmlBody());
+        $this->assertSame('Bevestig je e-mailadres | EquiApp', $message->getSubject());
+        $this->assertNull($message->getHtmlBody());
+        $this->assertSame('text', $message->getBody()->getMediaType());
+        $this->assertSame('plain', $message->getBody()->getMediaSubtype());
+        $this->assertStringContainsString('Hallo New Owner,', $message->getTextBody());
+        $this->assertStringContainsString('De link is 15 minuten geldig.', $message->getTextBody());
+        $this->assertStringNotContainsString($response->json('registration_token'), $message->getTextBody());
         preg_match('~https?://[^\s]+/registration/confirm/[a-f0-9-]+~', $message->getTextBody(), $matches);
         $this->get($matches[0])->assertOk();
         $this->assertGuest('web');

@@ -2,6 +2,7 @@
 
 namespace App\Http\Middleware;
 
+use App\Support\Brand;
 use Illuminate\Http\Request;
 use Inertia\Middleware;
 
@@ -19,6 +20,7 @@ class HandleInertiaRequests extends Middleware
 
         return [
             ...parent::share($request),
+            'brandName' => Brand::NAME,
             'auth' => [
                 'user' => $admin ? [
                     'id' => $admin->id,

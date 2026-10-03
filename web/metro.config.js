@@ -14,6 +14,7 @@ const overrides = new Map([
   ['db/provider.tsx', 'db/provider.tsx'],
   ['db/auth.ts', 'db/auth.ts'],
   ['db/connector.ts', 'db/connector.ts'],
+  ['lib/error-tracking.ts', 'components/error-tracking.ts'],
   ['app/_layout.tsx', 'components/RootLayout.tsx'],
   ['components/community/MediaGallery.tsx', 'components/MediaGallery.tsx'],
 ].map(([source, target]) => [path.join(shared, source), path.resolve(__dirname, target)]));

@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Mail\RegistrationConfirmation;
 use App\Models\User;
+use App\Support\WebLogin;
 use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -147,8 +148,11 @@ class RegistrationController extends Controller
         }
         [$user, $response] = $result;
         if ($request->routeIs('web-session.register.complete')) {
-            Auth::guard('web')->login($user);
+            Auth::guard('web')->setRememberDuration(WebLogin::MINUTES)->login($user, true);
             $request->session()->regenerate();
+            $login = app(WebLogin::class);
+            $login->start($request, $user);
+            $response = app(PowerSyncAuthController::class)->tokenResponse($user, $login->expiresAt($request));
         }
 
         return $response->setStatusCode(201)->header('Cache-Control', 'no-store');

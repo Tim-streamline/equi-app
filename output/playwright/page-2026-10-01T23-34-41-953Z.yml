@@ -1,0 +1,509 @@
+- generic [ref=e853]:
+  - generic [ref=e854]:
+    - generic [ref=e857]:
+      - generic [ref=e860]:
+        - generic [ref=e861]:
+          - generic [ref=e862]: EquiApp
+          - generic [ref=e863]:
+            - generic [ref=e866]: Online
+            - button "Account openen" [ref=e867] [cursor=pointer]:
+              - img [ref=e868]
+        - generic [ref=e871]:
+          - generic [ref=e872]: Goedemorgen, Shelley
+          - button "Wissel paard" [ref=e873] [cursor=pointer]:
+            - generic [ref=e875]: Q
+            - generic [ref=e876]: QA OPT-114 horse
+            - img [ref=e877]
+        - generic [ref=e880]: Ontdek in de bibliotheek
+        - generic [ref=e881]:
+          - link "De basics van hoefbevangenheid 1/2, Video, Vergrendeld, 1 credit" [ref=e883] [cursor=pointer]:
+            - generic [ref=e884]:
+              - generic [ref=e885]:
+                - img [ref=e886]
+                - img [ref=e889]
+              - generic [ref=e890]:
+                - img [ref=e891]
+                - generic [ref=e893]: Video
+            - generic [ref=e894]:
+              - generic [ref=e895]: De basics van hoefbevangenheid 1/2
+              - generic [ref=e896]:
+                - img [ref=e897]
+                - generic [ref=e901]: 1 credit
+          - 'link "Metformine bij insulinedysregulatie: heeft het zin?, Video, Vergrendeld, 1 credit" [ref=e903] [cursor=pointer]':
+            - generic [ref=e904]:
+              - generic [ref=e905]:
+                - img [ref=e906]
+                - img [ref=e909]
+              - generic [ref=e910]:
+                - img [ref=e911]
+                - generic [ref=e913]: Video
+            - generic [ref=e914]:
+              - generic [ref=e915]: "Metformine bij insulinedysregulatie: heeft het zin?"
+              - generic [ref=e916]:
+                - img [ref=e917]
+                - generic [ref=e921]: 1 credit
+          - link "SGLT2-remmers bij insulinedysregulatie, Artikel, Vergrendeld, 1 credit" [ref=e923] [cursor=pointer]:
+            - generic [ref=e924]:
+              - generic [ref=e925]:
+                - img [ref=e926]
+                - img [ref=e929]
+              - generic [ref=e930]:
+                - img [ref=e931]
+                - generic [ref=e933]: Artikel
+            - generic [ref=e934]:
+              - generic [ref=e935]: SGLT2-remmers bij insulinedysregulatie
+              - generic [ref=e936]:
+                - img [ref=e937]
+                - generic [ref=e941]: 1 credit
+          - 'link "Pijnstillers bij hoefbevangenheid: wel of niet?, Video, Vergrendeld, 1 credit" [ref=e943] [cursor=pointer]':
+            - generic [ref=e944]:
+              - generic [ref=e945]:
+                - img [ref=e946]
+                - img [ref=e949]
+              - generic [ref=e950]:
+                - img [ref=e951]
+                - generic [ref=e953]: Video
+            - generic [ref=e954]:
+              - generic [ref=e955]: "Pijnstillers bij hoefbevangenheid: wel of niet?"
+              - generic [ref=e956]:
+                - img [ref=e957]
+                - generic [ref=e961]: 1 credit
+        - generic [ref=e963] [cursor=pointer]: Bekijk de hele bibliotheek →
+        - link "Wil je jouw paard écht gericht ondersteunen? Ga voor Plus en ontvang een persoonlijk protocol op maat, afgestemd op jouw paard, zijn klachten en jullie doelen. Ontdek Plus →" [ref=e964] [cursor=pointer]:
+          - generic [ref=e965]: Wil je jouw paard écht gericht ondersteunen?
+          - generic [ref=e966]: Ga voor Plus en ontvang een persoonlijk protocol op maat, afgestemd op jouw paard, zijn klachten en jullie doelen.
+          - generic [ref=e967]: Ontdek Plus →
+      - button "Vraag het Shelby" [ref=e968] [cursor=pointer]:
+        - img [ref=e969]
+    - generic [ref=e974]:
+      - generic [ref=e975]:
+        - generic [ref=e977]: QA OPT-114 horse
+        - generic [ref=e979]: S
+      - button [ref=e982] [cursor=pointer]:
+        - generic [ref=e983]:
+          - img [ref=e985]
+          - generic [ref=e988]:
+            - generic [ref=e989]: PROTOCOL INTAKE
+            - generic [ref=e990]: Start jouw protocol intake
+            - generic [ref=e991]: 11 korte secties, samen ongeveer 60 minuten. Op basis van deze informatie wordt jouw protocol gemaakt.
+          - img [ref=e993]
+    - generic [ref=e1002]:
+      - generic [ref=e1003]:
+        - generic [ref=e1004]:
+          - heading [level=1] [ref=e1005]: Bibliotheek
+          - progressbar [ref=e1006]:
+            - img [ref=e1008]
+        - generic [ref=e1011]:
+          - img [ref=e1012]
+          - textbox [ref=e1015]:
+            - /placeholder: Waar wil je meer over weten?
+      - generic [ref=e1016]:
+        - button [ref=e1017] [cursor=pointer]:
+          - generic [ref=e1018]: Alles
+          - img [ref=e1019]
+        - generic [ref=e1023]:
+          - button [ref=e1024] [cursor=pointer]:
+            - generic [ref=e1026]: Voeding
+          - button [ref=e1027] [cursor=pointer]:
+            - generic [ref=e1029]: Kruiden
+          - button [ref=e1030] [cursor=pointer]:
+            - generic [ref=e1032]: Herfst
+          - button [ref=e1033] [cursor=pointer]:
+            - generic [ref=e1035]: Gedrag
+          - button [ref=e1036] [cursor=pointer]:
+            - generic [ref=e1038]: Hoeven
+          - button [ref=e1039] [cursor=pointer]:
+            - generic [ref=e1041]: Metabool
+          - button [ref=e1042] [cursor=pointer]:
+            - generic [ref=e1044]: Insuline resistentie
+          - button [ref=e1045] [cursor=pointer]:
+            - generic [ref=e1047]: Huisvesting
+          - button [ref=e1048] [cursor=pointer]:
+            - generic [ref=e1050]: Wildplukken
+      - generic [ref=e1051]: 26 items
+      - generic [ref=e1052]:
+        - link [ref=e1054] [cursor=pointer]:
+          - generic [ref=e1055]:
+            - generic [ref=e1056]:
+              - img [ref=e1057]
+              - img [ref=e1060]
+            - generic [ref=e1061]:
+              - img [ref=e1062]
+              - generic [ref=e1064]: Video
+          - generic [ref=e1065]:
+            - generic [ref=e1066]: De basics van hoefbevangenheid 2/2
+            - generic [ref=e1067]: In deze video's leer je over subklinische hoefbevangenheid, wat er in de hoef kan gebeuren nog voordat je iets merkt en waarom koude maanden extra risico kunnen geven.
+            - generic [ref=e1068]:
+              - img [ref=e1069]
+              - generic [ref=e1073]: 1 credit
+        - link [ref=e1075] [cursor=pointer]:
+          - generic [ref=e1076]:
+            - generic [ref=e1077]:
+              - img [ref=e1078]
+              - img [ref=e1081]
+            - generic [ref=e1082]:
+              - img [ref=e1083]
+              - generic [ref=e1085]: Video
+          - generic [ref=e1086]:
+            - generic [ref=e1087]: Tips bij acute hoefbevangenheid & hoe daarna verder?
+            - generic [ref=e1088]: Wat je direct kan doen en hoe je verder gaat zodra de acute fase voorbij is.
+            - generic [ref=e1089]:
+              - img [ref=e1090]
+              - generic [ref=e1094]: 1 credit
+        - link [ref=e1096] [cursor=pointer]:
+          - generic [ref=e1097]:
+            - generic [ref=e1098]:
+              - img [ref=e1099]
+              - img [ref=e1102]
+            - generic [ref=e1103]:
+              - img [ref=e1104]
+              - generic [ref=e1106]: Video
+          - generic [ref=e1107]:
+            - generic [ref=e1108]: De basics van hoefbevangenheid 1/2
+            - generic [ref=e1109]: In deze reeks bespreken we wat hoefbevangenheid is, wat de verschillende fasen van hoefbevangenheid zijn, hoe herken je hoefbevangenheid en de verschillende oorzaken van hoefbevangenheid.
+            - generic [ref=e1110]:
+              - img [ref=e1111]
+              - generic [ref=e1115]: 1 credit
+        - link [ref=e1117] [cursor=pointer]:
+          - generic [ref=e1118]:
+            - generic [ref=e1119]:
+              - img [ref=e1120]
+              - img [ref=e1123]
+            - generic [ref=e1124]:
+              - img [ref=e1125]
+              - generic [ref=e1127]: Video
+          - generic [ref=e1128]:
+            - generic [ref=e1129]: "Metformine bij insulinedysregulatie: heeft het zin?"
+            - generic [ref=e1130]: "Praktische uitleg over metformine bij insulinedysregulatie: werking, effectiviteit, bijwerkingen, stoppen en mijn eigen ervaring met een mogelijk rebound-effect."
+            - generic [ref=e1131]:
+              - img [ref=e1132]
+              - generic [ref=e1136]: 1 credit
+        - link [ref=e1138] [cursor=pointer]:
+          - generic [ref=e1139]:
+            - generic [ref=e1140]:
+              - img [ref=e1141]
+              - img [ref=e1144]
+            - generic [ref=e1145]:
+              - img [ref=e1146]
+              - generic [ref=e1148]: Artikel
+          - generic [ref=e1149]:
+            - generic [ref=e1150]: SGLT2-remmers bij insulinedysregulatie
+            - generic [ref=e1151]: Wat SGLT2-remmers, zoals Invokana, óók met het metabolisme kunnen doen, welke risico’s vaak onderbelicht blijven en waarom bloedcontrole vóór én tijdens de behandeling zo belangrijk is.
+            - generic [ref=e1152]:
+              - img [ref=e1153]
+              - generic [ref=e1157]: 1 credit
+        - link [ref=e1159] [cursor=pointer]:
+          - generic [ref=e1160]:
+            - generic [ref=e1161]:
+              - img [ref=e1162]
+              - img [ref=e1165]
+            - generic [ref=e1166]:
+              - img [ref=e1167]
+              - generic [ref=e1169]: Video
+          - generic [ref=e1170]:
+            - generic [ref=e1171]: "Pijnstillers bij hoefbevangenheid: wel of niet?"
+            - generic [ref=e1172]: Pijnstilling bij hoefbevangenheid vraagt om een zorgvuldige balans tussen comfort en bescherming van de kwetsbare hoef. In deze video leer je welke rol pijn heeft, wanneer pijnbestrijding belangrijk wordt en waarom een paard dat beter loopt op pijnstilling nog niet automatisch meer belastbaar is.
+            - generic [ref=e1173]:
+              - img [ref=e1174]
+              - generic [ref=e1178]: 1 credit
+        - link [ref=e1180] [cursor=pointer]:
+          - generic [ref=e1181]:
+            - generic [ref=e1182]:
+              - img [ref=e1183]
+              - img [ref=e1186]
+            - generic [ref=e1187]:
+              - img [ref=e1188]
+              - generic [ref=e1190]: Video
+          - generic [ref=e1191]:
+            - generic [ref=e1192]: Dit wil je weten als je voordroog voert
+            - generic [ref=e1193]: Wat er allemaal wordt beweerd over voordroog en waarom het toch niet in het rantsoen thuishoort.
+            - generic [ref=e1195]: Gratis
+        - link [ref=e1197] [cursor=pointer]:
+          - generic [ref=e1198]:
+            - generic [ref=e1199]:
+              - img [ref=e1200]
+              - img [ref=e1203]
+            - generic [ref=e1204]:
+              - img [ref=e1205]
+              - generic [ref=e1207]: Video
+          - generic [ref=e1208]:
+            - generic [ref=e1209]: "Masterclass: de apotheek van de herfst"
+            - generic [ref=e1210]: In de herfst trekt de kracht van de plant naar de wortels, de bessen en de schors. Precies die delen wil je nu gebruiken. Je leert welke herfstkruiden je paard helpen richting de winter, wat ze doen en wanneer je ze beter laat staan.
+            - generic [ref=e1211]:
+              - img [ref=e1212]
+              - generic [ref=e1216]: 4 credits
+        - link [ref=e1218] [cursor=pointer]:
+          - generic [ref=e1219]:
+            - generic [ref=e1220]:
+              - img [ref=e1221]
+              - img [ref=e1224]
+            - generic [ref=e1225]:
+              - img [ref=e1226]
+              - generic [ref=e1228]: Video
+          - generic [ref=e1229]:
+            - generic [ref=e1230]: Het suikergehalte van hooi zelf meten met een refractometer
+            - generic [ref=e1231]: Leer hoe je met een refractometer thuis een indicatie krijgt van het suikergehalte van je hooi. Je leest stap voor stap hoe je een representatief monster maakt, correct meet en de uitslag interpreteert én waar de beperkingen van deze methode liggen.
+            - generic [ref=e1233]: Gratis
+        - link [ref=e1235] [cursor=pointer]:
+          - generic [ref=e1236]:
+            - generic [ref=e1237]:
+              - img [ref=e1238]
+              - img [ref=e1241]
+            - generic [ref=e1242]:
+              - img [ref=e1243]
+              - generic [ref=e1245]: Artikel
+          - generic [ref=e1246]:
+            - generic [ref=e1247]: "Ruwvoer laten analyseren: welke analyse kies je?"
+            - generic [ref=e1248]: Niet iedere ruwvoeranalyse geeft je dezelfde informatie. In dit artikel vergelijk ik verschillende aanbieders en leg ik uit waar je op moet letten bij het kiezen én interpreteren van een analyse.
+            - generic [ref=e1250]: Gratis
+        - link [ref=e1252] [cursor=pointer]:
+          - generic [ref=e1253]:
+            - generic [ref=e1254]:
+              - img [ref=e1255]
+              - img [ref=e1258]
+            - generic [ref=e1259]:
+              - img [ref=e1260]
+              - generic [ref=e1262]: Artikel
+          - generic [ref=e1263]:
+            - generic [ref=e1264]: "Ruwvoeranalyse interpreteren: welke waarden wil je zien?"
+            - generic [ref=e1265]: Leer welke waarden op een ruwvoeranalyse echt belangrijk zijn en welke richtlijnen je kunt gebruiken voor suiker, eiwit, vezels en energie. Zo kun je de uitslag praktisch vertalen naar wat passend is voor jouw paard.
+            - generic [ref=e1266]:
+              - img [ref=e1267]
+              - generic [ref=e1271]: 1 credit
+        - link [ref=e1273] [cursor=pointer]:
+          - generic [ref=e1274]:
+            - generic [ref=e1275]:
+              - img [ref=e1276]
+              - img [ref=e1279]
+            - generic [ref=e1280]:
+              - img [ref=e1281]
+              - generic [ref=e1283]: Artikel
+          - generic [ref=e1284]:
+            - generic [ref=e1285]: Wat er van de akkers overwaait
+            - generic [ref=e1286]: Bestrijdingsmiddelen blijven niet altijd netjes binnen de grenzen van het perceel waarop ze worden gebruikt. Wat weten we over blootstelling bij vee, wat kunnen we daarvan vertalen naar paarden en wanneer is het zinvol om hier rekening mee te houden?
+            - generic [ref=e1287]:
+              - img [ref=e1288]
+              - generic [ref=e1292]: 1 credit
+        - link [ref=e1294] [cursor=pointer]:
+          - generic [ref=e1295]:
+            - generic [ref=e1296]:
+              - img [ref=e1297]
+              - img [ref=e1300]
+            - generic [ref=e1301]:
+              - img [ref=e1302]
+              - generic [ref=e1304]: Artikel
+          - generic [ref=e1305]:
+            - generic [ref=e1306]: "Waarom je je hooinetten wil wassen: vóór én tijdens gebruik"
+            - generic [ref=e1307]: Hooinetten worden vaak maandenlang gebruikt zonder ooit gewassen te worden. Terwijl het heel verstandig is om ze vóór het eerste gebruik én daarna regelmatig schoon te maken. In dit artikel lees je waarom en waar je op kunt letten.
+            - generic [ref=e1308]:
+              - img [ref=e1309]
+              - generic [ref=e1313]: 1 credit
+        - link [ref=e1315] [cursor=pointer]:
+          - generic [ref=e1316]:
+            - generic [ref=e1317]:
+              - img [ref=e1318]
+              - img [ref=e1321]
+            - generic [ref=e1322]:
+              - img [ref=e1323]
+              - generic [ref=e1325]: Video
+          - generic [ref=e1326]:
+            - generic [ref=e1327]: Verantwoord kruiden gebruiken bij paarden 1/3
+            - generic [ref=e1328]: "Deel 1: Kruiden veilig gebruiken bij je paard. Kruiden kunnen veel doen, waardoor de juiste dosering en een bewuste toepassing belangrijk zijn. In dit deel leer je waar je op let bij het doseren, wanneer een kruid minder geschikt is en welke extra aandachtspunten gelden bij medicatie, dracht en lactatie."
+            - generic [ref=e1329]:
+              - img [ref=e1330]
+              - generic [ref=e1334]: 1 credit
+        - link [ref=e1336] [cursor=pointer]:
+          - generic [ref=e1337]:
+            - generic [ref=e1338]:
+              - img [ref=e1339]
+              - img [ref=e1342]
+            - generic [ref=e1343]:
+              - img [ref=e1344]
+              - generic [ref=e1346]: Video
+          - generic [ref=e1347]:
+            - generic [ref=e1348]: Verantwoord kruiden gebruiken bij paarden 2/3
+            - generic [ref=e1349]: "Deel 2: Begrijpen hoe kruiden werken. Waarom werkt het ene kruid verzachtend en het andere juist stimulerend, samentrekkend of slijmoplossend? Je maakt kennis met belangrijke planteninhoudsstoffen en ontdekt hoe deze samenhangen met de werking en toepassing van een kruid. Ook leer je welke gebruiksvorm, zoals poeder, thee of tinctuur, het beste aansluit bij je doel."
+            - generic [ref=e1350]:
+              - img [ref=e1351]
+              - generic [ref=e1355]: 1 credit
+        - link [ref=e1357] [cursor=pointer]:
+          - generic [ref=e1358]:
+            - generic [ref=e1359]:
+              - img [ref=e1360]
+              - img [ref=e1363]
+            - generic [ref=e1364]:
+              - img [ref=e1365]
+              - generic [ref=e1367]: Video
+          - generic [ref=e1368]:
+            - generic [ref=e1369]: Verantwoord kruiden gebruiken bij paarden 3/3
+            - generic [ref=e1370]: "Deel 3: Planten leren lezen. De kleur, vorm en groeiomgeving van een plant hebben door de geschiedenis heen een belangrijke rol gespeeld binnen de kruidengeneeskunde. In dit verdiepende deel ontdek je de achtergrond van signatuurleer en traditionele kruidenkennis, en leer je hoe je met meer aandacht naar planten kunt kijken."
+            - generic [ref=e1371]:
+              - img [ref=e1372]
+              - generic [ref=e1376]: 1 credit
+        - link [ref=e1378] [cursor=pointer]:
+          - generic [ref=e1379]:
+            - generic [ref=e1380]:
+              - img [ref=e1381]
+              - img [ref=e1384]
+            - generic [ref=e1385]:
+              - img [ref=e1386]
+              - generic [ref=e1388]: Video
+          - generic [ref=e1389]:
+            - generic [ref=e1390]: Zelf gezonde kruidentraktaties maken voor je paard
+            - generic [ref=e1391]: "Maak zelf eenvoudige kruidentraktaties voor je paard: \"kruidnootjes\" en lijnzaad-brandnetelblokjes. Je ziet stap voor stap welke ingrediënten je nodig hebt en hoe je ze maakt."
+            - generic [ref=e1392]:
+              - img [ref=e1393]
+              - generic [ref=e1397]: 1 credit
+        - link [ref=e1399] [cursor=pointer]:
+          - generic [ref=e1400]:
+            - generic [ref=e1401]:
+              - img [ref=e1402]
+              - img [ref=e1405]
+            - generic [ref=e1406]:
+              - img [ref=e1407]
+              - generic [ref=e1409]: Video
+          - generic [ref=e1410]:
+            - generic [ref=e1411]: "Zelfselectie bij paarden: wat is het en hoe werkt het? 1/3"
+            - generic [ref=e1412]: "Deel 1: Zoöfarmacognosie: wat is het en hoe werkt het? Binnen de toegepaste zoöfarmacognosie krijgen dieren de ruimte om zelf te reageren op aangeboden planten, kruiden en andere natuurlijke stoffen. In dit deel ontdek je waar deze methode op gebaseerd is, wat zelfselectie waardevol kan maken en hoe je er op een verantwoorde manier mee begint."
+            - generic [ref=e1413]:
+              - img [ref=e1414]
+              - generic [ref=e1418]: 1 credit
+        - link [ref=e1420] [cursor=pointer]:
+          - generic [ref=e1421]:
+            - generic [ref=e1422]:
+              - img [ref=e1423]
+              - img [ref=e1426]
+            - generic [ref=e1427]:
+              - img [ref=e1428]
+              - generic [ref=e1430]: Video
+          - generic [ref=e1431]:
+            - generic [ref=e1432]: Zelfselectie bij paarden in de praktijk 2/3
+            - generic [ref=e1433]: "Deel 2: Zelfselectie in de praktijk. Hoe ziet een zelfselectiesessie er in de praktijk uit en welke reacties wil je leren herkennen? Je kijkt mee met de eerste sessies van Rolo en Harry en ziet hoe verschillend paarden op dezelfde werkwijze kunnen reageren."
+            - generic [ref=e1434]:
+              - img [ref=e1435]
+              - generic [ref=e1439]: 1 credit
+        - link [ref=e1441] [cursor=pointer]:
+          - generic [ref=e1442]:
+            - generic [ref=e1443]:
+              - img [ref=e1444]
+              - img [ref=e1447]
+            - generic [ref=e1448]:
+              - img [ref=e1449]
+              - generic [ref=e1451]: Video
+          - generic [ref=e1452]:
+            - generic [ref=e1453]: "Zelfselectie bij paarden: het mineralenbuffet 3/3"
+            - generic [ref=e1454]: "Deel 3: Werken met een mineralenbuffet. In dit laatste deel gaan we een stap verder met een mineralenbuffet. Je ziet hoe je verschillende mineralen overzichtelijk aanbiedt, hoe Rolo en Harry hierop reageren en welke signalen tijdens een zelfselectiesessie interessant zijn om te observeren."
+            - generic [ref=e1455]:
+              - img [ref=e1456]
+              - generic [ref=e1460]: 1 credit
+        - link [ref=e1462] [cursor=pointer]:
+          - generic [ref=e1463]:
+            - generic [ref=e1464]:
+              - img [ref=e1465]
+              - img [ref=e1468]
+            - generic [ref=e1469]:
+              - img [ref=e1470]
+              - generic [ref=e1472]: Video
+          - generic [ref=e1473]:
+            - generic [ref=e1474]: Een passende kruidenapotheek voor je paard samenstellen
+            - generic [ref=e1475]: Welke kruiden zijn handig om standaard in huis te hebben en wat past bij jouw paard? Je leert hoe je een overzichtelijke basisvoorraad samenstelt en deze aanpast aan de gezondheid, gevoeligheden en actuele behoeften van je paard.
+            - generic [ref=e1476]:
+              - img [ref=e1477]
+              - generic [ref=e1481]: 1 credit
+        - link [ref=e1483] [cursor=pointer]:
+          - generic [ref=e1484]:
+            - generic [ref=e1485]:
+              - img [ref=e1486]
+              - img [ref=e1489]
+            - generic [ref=e1490]:
+              - img [ref=e1491]
+              - generic [ref=e1493]: Video
+          - generic [ref=e1494]:
+            - generic [ref=e1495]: Kruiden integreren in de dagelijkse zorg van je paard
+            - generic [ref=e1497]:
+              - img [ref=e1498]
+              - generic [ref=e1502]: 1 credit
+        - link [ref=e1504] [cursor=pointer]:
+          - generic [ref=e1505]:
+            - generic [ref=e1506]:
+              - img [ref=e1507]
+              - img [ref=e1510]
+            - generic [ref=e1511]:
+              - img [ref=e1512]
+              - generic [ref=e1514]: Video
+          - generic [ref=e1515]:
+            - generic [ref=e1516]: Veilig en duurzaam wildplukken + opdracht
+            - generic [ref=e1517]: Waar mag je plukken, hoeveel kun je meenemen en hoe voorkom je dat je een groeiplaats beschadigt? Je leert de belangrijkste basisregels van wildplukken en onderzoekt hoe je kruiden op een verantwoorde manier verzamelt.
+            - generic [ref=e1518]:
+              - img [ref=e1519]
+              - generic [ref=e1523]: 1 credit
+        - link [ref=e1525] [cursor=pointer]:
+          - generic [ref=e1526]:
+            - generic [ref=e1527]:
+              - img [ref=e1528]
+              - img [ref=e1531]
+            - generic [ref=e1532]:
+              - img [ref=e1533]
+              - generic [ref=e1535]: Video
+          - generic [ref=e1536]:
+            - generic [ref=e1537]: Wilde kruiden herkennen en verzamelen
+            - generic [ref=e1538]: Een plant verkeerd herkennen kan grote gevolgen hebben. Je leert welke spullen je meeneemt, hoe je een plant stap voor stap determineert en welke kenmerken je altijd controleert voordat je een kruid verzamelt.
+            - generic [ref=e1539]:
+              - img [ref=e1540]
+              - generic [ref=e1544]: 1 credit
+        - link [ref=e1546] [cursor=pointer]:
+          - generic [ref=e1547]:
+            - generic [ref=e1548]:
+              - img [ref=e1549]
+              - img [ref=e1552]
+            - generic [ref=e1553]:
+              - img [ref=e1554]
+              - generic [ref=e1556]: Video
+          - generic [ref=e1557]:
+            - generic [ref=e1558]: Kruiden drogen, bewaren en houdbaar houden
+            - generic [ref=e1559]: Na het wildplukken bepalen het droogproces en de opslag hoeveel kwaliteit er behouden blijft. Leer welke droogmethoden geschikt zijn, welke fouten schimmel of kwaliteitsverlies kunnen veroorzaken en hoelang gedroogde kruiden en kruidenbereidingen houdbaar zijn.
+            - generic [ref=e1560]:
+              - img [ref=e1561]
+              - generic [ref=e1565]: 1 credit
+        - link [ref=e1567] [cursor=pointer]:
+          - generic [ref=e1568]:
+            - img [ref=e1570]
+            - generic [ref=e1572]:
+              - img [ref=e1573]
+              - generic [ref=e1575]: Video
+          - generic [ref=e1576]:
+            - generic [ref=e1577]: De 5 grootste stressoren voor paarden
+            - generic [ref=e1580]: Gratis
+    - generic [ref=e1586]:
+      - generic [ref=e1587]:
+        - generic [ref=e1588]:
+          - generic [ref=e1589]: COMMUNITY
+          - generic [ref=e1590]: Vraag & deel
+        - button [ref=e1591] [cursor=pointer]:
+          - img [ref=e1592]
+      - generic [ref=e1597]: Samen leren over je paard. Shelley leest en reageert mee wanneer ze kan. Een antwoord is niet gegarandeerd.
+      - generic [ref=e1598]:
+        - tab [ref=e1599] [cursor=pointer]:
+          - generic [ref=e1601]: Alle berichten
+        - tab [ref=e1602] [cursor=pointer]:
+          - generic [ref=e1603]:
+            - img [ref=e1604]
+            - generic [ref=e1606]: Bewaard
+      - progressbar [ref=e1608]:
+        - img [ref=e1610]
+  - generic [ref=e1615]:
+    - generic [ref=e1616] [cursor=pointer]:
+      - img [ref=e1617]
+      - generic [ref=e1620]: Home
+    - generic [ref=e1621] [cursor=pointer]:
+      - img [ref=e1622]
+      - generic [ref=e1625]: Protocol
+    - generic [ref=e1626] [cursor=pointer]:
+      - img [ref=e1627]
+      - generic [ref=e1632]: Scan
+    - generic [ref=e1633] [cursor=pointer]:
+      - img [ref=e1634]
+      - generic [ref=e1636]: Bibliotheek
+    - generic [ref=e1637] [cursor=pointer]:
+      - img [ref=e1638]
+      - generic [ref=e1640]: Community

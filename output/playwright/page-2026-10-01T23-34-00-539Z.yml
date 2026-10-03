@@ -1,0 +1,22 @@
+- generic [ref=e26]:
+  - generic [ref=e31]:
+    - generic [ref=e32]: EquiApp
+    - generic [ref=e33]: by De Paardentherapeut
+  - generic [ref=e34]:
+    - generic [ref=e35]: Welkom bij EquiApp!
+    - generic [ref=e36]:
+      - textbox "E-mailadres" [ref=e37]:
+        - /placeholder: e-mailadres
+      - generic [ref=e38]:
+        - textbox "Wachtwoord" [ref=e39]:
+          - /placeholder: wachtwoord
+        - button "Wachtwoord tonen" [ref=e40] [cursor=pointer]:
+          - img [ref=e41]
+    - link "Wachtwoord vergeten?" [ref=e44] [cursor=pointer]:
+      - generic [ref=e45]: Wachtwoord vergeten?
+  - generic [ref=e46]:
+    - button "Inloggen" [ref=e47] [cursor=pointer]:
+      - generic [ref=e48]: Inloggen
+      - img [ref=e49]
+    - button "Nieuw hier? Maak een account" [ref=e51] [cursor=pointer]:
+      - generic [ref=e52]: Nieuw hier? Maak een account

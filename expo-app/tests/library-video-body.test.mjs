@@ -20,6 +20,7 @@ function renderScreen(format, body, chapters = [], canRead = true) {
   const videoSources = [];
   const jsx = (type, props) => typeof type === 'function' ? type(props) : { type, props };
   const modules = {
+    '@/constants/brand': { BRAND_NAME: 'EquiApp' },
     '@/components/credits/TemporaryCreditButton': { TemporaryCreditButton: 'TemporaryCreditButton' },
     'react/jsx-runtime': { jsx, jsxs: jsx, Fragment: 'Fragment' },
     expo: { useEvent: (_player, _name, initial) => initial ?? null },

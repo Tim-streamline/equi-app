@@ -2,6 +2,7 @@
 
 namespace App\Notifications;
 
+use App\Support\Brand;
 use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
 
@@ -18,11 +19,12 @@ class CustomerPasswordReset extends Notification
     {
         $url = rtrim(config('app.url'), '/').'/web-session/password/reset/'.rawurlencode($this->token).'?'.http_build_query(['email' => $notifiable->getEmailForPasswordReset()]);
 
-        return (new MailMessage)->subject('Stel je EquiApp-wachtwoord opnieuw in')
-            ->greeting('Hallo '.$notifiable->name.',')
-            ->line('Je hebt een link aangevraagd om je wachtwoord opnieuw in te stellen.')
-            ->action('Nieuw wachtwoord instellen', $url)
-            ->line('Deze link is '.config('auth.passwords.users.expire').' minuten geldig en kan één keer worden gebruikt.')
-            ->line('Heb je dit niet aangevraagd? Dan hoef je niets te doen.');
+        return (new MailMessage)->subject('Stel je '.Brand::NAME.'-wachtwoord opnieuw in')
+            ->text('mail.password-reset-text', [
+                'name' => $notifiable->name,
+                'resetUrl' => $url,
+                'expiresInMinutes' => config('auth.passwords.users.expire'),
+                'brandName' => Brand::NAME,
+            ]);
     }
 }

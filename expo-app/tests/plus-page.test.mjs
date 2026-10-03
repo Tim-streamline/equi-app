@@ -9,6 +9,7 @@ function screen() {
   const exports = {}, state = []; let cursor = 0, intakes = 0;
   const jsx = (type, props) => ({ type, props });
   const modules = {
+    '@/constants/brand': { BRAND_NAME: 'EquiApp' },
     'react/jsx-runtime': { jsx, jsxs: jsx, Fragment: 'Fragment' },
     react: { useState: value => { const i = cursor++; if (!(i in state)) state[i] = value; return [state[i], next => state[i] = next]; } },
     'react-native': { Modal: 'Modal', Pressable: 'Pressable', ScrollView: 'ScrollView', Text: 'Text', View: 'View', useWindowDimensions: () => ({ width: 375, height: 667 }) },

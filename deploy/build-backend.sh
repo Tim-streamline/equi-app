@@ -8,6 +8,7 @@ APP_ENV=production APP_DEBUG=false LOG_CHANNEL=stderr php artisan package:discov
 npm ci --no-audit --no-fund
 # The local npm build hook reloads Octane; a release build has no running server.
 VITE_APP_NAME='Equi App' ./node_modules/.bin/vite build
+find public/build -type f -name '*.map' -delete
 test -s public/build/manifest.json
 test ! -e public/hot
 composer check-platform-reqs --no-dev

@@ -1,7 +1,7 @@
-const { getDefaultConfig } = require('expo/metro-config');
+const { getSentryExpoConfig, withSentryBabelTransformer } = require('@sentry/react-native/metro');
 const { withNativeWind } = require('nativewind/metro');
 
-const config = getDefaultConfig(__dirname);
+const config = getSentryExpoConfig(__dirname);
 
 const { transformer, resolver } = config;
 config.transformer = {
@@ -14,4 +14,8 @@ config.resolver = {
   sourceExts: [...resolver.sourceExts, 'svg'],
 };
 
-module.exports = withNativeWind(config, { input: './global.css' });
+// Wrap the SVG transformer so both SVG imports and Router error boundaries work.
+module.exports = withNativeWind(
+  withSentryBabelTransformer(config, false, true),
+  { input: './global.css' },
+);

@@ -13,8 +13,10 @@ use App\Models\Protocol;
 use App\Models\ProtocolTemplate;
 use App\Models\SeasonalTip;
 use App\Models\User;
+use App\Support\CreditLedger;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 use Tests\TestCase;
 
 class HorseDashboardTest extends TestCase
@@ -72,6 +74,42 @@ class HorseDashboardTest extends TestCase
         ]);
     }
 
+    public function test_account_without_an_active_horse_has_a_personal_home_and_four_published_recommendations(): void
+    {
+        $this->horse->update(['status' => 'archived']);
+        $this->owner->update(['name' => 'Shelley Example']);
+        $this->travelTo(now()->setTime(8, 0));
+        $published = [];
+        for ($i = 0; $i < 6; $i++) {
+            $published[] = LibraryItem::create(['slug' => 'available-'.$i, 'title' => 'Available '.$i, 'format' => 'article', 'credit_cost' => $i, 'published_at' => now()->subDay()]);
+        }
+        DB::table('library_unlocks')->insert(['user_id' => $this->owner->id, 'item_id' => $published[1]->id]);
+        $draft = LibraryItem::create(['slug' => 'draft', 'title' => 'Draft', 'format' => 'article', 'credit_cost' => 0]);
+        $future = LibraryItem::create(['slug' => 'future', 'title' => 'Future', 'format' => 'article', 'credit_cost' => 0, 'published_at' => now()->addDay()]);
+        $response = $this->getJson('/api/home?timezone=Europe/Amsterdam')->assertOk()
+            ->assertJsonPath('greeting', 'Goedemorgen, Shelley')
+            ->assertJsonPath('variant', 'without-horse')->assertJsonPath('horse.id', '')
+            ->assertJsonPath('protocol', null)->assertJsonPath('showPlusUpsell', false)
+            ->assertJsonCount(4, 'recommendations');
+        foreach ([$published[1]->id, $draft->id, $future->id] as $id) {
+            $this->assertNotContains($id, array_column($response->json('recommendations'), 'id'));
+        }
+        $this->getJson('/api/home?timezone=Not/AZone')->assertUnprocessable();
+        $this->owner->update(['disabled_at' => now()]);
+        $this->getJson('/api/home')->assertNotFound();
+    }
+
+    public function test_adding_a_horse_returns_the_existing_basic_then_active_protocol_variant(): void
+    {
+        $this->horse->update(['status' => 'archived']);
+        $this->getJson('/api/home')->assertOk()->assertJsonPath('protocol', null);
+        $horse = Horse::create(['owner_id' => $this->owner->id, 'name' => 'New horse', 'status' => 'active']);
+        $url = '/api/horses/'.$horse->id.'/dashboard';
+        $this->getJson($url)->assertOk()->assertJsonPath('variant', 'basic')->assertJsonPath('protocol', null);
+        $this->protocol->update(['horse_id' => $horse->id]);
+        $this->getJson($url)->assertOk()->assertJsonPath('variant', 'plus')->assertJsonPath('protocol.id', $this->protocol->id);
+    }
+
     public function test_historical_days_use_their_phase_and_update_calendar_after_checking_and_unchecking(): void
     {
         $this->travelTo(now()->setDate(2026, 9, 3));
@@ -122,7 +160,7 @@ class HorseDashboardTest extends TestCase
         $other = Horse::create(['owner_id' => User::factory()->create()->id, 'name' => 'Other', 'status' => 'active']);
         $url = str_replace($this->horse->id, $other->id, $this->dayUrl('2026-08-27'));
         $this->getJson($url)->assertNotFound();
-        $this->postJson($url, ['item_id' => (string) \Illuminate\Support\Str::uuid(), 'done' => true])->assertNotFound();
+        $this->postJson($url, ['item_id' => (string) Str::uuid(), 'done' => true])->assertNotFound();
         $this->protocol->update(['published_at' => null]);
         $this->getJson($this->dayUrl('2026-08-27'))->assertNotFound();
     }
@@ -130,7 +168,7 @@ class HorseDashboardTest extends TestCase
     public function test_sync_upload_cannot_bypass_date_or_plan_limits_and_updates_history(): void
     {
         $item = $this->protocol->phases()->first()->supplements()->first();
-        $id = (string) \Illuminate\Support\Str::uuid();
+        $id = (string) Str::uuid();
         $operation = ['op' => 'PUT', 'type' => 'protocol_supplement_intakes', 'id' => $id, 'data' => [
             'protocol_phase_supplement_id' => $item->id, 'horse_id' => $this->horse->id,
             'date' => '2026-08-27', 'done' => true, 'dosage' => '20 g',
@@ -140,7 +178,7 @@ class HorseDashboardTest extends TestCase
         $this->getJson($this->dayUrl('2026-08-27'))->assertJsonPath('state', 'complete');
         foreach (['2026-08-29', '2026-08-13'] as $date) {
             $bad = $operation;
-            $bad['id'] = (string) \Illuminate\Support\Str::uuid();
+            $bad['id'] = (string) Str::uuid();
             $bad['data']['date'] = $date;
             $this->postJson('/api/sync/upload', ['operations' => [$bad]])->assertUnprocessable();
         }
@@ -153,7 +191,7 @@ class HorseDashboardTest extends TestCase
         $this->travelTo(now()->setDate(2026, 8, 27)->setTime(12, 30));
         $item = $this->protocol->phases()->first()->supplements()->first();
         $this->postJson('/api/sync/upload', ['timezone' => 'Pacific/Kiritimati', 'operations' => [[
-            'op' => 'PUT', 'type' => 'protocol_supplement_intakes', 'id' => (string) \Illuminate\Support\Str::uuid(),
+            'op' => 'PUT', 'type' => 'protocol_supplement_intakes', 'id' => (string) Str::uuid(),
             'data' => ['protocol_phase_supplement_id' => $item->id, 'horse_id' => $this->horse->id, 'date' => '2026-08-28', 'done' => true],
         ]]])->assertOk();
         $this->getJson('/api/horses/'.$this->horse->id.'/dashboard?timezone=Pacific/Kiritimati')
@@ -210,15 +248,19 @@ class HorseDashboardTest extends TestCase
         DB::table('library_unlocks')->insert(['user_id' => User::factory()->create()->id, 'item_id' => $items[1]->id]);
         $url = '/api/horses/'.$this->horse->id.'/dashboard';
         $before = $this->getJson($url)->assertOk()->assertJsonCount(4, 'recommendations')->json('recommendations');
-        foreach ([$free->id, $plus->id, $items[0]->id] as $id) $this->assertNotContains($id, array_column($before, 'id'));
-        app(\App\Support\CreditLedger::class)->grant($this->owner, 10, 'adjustment');
+        foreach ([$free->id, $plus->id, $items[0]->id] as $id) {
+            $this->assertNotContains($id, array_column($before, 'id'));
+        }
+        app(CreditLedger::class)->grant($this->owner, 10, 'adjustment');
         $purchased = $before[0]['id'];
         $this->postJson('/api/library/'.$purchased.'/unlock', ['credits' => 2])->assertOk();
         $after = $this->getJson($url)->assertOk()->assertJsonCount(4, 'recommendations')->json('recommendations');
         $this->assertNotContains($purchased, array_column($after, 'id'));
         $this->assertCount(1, array_diff(array_column($after, 'id'), array_column($before, 'id')));
         $this->getJson('/api/library/'.$purchased)->assertOk()->assertJsonPath('canRead', true);
-        foreach ($items as $item) DB::table('library_unlocks')->updateOrInsert(['user_id' => $this->owner->id, 'item_id' => $item->id]);
+        foreach ($items as $item) {
+            DB::table('library_unlocks')->updateOrInsert(['user_id' => $this->owner->id, 'item_id' => $item->id]);
+        }
         $this->getJson($url)->assertJsonCount(0, 'recommendations');
         $subscription->update(['paid_through' => now()->subMinute()]);
         $this->getJson($url)->assertJsonCount(1, 'recommendations')->assertJsonPath('recommendations.0.id', $plus->id);
@@ -399,7 +441,7 @@ class HorseDashboardTest extends TestCase
     {
         $this->protocol->update(['published_at' => null]);
         $item = LibraryItem::create(['slug' => 'hooianalyse', 'title' => 'Hay analysis', 'format' => 'article', 'published_at' => now()->subDay()]);
-        app(\App\Support\CreditLedger::class)->grant($this->owner, 9, 'adjustment');
+        app(CreditLedger::class)->grant($this->owner, 9, 'adjustment');
         DB::table('library_unlocks')->insert(['user_id' => $this->owner->id, 'item_id' => $item->id]);
         SeasonalTip::create(['month' => 'augustus', 'month_order' => 8, 'body' => 'Managed seasonal text', 'active' => true, 'cta_item_id' => $item->id]);
         SeasonalTip::create(['month' => 'juli', 'month_order' => 7, 'body' => 'Outdated text', 'active' => true]);

@@ -23,8 +23,9 @@ class PasswordRecoveryTest extends TestCase
         $notification = Notification::sent($user, CustomerPasswordReset::class)->first();
         $this->assertNotNull($notification);
         $mail = $notification->toMail($user);
-        $this->assertStringContainsString('/web-session/password/reset/'.$notification->token, $mail->actionUrl);
-        $this->get($mail->actionUrl)->assertOk()->assertSee('Nieuw wachtwoord instellen')->assertSee('MixedCase@example.test');
+        $url = $mail->viewData['resetUrl'];
+        $this->assertStringContainsString('/web-session/password/reset/'.$notification->token, $url);
+        $this->get($url)->assertOk()->assertSee('Nieuw wachtwoord instellen')->assertSee('MixedCase@example.test');
         $this->assertDatabaseMissing('password_reset_tokens', ['token' => $notification->token]);
         $payload = ['email' => $user->email, 'token' => $notification->token, 'password' => 'a-new-test-password', 'password_confirmation' => 'a-new-test-password'];
         $this->post('/web-session/password/reset', $payload)->assertRedirect('https://customer.example.test/onboarding/welcome?passwordReset=1');
@@ -43,8 +44,13 @@ class PasswordRecoveryTest extends TestCase
         $this->assertCount(1, $messages);
         $mail = $messages->first()->getOriginalMessage();
         $this->assertSame($user->email, $mail->getTo()[0]->getAddress());
-        $this->assertStringContainsString('/web-session/password/reset/', $mail->getHtmlBody());
-        $this->assertStringContainsString('60 minuten geldig', $mail->getHtmlBody());
+        $this->assertNull($mail->getHtmlBody());
+        $this->assertSame('text', $mail->getBody()->getMediaType());
+        $this->assertSame('plain', $mail->getBody()->getMediaSubtype());
+        $this->assertStringContainsString('60 minuten geldig', $mail->getTextBody());
+        $this->assertStringContainsString('Heb je dit niet aangevraagd? Dan hoef je niets te doen.', $mail->getTextBody());
+        $this->assertSame(1, preg_match('~^https?://[^\s]+/web-session/password/reset/[^\s]+$~m', $mail->getTextBody(), $links));
+        $this->get($links[0])->assertOk()->assertSee('Nieuw wachtwoord instellen');
     }
 
     public function test_unknown_disabled_and_throttled_accounts_receive_the_same_response(): void

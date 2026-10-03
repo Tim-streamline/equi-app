@@ -24,10 +24,11 @@ import { ProtocolNotifications } from '@/components/notifications/ProtocolNotifi
 import { DbProvider } from '@/db/provider';
 import { IntakeProvider } from '@/lib/intake/store';
 import { IntakeSchemaProvider } from '@/lib/intake/schema-provider';
+import { wrapRoot } from '@/lib/error-tracking';
 
 SplashScreen.preventAutoHideAsync().catch(() => {});
 
-export default function RootLayout() {
+function RootLayout() {
   useEffect(() => {
     if (Updates.isEnabled) {
       console.info('[updates] launch', JSON.stringify({
@@ -89,3 +90,5 @@ export default function RootLayout() {
     </GestureHandlerRootView>
   );
 }
+
+export default wrapRoot(RootLayout);

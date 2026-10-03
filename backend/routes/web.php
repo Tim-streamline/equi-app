@@ -48,6 +48,7 @@ Route::middleware(AuthenticatePowerSyncJwt::class)->group(function () {
     Route::get('/api/intake-media/{attachment}', [IntakeAttachmentController::class, 'show'])->whereUuid('attachment');
     Route::post('/api/notifications/push-token', [PushTokenController::class, 'store']);
     Route::get('/api/horses/{horse}/dashboard', [HorseDashboardController::class, 'show']);
+    Route::get('/api/home', [HorseDashboardController::class, 'home']);
     Route::match(['get', 'post'], '/api/horses/{horse}/protocol-day', [HorseDashboardController::class, 'day']);
     Route::post('/api/horses/{horse}/weekly-update', [HorseDashboardController::class, 'weeklyUpdate']);
 });

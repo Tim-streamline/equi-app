@@ -1,4 +1,4 @@
-# Equi App web
+# EquiApp web
 
 Browser version of the Expo app, with shared routes, screens, assets, and business logic. Run commands from this directory. Requires Node 22.18+ (or Node 24 LTS) and the existing Laravel/PostgreSQL/PowerSync services.
 
@@ -31,9 +31,14 @@ If serving `dist/` with another web server, serve real files first and fall back
 - `metro.config.js` resolves shared source against this project's dependencies and substitutes browser database, authentication, and private-media modules. Native builds retain their existing adapters.
 - `db/provider.tsx` uses PowerSync Web with SQLite in IndexedDB, isolated by account and browser tab. Existing SQL selectors and queued writes are reused. Database filenames are hashed to stay within WA-SQLite's path limit.
 - Laravel `/web-session/*` endpoints use an HttpOnly session cookie and CSRF protection. Short-lived API/sync tokens remain in memory; passwords are never written to browser storage. Session changes notify other tabs, and logout clears the active tab's database.
+- Successful browser login (including registration completion) persists for 30 days using encrypted HttpOnly cookies, even after the shorter server session expires. This is a fixed deadline from the last successful login in that browser; browsing and token renewal do not extend it. Signing in again starts a new 30-day period. Logout, password reset, or a disabled account prevents renewal. Still-valid sessions from before this change upgrade automatically on their next authenticated request, with a one-time 30-day period starting then because legacy sessions did not record the original login time. Already-expired sessions still require login. The admin session lifetime remains separate.
 - Browser alerts implement the existing confirmation flows, uploads use browser `File` objects, and private images/videos use a session-protected endpoint with the same Community visibility policy.
 
-Synced database edits can queue while an open app is offline and upload after reconnection. A fresh page load requires an online session check; this is not an installable offline PWA. Remote media is not cached for offline use. Browser push notifications are not implemented; other existing feature behavior follows the Expo app.
+Synced database edits can queue while an open app is offline and upload after reconnection. A fresh page load requires an online session check, including when opened from a home-screen shortcut. Remote media is not cached for offline use. Browser push notifications are not implemented; other existing feature behavior follows the Expo app.
+
+## Web icons
+
+`public/` contains browser favicons (ICO and 16/32px PNG), the Apple touch icon, Android/desktop manifest icons, a maskable icon, and the Windows tile icon. All use the existing native EquiApp logo from `../expo-app/assets/images/icon.png`. The maskable version adds space around the logo so platform cropping preserves the lettering. `public/index.html` is the Expo SPA template that links these assets; `site.webmanifest` supplies the home-screen name and icons. The deployment package includes these files. Home-screen shortcuts still require an online page load.
 
 ## Validate
 

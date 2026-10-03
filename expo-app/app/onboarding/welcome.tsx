@@ -1,3 +1,4 @@
+import { BRAND_NAME } from '@/constants/brand';
 import { KeyboardScrollView as ScrollView, KeyboardTextInput as TextInput, KeyboardViewport as KeyboardAvoidingView } from '@/components/ui/KeyboardForm';
 // Welcome + login screen. Bypasses the old "screenCopy" table which used to
 // live in TinyBase — once we moved to PowerSync the brand strings became
@@ -65,7 +66,7 @@ export default function WelcomeScreen() {
               </View>
               <View>
                 <Text className="font-bold text-white" style={{ fontSize: 18, letterSpacing: 0.5 }}>
-                  Equi App
+                  {BRAND_NAME}
                 </Text>
                 <Text
                   className="font-semi text-mint-200"
@@ -78,7 +79,7 @@ export default function WelcomeScreen() {
 
             <View>
               <Text className="font-bold text-white mb-5" style={{ fontSize: 28, lineHeight: 34 }}>
-                Welkom bij EquiApp!
+                Welkom bij {BRAND_NAME}!
               </Text>
 
               <View className="gap-2 mb-3">

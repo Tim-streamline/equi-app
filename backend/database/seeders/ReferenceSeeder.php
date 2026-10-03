@@ -67,7 +67,7 @@ class ReferenceSeeder extends Seeder
     private function seedPlans(): void
     {
         $free = Plan::create([
-            'slug' => 'free', 'label' => 'Gratis', 'name' => 'Equi App Free',
+            'slug' => 'free', 'label' => 'Gratis', 'name' => 'EquiApp Free',
             'price_cents' => 0, 'currency' => 'EUR', 'interval' => 'monthly',
             'price_suffix' => '/ maand', 'description' => 'Voor wie wil rondkijken.',
             'is_recommended' => false, 'order' => 0,
@@ -77,7 +77,7 @@ class ReferenceSeeder extends Seeder
         }
 
         $plus = Plan::create([
-            'slug' => 'plus', 'label' => 'Plus', 'name' => 'Equi App Plus',
+            'slug' => 'plus', 'label' => 'Plus', 'name' => 'EquiApp Plus',
             'price_cents' => 1200, 'currency' => 'EUR', 'interval' => 'monthly',
             'price_suffix' => '/ maand', 'description' => 'Voor de actieve verzorger.',
             'is_recommended' => false, 'order' => 1,
@@ -94,7 +94,7 @@ class ReferenceSeeder extends Seeder
         $bundle = Plan::create([
             'slug' => 'bundle', 'label' => 'Aanbevolen', 'name' => 'Opleiding bundel',
             'price_cents' => 499700, 'currency' => 'EUR', 'interval' => 'one_time',
-            'price_suffix' => 'eenmalig', 'description' => 'Equi App Plus + 8-maands opleiding.',
+            'price_suffix' => 'eenmalig', 'description' => 'EquiApp Plus + 8-maands opleiding.',
             'is_recommended' => true, 'order' => 2,
         ]);
         foreach ([

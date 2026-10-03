@@ -14,6 +14,7 @@ async function screen(file, { db = {}, mutations = {}, platform = 'android', aut
   let stateIndex = 0, refIndex = 0, effectIndex = 0;
   const jsx = (type, props) => ({ type, props });
   const modules = {
+    '@/constants/brand': { BRAND_NAME: 'EquiApp' },
     '@/components/ui/KeyboardForm': { KeyboardViewport: 'KeyboardAvoidingView', KeyboardScrollView: 'ScrollView', KeyboardTextInput: 'TextInput' },
     'react/jsx-runtime': { jsx, jsxs: jsx },
     react: {

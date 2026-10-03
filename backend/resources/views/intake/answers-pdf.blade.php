@@ -2,7 +2,7 @@
 <html lang="nl">
 <head>
 <meta charset="utf-8">
-<title>Kopie protocolintake | Equi App</title>
+<title>Kopie protocolintake | {{ config('app.brand_name') }}</title>
 <style>
     @page { margin: 42px 44px 48px; }
     body { font-family: 'DejaVu Sans', sans-serif; color: #1b2a2a; font-size: 10px; line-height: 1.5; }
@@ -21,7 +21,7 @@
 </style>
 </head>
 <body>
-<p class="brand">EQUIAPP</p>
+<p class="brand">{{ config('app.brand_name') }}</p>
 <h1>Jouw protocolintake</h1>
 <p class="meta">{{ $booking->horse?->name ?? 'Paard niet gekoppeld' }}<br>
 {{ $booking->user?->name }}<br>

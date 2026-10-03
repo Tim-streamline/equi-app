@@ -19,7 +19,7 @@ export function useLibraryContent(itemId: string) {
   const { isLoggedIn, currentUserId, isConnected } = useDb();
   const { grants, isLoading: grantsLoading } = useLibraryAccessRecords();
   const grant = grants.find(row => row.item_id === itemId);
-  const { data: rows } = useQuery<Row>(`
+  const { data: rows, isLoading: itemLoading } = useQuery<Row>(`
     SELECT i.id, i.title, i.description, i.format, i.hero_image_url AS heroImageUrl,
            i.duration_label AS durationLabel, i.credit_cost AS creditCost, i.is_plus AS isPlus,
            t.name AS authorName, c.id AS content_id, c.body, c.chapters, c.attachments
@@ -49,6 +49,7 @@ export function useLibraryContent(itemId: string) {
   } : null;
   return {
     data, error: grant ? null : account.error, refresh: account.refresh,
+    unavailable: !itemLoading && !row,
     update: (result: LibraryContentData) => account.update(result.access),
     pendingContent: !canRead && !!row && (!!grant || (!!account.data && (
       account.data.unlockedIds.includes(itemId) || (row.isPlus ? account.data.hasPlus : row.creditCost === 0)

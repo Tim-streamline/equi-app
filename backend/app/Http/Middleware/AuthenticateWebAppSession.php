@@ -2,16 +2,16 @@
 
 namespace App\Http\Middleware;
 
+use App\Support\WebLogin;
 use Closure;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
 
 class AuthenticateWebAppSession
 {
     public function handle(Request $request, Closure $next)
     {
-        $user = Auth::guard('web')->user();
-        abort_unless($user && ! $user->disabled_at, 401);
+        $user = app(WebLogin::class)->user($request);
+        abort_unless($user, 401);
         $request->attributes->set('powersync_user_id', (string) $user->id);
 
         $response = $next($request);

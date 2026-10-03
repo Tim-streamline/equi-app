@@ -16,10 +16,10 @@ class HorseDashboard
 {
     public function __construct(private ProtocolNutrition $nutrition) {}
 
-    public function build(User $user, Horse $horse, CarbonImmutable $now, ?string $month = null): array
+    public function build(User $user, ?Horse $horse, CarbonImmutable $now, ?string $month = null): array
     {
-        $answers = $this->nutrition->answers($horse);
-        $protocol = $horse->protocols()->where('status', 'active')->whereNotNull('published_at')
+        $answers = $horse ? $this->nutrition->answers($horse) : [];
+        $protocol = $horse?->protocols()->where('status', 'active')->whereNotNull('published_at')
             ->where('published_at', '<=', $now)->orderByDesc('published_at')->first();
         $discovery = app(LibraryDiscovery::class);
         $access = $discovery->access($user);
@@ -36,11 +36,11 @@ class HorseDashboard
             $data['nutrition'] += $this->nutritionLinks($protocol, $items, $itemData);
         }
         $phaseText = implode(' ', array_column(array_filter($data['phases'] ?? [], fn ($p) => $p['state'] === 'active'), 'title'));
-        $profileText = $horse->breed.' '.json_encode($answers, JSON_UNESCAPED_UNICODE);
+        $profileText = ($horse?->breed ?? '').' '.json_encode($answers, JSON_UNESCAPED_UNICODE);
         $tokens = fn ($text) => array_values(array_unique(array_filter(preg_split('/[^\p{L}]+/u', mb_strtolower($text)), fn ($word) => mb_strlen($word) >= 4)));
         $phaseTokens = $tokens($phaseText);
         $profileTokens = $tokens($profileText);
-        $ranked = $items->reject(fn ($item) => $discovery->canRead($item, $access))->map(function ($item) use ($tokens, $phaseTokens, $profileTokens, $itemData, $phaseText) {
+        $ranked = $items->reject(fn ($item) => $horse ? $discovery->canRead($item, $access) : in_array($item->id, $unlocked, true))->map(function ($item) use ($tokens, $phaseTokens, $profileTokens, $itemData, $phaseText) {
             $words = $tokens($item->title.' '.$item->description.' '.$item->categories->pluck('label')->join(' '));
             $phaseMatch = count(array_intersect($phaseTokens, $words)) > 0;
 
@@ -65,9 +65,9 @@ class HorseDashboard
         return [
             'timezone' => $now->timezoneName, 'generatedAt' => $now->toIso8601String(), 'date' => $now->toDateString(),
             'greeting' => ($now->hour < 12 ? 'Goedemorgen' : ($now->hour < 18 ? 'Goedemiddag' : 'Goedenavond')).', '.explode(' ', trim($user->name))[0],
-            'horse' => ['id' => $horse->id, 'name' => $horse->name],
-            'hasPlus' => $hasPlus, 'showPlusUpsell' => ! $hasPlus && ! $protocol,
-            'variant' => $hasPlus || $protocol ? 'plus' : 'basic',
+            'horse' => ['id' => $horse?->id ?? '', 'name' => $horse?->name ?? ''],
+            'hasPlus' => $hasPlus, 'showPlusUpsell' => $horse && ! $hasPlus && ! $protocol,
+            'variant' => $horse ? ($hasPlus || $protocol ? 'plus' : 'basic') : 'without-horse',
             'credits' => app(CreditLedger::class)->summary($user)['balance'],
             'plusOffer' => $plusPlan ? ['name' => $plusPlan->name, 'description' => $plusPlan->description,
                 'priceLabel' => ($plusPlan->currency === 'EUR' ? '€' : $plusPlan->currency).' '.number_format($plusPlan->price_cents / 100, 2, ',', '.'),

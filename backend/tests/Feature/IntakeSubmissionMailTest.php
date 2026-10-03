@@ -175,7 +175,10 @@ class IntakeSubmissionMailTest extends TestCase
         foreach (['Er is een nieuwe protocolintake ingediend.', 'Paard: Rolo', 'Gebruiker: Account Owner', 'Ingediend op: 30-09-2026 00:24', 'Bekijk intake in backend', route('admin.bookings.show', $this->booking)] as $text) {
             $this->assertStringContainsString($text, $message->getTextBody());
         }
-        $this->assertStringContainsString('href="'.route('admin.bookings.show', $this->booking).'"', $message->getHtmlBody());
+        $this->assertNull($message->getHtmlBody());
+        $this->assertSame('text', $message->getBody()->getMediaType());
+        $this->assertSame('plain', $message->getBody()->getMediaSubtype());
+        $this->assertStringContainsString("\n\n".route('admin.bookings.show', $this->booking)."\n", $message->getTextBody());
         $this->assertCount(0, $message->getAttachments());
         $this->assertSame('sent', $this->booking->fresh()->submission_email_status);
         $this->assertNotNull($this->booking->fresh()->submission_email_sent_at);

@@ -2,8 +2,8 @@
 // can't express cleanly:
 //
 //   1. Per-variant launcher label. The Android debug variant gets a
-//      separate `app_name` string ("Equi App (dev)") so the dev build
-//      can sit next to a release build ("Equi App", from app.json's
+//      separate `app_name` string ("EquiApp (dev)") so the dev build
+//      can sit next to a release build ("EquiApp", from app.json's
 //      `expo.name`) without being confused for the same app.
 //
 //   2. Gradle JVM heap. R8/D8 dex-merging this project's deps OOMs at
@@ -39,7 +39,7 @@ function patchGradleHeap(projectRoot, jvmargs) {
 }
 
 module.exports = (config, opts = {}) => {
-  const debugLabel = opts.debugLabel ?? 'Equi App (dev)';
+  const debugLabel = opts.debugLabel ?? `${require('../constants/brand.json').name} (dev)`;
   const jvmargs = opts.jvmargs ?? '-Xmx6144m -XX:MaxMetaspaceSize=1024m';
   return withDangerousMod(config, [
     'android',

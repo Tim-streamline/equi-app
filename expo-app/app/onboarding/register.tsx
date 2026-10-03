@@ -1,3 +1,4 @@
+import { BRAND_NAME } from '@/constants/brand';
 import { KeyboardScrollView as ScrollView, KeyboardViewport as KeyboardAvoidingView } from '@/components/ui/KeyboardForm';
 import { useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, Platform, Text, View } from 'react-native';
@@ -82,20 +83,20 @@ export default function RegisterScreen() {
         {challenge ? <>
           <Text className="mb-2 font-bold text-[28px] text-ink">Bevestig je e-mailadres</Text>
           <Text className="mb-6 text-[15px] text-ink-50">We hebben een bevestigingsmail gestuurd naar {challenge.email}. Klik op de link in de e-mail. Dit scherm gaat automatisch verder en logt je in zodra je e-mailadres is bevestigd, ook als je de link op een ander apparaat opent.</Text>
-          <Text className="mb-4 text-[13px] text-ink-50">Laat dit scherm openstaan. De link is 15 minuten geldig. Controleer ook je spammap.</Text>
+          <Text className="mb-2 text-[13px] text-ink-50">Laat dit scherm openstaan. De link is 15 minuten geldig.</Text>
+          <Text className="mb-4 text-[13px] text-ink-50">Controleer ook je spam.</Text>
           {!expired && <View className="mb-4 flex-row items-center gap-3" accessibilityRole="progressbar" accessibilityLabel={finishing ? 'Je wordt ingelogd' : 'Wachten op e-mailbevestiging'}>
             <ActivityIndicator color="#127A79" />
             <Text className="text-ink-50">{finishing ? 'Je wordt ingelogd…' : 'Wachten op bevestiging…'}</Text>
           </View>}
         </> : <>
-          <Text className="mb-2 font-bold text-[28px] text-ink">Welkom bij Equi App.</Text>
-          <Text className="mb-3 font-bold text-[15px] text-ink">Maak je account aan en ontdek wat EquiApp voor jou en je paard kan betekenen.</Text>
-          <Text className="mb-6 text-[15px] text-ink-50">We controleren eerst je e-mailadres via een link in de bevestigingsmail. Daarna kun je je paard toevoegen, of dat later doen.</Text>
+          <Text className="mb-2 font-bold text-[28px] text-ink">Welkom bij {BRAND_NAME}!</Text>
+          <Text className="mb-6 text-[15px] text-ink-50">Maak je account aan en ontdek alles wat {BRAND_NAME} voor jou en je paard te bieden heeft. Bevestig daarna je e-mailadres om direct aan de slag te gaan.</Text>
           <Field label="Naam" accessibilityLabel="Naam" value={name} onChangeText={setName} autoComplete="name" editable={!locked} maxLength={255} />
           <Field label="E-mailadres" accessibilityLabel="E-mailadres" value={email} onChangeText={setEmail} autoComplete="email" autoCapitalize="none" autoCorrect={false} keyboardType="email-address" editable={!locked} maxLength={255} />
-          <Field label="Wachtwoord" accessibilityLabel="Wachtwoord" value={password} onChangeText={setPassword} autoComplete="new-password" secureTextEntry editable={!locked} maxLength={128} />
+          <Field label="Wachtwoord" accessibilityLabel="Wachtwoord" value={password} onChangeText={setPassword} autoComplete="new-password" secureTextEntry passwordToggle editable={!locked} maxLength={128} />
           <Text className="mb-4 text-[13px] text-ink-50">Gebruik minimaal 8 tekens.</Text>
-          <Field label="Herhaal wachtwoord" accessibilityLabel="Herhaal wachtwoord" value={confirmation} onChangeText={setConfirmation} autoComplete="new-password" secureTextEntry editable={!locked} maxLength={128} onSubmitEditing={() => void submit()} />
+          <Field label="Herhaal wachtwoord" accessibilityLabel="Herhaal wachtwoord" value={confirmation} onChangeText={setConfirmation} autoComplete="new-password" secureTextEntry passwordToggle editable={!locked} maxLength={128} onSubmitEditing={() => void submit()} />
         </>}
         {!!(error || waitingError) && <Text accessibilityRole="alert" className="mb-4 text-[14px] text-red-700">{error || waitingError}</Text>}
         <View className="mt-3 gap-3">

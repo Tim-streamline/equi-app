@@ -5,7 +5,7 @@ import vm from 'node:vm';
 
 const script = (await readFile(new URL('../../resources/js/Pages/Library/Edit.svelte', import.meta.url), 'utf8')).match(/<script>([\s\S]*?)<\/script>/)[1].replace(/^\s*import .*;$/gm, '');
 function formFor(item) {
-    const context = vm.createContext({ $props: () => ({ item, categories: [], therapists: [] }), $state: v => v, $derived: v => v, useForm: v => { context.$form = v; return v; } });
+    const context = vm.createContext({ $props: () => ({ item, categories: [], therapists: [] }), $state: v => v, $derived: v => v, useForm: v => { context.$form ??= v; return v; } });
     vm.runInContext(script, context);
     return context.$form;
 }

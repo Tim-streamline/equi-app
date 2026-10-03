@@ -13,6 +13,7 @@ const { outputText } = ts.transpileModule(source, {
 function renderLogin(platform, params = {}, replace = () => {}, push = () => {}) {
   const jsx = (type, props) => ({ type, props });
   const modules = {
+    '@/constants/brand': { BRAND_NAME: 'EquiApp' },
     '@/components/ui/KeyboardForm': { KeyboardViewport: 'KeyboardAvoidingView', KeyboardScrollView: 'ScrollView', KeyboardTextInput: 'TextInput' },
     'react/jsx-runtime': { jsx, jsxs: jsx },
     react: { useState: (initial) => [initial, () => {}] },

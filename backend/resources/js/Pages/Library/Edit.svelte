@@ -83,12 +83,22 @@
         featured_suggestion_ids: item?.featured_suggestion_ids ?? [],
     });
 
+    const publication = useForm({});
+    function unpublish() {
+        if (!item?.published_at || $publication.processing || $form.processing || mediaBusy || thumbnailBusy) return;
+        if (!confirm('Dit item terugzetten naar concept? Het verdwijnt uit de bibliotheek en is niet meer toegankelijk voor gebruikers. Alle opgeslagen inhoud en instellingen blijven behouden.')) return;
+        $publication.post(`/admin/library/${item.id}/unpublish`, {
+            preserveScroll: true,
+            onSuccess: () => { $form.published_at = ''; },
+        });
+    }
+
     function toggle(arr, id) {
         return arr.includes(id) ? arr.filter((x) => x !== id) : [...arr, id];
     }
     function submit(e) {
         e.preventDefault();
-        if (thumbnailBusy || mediaBusy || $form.processing) return;
+        if (thumbnailBusy || mediaBusy || $form.processing || $publication.processing) return;
         $form.transform((data) => ({ ...data, _method: isNew ? 'post' : 'put', duration_minutes: data.duration_minutes ?? null,
             credit_cost: data.is_plus ? 0 : data.credit_cost,
             attachments: data.attachments.map(({ id, title, file }) => ({ id, title, file })),
@@ -135,6 +145,12 @@
                 <CardHeader><CardTitle>Publishing</CardTitle></CardHeader>
                 <CardContent class="space-y-4">
                     <Field label="Publish date" hint="Blank = draft" error={$form.errors.published_at}><Input type="date" bind:value={$form.published_at} /></Field>
+                    {#if item?.published_at}
+                        <Button type="button" variant="outline" disabled={$publication.processing || $form.processing || mediaBusy || thumbnailBusy} onclick={unpublish}>Terugzetten naar concept</Button>
+                    {:else if item}
+                        <p class="text-sm text-muted-foreground">Concept — kies een publicatiedatum en sla op om dit item opnieuw te publiceren.</p>
+                    {/if}
+                    {#if Object.keys($publication.errors).length}<p role="alert" class="text-sm text-destructive">{Object.values($publication.errors).join(' ')}</p>{/if}
                     <Field label="Author" error={$form.errors.author_therapist_id}>
                         <Select bind:value={$form.author_therapist_id}
                             options={[{ value: '', label: 'None' }, ...therapists.map((t) => ({ value: t.id, label: `${t.name}${t.archived_at ? ' (gearchiveerd)' : ''}` }))]} />
@@ -207,7 +223,7 @@
 
             {#if Object.keys($form.errors).length}<p role="alert" class="text-sm text-destructive">Opslaan mislukt: {Object.values($form.errors).join(" ")}</p>{/if}
             <div class="flex gap-2">
-                <Button type="submit" class="flex-1" disabled={$form.processing || thumbnailBusy || mediaBusy}>{isNew ? 'Create' : 'Save'}</Button>
+                <Button type="submit" class="flex-1" disabled={$form.processing || $publication.processing || thumbnailBusy || mediaBusy}>{isNew ? 'Create' : 'Save'}</Button>
                 <Button variant="outline" href="/admin/library">Cancel</Button>
             </div>
         </div>

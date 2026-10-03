@@ -1,6 +1,6 @@
 Hallo {{ $name }},
 
-Bedankt voor je aanmelding bij Equi App. Klik op de onderstaande link om je e-mailadres te bevestigen:
+Bedankt voor je aanmelding bij {{ config('app.brand_name') }}. Klik op de onderstaande link om je e-mailadres te bevestigen:
 
 {{ $confirmationUrl }}
 
@@ -11,4 +11,4 @@ Werkt de link niet? Kopieer de link en plak hem in je browser.
 Heb je geen account aangevraagd? Dan kun je deze e-mail negeren.
 
 Met vriendelijke groet,
-Het Equi App-team
+Het {{ config('app.brand_name') }}-team

@@ -1,3 +1,4 @@
+import { BRAND_NAME } from '@/constants/brand';
 import { View, Text, ScrollView } from 'react-native';
 import { router } from 'expo-router';
 import { Calendar } from 'lucide-react-native';
@@ -57,7 +58,7 @@ export default function ConnectScreen() {
         )}
       </ScrollView>
       <StickyCTA>
-        <Button title="Plan intake & ga naar Equi App" variant="deep" onPress={finish} />
+        <Button title={`Plan intake & ga naar ${BRAND_NAME}`} variant="deep" onPress={finish} />
         <Button title="Sla over, ik kijk eerst rond" variant="ghost" onPress={finish} />
       </StickyCTA>
     </View>

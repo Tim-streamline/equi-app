@@ -4,3 +4,5 @@
 /deploy/staging.env
 /deploy/production.env
 /deploy/powersync/runtime.env
+/deploy/betterstack.env
+/web/.source-maps/

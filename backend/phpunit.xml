@@ -18,6 +18,8 @@
         </include>
     </source>
     <php>
+        <env name="BETTER_STACK_DSN" value="" force="true"/>
+        <env name="BETTER_STACK_ENVIRONMENT" value="testing" force="true"/>
         <env name="APP_ENV" value="testing"/>
         <env name="APP_MAINTENANCE_DRIVER" value="file"/>
         <env name="BCRYPT_ROUNDS" value="4"/>

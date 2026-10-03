@@ -1,3 +1,4 @@
+import './error-tracking';
 import { createInertiaApp } from '@inertiajs/svelte';
 import { mount } from 'svelte';
 

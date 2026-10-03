@@ -63,30 +63,36 @@ class PowerSyncAuthController extends Controller
         return $this->tokenResponse($user);
     }
 
-    public function tokenResponse(User $user): JsonResponse
+    public function tokenResponse(User $user, ?int $expiresAt = null): JsonResponse
     {
+        $ttl = (int) config('powersync.token_ttl');
+        if ($expiresAt !== null) {
+            $ttl = min($ttl, $expiresAt - now()->timestamp);
+            abort_if($ttl <= 0, 401);
+        }
+
         return response()->json([
             'endpoint' => config('powersync.service_url'),
-            'token' => $this->mintToken($user),
+            'token' => $this->mintToken($user, $ttl),
             'user' => [
                 'id' => $user->id,
                 'name' => $user->name,
                 'email' => $user->email,
                 'avatar_initial' => $user->avatar_initial,
             ],
-            'expires_in' => config('powersync.token_ttl'),
+            'expires_in' => $ttl,
         ]);
     }
 
-    private function mintToken(User $user): string
+    private function mintToken(User $user, int $ttl): string
     {
-        $now = time();
+        $now = now()->timestamp;
         $payload = [
             'iss' => config('powersync.issuer'),
             'aud' => config('powersync.audience'),
             'sub' => (string) $user->id,
             'iat' => $now,
-            'exp' => $now + (int) config('powersync.token_ttl'),
+            'exp' => $now + $ttl,
         ];
 
         return JWT::encode(

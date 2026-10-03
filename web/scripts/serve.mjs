@@ -40,7 +40,7 @@ function proxy(req, res, target, requestPath = req.url) {
   res.on('close', () => upstream.destroy());
   pipeline(req, upstream, () => {});
 }
-const mime = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript', '.css': 'text/css', '.json': 'application/json', '.wasm': 'application/wasm', '.png': 'image/png', '.jpg': 'image/jpeg', '.svg': 'image/svg+xml', '.ico': 'image/x-icon', '.ttf': 'font/ttf', '.woff2': 'font/woff2' };
+const mime = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript', '.css': 'text/css', '.json': 'application/json', '.webmanifest': 'application/manifest+json', '.xml': 'application/xml', '.wasm': 'application/wasm', '.png': 'image/png', '.jpg': 'image/jpeg', '.svg': 'image/svg+xml', '.ico': 'image/x-icon', '.ttf': 'font/ttf', '.woff2': 'font/woff2' };
 const server = http.createServer(async (req, res) => {
   const pathname = new URL(req.url, 'http://localhost').pathname;
   res.setHeader('X-Content-Type-Options', 'nosniff');
@@ -81,5 +81,5 @@ server.on('upgrade', (req, socket, head) => {
   upstream.on('response', response => { response.resume(); socket.destroy(); });
   upstream.on('error', () => socket.destroy()); upstream.end();
 });
-server.listen(port, host, () => console.log(`Equi App web: http://${host}:${port}`));
+server.listen(port, host, () => console.log(`EquiApp web: http://${host}:${port}`));
 for (const signal of ['SIGINT', 'SIGTERM']) process.on(signal, () => { child?.kill(signal); server.close(); process.exit(); });

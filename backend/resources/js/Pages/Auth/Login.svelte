@@ -1,5 +1,5 @@
 <script>
-    import { useForm } from '@inertiajs/svelte';
+    import { page, useForm } from '@inertiajs/svelte';
     import { Button, Input, Card, CardContent, CardHeader, CardTitle, CardDescription } from '$lib/components/ui';
     import Field from '$lib/components/Field.svelte';
     import { ShieldCheck } from '@lucide/svelte';
@@ -12,7 +12,7 @@
     }
 </script>
 
-<svelte:head><title>Sign in · Equi App Admin</title></svelte:head>
+<svelte:head><title>Sign in · {$page.props.brandName} Admin</title></svelte:head>
 
 <div class="flex min-h-screen items-center justify-center bg-secondary px-4">
     <div class="w-full max-w-sm">
@@ -21,7 +21,7 @@
                 <ShieldCheck class="size-6" />
             </div>
             <div class="text-center">
-                <div class="text-lg font-semibold">Equi App Admin</div>
+                <div class="text-lg font-semibold">{$page.props.brandName} Admin</div>
                 <div class="text-sm text-muted-foreground">Back-office console</div>
             </div>
         </div>

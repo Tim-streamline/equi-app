@@ -17,6 +17,6 @@ class IntakeSubmitted extends Mailable
 
     public function content(): Content
     {
-        return new Content(view: 'mail.intake-submitted', text: 'mail.intake-submitted-text');
+        return new Content(text: 'mail.intake-submitted-text');
     }
 }

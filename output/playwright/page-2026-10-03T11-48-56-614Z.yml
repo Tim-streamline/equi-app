@@ -1,0 +1,517 @@
+- generic [ref=e270]:
+  - complementary [ref=e271]:
+    - generic [ref=e272]:
+      - img [ref=e274]
+      - generic [ref=e275]:
+        - generic [ref=e276]: EquiApp
+        - generic [ref=e277]: Admin console
+    - navigation [ref=e278]:
+      - link "Dashboard" [ref=e280] [cursor=pointer]:
+        - /url: http://127.0.0.1:81/admin
+        - img [ref=e281]
+        - generic [ref=e282]: Dashboard
+      - generic [ref=e283]:
+        - generic [ref=e284]: Support
+        - link "Users" [ref=e285] [cursor=pointer]:
+          - /url: http://127.0.0.1:81/admin/users
+          - img [ref=e286]
+          - generic [ref=e287]: Users
+        - link "Horses" [ref=e288] [cursor=pointer]:
+          - /url: http://127.0.0.1:81/admin/horses
+          - img [ref=e289]
+          - generic [ref=e290]: Horses
+        - link "Therapists" [ref=e291] [cursor=pointer]:
+          - /url: http://127.0.0.1:81/admin/therapists
+          - img [ref=e292]
+          - generic [ref=e293]: Therapists
+        - link "Intake bookings" [ref=e294] [cursor=pointer]:
+          - /url: http://127.0.0.1:81/admin/bookings
+          - img [ref=e295]
+          - generic [ref=e296]: Intake bookings
+        - link "Protocols" [ref=e297] [cursor=pointer]:
+          - /url: http://127.0.0.1:81/admin/protocols
+          - img [ref=e298]
+          - generic [ref=e299]: Protocols
+      - generic [ref=e300]:
+        - generic [ref=e301]: Content
+        - link "Ontdek Plus" [ref=e302] [cursor=pointer]:
+          - /url: http://127.0.0.1:81/admin/plus-page
+          - img [ref=e303]
+          - generic [ref=e304]: Ontdek Plus
+        - link "Library" [ref=e305] [cursor=pointer]:
+          - /url: http://127.0.0.1:81/admin/library
+          - img [ref=e306]
+          - generic [ref=e307]: Library
+        - link "Categories" [ref=e308] [cursor=pointer]:
+          - /url: http://127.0.0.1:81/admin/library-categories
+          - img [ref=e309]
+          - generic [ref=e310]: Categories
+        - link "Seasonal tips" [ref=e311] [cursor=pointer]:
+          - /url: http://127.0.0.1:81/admin/seasonal-tips
+          - img [ref=e312]
+          - generic [ref=e313]: Seasonal tips
+        - link "Nova chat" [ref=e314] [cursor=pointer]:
+          - /url: http://127.0.0.1:81/admin/nova
+          - img [ref=e315]
+          - generic [ref=e316]: Nova chat
+      - generic [ref=e317]:
+        - generic [ref=e318]: Scanner
+        - link "Scan results" [ref=e319] [cursor=pointer]:
+          - /url: http://127.0.0.1:81/admin/scans
+          - img [ref=e320]
+          - generic [ref=e321]: Scan results
+        - link "Products" [ref=e322] [cursor=pointer]:
+          - /url: http://127.0.0.1:81/admin/products
+          - img [ref=e323]
+          - generic [ref=e324]: Products
+        - link "Ingredients" [ref=e325] [cursor=pointer]:
+          - /url: http://127.0.0.1:81/admin/ingredients
+          - img [ref=e326]
+          - generic [ref=e327]: Ingredients
+      - generic [ref=e328]:
+        - generic [ref=e329]: Community
+        - link "Posts & replies" [ref=e330] [cursor=pointer]:
+          - /url: http://127.0.0.1:81/admin/community
+          - img [ref=e331]
+          - generic [ref=e332]: Posts & replies
+        - link "Reports" [ref=e333] [cursor=pointer]:
+          - /url: http://127.0.0.1:81/admin/reports
+          - img [ref=e334]
+          - generic [ref=e335]: Reports
+      - generic [ref=e336]:
+        - generic [ref=e337]: Billing
+        - link "Plans" [ref=e338] [cursor=pointer]:
+          - /url: http://127.0.0.1:81/admin/plans
+          - img [ref=e339]
+          - generic [ref=e340]: Plans
+        - link "Subscriptions" [ref=e341] [cursor=pointer]:
+          - /url: http://127.0.0.1:81/admin/subscriptions
+          - img [ref=e342]
+          - generic [ref=e343]: Subscriptions
+        - link "Payments" [ref=e344] [cursor=pointer]:
+          - /url: http://127.0.0.1:81/admin/payments
+          - img [ref=e345]
+          - generic [ref=e346]: Payments
+        - link "Credits" [ref=e347] [cursor=pointer]:
+          - /url: http://127.0.0.1:81/admin/credits
+          - img [ref=e348]
+          - generic [ref=e349]: Credits
+      - generic [ref=e350]:
+        - generic [ref=e351]: Operations
+        - link "Data exports" [ref=e352] [cursor=pointer]:
+          - /url: http://127.0.0.1:81/admin/exports
+          - img [ref=e353]
+          - generic [ref=e354]: Data exports
+        - link "Notifications" [ref=e355] [cursor=pointer]:
+          - /url: http://127.0.0.1:81/admin/notifications
+          - img [ref=e356]
+          - generic [ref=e357]: Notifications
+        - link "Sync health" [ref=e358] [cursor=pointer]:
+          - /url: http://127.0.0.1:81/admin/sync-health
+          - img [ref=e359]
+          - generic [ref=e360]: Sync health
+        - link "Audit log" [ref=e361] [cursor=pointer]:
+          - /url: http://127.0.0.1:81/admin/audit-log
+          - img [ref=e362]
+          - generic [ref=e363]: Audit log
+        - link "Intakevragen" [ref=e364] [cursor=pointer]:
+          - /url: http://127.0.0.1:81/admin/intake-questionnaire
+          - img [ref=e365]
+          - generic [ref=e366]: Intakevragen
+        - link "Protocol Templates" [ref=e367] [cursor=pointer]:
+          - /url: http://127.0.0.1:81/admin/protocol-settings
+          - img [ref=e368]
+          - generic [ref=e369]: Protocol Templates
+        - link "Protocol Settings" [ref=e370] [cursor=pointer]:
+          - /url: http://127.0.0.1:81/admin/protocol-settings/advice
+          - img [ref=e371]
+          - generic [ref=e372]: Protocol Settings
+        - link "Settings" [ref=e373] [cursor=pointer]:
+          - /url: http://127.0.0.1:81/admin/settings
+          - img [ref=e374]
+          - generic [ref=e375]: Settings
+    - generic [ref=e377]:
+      - generic [ref=e378]: EO
+      - generic [ref=e379]:
+        - generic [ref=e380]: EquiApp Owner
+        - generic [ref=e381]: owner
+      - button "Log out" [ref=e382]:
+        - img [ref=e383]
+  - generic [ref=e384]:
+    - banner [ref=e385]:
+      - heading "Library" [level=1] [ref=e386]
+    - generic [ref=e388]: Library item created.
+    - main [ref=e389]:
+      - generic [ref=e390]:
+        - generic [ref=e391]:
+          - heading "Library CMS" [level=2] [ref=e392]
+          - paragraph [ref=e393]: Articles, videos, audio, podcasts, courses and programs
+        - link "New item" [ref=e395] [cursor=pointer]:
+          - /url: /admin/library/create
+          - img [ref=e396]
+          - text: New item
+      - generic [ref=e397]:
+        - generic [ref=e399]:
+          - img [ref=e401]
+          - generic [ref=e402]:
+            - generic [ref=e403]: "27"
+            - generic [ref=e404]: Total items
+        - generic [ref=e406]:
+          - img [ref=e408]
+          - generic [ref=e409]:
+            - generic [ref=e410]: "0"
+            - generic [ref=e411]: Drafts
+        - generic [ref=e413]:
+          - img [ref=e415]
+          - generic [ref=e416]:
+            - generic [ref=e417]: "23"
+            - generic [ref=e418]: Met credits
+      - generic [ref=e420]:
+        - generic [ref=e421]:
+          - generic [ref=e422]:
+            - img
+            - textbox "Search title…" [ref=e423]
+          - combobox [ref=e424]:
+            - option "All formats" [selected]
+            - option "Article"
+            - option "Video"
+            - option "Audio"
+            - option "Podcast"
+            - option "Course"
+            - option "Program"
+          - combobox [ref=e425]:
+            - option "All" [selected]
+            - option "Featured"
+            - option "Plus only"
+            - option "Met credits"
+            - option "Drafts"
+          - group [ref=e426]:
+            - generic "Categorieën" [ref=e427] [cursor=pointer]
+        - generic [ref=e429]:
+          - generic [ref=e430]:
+            - button "Alles" [pressed] [ref=e431]
+            - button "Kruiden 12" [ref=e432]
+            - button "Voeding 9" [ref=e433]
+            - button "Insuline resistentie 8" [ref=e434]
+            - button "Metabool 8" [ref=e435]
+            - button "Hoeven 6" [ref=e436]
+          - button "+ Meer" [ref=e437]
+        - table [ref=e439]:
+          - rowgroup [ref=e440]:
+            - row "Title Format Author Flags Published" [ref=e441]:
+              - columnheader "Title" [ref=e442]
+              - columnheader "Format" [ref=e443]
+              - columnheader "Author" [ref=e444]
+              - columnheader "Flags" [ref=e445]
+              - columnheader "Published" [ref=e446]
+              - columnheader [ref=e447]
+          - rowgroup [ref=e448]:
+            - 'row "Masterclass: de apotheek van de herfst video Shelley Meeuwsen featured 4 credits 14 sep 2026" [ref=e449]':
+              - 'cell "Masterclass: de apotheek van de herfst" [ref=e450]':
+                - 'link "Masterclass: de apotheek van de herfst" [ref=e451] [cursor=pointer]':
+                  - /url: http://127.0.0.1:81/admin/library/01a0a15d-4d56-73bd-8042-5eee179a5758/edit
+                  - img [ref=e454]
+                  - text: "Masterclass: de apotheek van de herfst"
+              - cell "video" [ref=e455]:
+                - generic [ref=e456]: video
+              - cell "Shelley Meeuwsen" [ref=e457]
+              - cell "featured 4 credits" [ref=e458]:
+                - generic [ref=e459]:
+                  - generic [ref=e460]: featured
+                  - generic [ref=e461]: 4 credits
+              - cell "14 sep 2026" [ref=e462]
+              - cell [ref=e463]:
+                - button [ref=e464] [cursor=pointer]:
+                  - img [ref=e465]
+            - 'row "Ruwvoer laten analyseren: welke analyse kies je? article Shelley Meeuwsen 15 sep 2026" [ref=e466]':
+              - 'cell "Ruwvoer laten analyseren: welke analyse kies je?" [ref=e467]':
+                - 'link "Ruwvoer laten analyseren: welke analyse kies je?" [ref=e468] [cursor=pointer]':
+                  - /url: http://127.0.0.1:81/admin/library/01a0a4b2-b937-718b-9a5b-c1856018db19/edit
+                  - img [ref=e471]
+                  - text: "Ruwvoer laten analyseren: welke analyse kies je?"
+              - cell "article" [ref=e472]:
+                - generic [ref=e473]: article
+              - cell "Shelley Meeuwsen" [ref=e474]
+              - cell [ref=e475]
+              - cell "15 sep 2026" [ref=e476]
+              - cell [ref=e477]:
+                - button [ref=e478] [cursor=pointer]:
+                  - img [ref=e479]
+            - row "SGLT2-remmers bij insulinedysregulatie article Shelley Meeuwsen 1 credits 14 sep 2026" [ref=e480]:
+              - cell "SGLT2-remmers bij insulinedysregulatie" [ref=e481]:
+                - link "SGLT2-remmers bij insulinedysregulatie" [ref=e482] [cursor=pointer]:
+                  - /url: http://127.0.0.1:81/admin/library/01a0a06e-0f6d-72df-b47a-42570ca70120/edit
+                  - img [ref=e485]
+                  - text: SGLT2-remmers bij insulinedysregulatie
+              - cell "article" [ref=e486]:
+                - generic [ref=e487]: article
+              - cell "Shelley Meeuwsen" [ref=e488]
+              - cell "1 credits" [ref=e489]:
+                - generic [ref=e491]: 1 credits
+              - cell "14 sep 2026" [ref=e492]
+              - cell [ref=e493]:
+                - button [ref=e494] [cursor=pointer]:
+                  - img [ref=e495]
+            - row "De basics van hoefbevangenheid 2/2 video Shelley Meeuwsen 1 credits 10 sep 2026" [ref=e496]:
+              - cell "De basics van hoefbevangenheid 2/2" [ref=e497]:
+                - link "De basics van hoefbevangenheid 2/2" [ref=e498] [cursor=pointer]:
+                  - /url: http://127.0.0.1:81/admin/library/01a08aa4-9bb0-703f-963e-ee645c43d15e/edit
+                  - img [ref=e501]
+                  - text: De basics van hoefbevangenheid 2/2
+              - cell "video" [ref=e502]:
+                - generic [ref=e503]: video
+              - cell "Shelley Meeuwsen" [ref=e504]
+              - cell "1 credits" [ref=e505]:
+                - generic [ref=e507]: 1 credits
+              - cell "10 sep 2026" [ref=e508]
+              - cell [ref=e509]:
+                - button [ref=e510] [cursor=pointer]:
+                  - img [ref=e511]
+            - row "Tips bij acute hoefbevangenheid & hoe daarna verder? video Shelley Meeuwsen 1 credits 10 sep 2026" [ref=e512]:
+              - cell "Tips bij acute hoefbevangenheid & hoe daarna verder?" [ref=e513]:
+                - link "Tips bij acute hoefbevangenheid & hoe daarna verder?" [ref=e514] [cursor=pointer]:
+                  - /url: http://127.0.0.1:81/admin/library/01a08b3e-0f28-712b-aa41-4b151612e5a1/edit
+                  - img [ref=e517]
+                  - text: Tips bij acute hoefbevangenheid & hoe daarna verder?
+              - cell "video" [ref=e518]:
+                - generic [ref=e519]: video
+              - cell "Shelley Meeuwsen" [ref=e520]
+              - cell "1 credits" [ref=e521]:
+                - generic [ref=e523]: 1 credits
+              - cell "10 sep 2026" [ref=e524]
+              - cell [ref=e525]:
+                - button [ref=e526] [cursor=pointer]:
+                  - img [ref=e527]
+            - 'row "Metformine bij insulinedysregulatie: heeft het zin? video Shelley Meeuwsen 1 credits 14 sep 2026" [ref=e528]':
+              - 'cell "Metformine bij insulinedysregulatie: heeft het zin?" [ref=e529]':
+                - 'link "Metformine bij insulinedysregulatie: heeft het zin?" [ref=e530] [cursor=pointer]':
+                  - /url: http://127.0.0.1:81/admin/library/01a0a05e-3f18-7212-a693-f08c4353aa0b/edit
+                  - img [ref=e533]
+                  - text: "Metformine bij insulinedysregulatie: heeft het zin?"
+              - cell "video" [ref=e534]:
+                - generic [ref=e535]: video
+              - cell "Shelley Meeuwsen" [ref=e536]
+              - cell "1 credits" [ref=e537]:
+                - generic [ref=e539]: 1 credits
+              - cell "14 sep 2026" [ref=e540]
+              - cell [ref=e541]:
+                - button [ref=e542] [cursor=pointer]:
+                  - img [ref=e543]
+            - row "Wat er van de akkers overwaait article Shelley Meeuwsen 1 credits 25 sep 2026" [ref=e544]:
+              - cell "Wat er van de akkers overwaait" [ref=e545]:
+                - link "Wat er van de akkers overwaait" [ref=e546] [cursor=pointer]:
+                  - /url: http://127.0.0.1:81/admin/library/01a0d895-e449-72ad-9fe3-5be7c1a4e8b4/edit
+                  - img [ref=e549]
+                  - text: Wat er van de akkers overwaait
+              - cell "article" [ref=e550]:
+                - generic [ref=e551]: article
+              - cell "Shelley Meeuwsen" [ref=e552]
+              - cell "1 credits" [ref=e553]:
+                - generic [ref=e555]: 1 credits
+              - cell "25 sep 2026" [ref=e556]
+              - cell [ref=e557]:
+                - button [ref=e558] [cursor=pointer]:
+                  - img [ref=e559]
+            - 'row "Pijnstillers bij hoefbevangenheid: wel of niet? video Shelley Meeuwsen 1 credits 14 sep 2026" [ref=e560]':
+              - 'cell "Pijnstillers bij hoefbevangenheid: wel of niet?" [ref=e561]':
+                - 'link "Pijnstillers bij hoefbevangenheid: wel of niet?" [ref=e562] [cursor=pointer]':
+                  - /url: http://127.0.0.1:81/admin/library/01a0a07a-31bf-72e5-9d95-17d21f6f972c/edit
+                  - img [ref=e565]
+                  - text: "Pijnstillers bij hoefbevangenheid: wel of niet?"
+              - cell "video" [ref=e566]:
+                - generic [ref=e567]: video
+              - cell "Shelley Meeuwsen" [ref=e568]
+              - cell "1 credits" [ref=e569]:
+                - generic [ref=e571]: 1 credits
+              - cell "14 sep 2026" [ref=e572]
+              - cell [ref=e573]:
+                - button [ref=e574] [cursor=pointer]:
+                  - img [ref=e575]
+            - 'row "Waarom je je hooinetten wil wassen: vóór én tijdens gebruik article Shelley Meeuwsen 1 credits 25 sep 2026" [ref=e576]':
+              - 'cell "Waarom je je hooinetten wil wassen: vóór én tijdens gebruik" [ref=e577]':
+                - 'link "Waarom je je hooinetten wil wassen: vóór én tijdens gebruik" [ref=e578] [cursor=pointer]':
+                  - /url: http://127.0.0.1:81/admin/library/01a0d8c3-0183-7031-9aba-85c8e9ddd2ea/edit
+                  - img [ref=e581]
+                  - text: "Waarom je je hooinetten wil wassen: vóór én tijdens gebruik"
+              - cell "article" [ref=e582]:
+                - generic [ref=e583]: article
+              - cell "Shelley Meeuwsen" [ref=e584]
+              - cell "1 credits" [ref=e585]:
+                - generic [ref=e587]: 1 credits
+              - cell "25 sep 2026" [ref=e588]
+              - cell [ref=e589]:
+                - button [ref=e590] [cursor=pointer]:
+                  - img [ref=e591]
+            - row "Verantwoord kruiden gebruiken bij paarden 1/3 video Shelley Meeuwsen 1 credits 27 sep 2026" [ref=e592]:
+              - cell "Verantwoord kruiden gebruiken bij paarden 1/3" [ref=e593]:
+                - link "Verantwoord kruiden gebruiken bij paarden 1/3" [ref=e594] [cursor=pointer]:
+                  - /url: http://127.0.0.1:81/admin/library/01a0e210-c78c-7305-b383-777f23ce51f6/edit
+                  - img [ref=e597]
+                  - text: Verantwoord kruiden gebruiken bij paarden 1/3
+              - cell "video" [ref=e598]:
+                - generic [ref=e599]: video
+              - cell "Shelley Meeuwsen" [ref=e600]
+              - cell "1 credits" [ref=e601]:
+                - generic [ref=e603]: 1 credits
+              - cell "27 sep 2026" [ref=e604]
+              - cell [ref=e605]:
+                - button [ref=e606] [cursor=pointer]:
+                  - img [ref=e607]
+            - row "De basics van hoefbevangenheid 1/2 video Shelley Meeuwsen 1 credits 14 sep 2026" [ref=e608]:
+              - cell "De basics van hoefbevangenheid 1/2" [ref=e609]:
+                - link "De basics van hoefbevangenheid 1/2" [ref=e610] [cursor=pointer]:
+                  - /url: http://127.0.0.1:81/admin/library/01a09fcd-f9a3-7023-a9b0-e38481583f10/edit
+                  - img [ref=e613]
+                  - text: De basics van hoefbevangenheid 1/2
+              - cell "video" [ref=e614]:
+                - generic [ref=e615]: video
+              - cell "Shelley Meeuwsen" [ref=e616]
+              - cell "1 credits" [ref=e617]:
+                - generic [ref=e619]: 1 credits
+              - cell "14 sep 2026" [ref=e620]
+              - cell [ref=e621]:
+                - button [ref=e622] [cursor=pointer]:
+                  - img [ref=e623]
+            - row "Verantwoord kruiden gebruiken bij paarden 3/3 video Shelley Meeuwsen 1 credits 27 sep 2026" [ref=e624]:
+              - cell "Verantwoord kruiden gebruiken bij paarden 3/3" [ref=e625]:
+                - link "Verantwoord kruiden gebruiken bij paarden 3/3" [ref=e626] [cursor=pointer]:
+                  - /url: http://127.0.0.1:81/admin/library/01a0e222-f03a-730c-b6a6-8ab84b3db419/edit
+                  - img [ref=e629]
+                  - text: Verantwoord kruiden gebruiken bij paarden 3/3
+              - cell "video" [ref=e630]:
+                - generic [ref=e631]: video
+              - cell "Shelley Meeuwsen" [ref=e632]
+              - cell "1 credits" [ref=e633]:
+                - generic [ref=e635]: 1 credits
+              - cell "27 sep 2026" [ref=e636]
+              - cell [ref=e637]:
+                - button [ref=e638] [cursor=pointer]:
+                  - img [ref=e639]
+            - 'row "Zelfselectie bij paarden: het mineralenbuffet 3/3 video Shelley Meeuwsen 1 credits 27 sep 2026" [ref=e640]':
+              - 'cell "Zelfselectie bij paarden: het mineralenbuffet 3/3" [ref=e641]':
+                - 'link "Zelfselectie bij paarden: het mineralenbuffet 3/3" [ref=e642] [cursor=pointer]':
+                  - /url: http://127.0.0.1:81/admin/library/01a0e26e-0ce0-73d5-9560-6f0ecc4d312e/edit
+                  - img [ref=e645]
+                  - text: "Zelfselectie bij paarden: het mineralenbuffet 3/3"
+              - cell "video" [ref=e646]:
+                - generic [ref=e647]: video
+              - cell "Shelley Meeuwsen" [ref=e648]
+              - cell "1 credits" [ref=e649]:
+                - generic [ref=e651]: 1 credits
+              - cell "27 sep 2026" [ref=e652]
+              - cell [ref=e653]:
+                - button [ref=e654] [cursor=pointer]:
+                  - img [ref=e655]
+            - row "Het suikergehalte van hooi zelf meten met een refractometer video Shelley Meeuwsen 15 sep 2026" [ref=e656]:
+              - cell "Het suikergehalte van hooi zelf meten met een refractometer" [ref=e657]:
+                - link "Het suikergehalte van hooi zelf meten met een refractometer" [ref=e658] [cursor=pointer]:
+                  - /url: http://127.0.0.1:81/admin/library/01a0a4a5-6216-7377-a56e-1dbd60612ffc/edit
+                  - img [ref=e661]
+                  - text: Het suikergehalte van hooi zelf meten met een refractometer
+              - cell "video" [ref=e662]:
+                - generic [ref=e663]: video
+              - cell "Shelley Meeuwsen" [ref=e664]
+              - cell [ref=e665]
+              - cell "15 sep 2026" [ref=e666]
+              - cell [ref=e667]:
+                - button [ref=e668] [cursor=pointer]:
+                  - img [ref=e669]
+            - 'row "Zelfselectie bij paarden: wat is het en hoe werkt het? 1/3 video Shelley Meeuwsen 1 credits 27 sep 2026" [ref=e670]':
+              - 'cell "Zelfselectie bij paarden: wat is het en hoe werkt het? 1/3" [ref=e671]':
+                - 'link "Zelfselectie bij paarden: wat is het en hoe werkt het? 1/3" [ref=e672] [cursor=pointer]':
+                  - /url: http://127.0.0.1:81/admin/library/01a0e250-cc66-737b-bfcd-be0623bec183/edit
+                  - img [ref=e675]
+                  - text: "Zelfselectie bij paarden: wat is het en hoe werkt het? 1/3"
+              - cell "video" [ref=e676]:
+                - generic [ref=e677]: video
+              - cell "Shelley Meeuwsen" [ref=e678]
+              - cell "1 credits" [ref=e679]:
+                - generic [ref=e681]: 1 credits
+              - cell "27 sep 2026" [ref=e682]
+              - cell [ref=e683]:
+                - button [ref=e684] [cursor=pointer]:
+                  - img [ref=e685]
+            - row "Veilig en duurzaam wildplukken + opdracht video Shelley Meeuwsen 1 credits 27 sep 2026" [ref=e686]:
+              - cell "Veilig en duurzaam wildplukken + opdracht" [ref=e687]:
+                - link "Veilig en duurzaam wildplukken + opdracht" [ref=e688] [cursor=pointer]:
+                  - /url: http://127.0.0.1:81/admin/library/01a0e2c0-ce31-7208-b3c2-14f740282fcf/edit
+                  - img [ref=e691]
+                  - text: Veilig en duurzaam wildplukken + opdracht
+              - cell "video" [ref=e692]:
+                - generic [ref=e693]: video
+              - cell "Shelley Meeuwsen" [ref=e694]
+              - cell "1 credits" [ref=e695]:
+                - generic [ref=e697]: 1 credits
+              - cell "27 sep 2026" [ref=e698]
+              - cell [ref=e699]:
+                - button [ref=e700] [cursor=pointer]:
+                  - img [ref=e701]
+            - row "Dit wil je weten als je voordroog voert video Shelley Meeuwsen 14 sep 2026" [ref=e702]:
+              - cell "Dit wil je weten als je voordroog voert" [ref=e703]:
+                - link "Dit wil je weten als je voordroog voert" [ref=e704] [cursor=pointer]:
+                  - /url: http://127.0.0.1:81/admin/library/01a0a10d-22aa-71e7-9313-03427a3681f5/edit
+                  - img [ref=e707]
+                  - text: Dit wil je weten als je voordroog voert
+              - cell "video" [ref=e708]:
+                - generic [ref=e709]: video
+              - cell "Shelley Meeuwsen" [ref=e710]
+              - cell [ref=e711]
+              - cell "14 sep 2026" [ref=e712]
+              - cell [ref=e713]:
+                - button [ref=e714] [cursor=pointer]:
+                  - img [ref=e715]
+            - row "Wilde kruiden herkennen en verzamelen video Shelley Meeuwsen 1 credits 27 sep 2026" [ref=e716]:
+              - cell "Wilde kruiden herkennen en verzamelen" [ref=e717]:
+                - link "Wilde kruiden herkennen en verzamelen" [ref=e718] [cursor=pointer]:
+                  - /url: http://127.0.0.1:81/admin/library/01a0e2cb-d26e-72d9-b9f3-6023135b593b/edit
+                  - img [ref=e721]
+                  - text: Wilde kruiden herkennen en verzamelen
+              - cell "video" [ref=e722]:
+                - generic [ref=e723]: video
+              - cell "Shelley Meeuwsen" [ref=e724]
+              - cell "1 credits" [ref=e725]:
+                - generic [ref=e727]: 1 credits
+              - cell "27 sep 2026" [ref=e728]
+              - cell [ref=e729]:
+                - button [ref=e730] [cursor=pointer]:
+                  - img [ref=e731]
+            - row "Zelfselectie bij paarden in de praktijk 2/3 video Shelley Meeuwsen 1 credits 27 sep 2026" [ref=e732]:
+              - cell "Zelfselectie bij paarden in de praktijk 2/3" [ref=e733]:
+                - link "Zelfselectie bij paarden in de praktijk 2/3" [ref=e734] [cursor=pointer]:
+                  - /url: http://127.0.0.1:81/admin/library/01a0e252-dcf7-7086-bbe1-e2725183f043/edit
+                  - img [ref=e737]
+                  - text: Zelfselectie bij paarden in de praktijk 2/3
+              - cell "video" [ref=e738]:
+                - generic [ref=e739]: video
+              - cell "Shelley Meeuwsen" [ref=e740]
+              - cell "1 credits" [ref=e741]:
+                - generic [ref=e743]: 1 credits
+              - cell "27 sep 2026" [ref=e744]
+              - cell [ref=e745]:
+                - button [ref=e746] [cursor=pointer]:
+                  - img [ref=e747]
+            - row "Zelf gezonde kruidentraktaties maken voor je paard video Shelley Meeuwsen 1 credits 27 sep 2026" [ref=e748]:
+              - cell "Zelf gezonde kruidentraktaties maken voor je paard" [ref=e749]:
+                - link "Zelf gezonde kruidentraktaties maken voor je paard" [ref=e750] [cursor=pointer]:
+                  - /url: http://127.0.0.1:81/admin/library/01a0e241-8ae8-709b-b1f6-7d91c89f97ef/edit
+                  - img [ref=e753]
+                  - text: Zelf gezonde kruidentraktaties maken voor je paard
+              - cell "video" [ref=e754]:
+                - generic [ref=e755]: video
+              - cell "Shelley Meeuwsen" [ref=e756]
+              - cell "1 credits" [ref=e757]:
+                - generic [ref=e759]: 1 credits
+              - cell "27 sep 2026" [ref=e760]
+              - cell [ref=e761]:
+                - button [ref=e762] [cursor=pointer]:
+                  - img [ref=e763]
+        - generic [ref=e764]:
+          - generic [ref=e765]: 1–20 of 27
+          - generic [ref=e766]:
+            - generic [ref=e767]: « Previous
+            - link "1" [ref=e768] [cursor=pointer]:
+              - /url: http://127.0.0.1:81/admin/library?page=1
+            - link "2" [ref=e769] [cursor=pointer]:
+              - /url: http://127.0.0.1:81/admin/library?page=2
+            - link "Next »" [ref=e770] [cursor=pointer]:
+              - /url: http://127.0.0.1:81/admin/library?page=2

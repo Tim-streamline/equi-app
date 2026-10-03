@@ -1,0 +1,6 @@
+FROM node:24-bookworm-slim
+
+# Source-map uploads use the system trust store for HTTPS verification.
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends ca-certificates \
+    && rm -rf /var/lib/apt/lists/*

@@ -9,6 +9,7 @@ function harness(platform = 'android') {
   const jsx = (type, props) => ({ type, props });
   let current;
   const modules = {
+    '@/constants/brand': { BRAND_NAME: 'EquiApp' },
     react: { useMemo: fn => fn(), useCallback: fn => fn, useEffect: fn => cleanups.push(fn()) },
     'react/jsx-runtime': { jsx, jsxs: jsx },
     'react-native': { View: 'View', Text: 'Text', Pressable: 'Pressable', Platform: { OS: platform } },

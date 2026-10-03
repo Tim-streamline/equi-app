@@ -54,6 +54,10 @@ Supply `PLOI_API_TOKEN` through the shell/CI environment or the private mode-600
 file `~/.config/equi-app/ploi-api-token`. It needs permissions and an IP allowlist
 covering the selected server. Do not put it in either Laravel env file.
 
+The customer web build uses `deploy/Dockerfile.web`, which adds the system CA
+certificate bundle to Node 24's minimal image for verified HTTPS source-map uploads.
+The image is cached locally; its build receives no repository files or secrets.
+
 Mail settings are not inherited from the local backend: edit the selected deploy
 file. Use `MAIL_SCHEME=smtp` with port `587` (STARTTLS), or `smtps` with port `465`.
 Deploying regenerates Laravel's configuration cache and reloads PHP-FPM.

@@ -1,6 +1,6 @@
 {
   "name": "expo-app",
-  "main": "expo-router/entry",
+  "main": "index.js",
   "version": "1.0.0",
   "scripts": {
     "start": "expo start",
@@ -10,8 +10,8 @@
     "web": "expo start --web",
     "lint": "expo lint",
     "test": "node --test tests/*.test.mjs",
-    "update:preview": "npx --yes eas-cli@latest update --channel preview --environment preview --platform android",
-    "update:production": "npx --yes eas-cli@latest update --channel production --environment production --platform android"
+    "update:preview": "EXPO_PUBLIC_BETTER_STACK_ENVIRONMENT=staging npx --yes eas-cli@latest update --channel preview --environment preview --platform android && node scripts/upload-source-maps.mjs",
+    "update:production": "EXPO_PUBLIC_BETTER_STACK_ENVIRONMENT=production npx --yes eas-cli@latest update --channel production --environment production --platform android && node scripts/upload-source-maps.mjs"
   },
   "dependencies": {
     "@expo-google-fonts/source-sans-3": "^0.4.1",
@@ -25,6 +25,7 @@
     "@react-navigation/elements": "^2.6.3",
     "@react-navigation/material-top-tabs": "^7.4.28",
     "@react-navigation/native": "^7.1.8",
+    "@sentry/react-native": "^8.29.0",
     "expo": "~54.0.33",
     "expo-blur": "~15.0.8",
     "expo-build-properties": "~1.0.10",

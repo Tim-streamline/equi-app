@@ -111,6 +111,19 @@ class LibraryItemController extends Controller
         return redirect()->route('admin.library.index')->with('success', 'Library item updated.');
     }
 
+    public function unpublish(LibraryItem $library): RedirectResponse
+    {
+        DB::transaction(function () use ($library) {
+            $item = LibraryItem::whereKey($library->id)->lockForUpdate()->firstOrFail();
+            if ($item->published_at === null) return;
+            $before = $item->only('published_at');
+            $item->update(['published_at' => null]);
+            AuditLogger::updated($item, $before);
+        });
+
+        return back()->with('success', 'Bibliotheekitem teruggezet naar concept.');
+    }
+
     public function destroy(LibraryItem $library): RedirectResponse
     {
         $paths = $library->attachments()->pluck('path')->all();

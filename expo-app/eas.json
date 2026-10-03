@@ -7,7 +7,10 @@
       "developmentClient": true,
       "distribution": "internal",
       "environment": "development",
-      "channel": "development"
+      "channel": "development",
+      "env": {
+        "EXPO_PUBLIC_BETTER_STACK_ENVIRONMENT": "development"
+      }
     },
     "preview": {
       "distribution": "internal",
@@ -15,11 +18,17 @@
       "channel": "preview",
       "android": {
         "buildType": "apk"
+      },
+      "env": {
+        "EXPO_PUBLIC_BETTER_STACK_ENVIRONMENT": "staging"
       }
     },
     "production": {
       "environment": "production",
-      "channel": "production"
+      "channel": "production",
+      "env": {
+        "EXPO_PUBLIC_BETTER_STACK_ENVIRONMENT": "production"
+      }
     }
   }
 }

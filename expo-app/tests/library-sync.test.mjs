@@ -122,3 +122,20 @@ test('granted item awaiting initial sync shows download state instead of a secon
     assert.ok(!app.render().includes('Ontgrendel dit item')); assert.deepEqual(app.requests, []);
   } finally { app.db.close(); }
 });
+
+test('an open reader clears content and attachments when unpublication arrives after reconnecting', () => {
+  for (const update of ["UPDATE library_items SET published_at = NULL", 'DELETE FROM library_items']) {
+    const app = reader();
+    try {
+      assert.ok(app.render().some(n => n?.type === 'MarkdownBody'));
+      app.session.isConnected = true;
+      app.account.data = { hasPlus: true, unlockedIds: ['lesson'], credits: 5 };
+      app.db.exec(update);
+      const nodes = app.render();
+      assert.equal(app.content().unavailable, true);
+      assert.ok(nodes.includes('Dit bibliotheekitem is niet beschikbaar.'));
+      assert.ok(!nodes.some(n => ['MarkdownBody', 'LibraryAttachments', 'ActivityIndicator'].includes(n?.type)));
+      assert.ok(!nodes.includes('Chapter'));
+    } finally { app.db.close(); }
+  }
+});

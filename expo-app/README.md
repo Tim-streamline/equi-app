@@ -1,4 +1,4 @@
-# Equi App mobile
+# EquiApp mobile
 
 Expo SDK 54 / React Native app, connected to the `@optimize-it/equi-app` EAS project.
 

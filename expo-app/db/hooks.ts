@@ -314,7 +314,7 @@ export function useLibraryFeatured() {
   return rows[0];
 }
 export function useLibraryItem(id: string): Indexed {
-  const rows = useCamelQuery(`SELECT * FROM library_items WHERE id = ?`, [id]);
+  const rows = useCamelQuery(`SELECT * FROM library_items WHERE id = ? AND published_at IS NOT NULL AND datetime(published_at) <= datetime('now')`, [id]);
   return { ...(rows[0] ?? {}), id } as Indexed;
 }
 export function useLibraryChapters(itemId: string) {

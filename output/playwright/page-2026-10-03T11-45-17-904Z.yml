@@ -1,0 +1,32 @@
+- generic [ref=e17]:
+  - generic [ref=e18]:
+    - button [ref=e19] [cursor=pointer]:
+      - img [ref=e20]
+    - generic [ref=e22]: Account aanmaken
+  - generic [ref=e24]:
+    - generic [ref=e25]: Welkom bij EquiApp!
+    - generic [ref=e26]: Maak je account aan en ontdek alles wat EquiApp voor jou en je paard te bieden heeft. Bevestig daarna je e-mailadres om direct aan de slag te gaan.
+    - generic [ref=e27]:
+      - generic [ref=e28]: Naam
+      - textbox "Naam" [ref=e30]
+    - generic [ref=e31]:
+      - generic [ref=e32]: E-mailadres
+      - textbox "E-mailadres" [ref=e34]
+    - generic [ref=e35]:
+      - generic [ref=e36]: Wachtwoord
+      - generic [ref=e37]:
+        - textbox "Wachtwoord" [ref=e38]
+        - button "Wachtwoord tonen" [ref=e39] [cursor=pointer]:
+          - img [ref=e40]
+    - generic [ref=e43]: Gebruik minimaal 8 tekens.
+    - generic [ref=e44]:
+      - generic [ref=e45]: Herhaal wachtwoord
+      - generic [ref=e46]:
+        - textbox "Herhaal wachtwoord" [ref=e47]
+        - button "Herhaal wachtwoord tonen" [ref=e48] [cursor=pointer]:
+          - img [ref=e49]
+    - generic [ref=e52]:
+      - button "Account aanmaken" [ref=e53] [cursor=pointer]:
+        - generic [ref=e54]: Account aanmaken
+      - button "Ik heb al een account" [ref=e55] [cursor=pointer]:
+        - generic [ref=e56]: Ik heb al een account

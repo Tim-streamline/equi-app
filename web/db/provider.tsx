@@ -1,10 +1,12 @@
 import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from 'react';
 import { ActivityIndicator, Pressable, Text, View } from 'react-native';
-import { PowerSyncDatabase, WASQLiteOpenFactory } from '@powersync/web/umd';
+import { WASQLiteOpenFactory } from '@powersync/web/umd';
+import { PowerSyncDatabase } from './powersync';
 import { PowerSyncContext } from '@powersync/react';
 import type { SyncStatus as PsSyncStatus } from '@powersync/common';
 import { AppSchema } from '@/db/powersync-schema';
 import { accountSession } from '@/lib/account-session';
+import { captureException } from '../components/error-tracking';
 import { getSession, login as signIn, register as signUp, type RegistrationInput, type RegistrationChallenge, type RegistrationCompletion, completeRegistration as confirmSignUp, logout as signOut, forgetSession, type LoginResponse } from './auth';
 import { LaravelConnector } from './connector';
 import { databaseName } from './database-name';
@@ -63,7 +65,8 @@ export function DbProvider({ children }: { children: ReactNode }) {
       active.current = { db, userId: id, unsubscribe };
       setUserId(id); selectHorse(null); setSyncStatus(id ? 'connecting' : 'idle');
       setDatabase(db);
-      if (id) void db.connect(new LaravelConnector(id)).catch(() => {
+      if (id) void db.connect(new LaravelConnector(id)).catch((cause) => {
+        captureException(cause, { tags: { operation: 'database.connect' } });
         if (active.current?.db === db) setSyncStatus('error');
       });
     } catch (cause) {
@@ -76,7 +79,10 @@ export function DbProvider({ children }: { children: ReactNode }) {
     mounted.current = true;
     void accountSession.transition(async () => {
       try { await open(await getSession()); }
-      catch (cause) { if (mounted.current) setError(cause instanceof Error ? cause.message : 'De app kon niet starten.'); }
+      catch (cause) {
+        captureException(cause, { tags: { operation: 'database.boot' } });
+        if (mounted.current) setError(cause instanceof Error ? cause.message : 'De app kon niet starten.');
+      }
     });
     const expire = () => {
       if (!active.current?.userId) return;

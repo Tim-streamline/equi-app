@@ -42,7 +42,7 @@
                 <ShieldCheck class="size-5" />
             </div>
             <div class="leading-tight">
-                <div class="text-sm font-semibold">Equi App</div>
+                <div class="text-sm font-semibold">{$page.props.brandName}</div>
                 <div class="text-xs text-sidebar-muted">Admin console</div>
             </div>
             <button class="ml-auto lg:hidden" onclick={() => (mobileOpen = false)} aria-label="Close menu">

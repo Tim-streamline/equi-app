@@ -215,11 +215,11 @@ if name == 'curl':
     def test_web_package_includes_shared_sources_without_local_state(self):
         source = self.root / "web-source"
         files = {
-            "web": "app.json package.json package-lock.json babel.config.js metro.config.js tailwind.config.js tsconfig.json global.css nativewind-env.d.ts",
+            "web": "index.js app.json app.config.js package.json package-lock.json babel.config.js metro.config.js tailwind.config.js tsconfig.json global.css nativewind-env.d.ts",
             "expo-app": "package.json app.json tailwind.config.js tsconfig.json global.css nativewind-env.d.ts",
         }
         directories = {
-            "web": "components db scripts",
+            "web": "components db scripts public",
             "expo-app": "app assets components constants db hooks lib",
         }
         for project in files:
@@ -236,11 +236,19 @@ if name == 'curl':
                 (base / name / "local").touch()
         (source / "expo-app/app/screen.tsx").write_text("shared screen")
         (source / "web/components/provider.tsx").write_text("web provider")
+        (source / "web/public/site.webmanifest").write_text('{"name":"EquiApp"}')
+        (source / "web/public/apple-touch-icon.png").write_bytes(b"icon")
+        (source / "web/public/powersync").mkdir()
+        (source / "web/public/powersync/generated-worker.js").write_text("generated")
         packed = self.root / "packed-web"
         result = subprocess.run(["bash", str(DEPLOY / "package-web.sh"), str(source), str(packed)], text=True, capture_output=True)
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertEqual((packed / "expo-app/app/screen.tsx").read_text(), "shared screen")
         self.assertEqual((packed / "web/components/provider.tsx").read_text(), "web provider")
+        self.assertTrue((packed / "web/index.js").is_file())
+        self.assertEqual((packed / "web/public/site.webmanifest").read_text(), '{"name":"EquiApp"}')
+        self.assertEqual((packed / "web/public/apple-touch-icon.png").read_bytes(), b"icon")
+        self.assertFalse((packed / "web/public/powersync").exists())
         for project in files:
             for name in [".env", "components/.env.local", "components/private.pem", "components/private.key", "node_modules", "android", "dist"]:
                 self.assertFalse((packed / project / name).exists(), name)
