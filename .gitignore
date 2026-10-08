@@ -6,3 +6,4 @@
 /deploy/powersync/runtime.env
 /deploy/betterstack.env
 /web/.source-maps/
+/output/
