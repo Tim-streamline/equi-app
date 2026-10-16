@@ -1,3 +1,5 @@
+import { Button } from '@/components/ui/Button';
+import { formatIntakeDate } from '@/lib/intake/submission';
 import { isPhotoSection } from '@/lib/intake/logic';
 // Section overview "hub" — shows progress, auto-save state, and the intake
 // sections with their per-section status. Tapping a section pushes the
@@ -26,7 +28,13 @@ type Status = 'done' | 'active' | 'todo';
 
 export default function IntakeOverview() {
   const rootNavigation = useNavigation('/');
-  const { state } = useIntake();
+  const { state, loaded, submit, submitting } = useIntake();
+  const [submitError, setSubmitError] = useState('');
+  const onSubmit = async () => {
+    setSubmitError('');
+    try { await submit(); router.replace('/intake/sent'); }
+    catch (error) { setSubmitError(error instanceof Error ? error.message : 'Intake niet verstuurd. Probeer opnieuw.'); }
+  };
   const { schema, disclaimerShort, noneOptions } = useIntakeSchema();
   const { done, total, pct } = intakeProgress(state.answers, schema, noneOptions);
   const upcomingId = nextSectionId(state.answers, schema, noneOptions);
@@ -107,6 +115,10 @@ export default function IntakeOverview() {
             </View>
           </View>
 
+          {!!state.submittedAt && <View className="mx-4 mb-4 rounded-2xl bg-mint-50 p-4">
+            <Text className="font-bold text-mint-700">Intake ingestuurd op {formatIntakeDate(state.submittedAt)}</Text>
+            <Text className="mt-1 text-ink-70">Je kunt je antwoorden hieronder bekijken. Aanpassen is niet meer mogelijk.</Text>
+          </View>}
           <View className="mx-4 gap-2">
             {schema.map((s) => {
               const a = answersForSection(s, state.answers);
@@ -121,24 +133,20 @@ export default function IntakeOverview() {
             })}
           </View>
 
-          <View className="mx-4 mt-4 rounded-2xl bg-mint-50 p-3.5">
+          {!state.submittedAt && <View className="mx-4 mt-4 rounded-2xl bg-mint-50 p-3.5">
             <Text className="text-[12.5px] leading-[18px] text-ink-70">
               <Text className="font-bold text-mint-700">Tip · </Text>
               Doe één sectie per dag als je het rustig wilt aanpakken. Alles wordt automatisch
               opgeslagen, je kunt later verder.
             </Text>
-          </View>
+          </View>}
 
-          {done === total && (
+          {!state.submittedAt && (
             <View className="mx-4 mt-3">
-              <Pressable
-                onPress={() => router.push('/intake/submit' as any)}
-                className="items-center rounded-2xl bg-mint-500 py-4"
-              >
-                <Text className="font-bold text-white text-[15px]">
-                  Controleren & versturen →
-                </Text>
-              </Pressable>
+              <Button title={submitting ? 'Synchroniseren en versturen…' : 'Intake versturen'}
+                disabled={!loaded || total === 0 || done !== total || submitting} onPress={onSubmit} />
+              {!!submitError && <Text accessibilityRole="alert" className="mt-2 text-danger">{submitError}</Text>}
+              <Text className="mt-2 text-sm text-ink-70">Na het versturen kun je je intake nog inzien, maar niet meer aanpassen.</Text>
             </View>
           )}
         </ScrollView>

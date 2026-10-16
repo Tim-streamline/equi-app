@@ -8,7 +8,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
-#[Fillable(['questionnaire_id', 'key', 'order', 'title', 'intro', 'minutes', 'icon', 'subtitle', 'active'])]
+#[Fillable(['questionnaire_id', 'key', 'order', 'title', 'intro', 'presentation', 'minutes', 'icon', 'subtitle', 'active'])]
 class IntakeSection extends Model
 {
     use HasUuids;
@@ -16,6 +16,7 @@ class IntakeSection extends Model
     protected function casts(): array
     {
         return [
+            'presentation' => 'array',
             'order' => 'integer',
             'minutes' => 'integer',
             'active' => 'boolean',

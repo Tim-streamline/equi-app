@@ -5,12 +5,13 @@ type Props = {
   n: number;
   label: string;
   hint?: string;
+  photo?: boolean;
   required?: boolean;
   /** Optional inline tappable hyperlink rendered within the label text. */
   link?: { text: string; url: string };
 };
 
-export function FieldLabel({ n, label, hint, required, link }: Props) {
+export function FieldLabel({ n, label, hint, required, link, photo }: Props) {
   // When a link is present, split the label around its text so the matched
   // phrase renders as a tappable hyperlink (e.g. "privacyverklaring").
   const parts = link && label.includes(link.text) ? label.split(link.text) : null;
@@ -20,7 +21,7 @@ export function FieldLabel({ n, label, hint, required, link }: Props) {
         <Text className="font-bold text-[11px] tracking-display text-ink-50">
           {String(n).padStart(2, '0')}
         </Text>
-        <Text className="flex-1 font-semi text-[14.5px] leading-[20px] text-ink">
+        <Text className={photo ? "flex-1 font-bold text-[18px] leading-[24px] text-ink" : "flex-1 font-semi text-[14.5px] leading-[20px] text-ink"}>
           {parts ? (
             <>
               {parts[0]}
@@ -39,7 +40,7 @@ export function FieldLabel({ n, label, hint, required, link }: Props) {
         </Text>
       </View>
       {hint && (
-        <Text className="mt-0.5 pl-[22px] text-[12px] text-ink-50 leading-[16px]">
+        <Text className={photo ? "mt-2 text-[16px] leading-[23px] text-ink-70" : "mt-0.5 pl-[22px] text-[12px] text-ink-50 leading-[16px]"}>
           {hint}
         </Text>
       )}

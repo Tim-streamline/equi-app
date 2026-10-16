@@ -6,7 +6,7 @@ import { ensureIntake, openOrCreateIntake, saveAnswer, bookingQuery } from '../l
 function database() {
   const db = new DatabaseSync(':memory:');
   db.exec(`CREATE TABLE protocols (id TEXT PRIMARY KEY,status TEXT);
-    CREATE TABLE intake_bookings (id TEXT PRIMARY KEY,protocol_id TEXT,user_id TEXT,horse_id TEXT,status TEXT,intake_status TEXT,started_at TEXT,submitted_at TEXT,created_at TEXT,updated_at TEXT);
+    CREATE TABLE intake_bookings (id TEXT PRIMARY KEY,protocol_id TEXT,user_id TEXT,horse_id TEXT,status TEXT,intake_status TEXT,started_at TEXT,submitted_at TEXT,completed_at TEXT,created_at TEXT,updated_at TEXT);
     CREATE TABLE intake_answers (id TEXT PRIMARY KEY,response_id TEXT,section_id TEXT,field_id TEXT,value TEXT,created_at TEXT,updated_at TEXT,UNIQUE(response_id,section_id,field_id));`);
   const adapter = {
     async getOptional(sql, args=[]) { return db.prepare(sql).get(...args) ?? null; },

@@ -15,7 +15,7 @@ function screen(file, modules) {
 }
 function setup() {
   const events = [];
-  const section = { id: 'photos', nr: 0, title: 'Intake fotos', fields: [] };
+  const section = { id: 'photos', nr: 0, title: 'Foto’s voor je intake', fields: [] };
   const modules = {
     react: { useEffect() {}, useState: value => [value, () => {}], useRef: value => ({ current: value }), useMemo: fn => fn() },
     'react/jsx-runtime': { jsx, jsxs: jsx },
@@ -27,6 +27,7 @@ function setup() {
     '@/components/intake/IntakeScrollView': { IntakeScrollView: 'IntakeScrollView' },
     '@/components/intake/IntakeField': { IntakeField: 'IntakeField' },
     '@/lib/intake/schema-provider': { useIntakeSchema: () => ({ schema: [section] }) },
+    '@/lib/intake/submission': {formatIntakeDate: () => '16 oktober 2026'},
     '@/lib/intake/store': { useIntake: () => ({ state: { answers: {} }, trackActivity() {} }), formatSavedAgo: () => null },
     '@/lib/intake/logic': { intakeProgress: () => ({done: 0, total: 1, pct: 0}), nextSectionId: () => 'photos',
       answersForSection: () => ({}), answeredCount: () => ({ answered: 0, total: 0 }), isSectionComplete: () => false, isPhotoSection: () => false },

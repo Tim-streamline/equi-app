@@ -25,7 +25,7 @@ class IntakePhotoRules
         if ($this->notApplicable($field, $answers)) {
             return true;
         }
-        $refs = $this->references($value);
+        $refs = $this->fieldReferences($field, $value, $answers);
         if (! $refs) {
             return false;
         }
@@ -40,11 +40,30 @@ class IntakePhotoRules
             }
         }
         foreach ($config['slots'] ?? [] as $slot) {
-            if (! array_filter($refs, fn ($ref) => ($answers['__photos']['slot-'.explode(':', $ref)[1]] ?? null) === $slot['id'])) {
+            if (! $this->slotReferences($field, $slot, $value, $answers)) {
                 return false;
             }
         }
 
         return true;
+    }
+
+    public function slotReferences(IntakeField $field, array $slot, mixed $value, array $answers): array
+    {
+        if (isset($slot['answer_field'])) {
+            return $this->references($slot['answer_field'] === $field->key ? $value : ($answers[$field->answer_section_key ?? $field->section->key][$slot['answer_field']] ?? null));
+        }
+
+        return array_values(array_filter($this->references($value), fn ($ref) => ($answers['__photos']['slot-'.explode(':', $ref)[1]] ?? null) === $slot['id']));
+    }
+
+    public function fieldReferences(IntakeField $field, mixed $value, array $answers): array
+    {
+        $refs = $this->references($value);
+        foreach ($field->photo_config['slots'] ?? [] as $slot) {
+            $refs = array_merge($refs, $this->slotReferences($field, $slot, $value, $answers));
+        }
+
+        return array_values(array_unique($refs));
     }
 }

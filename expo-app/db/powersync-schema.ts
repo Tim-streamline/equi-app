@@ -519,6 +519,7 @@ const intake_bookings = new Table({
   intake_status: column.text,
   started_at: column.text,
   submitted_at: column.text,
+  completed_at: column.text,
   created_at: column.text,
   updated_at: column.text,
 }, { indexes: { byUser: ['user_id'] } });
@@ -540,6 +541,7 @@ const intake_sections = new Table({
   order: column.integer,
   title: column.text,
   intro: column.text,
+  presentation: column.text,
   minutes: column.integer,
   icon: column.text,
   subtitle: column.text,

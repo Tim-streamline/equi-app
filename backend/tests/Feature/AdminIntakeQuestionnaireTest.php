@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Models\AdminUser;
+use App\Models\IntakeSection;
 use Database\Seeders\IntakeQuestionnaireSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
@@ -28,13 +29,25 @@ class AdminIntakeQuestionnaireTest extends TestCase
         ]);
     }
 
+    public function test_section_presentation_is_editable_and_validated(): void
+    {
+        $this->seed(IntakeQuestionnaireSeeder::class);
+        $s = IntakeSection::where('key', 'intake-fotos')->sole();
+        $data = ['questionnaire_id' => $s->questionnaire_id, 'key' => $s->key, 'title' => 'Custom photos', 'intro' => 'Custom intro', 'subtitle' => 'Custom subtitle', 'order' => 0, 'minutes' => 1, 'active' => true,
+            'presentation' => ['intro_style' => 'card', 'offline_notice' => 'Custom offline message']];
+        $this->actingAs($this->admin, 'admin')->put('/admin/intake-questionnaire/sections/'.$s->id, $data)->assertSessionHasNoErrors();
+        $this->assertSame($data['presentation'], $s->fresh()->presentation);
+        $data['presentation']['intro_style'] = 'arbitrary';
+        $this->put('/admin/intake-questionnaire/sections/'.$s->id, $data)->assertSessionHasErrors('presentation.intro_style');
+    }
+
     public function test_current_hard_coded_questionnaire_is_seeded_completely(): void
     {
         $this->seed(IntakeQuestionnaireSeeder::class);
 
         $this->assertDatabaseCount('intake_questionnaires', 1);
         $this->assertDatabaseCount('intake_sections', 13);
-        $this->assertDatabaseCount('intake_fields', 379);
+        $this->assertDatabaseCount('intake_fields', 376);
         $this->assertDatabaseHas('intake_fields', [
             'key' => 'merrie-vruchtbaarheid',
             'type' => 'radio',

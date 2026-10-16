@@ -11,6 +11,7 @@ use App\Models\IntakeQuestionnaire;
 use App\Models\User;
 use App\Support\IntakeAnswersPdf;
 use App\Support\IntakeSubmissionMail;
+use Carbon\Carbon;
 use Firebase\JWT\JWT;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
@@ -67,7 +68,7 @@ class IntakeSubmissionMailTest extends TestCase
         foreach ([
             ['key' => 'gewicht', 'label' => 'Gewicht', 'type' => 'number', 'unit' => 'kg'],
             ['key' => 'voer', 'label' => 'Voer', 'type' => 'repeater', 'repeater_sub' => [['id' => 'name', 'label' => 'Naam'], ['id' => 'amount', 'label' => 'Hoeveelheid']]],
-            ['key' => 'klachten', 'label' => 'Klachten', 'type' => 'multi'],
+            ['key' => 'klachten', 'label' => 'Klachten', 'type' => 'multi', 'options' => ['Jeuk', 'Hoesten']],
             ['key' => 'foto', 'label' => 'Foto', 'type' => 'photo', 'optional' => true],
             ['key' => 'hidden', 'label' => 'Hidden question', 'type' => 'text', 'show_if' => ['gewicht' => '999']],
         ] as $field) {
@@ -150,6 +151,7 @@ class IntakeSubmissionMailTest extends TestCase
 
     public function test_pdf_download_uses_the_requested_filename_from_the_submission_and_intake_name(): void
     {
+        $this->travelTo(Carbon::parse('2026-09-29T21:00:00Z'));
         $this->booking->answers()->create(['section_id' => 'paard', 'field_id' => 'naam', 'value' => json_encode('Rolo')]);
         $this->upload([$this->submission()])->assertOk();
         $this->actingAs(AdminUser::create(['name' => 'Admin', 'email' => 'admin@example.test', 'password' => 'password', 'role' => 'owner', 'active' => true]), 'admin');
@@ -157,10 +159,11 @@ class IntakeSubmissionMailTest extends TestCase
             ->assertHeader('Content-Disposition', 'attachment; filename="EquiApp_protocolintake_29-09-2026_Rolo.pdf"');
     }
 
-    public function test_first_submission_sets_review_status_and_normalizes_timestamp_without_resetting_review_on_replay(): void
+    public function test_first_submission_uses_server_time_without_resetting_review_on_replay(): void
     {
         $this->booking->update(['status' => 'confirmed']);
-        $op = $this->submission(['submitted_at' => '2026-09-30T00:24:00+02:00']);
+        $this->travelTo(Carbon::parse('2026-09-29T22:24:00Z'));
+        $op = $this->submission(['submitted_at' => '2001-01-01T00:00:00Z']);
         $this->upload([$op])->assertOk();
         $booking = $this->booking->fresh();
         $this->assertSame('pending', $booking->status);
@@ -184,7 +187,8 @@ class IntakeSubmissionMailTest extends TestCase
     public function test_therapist_notification_is_sent_once_after_commit_with_the_requested_content(): void
     {
         $this->booking->answers()->create(['section_id' => 'paard', 'field_id' => 'naam', 'value' => json_encode('Rolo')]);
-        $op = $this->submission(['submitted_at' => '2026-09-30T00:24:00+02:00']);
+        $this->travelTo(Carbon::parse('2026-09-29T22:24:00Z'));
+        $op = $this->submission(['submitted_at' => '2001-01-01T00:00:00Z']);
         $this->upload([$op])->assertOk();
         $this->assertSame('pending', $this->booking->fresh()->submission_email_status);
         $this->assertCount(0, $this->messages());
@@ -217,7 +221,7 @@ class IntakeSubmissionMailTest extends TestCase
         $this->assertCount(1, $this->messages());
         $this->assertSame('done', $this->booking->fresh()->status);
         $this->assertSame('30-09-2026 00:24', $this->booking->fresh()->submitted_at_label);
-        $this->assertSame('Later aangepast', $this->booking->fresh()->notes);
+        $this->assertNotSame('Later aangepast', $this->booking->fresh()->notes);
     }
 
     public function test_notification_transport_failure_does_not_retry_uncertain_delivery(): void
@@ -254,14 +258,15 @@ class IntakeSubmissionMailTest extends TestCase
         $this->assertCount(0, $this->messages());
     }
 
-    public function test_notification_delivery_fields_cannot_be_forged_and_pending_delivery_waits_for_submission(): void
+    public function test_notification_delivery_fields_cannot_be_forged_and_submission_cannot_be_reopened(): void
     {
         $this->upload([$this->submission(['submission_email_status' => 'sent', 'submission_email_sent_at' => now()->toISOString()])])->assertOk();
         $this->assertSame('pending', $this->booking->fresh()->submission_email_status);
         $this->assertNull($this->booking->fresh()->submission_email_sent_at);
         $this->upload([$this->submission(['intake_status' => 'draft', 'submitted_at' => null])])->assertOk();
         $this->artisan('intakes:send-submission-notifications')->assertSuccessful();
-        $this->assertCount(0, $this->messages());
+        $this->assertSame('submitted', $this->booking->fresh()->intake_status);
+        $this->assertCount(1, $this->messages());
         $this->upload([$this->submission()])->assertOk();
         $this->artisan('intakes:send-submission-notifications')->assertSuccessful();
         $this->upload([$this->submission(['intake_status' => 'draft', 'submitted_at' => null])])->assertOk();

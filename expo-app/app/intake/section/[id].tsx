@@ -1,3 +1,4 @@
+import { formatIntakeDate } from '@/lib/intake/submission';
 // Data-driven section detail screen. The route param `id` selects the
 // section, and the fields are rendered straight from the schema through
 // <IntakeField/>. The sticky CTA jumps to the next not-yet-completed
@@ -105,14 +106,14 @@ export default function IntakeSectionScreen() {
           }}
         >
           <Button
-            title="Opslaan en terug naar overzicht"
+            title={state.submittedAt ? "Terug naar overzicht" : "Opslaan en terug naar overzicht"}
             variant="primary"
             onPress={() => router.dismissTo('/intake/overview')}
           />
           <View className="flex-row items-center justify-center gap-1.5">
             <View className="h-1.5 w-1.5 rounded-full bg-mint-500" />
             <Text className="text-[11px] text-ink-50">
-              Automatisch opgeslagen ·{' '}
+              {state.submittedAt ? `Ingestuurd op ${formatIntakeDate(state.submittedAt)} · ` : 'Automatisch opgeslagen · '}
               <Text className={allAnswered ? 'text-success' : 'text-danger'}>
                 {filled} / {total}
               </Text>{' '}
@@ -121,10 +122,11 @@ export default function IntakeSectionScreen() {
           </View>
         </View>
         }>
-            {section.intro && (
-              <Text className="mb-4 text-[13.5px] leading-[20px] text-ink-70">
-                {section.intro}
-              </Text>
+            {!!(section.intro || section.presentation?.offline_notice) && (
+              <View className={section.presentation?.intro_style === 'card' ? 'mb-5 rounded-2xl bg-teal-700 p-5' : 'mb-4'}>
+                {!!section.intro && <Text className={section.presentation?.intro_style === 'card' ? 'text-[16px] leading-[24px] text-white' : 'text-[16px] leading-[23px] text-ink-70'}>{section.intro}</Text>}
+                {!!section.presentation?.offline_notice && <Text className={section.presentation?.intro_style === 'card' ? 'mt-4 text-[14px] leading-[21px] text-white' : 'mt-4 text-sm text-ink-70'}>{section.presentation.offline_notice}</Text>}
+              </View>
             )}
 
             {isPhotoSection(section) && isSectionComplete(section, answers, state.answers, noneOptions) && (

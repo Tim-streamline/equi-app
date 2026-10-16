@@ -6,7 +6,7 @@ const jsx = (type, props) => ({ type, props });
 const runtime = { jsx, jsxs: jsx };
 function load(path, modules) {
   const exports = {};
-  const code = ts.transpileModule(readFileSync(new URL(path, import.meta.url), 'utf8'), { compilerOptions: { jsx: ts.JsxEmit.ReactJSX, module: ts.ModuleKind.CommonJS } }).outputText;
+  const code = ts.transpileModule(readFileSync(new URL(path, import.meta.url), 'utf8'), { compilerOptions: { jsx: ts.JsxEmit.ReactJSX, module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 } }).outputText;
   new Function('require', 'exports', code)(name => { assert.ok(name in modules, name); return modules[name]; }, exports);
   return exports;
 }
@@ -34,6 +34,7 @@ test('field renderer supports multiple medicines, other names, condition introdu
     './IntakeScrollView': { IntakeTextInput: 'TextInput' },
     '@/lib/intake/logic': pure['./logic'], '@/lib/intake/store': { useIntake: () => ({ state, setField: (s, f, value) => { (state.answers[s] ??= {})[f] = value; } }) },
     './AgeField': { AgeField: 'AgeField' },
+    './PhotoInstructions': {PhotoInstructions: () => null},
     './ConfiguredPhotoField': { ConfiguredPhotoField: 'ConfiguredPhoto', PhotoExample: () => null },
     './AttachmentField': { AttachmentField: 'AttachmentField' }, './FieldLabel': { FieldLabel: 'FieldLabel' },
     '@/assets/images/intake-hoef-voorbeeld.png': {},
@@ -71,7 +72,7 @@ test('offline blood-test selection shows size restrictions only on validation fa
     '@/lib/account-session': { accountSession: { revision: 0 } },
     '@/lib/intake/attachments/storage': { saveAttachment: async (record, asset) => { uploads++; assert.ok(asset.file); assert.equal(record.userId, 'owner'); } },
     '@/lib/intake/attachments/events': {},
-    '@/lib/intake/store': { useIntake: () => ({ ensureBooking: async () => 'fixture-booking', horseId: 'fixture-horse' }) },
+    '@/lib/intake/store': { useIntake: () => ({ state: {submittedAt: null}, submitting: false, ensureBooking: async () => 'fixture-booking', horseId: 'fixture-horse' }) },
   });
   const draw = () => { hook = 0; return AttachmentField({ value, onChange: next => { value = next; }, section: 'klacht', field: 'bloedonderzoek', photo: false }); };
   const button = () => flatten(draw()).find(n => n.type === 'Pressable' && n.props.accessibilityRole === 'button');
@@ -99,6 +100,7 @@ test('supplement repeaters support add/remove and every new none option clears o
     './IntakeScrollView': { IntakeTextInput: 'TextInput' },
     '@/lib/intake/logic': pure['./logic'], '@/lib/intake/store': { useIntake: () => ({ state, setField: (s, f, value) => { (state.answers[s] ??= {})[f] = value; } }) },
     './AgeField': { AgeField: 'AgeField' },
+    './PhotoInstructions': {PhotoInstructions: () => null},
     './ConfiguredPhotoField': { ConfiguredPhotoField: 'ConfiguredPhoto', PhotoExample: () => null },
     './AttachmentField': { AttachmentField: 'AttachmentField' }, './FieldLabel': { FieldLabel: 'FieldLabel' },
     '@/assets/images/intake-hoef-voorbeeld.png': {},
@@ -135,6 +137,7 @@ test('behavior signals clear none and unknown in both directions and retain mult
     './IntakeScrollView': { IntakeTextInput: 'TextInput' },
     '@/lib/intake/logic': pure['./logic'], '@/lib/intake/store': { useIntake: () => ({ state, setField: (s, f, value) => { (state.answers[s] ??= {})[f] = value; } }) },
     './AgeField': { AgeField: 'AgeField' },
+    './PhotoInstructions': {PhotoInstructions: () => null},
     './ConfiguredPhotoField': { ConfiguredPhotoField: 'ConfiguredPhoto', PhotoExample: () => null },
     './AttachmentField': { AttachmentField: 'AttachmentField' }, './FieldLabel': { FieldLabel: 'FieldLabel' },
     '@/assets/images/intake-hoef-voorbeeld.png': {},
@@ -169,7 +172,7 @@ test('offline hoof photo selection retains all eight front and side photos and a
     '@/lib/account-session': { accountSession: { revision: 0 } },
     '@/lib/intake/attachments/storage': { saveAttachment: async (record, asset) => { uploads++; assert.ok(asset.file); assert.equal(record.userId, 'owner'); } },
     '@/lib/intake/attachments/events': {},
-    '@/lib/intake/store': { useIntake: () => ({ ensureBooking: async () => 'fixture-booking', horseId: 'fixture-horse' }) },
+    '@/lib/intake/store': { useIntake: () => ({ state: {submittedAt: null}, submitting: false, ensureBooking: async () => 'fixture-booking', horseId: 'fixture-horse' }) },
   });
   const draw = () => { hook = 0; return AttachmentField({ value, onChange: next => { value = next; }, section: 'fysiek', field: 'foto-hoeven', photo: true }); };
   globalThis.fetch = async () => { assert.fail('Adding an attachment must not use the network'); };
@@ -185,7 +188,7 @@ test('offline hoof photo selection retains all eight front and side photos and a
   } finally { globalThis.fetch = originalFetch; }
 });
 
-test('submitted intake routes cannot reopen answers, while drafts and confirmation remain available', () => {
+test('submitted intakes allow read-only viewing but cannot revisit submission or onboarding', () => {
   let loaded = false, submittedAt = null, route = 'welcome', horseId = 'horse', horsesLoading = true, hasSynced = false, horses = [];
   const { default: Layout } = load('../app/intake/_layout.tsx', {
     'react/jsx-runtime': runtime,
@@ -202,11 +205,10 @@ test('submitted intake routes cannot reopen answers, while drafts and confirmati
   loaded = true;
   assert.equal(Layout().type, 'Stack');
   submittedAt = '2026-09-30T08:00:00Z';
-  for (route of ['welcome', 'review', 'submit', '[id]']) {
+  for (route of ['welcome', 'submit']) {
     assert.deepEqual(Layout(), { type: 'Redirect', props: { href: '/intake/sent' } });
   }
-  route = 'sent';
-  assert.equal(Layout().type, 'Stack');
+  for (route of ['sent', 'overview', '[id]']) assert.equal(Layout().type, 'Stack');
   horseId = '';
   assert.equal(Layout().type, 'View', 'horse data still loading must not redirect');
   horsesLoading = false; hasSynced = true; horses = [{ id: 'horse' }];

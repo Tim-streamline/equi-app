@@ -58,6 +58,7 @@ function screen() {
     '@/components/home/SeasonalTipCard': { SeasonalTipCard: 'SeasonalTipCard' },
     '@/components/ui/ConnectionStatus': { ConnectionStatus: 'ConnectionStatus' },
     '@/components/library/LibraryCard': { LibraryCard: 'LibraryCard' },
+    '@/lib/intake/submission': {formatIntakeDate: () => '1 oktober 2026'},
     '@/lib/intake/store': { useIntake: () => intakes[selected] },
   };
   modules['@/components/intake/PurchasedProtocols'] = load('../components/intake/PurchasedProtocols.tsx', modules);
@@ -89,6 +90,9 @@ test('selected horse determines purchased intakes, including when dashboard is o
   assert.deepEqual(app.routes, [{ pathname: '/intake', params: { bookingId: 'i3' } }]);
   app.select('submitted'); assert.equal(app.entry(), undefined);
   assert.ok(text(app.render()).includes('Je intake is verstuurd.'));
+  assert.ok(text(app.render()).includes('Intake ingestuurd op 1 oktober 2026'));
+  app.render().find(n => n?.type === 'Button' && n.props.title === 'Intake bekijken').props.onPress();
+  assert.deepEqual(app.routes.at(-1), {pathname: '/intake', params: {bookingId: 'i2'}});
 });
 test('finished protocols stay visible alongside a newly purchased intake', () => {
   const app = screen();

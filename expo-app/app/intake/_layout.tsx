@@ -40,7 +40,7 @@ export default function IntakeLayout() {
     if (!access.value.intakeAvailable && !state.submittedAt) return <View className="flex-1 items-center justify-center gap-4 p-6"><Text>{'Koop een protocol voor dit paard om de bijbehorende intake te starten.'}</Text><Button title="Protocol kopen" onPress={() => router.replace('/protocol-purchase')} /></View>;
     return <View className="flex-1 items-center justify-center gap-4 p-6"><ActivityIndicator /><Text>Je intake wordt gesynchroniseerd…</Text><Button title="Naar Home" onPress={() => router.replace('/(tabs)/(pager)/home')} /></View>;
   }
-  if (state.submittedAt && segments.at(-1) !== 'sent') return <Redirect href="/intake/sent" />;
+  if (state.submittedAt && ['submit', 'welcome'].includes(segments.at(-1) ?? '')) return <Redirect href="/intake/sent" />;
   return (
     <Stack
       screenOptions={{

@@ -14,7 +14,7 @@ export default function IntakeIndex() {
   useEffect(() => {
     if (!loaded) return;
     if (state.submittedAt) {
-      router.replace('/intake/sent' as any);
+      router.replace('/intake/overview' as any);
       return;
     }
     const hasAnyAnswer = Object.keys(state.answers).length > 0;

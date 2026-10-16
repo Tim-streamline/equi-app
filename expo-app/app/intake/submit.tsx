@@ -19,7 +19,7 @@ import { useIntake } from '@/lib/intake/store';
 
 export default function IntakeSubmit() {
   const insets = useSafeAreaInsets();
-  const { state, submit } = useIntake();
+  const { state, submit, submitting } = useIntake();
   const { schema, noneOptions } = useIntakeSchema();
   const critical = hasCriticalAnswers(state.answers, schema);
 
@@ -182,7 +182,8 @@ export default function IntakeSubmit() {
           }}
         >
           <Button
-            title="VERSTUREN"
+            title={submitting ? "Synchroniseren en versturen…" : "Intake versturen"}
+            disabled={missingBySection.length > 0 || submitting || !!state.submittedAt}
             variant="primary"
             onPress={onSubmit}
             leading={<Send size={18} color="#fff" />}

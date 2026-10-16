@@ -103,7 +103,7 @@ class IntakeBooking extends Model
             'last_activity_at' => 'datetime', 'last_reminder_at' => 'datetime',
             'answers_email_sent_at' => 'datetime', 'answers_email_claimed_at' => 'datetime',
             'submission_email_sent_at' => 'datetime', 'submission_email_claimed_at' => 'datetime',
-            'started_at' => 'datetime', 'submitted_at' => 'datetime',
+            'started_at' => 'datetime', 'submitted_at' => 'datetime', 'completed_at' => 'datetime',
             'accepted_triggers' => 'array', 'review_updated_at' => 'datetime',
             'duration_minutes' => 'integer',
         ];

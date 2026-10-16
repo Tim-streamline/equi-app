@@ -17,8 +17,8 @@ const jsx = (type, props) => ({type, props});
 const flatten = node => Array.isArray(node) ? node.flatMap(flatten) : node && typeof node === 'object' ? [node, ...flatten(node.props?.children)] : [];
 
 test('Intake fotos is the first regular section and moved questions retain their saved answer identifiers', () => {
- assert.equal(photos.title, 'Intake fotos'); assert.equal(photos.id, 'intake-fotos'); assert.equal(photos.nr, 0);
- assert.equal(photos.fields.filter(f => f.type === 'photo').length, 19);
+ assert.equal(photos.title, 'Foto’s voor je intake'); assert.equal(photos.id, 'intake-fotos'); assert.equal(photos.nr, 0);
+ assert.equal(photos.fields.filter(f => f.type === 'photo').length, 16);
  assert.equal(INTAKE_SCHEMA.slice(1).flatMap(s => s.fields).some(f => f.type === 'photo'), false);
  assert.equal(photos.fields.find(f => f.id === 'foto-hoeven').answerSection, 'fysiek');
  const answers = { fysiek: { 'foto-hoeven': ['attachment:old:hoef.jpg'] } };
@@ -47,7 +47,8 @@ test('the regular section renderer displays newly configured photo questions in 
    '@/components/ui/Button': {Button: 'Button'}, '@/components/ui/IconButton': {IconButton: 'IconButton'},
    '@/components/intake/IntakeScrollView': {IntakeScrollView: 'Scroll'}, '@/components/intake/IntakeField': {IntakeField: 'Field'},
    '@/lib/intake/schema-provider': {useIntakeSchema: () => ({schema: [section], noneOptions: []})},
-   '@/lib/intake/logic': modules['./logic'], '@/lib/intake/store': {useIntake: () => ({state: {answers: {}}, trackActivity() {}})},
+   '@/lib/intake/logic': modules['./logic'], '@/lib/intake/submission': {formatIntakeDate: () => '16 oktober 2026'},
+    '@/lib/intake/store': {useIntake: () => ({state: {answers: {}}, trackActivity() {}})},
   };
   const screen = load('../app/intake/section/[id].tsx', dependencies).default;
   assert.equal(flatten(screen()).find(n => n.type === 'Field').props.field.id, 'new-photo');
@@ -59,9 +60,11 @@ test('moved photo input reuses the old upload namespace and writes through norma
   'react/jsx-runtime': {jsx, jsxs: jsx}, 'react-native': {View: 'View', Text: 'Text', Pressable: 'Pressable'},
   'lucide-react-native': {Check: 'Check', Plus: 'Plus', Trash2: 'Trash2'},
   './IntakeScrollView': {IntakeTextInput: 'TextInput'}, '@/lib/intake/logic': modules['./logic'],
-  '@/lib/intake/store': {useIntake: () => ({state: {answers: {fysiek: {'foto-hoeven': ['attachment:old:hoof.jpg']}}}, setField: (...args) => saved.push(args)})},
+  '@/lib/intake/submission': {formatIntakeDate: () => '16 oktober 2026'},
+    '@/lib/intake/store': {useIntake: () => ({state: {answers: {fysiek: {'foto-hoeven': ['attachment:old:hoof.jpg']}}}, setField: (...args) => saved.push(args)})},
+  './PhotoInstructions': {PhotoInstructions: () => null},
   './ConfiguredPhotoField': {ConfiguredPhotoField: 'Upload', PhotoExample: () => null},
-  './AttachmentField': {AttachmentField: 'Upload'}, './FieldLabel': {FieldLabel: 'Label'},
+  './AttachmentField': {AttachmentField: 'Upload'}, './FieldLabel': {FieldLabel: 'Label'}, './AgeField': {AgeField: 'Age'},
  };
  const {IntakeField} = load('../components/intake/IntakeField.tsx', dependencies);
  const input = flatten(IntakeField({field, sectionId: photos.id, n: 1, noneOptions: []})).find(n => n.type === 'Upload');

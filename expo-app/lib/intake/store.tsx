@@ -1,3 +1,5 @@
+import { waitForIntakeUploads } from './submission';
+import { accountSession } from '@/lib/account-session';
 import { useGlobalSearchParams } from 'expo-router';
 import { dashboardRequest } from '@/hooks/useHorseDashboard';
 // Offline answers belong to the selected horse's booking, which is also its intake.
@@ -12,7 +14,7 @@ import { useCurrentUserId, useCurrentHorseId } from '@/db/hooks';
 export type IntakeState = { answers: IntakeAnswers; submittedAt: string | null; savedAt: string | null };
 const EMPTY: IntakeState = { answers: {}, submittedAt: null, savedAt: null };
 type Ctx = {
-  state: IntakeState; loaded: boolean;
+  state: IntakeState; loaded: boolean; submitting: boolean;
   setField: (section: string, field: string, value: FieldValue) => void;
   resetSection: (section: string) => void;
   submit: () => Promise<void>; reset: () => void;
@@ -41,13 +43,24 @@ function HorseIntakeProvider({ userId, horseId, selectedId, children }: { userId
   const { powersync } = useDb();
   const [state, setState] = useState<IntakeState>(EMPTY);
   const dirty = useRef(false);
+  const [submitting, setSubmitting] = useState(false);
+  const locked = useRef(false);
+  const mounted = useRef(true);
+  useEffect(() => { mounted.current = true; return () => { mounted.current = false; }; }, []);
   const queue = useRef<Promise<unknown>>(Promise.resolve());
-  const { data: bookings, isLoading: bookingLoading } = useQuery<{ id: string; submitted_at: string | null; updated_at: string | null }>(selectedId ? 'SELECT id, submitted_at, updated_at FROM intake_bookings WHERE user_id = ? AND horse_id = ? AND id = ? AND status != \'cancelled\'' : bookingQuery, selectedId ? [userId, horseId, selectedId] : [userId, horseId]);
+  const { data: bookings, isLoading: bookingLoading } = useQuery<{ id: string; submitted_at: string | null; completed_at: string | null; updated_at: string | null }>(selectedId ? 'SELECT id, submitted_at, completed_at, updated_at FROM intake_bookings WHERE user_id = ? AND horse_id = ? AND id = ? AND status != \'cancelled\'' : bookingQuery, selectedId ? [userId, horseId, selectedId] : [userId, horseId]);
   const booking = bookings?.[0];
   const { data: answers, isLoading: answersLoading } = useQuery<{ section_id: string; field_id: string; value: string | null; updated_at: string }>(
     'SELECT section_id, field_id, value, updated_at FROM intake_answers WHERE response_id = ?', [booking?.id ?? '']);
   const loaded = !bookingLoading && (!booking || !answersLoading);
+  const completedAt = booking?.completed_at ?? booking?.submitted_at ?? null;
+  if (completedAt || state.submittedAt) locked.current = true;
   useEffect(() => {
+    if (completedAt) {
+      locked.current = true;
+      // Server completion wins over unsynced edits from another device.
+      dirty.current = false;
+    }
     if (dirty.current || !loaded) return;
     const next: IntakeAnswers = {};
     let savedAt = booking?.updated_at ?? null;
@@ -55,8 +68,8 @@ function HorseIntakeProvider({ userId, horseId, selectedId, children }: { userId
       (next[row.section_id] ??= {})[row.field_id] = decode(row.value);
       if (!savedAt || row.updated_at > savedAt) savedAt = row.updated_at;
     }
-    setState({ answers: next, submittedAt: booking?.submitted_at ?? null, savedAt });
-  }, [bookings, answers, loaded, booking]);
+    setState({ answers: next, submittedAt: completedAt, savedAt });
+  }, [bookings, answers, loaded, booking, completedAt]);
   const authorizedBooking = useRef<Promise<string> | null>(null);
   const ensureBooking = useCallback(() => {
     if (booking?.id) return Promise.resolve(booking.id);
@@ -79,6 +92,7 @@ function HorseIntakeProvider({ userId, horseId, selectedId, children }: { userId
     return work;
   }, []);
   const setField = useCallback<Ctx['setField']>((section, field, value) => {
+    if (locked.current) return;
     dirty.current = true;
     setState(prev => ({ ...prev, answers: { ...prev.answers, [section]: { ...prev.answers[section], [field]: value } } }));
     void enqueue(async () => {
@@ -88,23 +102,44 @@ function HorseIntakeProvider({ userId, horseId, selectedId, children }: { userId
     }).catch(() => {});
   }, [enqueue, ensureBooking, powersync]);
   const resetSection = useCallback<Ctx['resetSection']>(section => {
+    if (locked.current) return;
     dirty.current = true;
     setState(prev => { const answers = { ...prev.answers }; delete answers[section]; return { ...prev, answers }; });
     void enqueue(async () => { const id = await ensureBooking(); await powersync.execute('DELETE FROM intake_answers WHERE response_id = ? AND section_id = ?', [id,section]); }).catch(() => {});
   }, [enqueue, ensureBooking, powersync]);
   const submit = useCallback(async () => {
-    await queue.current;
-    // Retry the complete current form before submission, including any failed local write.
-    const id = await ensureBooking();
-    await enqueue(async () => {
-      for (const [section, values] of Object.entries(state.answers)) for (const [field, value] of Object.entries(values)) await saveAnswer(powersync, id, section, field, value, newId);
-      const now = new Date().toISOString();
-      await powersync.execute("UPDATE intake_bookings SET intake_status = 'submitted', submitted_at = ?, updated_at = ? WHERE id = ?", [now,now,id]);
+    if (state.submittedAt) return;
+    if (locked.current) throw new Error('Je intake wordt al verstuurd.');
+    locked.current = true;
+    setSubmitting(true);
+    const revision = accountSession.revision;
+    const checkSession = () => {
+      if (!mounted.current || revision !== accountSession.revision) throw new Error('Je sessie is gewijzigd.');
+    };
+    try {
+      await queue.current;
+      checkSession();
+      const id = await ensureBooking();
+      // Retry any failed local save before waiting for the upload queue.
+      for (const [section, values] of Object.entries(state.answers)) for (const [field, value] of Object.entries(values)) {
+        checkSession();
+        await saveAnswer(powersync, id, section, field, value, newId);
+      }
+      await waitForIntakeUploads(powersync, checkSession);
+      checkSession();
+      const result = await dashboardRequest(`/api/intakes/${id}/submit`, {});
+      checkSession();
       dirty.current = true;
-      setState(prev => ({ ...prev, submittedAt: now, savedAt: now }));
-    });
-  }, [enqueue, ensureBooking, powersync, state.answers]);
+      setState(prev => ({ ...prev, submittedAt: result.completed_at, savedAt: result.completed_at }));
+    } catch (error) {
+      locked.current = !!completedAt;
+      throw error;
+    } finally {
+      if (mounted.current) setSubmitting(false);
+    }
+  }, [ensureBooking, powersync, state.answers, state.submittedAt, completedAt]);
   const reset = useCallback(() => {
+    if (locked.current) return;
     dirty.current = true;
     setState(EMPTY);
     void enqueue(async () => {
@@ -116,7 +151,7 @@ function HorseIntakeProvider({ userId, horseId, selectedId, children }: { userId
     }).catch(() => {});
   }, [enqueue, ensureBooking, powersync]);
   const bookingId = booking?.id ?? null;
-  const value = useMemo(() => ({ state, loaded, setField, resetSection, submit, reset, ensureBooking, trackActivity, horseId, bookingId }), [state, loaded, setField, resetSection, submit, reset, ensureBooking, trackActivity, horseId, bookingId]);
+  const value = useMemo(() => ({ state, loaded, submitting, setField, resetSection, submit, reset, ensureBooking, trackActivity, horseId, bookingId }), [state, loaded, submitting, setField, resetSection, submit, reset, ensureBooking, trackActivity, horseId, bookingId]);
   return <IntakeContext.Provider value={value}>{children}</IntakeContext.Provider>;
 }
 export function useIntake(): Ctx { const context = useContext(IntakeContext); if (!context) throw new Error('useIntake must be inside IntakeProvider'); return context; }

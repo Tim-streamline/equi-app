@@ -42,6 +42,7 @@
 {{ $file['name'] }}
 @if(!empty($file['year']))<br>Jaartal: {{ $file['year'] }}@endif
 @if(!empty($file['slot']))<br>{{ $file['slot'] }}@endif
+@if(!empty($file['caption']))<br>{{ $file['caption'] }}@endif
 </div>
 @endforeach
 @elseif ($row['type'] === 'repeater')

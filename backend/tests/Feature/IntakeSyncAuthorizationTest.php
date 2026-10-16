@@ -4,8 +4,9 @@ namespace Tests\Feature;
 
 use App\Models\Horse;
 use App\Models\IntakeBooking;
+use App\Models\IntakeQuestionnaire;
 use App\Models\User;
-use App\Support\ProtocolAccess;
+use App\Support\SubscriptionAccess;
 use Firebase\JWT\JWT;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Str;
@@ -22,6 +23,9 @@ class IntakeSyncAuthorizationTest extends TestCase
         $user = User::factory()->create();
         $horse = Horse::create(['owner_id' => $user->id, 'name' => 'Nova']);
         $booking = IntakeBooking::create(['user_id' => $user->id, 'horse_id' => $horse->id]);
+        $q = IntakeQuestionnaire::create(['slug' => 'protocol-intake', 'name' => 'Intake', 'active' => true]);
+        $s = $q->sections()->create(['key' => 'paard', 'title' => 'Paard', 'active' => true]);
+        $s->fields()->create(['key' => 'naam', 'label' => 'Naam', 'type' => 'text', 'active' => true]);
         $id = (string) Str::uuid();
         $this->postSyncAs($user, [
             ['op' => 'PUT', 'type' => 'intake_bookings', 'id' => $booking->id, 'data' => ['user_id' => $user->id, 'horse_id' => $horse->id]],
@@ -37,6 +41,7 @@ class IntakeSyncAuthorizationTest extends TestCase
         $this->postSyncAs($user, [['op' => 'PUT', 'type' => 'intake_bookings', 'id' => (string) Str::uuid(),
             'data' => ['user_id' => $user->id, 'horse_id' => $horse->id]]])->assertForbidden();
         $this->assertDatabaseCount('intake_bookings', 1);
+        $this->assertDatabaseHas('intake_answers', ['id' => $id, 'value' => '"Updated offline"']);
     }
 
     public function test_offline_writes_still_reject_foreign_bookings_and_transferred_horses_without_plus(): void
@@ -216,7 +221,9 @@ class IntakeSyncAuthorizationTest extends TestCase
 
     private function tokenFor(User $user): string
     {
-        if (! app(\App\Support\SubscriptionAccess::class)->active($user->id)) $this->subscribe($user);
+        if (! app(SubscriptionAccess::class)->active($user->id)) {
+            $this->subscribe($user);
+        }
         $now = time();
 
         return JWT::encode([

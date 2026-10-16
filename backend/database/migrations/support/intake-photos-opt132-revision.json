@@ -1,0 +1,160 @@
+{
+  "changes": {
+    "foto-historie": {
+      "order": 0
+    },
+    "foto-hooi": {
+      "photoConfig": {
+        "caption": {
+          "label": "Eventuele toelichting",
+          "placeholder": "Weidehooi close-up"
+        }
+      },
+      "order": 1
+    },
+    "foto-mest": {
+      "order": 2
+    },
+    "foto-stal": {
+      "photoConfig": {
+        "caption": {
+          "label": "Eventuele toelichting",
+          "placeholder": "Nachtverblijf"
+        }
+      },
+      "order": 3
+    },
+    "foto-weide": {
+      "photoConfig": {
+        "allow_na": true,
+        "na_key": "weide-na",
+        "caption": {
+          "label": "Eventuele toelichting",
+          "placeholder": "Zomerweide"
+        }
+      },
+      "order": 4
+    },
+    "giftige-planten-foto": {
+      "photoConfig": {
+        "max": 10,
+        "allow_na": true,
+        "na_key": "planten-na",
+        "caption": {
+          "label": "Eventuele toelichting",
+          "placeholder": "Rondom de paddock"
+        }
+      },
+      "order": 5
+    },
+    "foto-zijaanzicht-links": {
+      "label": "Actuele foto’s van je paard",
+      "photoConfig": {
+        "slots": [
+          {
+            "id": "links",
+            "label": "Hele paard van links",
+            "answer_field": "foto-zijaanzicht-links"
+          },
+          {
+            "id": "rechts",
+            "label": "Hele paard van rechts",
+            "answer_field": "foto-zijaanzicht-rechts"
+          },
+          {
+            "id": "voor",
+            "label": "Vooraanzicht",
+            "answer_field": "foto-vooraanzicht"
+          },
+          {
+            "id": "achter",
+            "label": "Achteraanzicht",
+            "answer_field": "foto-achteraanzicht"
+          }
+        ]
+      },
+      "hint": "Met deze foto’s krijg ik een beter beeld van onder andere lichaamsconditie, bespiering en houding.\n\nZet je paard zo natuurlijk en recht mogelijk op een vlakke ondergrond. Zorg dat het hele paard, inclusief de hoeven, zichtbaar is. Fotografeer bij voorkeur bij goed daglicht en zonder deken, zadel of andere uitrusting die het lichaam bedekt. Houd de camera ongeveer ter hoogte van het midden van het lichaam en fotografeer zo recht mogelijk. Gebruik geen filters of andere beeldbewerking.",
+      "optional": false,
+      "order": 6
+    },
+    "foto-huid": {
+      "photoConfig": {
+        "allow_na": true,
+        "na_key": "klacht-na",
+        "caption": {
+          "label": "Eventuele toelichting",
+          "placeholder": "Plekje op de hals"
+        }
+      },
+      "order": 7
+    },
+    "foto-hoeven": {
+      "photoConfig": {
+        "slots": [
+          {
+            "id": "lv",
+            "label": "Linker voorhoef"
+          },
+          {
+            "id": "rv",
+            "label": "Rechter voorhoef"
+          },
+          {
+            "id": "la",
+            "label": "Linker achterhoef"
+          },
+          {
+            "id": "ra",
+            "label": "Rechter achterhoef"
+          }
+        ]
+      },
+      "hint": "De hoeven geven aanvullende informatie over onder andere hoefkwaliteit, vorm en groei.\n\nZet je paard op een vlakke, harde ondergrond, bijvoorbeeld beton, klinkers of een andere egale verharde vloer.\n\nMaak van iedere hoef één foto recht van de zijkant. Houd je telefoon horizontaal en zo laag mogelijk, vrijwel op de grond, zodat de camera ongeveer op hoefhoogte zit. Zorg voor voldoende licht, een scherpe foto en maak de hoef indien nodig eerst schoon, zodat de hoefwand goed zichtbaar is.",
+      "order": 8
+    },
+    "foto-slijmvlies": {
+      "order": 9
+    },
+    "sec-hoef-upload": {
+      "photoConfig": {
+        "example_url": "/api/intake-examples/hooves",
+        "example_caption": "Voorbeeldfoto’s — David Landreville",
+        "example_after": "Extra tip: Gebruik dezelfde afstand en camerahoek voor alle vier de hoeven zodat de foto’s goed met elkaar te vergelijken zijn."
+      },
+      "hint": "Alleen invullen als jouw klacht of hulpvraag met de hoeven, pees-, gewrichts-, bewegingsproblemen of staakgedrag te maken heeft.\n\nUpload van iedere hoef een extra foto van:\n- zool;\n- achterzijde vanaf de hielen;\n- zijaanzicht.\n\nFoto-instructies\n\nMaak de hoeven droog en voldoende schoon zodat de hoefstructuren goed zichtbaar zijn.\n\n• Zool: Til de hoef op en fotografeer de volledige onderzijde zo recht mogelijk.\n• Achterzijde / hielen: Fotografeer recht vanaf de achterkant zodat de volledige achterzijde en beide hielen goed zichtbaar zijn.\n• Zijaanzicht: Fotografeer de hoef zo recht mogelijk van opzij, met de volledige hoef in beeld.",
+      "order": 10
+    },
+    "foto-hoef-lv": {
+      "label": "Linkervoorhoef",
+      "hint": null,
+      "order": 11
+    },
+    "foto-hoef-rv": {
+      "label": "Rechtervoorhoef",
+      "hint": null,
+      "order": 12
+    },
+    "foto-hoef-la": {
+      "label": "Linkerachterhoef",
+      "hint": null,
+      "order": 13
+    },
+    "foto-hoef-ra": {
+      "label": "Rechterachterhoef",
+      "hint": null,
+      "order": 14
+    },
+    "foto-hoef-instructie": {
+      "order": 15
+    },
+    "hoefbevangenheid-rontgen-upload": {
+      "hint": "Alleen invullen als je recente röntgenfoto’s van max. 5 jaar oud hebt die relevant zijn voor je huidige klacht of hulpvraag. Upload alleen de beelden die iets zeggen over het gebied of probleem waarvoor je deze intake invult.",
+      "order": 16
+    }
+  },
+  "retired": [
+    "foto-zijaanzicht-rechts",
+    "foto-vooraanzicht",
+    "foto-achteraanzicht"
+  ]
+}

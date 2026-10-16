@@ -86,7 +86,7 @@ test('generic controls restore years and preserve images when toggling not-appli
 });
 test('separate uploads retain earlier views even when upload callbacks finish out of order',()=>{
  const f=field('foto-hoeven'), app=ui(f,{fysiek:{'foto-hoeven':[]}});
- const uploads=app.render().filter(n=>n.type==='Upload');
+ const uploads=app.render().filter(n=>n.type==='Upload' && !n.props.slots);
  assert.equal(uploads.length,4);
  uploads[1].props.onChange(['attachment:b:b.jpg']);
  uploads[0].props.onChange(['attachment:a:a.jpg']);
@@ -101,4 +101,60 @@ test('older hoof uploads can be assigned a view without uploading a replacement'
  flatten(upload.props.renderMetadata('attachment:old:hoof.jpg')).find(n=>n.type==='Pressable').props.onPress();
  const first=app.render().find(n=>n.type==='Upload');
  assert.deepEqual(first.props.value,['attachment:old:hoof.jpg']);
+});
+
+test('body views are question seven, require all four, and preserve their original answer namespaces', () => {
+ const f=field('foto-zijaanzicht-links'), answers={fysiek:{}};
+ const visible=visibleFields(section,{},answers);
+ assert.equal(visible[6].id,f.id);
+ assert.equal(visible[7].id,'foto-huid');
+ assert.equal(visible.some(f=>f.id==='foto-zijaanzicht-rechts'),false);
+ const s={id:'intake-fotos',fields:[f]};
+ f.photoConfig.slots.forEach((slot,i)=>{
+  answers.fysiek[slot.answer_field]=[`attachment:${slot.id}:horse.jpg`];
+  assert.equal(answeredCount(s,{},answers).answered,i===3?1:0);
+  assert.equal(missingRequired(s,{},answers).length,i===3?0:1);
+ });
+ const app=ui(f,answers), uploads=app.render().filter(n=>n.type==='Upload' && !n.props.slots);
+ assert.equal(uploads.length,4);
+ assert.equal(uploads[1].props.field,'foto-zijaanzicht-rechts');
+ assert.deepEqual(uploads[1].props.value,['attachment:rechts:horse.jpg']);
+ uploads[1].props.onChange(['attachment:new:right.jpg']);
+ assert.deepEqual(app.state.answers.fysiek['foto-zijaanzicht-links'],['attachment:links:horse.jpg']);
+ assert.deepEqual(app.state.answers.fysiek['foto-zijaanzicht-rechts'],['attachment:new:right.jpg']);
+ assert.deepEqual(answeredCount(s,{},JSON.parse(JSON.stringify(app.state.answers))),{answered:1,total:1});
+});
+test('captions are optional, independently saved per image, and fully configured by admin',()=>{
+ for (const [id,placeholder] of Object.entries({'foto-hooi':'Weidehooi close-up','foto-stal':'Nachtverblijf','foto-weide':'Zomerweide','giftige-planten-foto':'Rondom de paddock','foto-huid':'Plekje op de hals'})) {
+  assert.deepEqual(field(id).photoConfig.caption,{label:'Eventuele toelichting',placeholder});
+ }
+ const f=structuredClone(field('foto-hooi')); f.photoConfig.caption={label:'Admin label',placeholder:'Admin placeholder'};
+ const app=ui(f,{voer:{'foto-hooi':['attachment:a:a.jpg','attachment:b:b.jpg']}});
+ const upload=app.render().find(n=>n.type==='Upload');
+ const inputs=['a','b'].map(id=>flatten(upload.props.renderMetadata(`attachment:${id}:${id}.jpg`)).find(n=>n.type==='Input'));
+ assert.equal(inputs[0].props.accessibilityLabel,'Admin label'); assert.equal(inputs[0].props.placeholder,'Admin placeholder');
+ inputs[0].props.onChangeText('Eerste baal'); inputs[1].props.onChangeText('Tweede baal');
+ assert.deepEqual(app.state.answers.__photos,{'caption-a':'Eerste baal','caption-b':'Tweede baal'});
+ assert.equal(flatten(app.render().find(n=>n.type==='Upload').props.renderMetadata('attachment:a:a.jpg')).find(n=>n.type==='Input').props.value,'Eerste baal');
+ delete f.photoConfig.caption;
+ assert.equal(app.render().find(n=>n.type==='Upload').props.renderMetadata,undefined);
+});
+
+test('batch assignments preserve configured body answer fields and hoof view metadata', () => {
+ for (const id of ['foto-zijaanzicht-links', 'foto-hoeven']) {
+  const f=field(id), app=ui(f,{fysiek:{}});
+  let batch=app.render().find(n=>n.type==='Upload' && n.props.slots);
+  assert.deepEqual(batch.props.slots.map(s=>s.id),f.photoConfig.slots.map(s=>s.id));
+  for (const slot of f.photoConfig.slots) {
+   batch=app.render().find(n=>n.type==='Upload' && n.props.slots);
+   batch.props.onSlotAdded(`attachment:${slot.id}:horse.jpg`,slot.id);
+  }
+  batch=app.render().find(n=>n.type==='Upload' && n.props.slots);
+  assert.deepEqual(batch.props.slots,[]);
+  assert.equal(photoAnswered(f,app.state.answers.fysiek[f.id],app.state.answers,'fysiek'),true);
+  for (const slot of f.photoConfig.slots) {
+   if (slot.answer_field) assert.deepEqual(app.state.answers.fysiek[slot.answer_field],[`attachment:${slot.id}:horse.jpg`]);
+   else assert.equal(app.state.answers.__photos[`slot-${slot.id}`],slot.id);
+  }
+ }
 });

@@ -65,12 +65,24 @@ class IntakeReview
                     $row['empty'] = $this->empty($row['value']);
                 }
                 if (in_array($field->type, ['photo', 'file'])) {
-                    foreach (is_array($value) ? $value : [] as $reference) {
+                    $references = $field->type === 'photo' ? $photos->fieldReferences($field, $value, $answers) : (is_array($value) ? $value : []);
+                    foreach ($references as $reference) {
                         $id = is_string($reference) ? explode(':', $reference)[1] ?? '' : '';
                         $file = $attachments->get($id);
-                        if ($file && $file->section_key === $answerSection && $file->field_key === $field->key) {
+                        $sourceField = $field->key;
+                        $slotLabel = null;
+                        foreach ($field->photo_config['slots'] ?? [] as $slot) {
+                            if (in_array($reference, $photos->slotReferences($field, $slot, $value, $answers), true)) {
+                                $sourceField = $slot['answer_field'] ?? $field->key;
+                                $slotLabel = $slot['label'];
+                                break;
+                            }
+                        }
+                        if ($file && $file->section_key === $answerSection && $file->field_key === $sourceField) {
                             $row['attachments'][] = ['id' => $file->id, 'name' => $file->name, 'image' => str_starts_with($file->mime, 'image/'),
-                                'year' => $answers['__photos']['year-'.$file->id] ?? null, 'url' => route('admin.intake-media', $file->id)];
+                                'year' => $answers['__photos']['year-'.$file->id] ?? null,
+                                'caption' => $answers['__photos']['caption-'.$file->id] ?? null,
+                                'slot' => $slotLabel, 'url' => route('admin.intake-media', $file->id)];
                         }
                     }
                     $row['empty'] = $row['attachments'] === [];
@@ -86,9 +98,10 @@ class IntakeReview
                     }
                     $slots = array_column($config['slots'] ?? [], 'label', 'id');
                     foreach ($row['attachments'] as &$photo) {
-                        $photo['slot'] = $slots[$answers['__photos']['slot-'.$photo['id']] ?? ''] ?? null;
+                        $photo['slot'] ??= $slots[$answers['__photos']['slot-'.$photo['id']] ?? ''] ?? null;
                         $usedMetadata[] = 'year-'.$photo['id'];
                         $usedMetadata[] = 'slot-'.$photo['id'];
+                        $usedMetadata[] = 'caption-'.$photo['id'];
                     }
                     unset($photo);
                 }

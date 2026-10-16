@@ -1,3 +1,4 @@
+import { formatIntakeDate } from '@/lib/intake/submission';
 // Post-submit confirmation. Shows the status timeline and an exit back to
 // the home tab — the screen is the last stop in the intake stack and the
 // "Terug naar de app" button pops the user out cleanly.
@@ -69,7 +70,9 @@ export default function IntakeSent() {
             klaarstaat in de app.
           </Text>
 
-          <View className="w-full gap-4 rounded-2xl border border-ink-8 bg-white p-4">
+          <Text className="mb-4 text-center text-ink">Ingestuurd op {formatIntakeDate(state.submittedAt)}</Text>
+          <Button title="Intake bekijken" onPress={() => router.replace('/intake/overview')} />
+          <View className="mt-4 w-full gap-4 rounded-2xl border border-ink-8 bg-white p-4">
             <TimelineStep when={submittedLabel} what="Intake verzonden naar Shelley" state="done" />
             <TimelineStep
               when="verwacht binnen 24u"

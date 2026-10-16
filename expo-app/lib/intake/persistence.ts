@@ -5,7 +5,7 @@ type Database = {
   writeTransaction<T>(callback: (tx: any) => Promise<T>): Promise<T>;
 };
 // Choose the selected horse's unfinished protocol; completed history never steals its intake.
-export const bookingQuery = `SELECT i.id, i.submitted_at, i.updated_at FROM intake_bookings i
+export const bookingQuery = `SELECT i.id, i.submitted_at, i.completed_at, i.updated_at FROM intake_bookings i
  JOIN protocols p ON p.id = i.protocol_id
  WHERE i.user_id = ? AND i.horse_id = ? AND i.status != 'cancelled'
  AND p.status NOT IN ('completed','archived')

@@ -1,3 +1,4 @@
+import { PhotoInstructions } from './PhotoInstructions';
 // Field renderer for the protocol intake. Dispatches on `field.type` and
 // reads/writes the value through the IntakeProvider. Sticking to one parent
 // component keeps auto-save behavior uniform across every input type.
@@ -50,10 +51,11 @@ export function IntakeField({ field, sectionId, n, noneOptions }: Props) {
   if (field.type === 'sectionhead') {
     return (
       <View className="mt-3 mb-2 border-t border-ink-8 pt-3">
-        <Text className="font-semi uppercase text-mint-700 text-[11px] tracking-eyebrow">
+        <Text className={field.photoConfig ? "font-bold text-[18px] leading-[24px] text-ink" : "font-semi uppercase text-mint-700 text-[11px] tracking-eyebrow"}>
           {field.label}
         </Text>
-        {field.hint && <Text className="mt-2 text-[13.5px] leading-[20px] text-ink-70">{field.hint}</Text>}
+        {field.hint && <Text className={field.photoConfig ? "mt-2 text-[16px] leading-[23px] text-ink-70" : "mt-2 text-[13.5px] leading-[20px] text-ink-70"}>{field.hint}</Text>}
+        <PhotoInstructions field={field} />
         <PhotoExample field={field} />
 
       </View>
@@ -66,12 +68,31 @@ export function IntakeField({ field, sectionId, n, noneOptions }: Props) {
         n={n}
         label={field.label}
         hint={field.hint}
+        photo={field.type === 'photo'}
         required={isFieldRequired(field)}
         link={field.link}
       />
-      {renderInput(field, value, set, noneOptions, answerSection)}
+      {field.type === 'photo' && <PhotoInstructions field={field} />}
+      {state.submittedAt && !['photo', 'file'].includes(field.type)
+        ? <ReadOnlyAnswer field={field} value={value} answers={state.answers[answerSection] ?? {}} />
+        : renderInput(field, value, set, noneOptions, answerSection)}
     </View>
   );
+}
+
+
+function ReadOnlyAnswer({ field, value, answers }: { field: Field; value: FieldValue; answers: Record<string, FieldValue> }) {
+  let text = '';
+  if (field.type === 'repeater' && Array.isArray(value)) {
+    text = value.map(row => (field.sub ?? []).map(sub => {
+      const entry = row && typeof row === 'object' ? (row as Record<string, string>)[sub.id] : null;
+      return entry ? `${sub.label}: ${entry}` : '';
+    }).filter(Boolean).join('\n')).filter(Boolean).join('\n\n');
+  } else text = Array.isArray(value) ? value.join(' · ') : value == null ? '' : String(value);
+  if (field.unit && text) text += ` ${field.unit}`;
+  const birthDate = field.ageConfig && answers[field.ageConfig.date_field];
+  if (birthDate) text += `${text ? '\n' : ''}${field.ageConfig!.date_label}: ${birthDate}`;
+  return <Text selectable className="rounded-xl bg-white p-3 text-[16px] leading-[23px] text-ink">{text || 'Niet ingevuld'}</Text>;
 }
 
 function renderInput(

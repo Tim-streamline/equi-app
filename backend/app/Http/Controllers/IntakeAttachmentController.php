@@ -20,11 +20,16 @@ class IntakeAttachmentController extends Controller
             'field' => ['required', 'string', 'max:64'], 'attachment_id' => ['sometimes', 'uuid'],
             'file' => ['required', 'file', 'mimes:jpg,jpeg,png,webp,pdf', 'max:15360']]);
         abort_unless(Horse::whereKey($data['horse_id'])->where('owner_id', $userId)->exists(), 403);
-        $field = IntakeField::where('key', $data['field'])->where('active', true)->whereIn('type', ['photo', 'file'])
+        $fields = IntakeField::where('active', true)->whereIn('type', ['photo', 'file'])
             ->where(fn ($q) => $q->where('answer_section_key', $data['section'])
                 ->orWhere(fn ($q) => $q->whereNull('answer_section_key')->whereHas('section', fn ($q) => $q->where('key', $data['section']))))
             ->whereHas('section', fn ($q) => $q->where('active', true)
-                ->whereHas('questionnaire', fn ($q) => $q->where('slug', 'protocol-intake')->where('active', true)))->firstOrFail();
+                ->whereHas('questionnaire', fn ($q) => $q->where('slug', 'protocol-intake')->where('active', true)))->get();
+        // Grouped photo slots keep their original upload namespaces, including
+        // uploads queued by older/offline clients before the questions merged.
+        $field = $fields->firstWhere('key', $data['field']) ?? $fields->first(fn ($field) => $field->type === 'photo'
+            && in_array($data['field'], array_column($field->photo_config['slots'] ?? [], 'answer_field'), true));
+        abort_unless($field, 404);
         if ($field->type === 'photo') {
             $request->validate(['file' => ['image']]);
         }
@@ -40,6 +45,7 @@ class IntakeAttachmentController extends Controller
 
                 return response()->json(['value' => 'attachment:'.$existing->id.':'.rawurlencode($existing->name)]);
             }
+            abort_if($booking->completed_at || $booking->submitted_at, 409, 'Deze intake is al ingestuurd en kan niet meer worden aangepast.');
             $file = $request->file('file');
             $path = $file->store('intake/'.$booking->id, 'local');
             try {

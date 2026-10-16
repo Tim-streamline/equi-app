@@ -27,7 +27,7 @@
         questionnaire_id: questionnaire.id,
         key: '',
         title: '',
-        intro: '',
+        intro: '', presentation: { intro_style: 'plain', offline_notice: '' },
         subtitle: '',
         icon: 'sparkles',
         minutes: 2,
@@ -70,7 +70,7 @@
 
     function createSection() {
         editingSection = null;
-        $sectionForm.defaults({ questionnaire_id: questionnaire.id, key: '', title: '', intro: '', subtitle: '', icon: 'sparkles', minutes: 2, order: questionnaire.sections.length, active: true });
+        $sectionForm.defaults({ questionnaire_id: questionnaire.id, key: '', title: '', intro: '', presentation: { intro_style: 'plain', offline_notice: '' }, subtitle: '', icon: 'sparkles', minutes: 2, order: questionnaire.sections.length, active: true });
         $sectionForm.reset();
         $sectionForm.clearErrors();
         sectionOpen = true;
@@ -83,6 +83,7 @@
             key: section.key,
             title: section.title,
             intro: section.intro ?? '',
+            presentation: { intro_style: section.presentation?.intro_style ?? 'plain', offline_notice: section.presentation?.offline_notice ?? '' },
             subtitle: section.subtitle ?? '',
             icon: section.icon ?? '',
             minutes: section.minutes,
@@ -249,6 +250,8 @@
                 <Field label="Volgorde" error={$sectionForm.errors.order}><Input type="number" min="0" bind:value={$sectionForm.order} /></Field>
             </div>
             <Field label="Titel" error={$sectionForm.errors.title}><Input bind:value={$sectionForm.title} /></Field>
+            <Field label="Introductie-opmaak"><select class="rounded border p-2" bind:value={$sectionForm.presentation.intro_style}><option value="plain">Gewone tekst</option><option value="card">Donkergroene informatiekaart</option></select></Field>
+            <Field label="Offline-melding bovenaan" error={$sectionForm.errors['presentation.offline_notice']}><Textarea rows="2" bind:value={$sectionForm.presentation.offline_notice} /></Field>
             <Field label="Introductie" error={$sectionForm.errors.intro}><Textarea rows="3" bind:value={$sectionForm.intro} /></Field>
             <div class="grid gap-4 md:grid-cols-3">
                 <Field label="Ondertitel" error={$sectionForm.errors.subtitle}><Input bind:value={$sectionForm.subtitle} /></Field>
@@ -284,7 +287,7 @@
 
             <div class="grid gap-4 md:grid-cols-2">
                 <div class="md:col-span-2"><Field label="Leeftijd-instellingen (JSON)" error={$fieldForm.errors.age_config_json} hint="Type number: date_field is de opslagsleutel van de geboortedatum. date_label, toggle_label, calculated_hint en estimate_label bepalen de teksten."><Textarea rows="6" bind:value={$fieldForm.age_config_json} /></Field></div>
-                <div class="md:col-span-2"><Field label="Foto-instellingen (JSON)" error={$fieldForm.errors.photo_config_json} hint="max: maximum aantal foto’s; year_required: jaartal verplicht per foto; allow_na: Niet van toepassing toestaan; slots: afzonderlijke aanzichten met id en label; example_url en example_caption: voorbeeldafbeelding. na_key verbindt een gedeelde keuze; existing_only toont alleen eerder opgeslagen foto’s."><Textarea rows="8" bind:value={$fieldForm.photo_config_json} placeholder={'{"max":10,"year_required":true,"allow_na":false}'} /></Field></div>
+                <div class="md:col-span-2"><Field label="Foto-instellingen (JSON)" error={$fieldForm.errors.photo_config_json} hint="instruction_label en instructions: bewerkbaar instructiekopje en fotoinstructies; de Helptekst bevat de uitleg waarom. max: maximum aantal foto’s; year_required: jaartal verplicht per foto; allow_na: Niet van toepassing toestaan; slots: afzonderlijke aanzichten met id en label; optioneel answer_field bewaart een bestaande antwoordsleutel binnen dezelfde antwoordsectie. caption: toelichting per foto met label en placeholder (verwijder caption om te verbergen). example_url en example_caption: voorbeeldafbeelding; example_after: tekst onder het voorbeeld. na_key verbindt een gedeelde keuze; existing_only toont alleen eerder opgeslagen foto’s."><Textarea rows="8" bind:value={$fieldForm.photo_config_json} placeholder={'{"max":10,"year_required":true,"allow_na":false}'} /></Field></div>
                 <Field label="Antwoordopties (JSON-array)" error={$fieldForm.errors.options_json}><Textarea rows="5" bind:value={$fieldForm.options_json} placeholder='["Ja", "Nee"]' /></Field>
                 <Field label="Zichtbaarheidsregel showIf (JSON-object)" error={$fieldForm.errors.show_if_json}><Textarea rows="5" bind:value={$fieldForm.show_if_json} placeholder={'{"paard.geslacht":"merrie"}'} /></Field>
                 <Field label="Signaleringsregel flagIf (JSON)" error={$fieldForm.errors.flag_if_json}><Textarea rows="4" bind:value={$fieldForm.flag_if_json} placeholder='["Ja"] of "non-empty"' /></Field>

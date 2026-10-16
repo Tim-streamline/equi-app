@@ -20,7 +20,7 @@
             {#if file.image && row.type === 'photo'}
                 <button class="photo" onclick={() => openPhoto(file)} aria-label={`Vergroot ${file.name}`}>
                     <img src={file.url} alt={file.name} loading={printMode ? 'eager' : 'lazy'} />
-                    <span>{file.name}</span>{#if file.year}<span>Jaartal: {file.year}</span>{/if}{#if file.slot}<span>{file.slot}</span>{/if}
+                    <span>{file.name}</span>{#if file.year}<span>Jaartal: {file.year}</span>{/if}{#if file.slot}<span>{file.slot}</span>{/if}{#if file.caption}<span class="whitespace-pre-wrap">{file.caption}</span>{/if}
                 </button>
             {:else}
                 <a href={`${file.url}?download=1`} class="inline-flex items-center gap-2 text-primary underline"><FileText size={18} />{file.name}<Download size={15} /></a>

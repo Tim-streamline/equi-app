@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models;
+use App\Support\IntakeSubmission;
 use App\Support\ProtocolAccess;
 use App\Support\ProtocolDayHistory;
 use App\Support\SyncAccessPolicy;
@@ -134,35 +135,31 @@ class SyncController extends Controller
                     $booking = Models\IntakeBooking::findOrFail($op['data']['response_id'] ?? $answer?->response_id);
                     app(ProtocolAccess::class)->authorizeBooking($userId, $booking->horse_id, $booking->id);
                 }
+                if (in_array($op['type'], ['intake_bookings', 'intake_answers'], true)) {
+                    $locked = Models\IntakeBooking::lockForUpdate()->findOrFail($booking->id);
+                    if ($locked->completed_at || $locked->submitted_at) {
+                        // Acknowledge stale offline writes without applying them, so one
+                        // completed intake cannot block the device's entire sync queue.
+                        $skipped[] = $op['type'].':completed';
+
+                        continue;
+                    }
+                }
                 if ($op['type'] === 'intake_bookings') {
-                    $before = Models\IntakeBooking::query()->lockForUpdate()->find($op['id']);
-                    if ($op['op'] !== 'DELETE' && ! $before?->submitted_at && $before?->intake_status !== 'submitted') {
+                    $data = $op['data'] ?? [];
+                    if ($op['op'] !== 'DELETE' && (($data['intake_status'] ?? '') === 'submitted'
+                        || ! empty($data['submitted_at']) || ! empty($data['completed_at']))) {
                         $newSubmissions[] = $op['id'];
                     }
-                    // Clinical review and mail delivery are server-managed.
-                    $op['data'] = array_intersect_key($op['data'] ?? [], array_flip([
+                    // Completion timestamps and review state are server-managed.
+                    $op['data'] = array_intersect_key($data, array_flip([
                         'user_id', 'horse_id', 'therapist_id', 'scheduled_at', 'slot_label',
-                        'duration_minutes', 'status', 'notes', 'intake_status', 'started_at', 'submitted_at',
+                        'duration_minutes', 'status', 'notes', 'started_at',
                     ]));
                     validator($op['data'], [
-                        'intake_status' => ['sometimes', 'in:draft,submitted'],
                         'status' => ['sometimes', 'in:pending,confirmed,done,cancelled'],
-                        'submitted_at' => ['sometimes', 'nullable', 'date'],
                         'started_at' => ['sometimes', 'nullable', 'date'],
                     ])->validate();
-                    if ($op['op'] !== 'DELETE') {
-                        if ($before?->submitted_at && $before->intake_status === 'submitted'
-                            && ($op['data']['intake_status'] ?? 'submitted') === 'submitted') {
-                            // Replayed client writes must not move the submission date or undo an admin review.
-                            $op['data']['submitted_at'] = $before->submitted_at;
-                            unset($op['data']['status']);
-                        }
-                        if (! empty($op['data']['submitted_at'])) {
-                            $op['data']['submitted_at'] = CarbonImmutable::parse($op['data']['submitted_at'])->utc();
-                        } elseif (($op['data']['intake_status'] ?? $before?->intake_status) === 'submitted' && ! $before?->submitted_at && $before?->intake_status !== 'submitted') {
-                            $op['data']['submitted_at'] = now();
-                        }
-                    }
                 }
 
                 if ($op['type'] === 'user_home_preferences') {
@@ -201,17 +198,13 @@ class SyncController extends Controller
                 }
                 $applied++;
             }
-            // Persist the mail request with the complete successful upload. The scheduled
-            // sender only sees committed rows; drafts, rolled-back batches and replays do not send.
-            Models\IntakeBooking::query()->whereIn('id', array_unique($newSubmissions))
-                ->where('intake_status', 'submitted')->whereNotNull('submitted_at')->update(['status' => 'pending']);
-            Models\IntakeBooking::query()->whereIn('id', array_unique($newSubmissions))
-                ->where('intake_status', 'submitted')->whereNotNull('submitted_at')
-                ->whereNull('submission_email_status')->update(['submission_email_status' => 'pending']);
+            foreach (array_unique($newSubmissions) as $id) {
+                app(IntakeSubmission::class)->complete(Models\IntakeBooking::lockForUpdate()->findOrFail($id));
+            }
         });
 
         if ($skipped) {
-            Log::warning('[sync] skipped unknown tables', ['tables' => array_values(array_unique($skipped))]);
+            Log::warning('[sync] skipped unsupported or completed-intake operations', ['tables' => array_values(array_unique($skipped))]);
         }
 
         return response()->json([

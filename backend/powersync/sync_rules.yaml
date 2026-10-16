@@ -92,7 +92,7 @@ streams:
                 WHERE auth.parameter('subscribed') = 1 AND ( session_id IN (
                     SELECT id FROM chat_sessions WHERE user_id = auth.user_id()
                 ))
-            - SELECT id, protocol_id, user_id, horse_id, therapist_id, scheduled_at, slot_label, duration_minutes, status, notes, intake_status, started_at, submitted_at, created_at, updated_at FROM intake_bookings WHERE auth.parameter('subscribed') = 1 AND ( user_id = auth.user_id())
+            - SELECT id, protocol_id, user_id, horse_id, therapist_id, scheduled_at, slot_label, duration_minutes, status, notes, intake_status, started_at, submitted_at, completed_at, created_at, updated_at FROM intake_bookings WHERE auth.parameter('subscribed') = 1 AND ( user_id = auth.user_id())
             - |
                 SELECT * FROM intake_answers
                 WHERE auth.parameter('subscribed') = 1 AND ( response_id IN (

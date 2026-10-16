@@ -37,6 +37,7 @@ class IntakeQuestionnaireSeeder extends Seeder
                         'order' => $sectionData['nr'],
                         'title' => $sectionData['title'],
                         'intro' => $sectionData['intro'] ?? null,
+                        'presentation' => $sectionData['presentation'] ?? null,
                         'minutes' => $sectionData['minutes'] ?? 0,
                         'icon' => $sectionData['icon'] ?? null,
                         'subtitle' => $sectionData['sub'] ?? null,

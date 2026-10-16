@@ -65,6 +65,7 @@ export function buildIntakeSchema(sectionRows: Row[], fieldRows: Row[]): Section
       nr: Number(row.order ?? 0),
       title: String(row.title),
       intro: row.intro == null ? '' : String(row.intro),
+      presentation: json<Section['presentation']>(row.presentation),
       minutes: Number(row.minutes ?? 0),
       icon: String(row.icon ?? 'sparkles') as Section['icon'],
       sub: row.subtitle == null ? '' : String(row.subtitle),

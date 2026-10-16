@@ -128,12 +128,20 @@ export const photoNaKey = (field: Field, sectionId: string) => field.photoConfig
 export function photoNotApplicable(field: Field, answers: IntakeAnswers = {}, sectionId = '') {
   return !!field.photoConfig?.allow_na && answers.__photos?.[photoNaKey(field, sectionId)] === 'yes';
 }
+/** A configured slot can retain a pre-existing answer/attachment namespace. */
+export function photoSlotReferences(field: Field, slot: NonNullable<NonNullable<Field['photoConfig']>['slots']>[number], value: unknown, answers: IntakeAnswers = {}, sectionId = '') {
+  if (slot.answer_field) return photoReferences(slot.answer_field === field.id ? value : answers[field.answerSection ?? sectionId]?.[slot.answer_field]);
+  return photoReferences(value).filter(ref => answers.__photos?.[`slot-${photoId(ref)}`] === slot.id);
+}
+export function photoFieldReferences(field: Field, value: unknown, answers: IntakeAnswers = {}, sectionId = '') {
+  return Array.from(new Set([...photoReferences(value), ...(field.photoConfig?.slots ?? []).flatMap(slot => photoSlotReferences(field, slot, value, answers, sectionId))]));
+}
 export function photoAnswered(field: Field, value: unknown, answers: IntakeAnswers = {}, sectionId = '') {
   if (photoNotApplicable(field, answers, sectionId)) return true;
-  const refs = photoReferences(value), config = field.photoConfig;
+  const refs = photoFieldReferences(field, value, answers, sectionId), config = field.photoConfig;
   if (!refs.length) return false;
   if (config?.year_required && refs.some(ref => !validPhotoYear(answers.__photos?.[`year-${photoId(ref)}`]))) return false;
-  return !config?.slots?.length || config.slots.every(slot => refs.some(ref => answers.__photos?.[`slot-${photoId(ref)}`] === slot.id));
+  return !config?.slots?.length || config.slots.every(slot => photoSlotReferences(field, slot, value, answers, sectionId).length > 0);
 }
 export function validPhotoYear(value: unknown): boolean {
   return typeof value === 'string' && /^\d{4}$/.test(value) && Number(value) >= 1000 && Number(value) <= new Date().getFullYear();
