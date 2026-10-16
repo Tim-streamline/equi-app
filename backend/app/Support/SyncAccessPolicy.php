@@ -20,6 +20,7 @@ class SyncAccessPolicy
         'horse_stats',
         'ingredients',
         'library_article_sections',
+        'library_filter_groups',
         'library_categories',
         'library_chapters',
         'library_item_categories',

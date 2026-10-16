@@ -1,0 +1,25 @@
+import assert from 'node:assert/strict';
+import {readFileSync} from 'node:fs';
+import {DatabaseSync} from 'node:sqlite';
+import test from 'node:test';
+import ts from 'typescript';
+const code=ts.transpileModule(readFileSync(new URL('../hooks/useLibraryViewed.ts',import.meta.url),'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS}}).outputText;
+test('opening readable content records an offline view without resetting progress; previews and cancelled sessions do not', async()=>{
+ const db=new DatabaseSync(':memory:');db.exec('CREATE TABLE library_progress(id TEXT,user_id TEXT,item_id TEXT,last_viewed_at TEXT,progress REAL,position_sec INTEGER,completed INTEGER)');
+ const tx={getOptional:async(sql,args)=>db.prepare(sql).get(...args),execute:async(sql,args)=>db.prepare(sql).run(...args)};
+ let pending=[],cancel,write;
+ const session={revision:1};const account={currentUserId:'alice',isLoggedIn:true,powersync:{writeTransaction:fn=>{write=()=>fn(tx);const promise=write();pending.push(promise);return promise;}}};
+ const modules={react:{useCallback:fn=>fn},'expo-router':{useFocusEffect:fn=>{cancel=fn();}},'@/db/provider':{useDb:()=>account},'@/lib/account-session':{accountSession:session},'@/lib/error-tracking':{captureException:e=>{throw e;}}};
+ const exports={};new Function('require','exports',code)(name=>modules[name],exports);
+ exports.useLibraryViewed('lesson',false);assert.equal(pending.length,0);
+ exports.useLibraryViewed('lesson',true);await Promise.all(pending);
+ assert.equal(db.prepare('SELECT * FROM library_progress').all().length,1);
+ db.exec('UPDATE library_progress SET progress=.75,position_sec=120');
+ exports.useLibraryViewed('lesson',true);await Promise.all(pending);
+ const row=db.prepare('SELECT * FROM library_progress').get();assert.equal(row.progress,.75);assert.equal(row.position_sec,120);assert.ok(row.last_viewed_at);
+ account.powersync.writeTransaction=fn=>{write=()=>fn(tx);return Promise.resolve();};
+ exports.useLibraryViewed('cancelled',true);cancel();await write();
+ exports.useLibraryViewed('other-account',true);session.revision++;await write();
+ assert.equal(db.prepare('SELECT * FROM library_progress').all().length,1);
+ db.close();
+});

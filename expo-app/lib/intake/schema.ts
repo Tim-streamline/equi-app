@@ -57,7 +57,16 @@ export type PhotoConfig = {
   example_caption?: string;
 };
 
+export type AgeConfig = {
+  date_field: string;
+  date_label: string;
+  toggle_label: string;
+  calculated_hint: string;
+  estimate_label: string;
+};
+
 export type Field = {
+  ageConfig?: AgeConfig;
   photoConfig?: PhotoConfig;
   id: string;
   /** Stable answer/attachment namespace when a question moves sections. */
@@ -544,13 +553,20 @@ export const INTAKE_SCHEMA: Section[] = [
         hint: 'Niet zeker? "Onbekend" mag ook.',
       },
       {
-        "id": "geboortedatum",
-        "label": "Geboortedatum (zo precies mogelijk)",
-        "type": "date",
-        "optional": true,
-        "hint": "Geboortedatum niet bekend? Vul hieronder dan de (geschatte) leeftijd in."
+        "id": "leeftijd",
+        "label": "Hoe oud is je paard?",
+        "type": "number",
+        "unit": "jaar",
+        "required": true,
+        "hint": "Een schatting is ook goed.",
+        "ageConfig": {
+          "date_field": "geboortedatum",
+          "date_label": "Geboortedatum",
+          "toggle_label": "Ik weet de exacte geboortedatum",
+          "calculated_hint": "Leeftijd wordt automatisch berekend.",
+          "estimate_label": "Gebruik een geschatte leeftijd"
+        }
       },
-      { id: 'leeftijd', label: 'Leeftijd', type: 'number', unit: 'jaar', required: true },
       {
         id: 'geslacht',
         label: 'Geslacht',
@@ -691,9 +707,11 @@ export const INTAKE_SCHEMA: Section[] = [
       },
       {
         id: 'gezondheid-eigen-woorden',
-        label: 'Hoe omschrijf je de gezondheidsstatus op dit moment?',
+        label: 'Hoe gaat het volgens jou op dit moment in het algemeen met je paard?',
         type: 'textarea',
         required: true,
+        hint: 'Geef hier kort je algemene indruk van hoe je paard zich op dit moment voelt en functioneert. Denk bijvoorbeeld aan energie, uitstraling, comfort en algemeen welzijn. Specifieke klachten en medische informatie vragen we verderop uitgebreider uit.',
+        tall: false,
       },
       {
         id: 'paard-leuk',
@@ -2643,17 +2661,19 @@ export const INTAKE_SCHEMA: Section[] = [
       },
       {
         "id": "bijvoeding-nu",
-        "label": "Krijgt je paard op dit moment bijvoeding?",
+        "label": "Krijgt je paard op dit moment voer uit een zak?",
         "type": "radio",
         "required": true,
         "options": [
           "Ja",
-          "Nee"
-        ]
+          "Nee",
+          "Weet ik niet"
+        ],
+        "hint": "Denk bijvoorbeeld aan balancer, mineralenvoer, krachtvoer, muesli, brok, grasbrok, luzerne, slobber, bietenpulp of andere voerproducten uit een zak."
       },
       {
         "id": "huidige-bijvoeding",
-        "label": "Welke bijvoeding krijgt je paard op dit moment?",
+        "label": "Welk voer uit een zak krijgt je paard op dit moment?",
         "type": "repeater",
         "required": true,
         "hint": "Voeg ieder product apart toe.",
@@ -2677,6 +2697,11 @@ export const INTAKE_SCHEMA: Section[] = [
             "id": "voerbeurten",
             "label": "Aantal voerbeurten per dag",
             "type": "text"
+          },
+          {
+            "id": "sinds",
+            "label": "Sinds wanneer (ongeveer)?",
+            "type": "text"
           }
         ],
         "showIf": {
@@ -2685,18 +2710,19 @@ export const INTAKE_SCHEMA: Section[] = [
       },
       {
         "id": "bijvoeding-eerder",
-        "label": "Heeft je paard in de afgelopen 2–5 jaar andere bijvoeding gekregen dan wat je hierboven hebt ingevuld?",
+        "label": "Heeft je paard in de afgelopen 2–5 jaar ander voer uit een zak gekregen dan wat je hierboven hebt ingevuld?",
         "type": "radio",
         "required": true,
         "options": [
           "Ja",
           "Nee",
           "Weet ik niet"
-        ]
+        ],
+        "hint": "Denk ook hier aan balancer, mineralenvoer, krachtvoer, muesli, brok, grasbrok, luzerne, slobber, bietenpulp of andere voerproducten uit een zak."
       },
       {
         "id": "bijvoeding-historie",
-        "label": "Welke andere bijvoeding heeft je paard in die periode gekregen?",
+        "label": "Welk ander voer uit een zak heeft je paard in die periode gekregen?",
         "type": "repeater",
         "required": true,
         "hint": "Voeg ieder product apart toe. Neem ook producten mee die maar tijdelijk zijn gevoerd.",
@@ -2734,48 +2760,6 @@ export const INTAKE_SCHEMA: Section[] = [
         ],
         "showIf": {
           "bijvoeding-eerder": "Ja"
-        }
-      },
-      {
-        "id": "balancer-nu",
-        "label": "Krijgt je paard op dit moment een mineralenvoeding of balancer?",
-        "type": "radio",
-        "required": true,
-        "options": [
-          "Ja",
-          "Nee"
-        ]
-      },
-      {
-        "id": "balancer",
-        "label": "Welke mineralenvoeding of balancer krijgt je paard?",
-        "type": "repeater",
-        "required": true,
-        "hint": "Voeg ieder product apart toe.",
-        "sub": [
-          {
-            "id": "merk",
-            "label": "Merk",
-            "type": "text"
-          },
-          {
-            "id": "product",
-            "label": "Exacte productnaam",
-            "type": "text"
-          },
-          {
-            "id": "hoeveelheid",
-            "label": "Hoeveelheid per voerbeurt",
-            "type": "text"
-          },
-          {
-            "id": "voerbeurten",
-            "label": "Aantal voerbeurten per dag",
-            "type": "text"
-          }
-        ],
-        "showIf": {
-          "balancer-nu": "Ja"
         }
       },
       {
@@ -2854,20 +2838,21 @@ export const INTAKE_SCHEMA: Section[] = [
       },
       {
         "id": "supplementen-nu",
-        "label": "Krijgt je paard op dit moment supplementen?",
+        "label": "Krijgt je paard op dit moment supplementen en/of kruiden?",
         "type": "radio",
         "required": true,
         "options": [
           "Ja",
           "Nee"
-        ]
+        ],
+        "hint": "Denk bijvoorbeeld aan losse vitaminen/mineralen, kruiden, kruidenmengsels, oliën, darmproducten en andere aanvullende producten."
       },
       {
         "id": "huidig-extra",
-        "label": "Welke supplementen krijgt je paard op dit moment?",
+        "label": "Welke supplementen en/of kruiden krijgt je paard op dit moment?",
         "type": "repeater",
         "required": true,
-        "hint": "Voeg ieder supplement apart toe.",
+        "hint": "Voeg ieder supplement of kruidenproduct apart toe.",
         "flagIf": "any",
         "sub": [
           {
@@ -2892,7 +2877,7 @@ export const INTAKE_SCHEMA: Section[] = [
           },
           {
             "id": "reden",
-            "label": "Waarom geef je dit supplement?",
+            "label": "Waarom geef je dit product?",
             "type": "text"
           },
           {
@@ -2914,21 +2899,22 @@ export const INTAKE_SCHEMA: Section[] = [
       },
       {
         "id": "supplementen-eerder",
-        "label": "Heeft je paard in de afgelopen 2–5 jaar andere supplementen gekregen dan wat je hierboven hebt ingevuld?",
+        "label": "Heeft je paard in de afgelopen 2–5 jaar andere supplementen en/of kruiden gekregen dan wat je hierboven hebt ingevuld?",
         "type": "radio",
         "required": true,
         "options": [
           "Ja",
           "Nee",
           "Weet ik niet"
-        ]
+        ],
+        "hint": "Denk bijvoorbeeld aan losse vitaminen/mineralen, kruiden, kruidenmengsels, oliën, darmproducten en andere aanvullende producten."
       },
       {
         "id": "historie-extra",
-        "label": "Welke andere supplementen heeft je paard in die periode gekregen?",
+        "label": "Welke andere supplementen en/of kruiden heeft je paard in die periode gekregen?",
         "type": "repeater",
         "required": true,
-        "hint": "Voeg ieder supplement apart toe. Neem ook supplementen mee die maar tijdelijk zijn gegeven.",
+        "hint": "Voeg ieder supplement of kruidenproduct apart toe. Neem ook producten mee die maar tijdelijk zijn gegeven.",
         "sub": [
           {
             "id": "merk",

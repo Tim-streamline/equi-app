@@ -17,10 +17,10 @@ const grants = [
   { id: 'grant-b', user_id: 'bob', item_id: 'lesson-a', reason: 'plus' },
   { id: 'grant-c', user_id: 'alice', item_id: 'lesson-b', reason: 'unlocked' },
 ];
-async function buckets(user, item, access = grants, client = {}) {
+async function buckets(user, item, access = grants, client = {}, subscribed = 1) {
   const index = access.flatMap(record => rules.evaluateParameterRow(sourceTable('library_item_access'), record));
   const { querier, errors } = rules.getBucketParameterQuerier({
-    globalParameters: new RequestParameters(new BaseJwtPayload({ sub: user }), client), hasDefaultStreams: false,
+    globalParameters: new RequestParameters(new BaseJwtPayload({ sub: user, subscribed }), client), hasDefaultStreams: false,
     streams: { library_content: [{ parameters: { item_id: item }, opaque_id: 0, priorityOverride: null }] },
   });
   assert.deepEqual(errors, []);
@@ -39,3 +39,8 @@ assert.deepEqual(await buckets('bob', 'lesson-b'), []);
 assert.deepEqual(await buckets('alice', 'lesson-a', grants.filter(g => g.id !== 'grant-a')), []);
 assert.deepEqual(await buckets('bob', 'lesson-a', grants.filter(g => g.id !== 'grant-a')), [itemBuckets[0].bucket]);
 console.log('PASS: one shared bucket per item; authorized users share it; forged requests and revoked grants receive no bucket.');
+
+assert.deepEqual(await buckets('alice', 'lesson-a', grants, {subscribed:1}, 0), []);
+const groups = rules.evaluateRow({ sourceTable: sourceTable('library_filter_groups'), record: {id:'group-a',slug:'topic',label:'Onderwerp',active:true,order:1} });
+assert.ok(groups.some(row => row.table === 'library_filter_groups'));
+console.log('PASS: filter groups replicate; subscription claims cannot be forged through client parameters.');

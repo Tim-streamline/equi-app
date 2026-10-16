@@ -101,3 +101,11 @@ test('credit bands compose with saved, category, format and search without hidin
   assert.equal(ids({ accessibleOnly: true, access: { hasPlus: true, unlockedIds: [] } }).length, 2);
   assert.deepEqual(ids({ accessibleOnly: true, access: null }), []);
 });
+
+test('grouped taxonomy uses OR within a group and AND across groups', () => {
+ const items=[{id:'a'},{id:'b'},{id:'c'}];
+ const links=[{itemId:'a',categoryId:'gut'},{itemId:'a',categoryId:'food'},{itemId:'b',categoryId:'skin'},{itemId:'b',categoryId:'food'},{itemId:'c',categoryId:'gut'}];
+ const filters={categoryGroups:{gut:'complaint',skin:'complaint',food:'topic'}};
+ assert.deepEqual(filterLibraryItems(items,links,['gut','skin','food'],'',filters).map(i=>i.id),['a','b']);
+ assert.deepEqual(filterLibraryItems(items,links,['gut','food'],'',filters).map(i=>i.id),['a']);
+});

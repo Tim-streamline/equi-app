@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\LibraryCategory;
+use App\Models\LibraryFilterGroup;
 use App\Models\LibraryItem;
 use App\Models\MediaAsset;
 use App\Models\Therapist;
@@ -75,7 +76,8 @@ class LibraryItemController extends Controller
             'videoDurationMinutes' => $library ? LibraryVideoDuration::minutes($library->duration_label, $library->duration_sec) : null,
             'automaticThumbnailUrl' => $library ? app(LibraryThumbnail::class)->sourceAsset($library)?->thumbnail_url : null,
             'videoPosters' => $library ? app(LibraryThumbnail::class)->videoPosters($library) : (object) [],
-            'categories' => LibraryCategory::orderBy('order')->get(['id', 'label']),
+            'groups' => LibraryFilterGroup::orderBy('order')->orderBy('label')->get(),
+            'categories' => LibraryCategory::orderBy('order')->get(['id', 'label', 'group_id', 'active']),
             'suggestionItems' => LibraryItem::query()->when($library, fn ($q) => $q->where('id', '!=', $library->id))->orderBy('title')->get(['id', 'title', 'published_at']),
             'therapists' => Therapist::availableFor($library?->author_therapist_id)->orderBy('name')->get(['id', 'name', 'title', 'archived_at'])
                 ->map(fn (Therapist $therapist) => [
@@ -115,7 +117,9 @@ class LibraryItemController extends Controller
     {
         DB::transaction(function () use ($library) {
             $item = LibraryItem::whereKey($library->id)->lockForUpdate()->firstOrFail();
-            if ($item->published_at === null) return;
+            if ($item->published_at === null) {
+                return;
+            }
             $before = $item->only('published_at');
             $item->update(['published_at' => null]);
             AuditLogger::updated($item, $before);
@@ -145,7 +149,9 @@ class LibraryItemController extends Controller
         try {
             DB::transaction(function () use ($item, $data, $request, $attachments, &$createdPaths, &$removedPaths) {
                 $new = ! $item->exists;
-                if (! $new) $item = LibraryItem::whereKey($item->id)->lockForUpdate()->firstOrFail();
+                if (! $new) {
+                    $item = LibraryItem::whereKey($item->id)->lockForUpdate()->firstOrFail();
+                }
                 $before = $item->only(array_keys($data));
                 $item->fill($data)->save();
                 $this->syncRelations($item, $request);
@@ -157,9 +163,13 @@ class LibraryItemController extends Controller
                         abort_unless($attachment, 422, 'Deze bijlage is niet meer beschikbaar. Herlaad het item.');
                         if ($file = $entry['file'] ?? null) {
                             $path = $file->store('library-attachments/'.$item->id, 'local');
-                            if (! $path) throw new \RuntimeException('PDF opslaan is niet gelukt.');
+                            if (! $path) {
+                                throw new \RuntimeException('PDF opslaan is niet gelukt.');
+                            }
                             $createdPaths[] = $path;
-                            if ($attachment->exists) $removedPaths[] = $attachment->path;
+                            if ($attachment->exists) {
+                                $removedPaths[] = $attachment->path;
+                            }
                             $attachment->fill(['path' => $path, 'name' => mb_substr(basename($file->getClientOriginalName()), 0, 255), 'size_bytes' => $file->getSize()]);
                         }
                         $attachment->fill(['title' => $entry['title'], 'order' => $order])->save();
@@ -258,6 +268,7 @@ class LibraryItemController extends Controller
         if ($validated['is_plus'] ?? ($id ? LibraryItem::find($id)?->is_plus : false)) {
             $validated['credit_cost'] = 0;
         }
+
         return $validated;
     }
 }

@@ -72,7 +72,7 @@ function reader() {
   const modules = {
     react, 'react/jsx-runtime': { jsx, jsxs: jsx, Fragment: 'Fragment' },
     'react-native': { Text: 'Text', View: 'View', ActivityIndicator: 'ActivityIndicator' },
-    'expo-router': { router: { push() {} } }, '@/hooks/useLibraryContent': { useLibraryContent },
+    'expo-router': { router: { push() {} } }, '@/hooks/useLibraryViewed': { useLibraryViewed() {} }, '@/hooks/useLibraryContent': { useLibraryContent },
     '@/hooks/useLibraryResource': { libraryRequest: () => { throw new Error('Reader must not fetch content'); } },
     '@/lib/library': { libraryMetadata: () => 'Artikel' },
     '@/components/credits/TemporaryCreditButton': { TemporaryCreditButton: 'TemporaryCreditButton' },

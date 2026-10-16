@@ -13,7 +13,7 @@ const { INTAKE_SCHEMA, INTAKE_NONE_OPTIONS } = modules['./schema'];
 const { buildIntakeSchema } = modules['./config'];
 const { visibleFields, missingRequired, isFieldAnswered, fieldFlagged, answeredCount, countFlags } = modules['./logic'];
 const payload = JSON.parse(readFileSync(new URL('../../backend/database/data/intake-questionnaire.json', import.meta.url)));
-const synced = buildIntakeSchema(payload.sections.map(s => ({ ...s, key: s.id, order: s.nr })), payload.sections.flatMap(s => s.fields.map((f, order) => ({ ...f, key: f.id, section_id: s.id, answer_section_key: f.answerSection, photo_config: JSON.stringify(f.photoConfig), order, show_if: JSON.stringify(f.showIf), flag_if: JSON.stringify(f.flagIf), critical_if: JSON.stringify(f.criticalIf), repeater_sub: JSON.stringify(f.sub) }))));
+const synced = buildIntakeSchema(payload.sections.map(s => ({ ...s, key: s.id, order: s.nr })), payload.sections.flatMap(s => s.fields.map((f, order) => ({ ...f, key: f.id, section_id: s.id, answer_section_key: f.answerSection, photo_config: JSON.stringify(f.photoConfig), age_config: JSON.stringify(f.ageConfig), order, show_if: JSON.stringify(f.showIf), flag_if: JSON.stringify(f.flagIf), critical_if: JSON.stringify(f.criticalIf), repeater_sub: JSON.stringify(f.sub) }))));
 
 test('the exported questionnaire matches the offline source including all 13 sections', () => {
   assert.deepEqual(INTAKE_SCHEMA, payload.sections);
@@ -42,7 +42,7 @@ for (const [name, schema] of [['offline', INTAKE_SCHEMA], ['synced', synced]]) {
     assert.ok(!missingRequired(section('voer'), a).some(f => f.id.startsWith('analyse-') || f.id === 'hooi-analyse'));
   });
   test(`${name}: feed gates hide stale products and require at least one meaningful row for Ja (OPT-87)`, () => {
-    const pairs = [['bijvoeding-nu', 'huidige-bijvoeding'], ['bijvoeding-eerder', 'bijvoeding-historie'], ['balancer-nu', 'balancer'], ['supplementen-nu', 'huidig-extra'], ['supplementen-eerder', 'historie-extra']];
+    const pairs = [['bijvoeding-nu', 'huidige-bijvoeding'], ['bijvoeding-eerder', 'bijvoeding-historie'], ['supplementen-nu', 'huidig-extra'], ['supplementen-eerder', 'historie-extra']];
     for (const [gate, detail] of pairs) {
       const gateField = field('voer', gate), detailField = field('voer', detail);
       for (const option of gateField.options.filter(o => o !== 'Ja')) {
@@ -164,9 +164,9 @@ for (const [name, schema] of [['offline', INTAKE_SCHEMA], ['synced', synced]]) {
     assert.ok(missingRequired(section('gedrag'), { [f.id]: ['Anders, namelijk'] }).some(f => f.id === 'gedrag-signalen-anders'));
   });
   test(`${name}: horse questions retain required answers without reversing old owner answers (OPT-75/76/77)`, () => {
-    assert.equal(field('paard', 'geboortedatum').hint, 'Geboortedatum niet bekend? Vul hieronder dan de (geschatte) leeftijd in.');
-    const fields = section('paard').fields;
-    assert.equal(fields[fields.findIndex(f => f.id === 'geboortedatum') + 1].id, 'leeftijd');
+    assert.equal(field('paard', 'geboortedatum'), undefined);
+    assert.equal(field('paard', 'leeftijd').type, 'number');
+    assert.equal(field('paard', 'leeftijd').ageConfig.date_field, 'geboortedatum');
     const owner = field('paard', 'eerdere-eigenaar');
     assert.deepEqual(owner.options, ['Nee, ik heb hem/haar zelf gefokt', 'Nee, hij/zij komt rechtstreeks van de fokker', 'Ja', 'Onbekend']);
     assert.equal(owner.type, 'radio');

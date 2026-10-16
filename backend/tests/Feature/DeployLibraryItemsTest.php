@@ -46,7 +46,7 @@ class DeployLibraryItemsTest extends TestCase
         $this->assertCount(4, $manifest['files']);
         $this->assertCount(2, $manifest['records']['media_assets']);
         $this->assertArrayNotHasKey('uploaded_by', $manifest['records']['media_assets'][0]);
-        $this->assertCount(8, $manifest['records']);
+        $this->assertCount(9, $manifest['records']);
         $this->assertSame('video-bytes', file_get_contents($this->blobFor('library/video/lesson.mp4')));
 
         $this->emptyCatalog();
@@ -217,13 +217,15 @@ class DeployLibraryItemsTest extends TestCase
 
     public function test_private_pdf_bundle_preserves_titles_order_and_bytes_without_public_urls(): void
     {
-        Storage::fake('local'); $item = $this->sourceCatalog();
+        Storage::fake('local');
+        $item = $this->sourceCatalog();
         Storage::disk('local')->put('library-attachments/checklist.pdf', '%PDF-private');
         $attachment = $item->attachments()->create(['title' => 'Checklist', 'name' => 'checklist.pdf', 'path' => 'library-attachments/checklist.pdf', 'size_bytes' => 12, 'order' => 2]);
         $manifest = app(LibraryDeployment::class)->export($this->bundle);
-        $this->assertSame(2, $manifest['version']);
+        $this->assertSame(3, $manifest['version']);
         $this->assertSame([], collect($manifest['files'])->firstWhere('disk', 'local')['urls']);
-        $this->emptyCatalog(); Storage::fake('local');
+        $this->emptyCatalog();
+        Storage::fake('local');
         $target = LibraryItem::create(['title' => 'Existing', 'slug' => $item->slug, 'format' => 'video']);
         $this->artisan('deploy-library-items', ['--path' => $this->bundle])->assertSuccessful();
         $this->assertDatabaseHas('library_attachments', ['id' => $attachment->id, 'library_item_id' => $target->id, 'title' => 'Checklist', 'order' => 2]);
@@ -231,10 +233,27 @@ class DeployLibraryItemsTest extends TestCase
         $this->artisan('deploy-library-items', ['--path' => $this->bundle])->assertSuccessful();
         $this->assertDatabaseCount('library_attachments', 1);
         // Importing an older bundle must preserve PDFs it knows nothing about.
-        $manifest['version'] = 1; unset($manifest['records']['library_attachments']);
+        $manifest['version'] = 1;
+        unset($manifest['records']['library_attachments']);
         file_put_contents($this->bundle.'/manifest.json', json_encode($manifest));
         $this->artisan('deploy-library-items', ['--path' => $this->bundle])->assertSuccessful();
         $this->assertDatabaseCount('library_attachments', 1);
+    }
+
+    public function test_old_bundles_without_filter_groups_remain_importable(): void
+    {
+        $this->sourceCatalog();
+        $manifest = app(LibraryDeployment::class)->export($this->bundle);
+        $manifest['version'] = 2;
+        unset($manifest['records']['library_filter_groups']);
+        foreach ($manifest['records']['library_categories'] as &$category) {
+            unset($category['group_id'], $category['active']);
+        }
+        unset($category);
+        file_put_contents($this->bundle.'/manifest.json', json_encode($manifest));
+        $this->emptyCatalog();
+        $this->artisan('deploy-library-items', ['--path' => $this->bundle])->assertSuccessful();
+        $this->assertSame('Onderwerp', LibraryCategory::where('slug', 'nutrition')->sole()->group->label);
     }
 
     private function sourceCatalog(): LibraryItem

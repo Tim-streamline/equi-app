@@ -1,0 +1,115 @@
+{
+  "bijvoeding-nu": {
+    "label": "Krijgt je paard op dit moment voer uit een zak?",
+    "hint": "Denk bijvoorbeeld aan balancer, mineralenvoer, krachtvoer, muesli, brok, grasbrok, luzerne, slobber, bietenpulp of andere voerproducten uit een zak.",
+    "options": [
+      "Ja",
+      "Nee",
+      "Weet ik niet"
+    ]
+  },
+  "huidige-bijvoeding": {
+    "label": "Welk voer uit een zak krijgt je paard op dit moment?",
+    "sub": [
+      {
+        "id": "merk",
+        "label": "Merk",
+        "type": "text"
+      },
+      {
+        "id": "product",
+        "label": "Exacte productnaam",
+        "type": "text"
+      },
+      {
+        "id": "hoeveelheid",
+        "label": "Hoeveelheid per voerbeurt",
+        "type": "text"
+      },
+      {
+        "id": "voerbeurten",
+        "label": "Aantal voerbeurten per dag",
+        "type": "text"
+      },
+      {
+        "id": "sinds",
+        "label": "Sinds wanneer (ongeveer)?",
+        "type": "text"
+      }
+    ]
+  },
+  "bijvoeding-eerder": {
+    "label": "Heeft je paard in de afgelopen 2–5 jaar ander voer uit een zak gekregen dan wat je hierboven hebt ingevuld?",
+    "hint": "Denk ook hier aan balancer, mineralenvoer, krachtvoer, muesli, brok, grasbrok, luzerne, slobber, bietenpulp of andere voerproducten uit een zak."
+  },
+  "bijvoeding-historie": {
+    "label": "Welk ander voer uit een zak heeft je paard in die periode gekregen?"
+  },
+  "supplementen-nu": {
+    "label": "Krijgt je paard op dit moment supplementen en/of kruiden?",
+    "hint": "Denk bijvoorbeeld aan losse vitaminen/mineralen, kruiden, kruidenmengsels, oliën, darmproducten en andere aanvullende producten."
+  },
+  "huidig-extra": {
+    "label": "Welke supplementen en/of kruiden krijgt je paard op dit moment?",
+    "hint": "Voeg ieder supplement of kruidenproduct apart toe.",
+    "sub": [
+      {
+        "id": "merk",
+        "label": "Merknaam",
+        "type": "text"
+      },
+      {
+        "id": "product",
+        "label": "Exacte productnaam",
+        "type": "text"
+      },
+      {
+        "id": "dosering",
+        "label": "Hoeveel krijgt jouw paard per dag?",
+        "type": "text"
+      },
+      {
+        "id": "sinds",
+        "label": "Sinds wanneer krijgt jouw paard dit?",
+        "type": "text"
+      },
+      {
+        "id": "reden",
+        "label": "Waarom geef je dit product?",
+        "type": "text"
+      },
+      {
+        "id": "verschil",
+        "label": "Heb je verschil gemerkt sinds je dit geeft?",
+        "type": "radio",
+        "options": [
+          "Ja, duidelijk positief",
+          "Enigszins positief",
+          "Geen merkbaar verschil",
+          "Negatief effect",
+          "Weet ik niet"
+        ]
+      }
+    ]
+  },
+  "supplementen-eerder": {
+    "label": "Heeft je paard in de afgelopen 2–5 jaar andere supplementen en/of kruiden gekregen dan wat je hierboven hebt ingevuld?",
+    "hint": "Denk bijvoorbeeld aan losse vitaminen/mineralen, kruiden, kruidenmengsels, oliën, darmproducten en andere aanvullende producten."
+  },
+  "historie-extra": {
+    "label": "Welke andere supplementen en/of kruiden heeft je paard in die periode gekregen?",
+    "hint": "Voeg ieder supplement of kruidenproduct apart toe. Neem ook producten mee die maar tijdelijk zijn gegeven."
+  },
+  "leeftijd": {
+    "label": "Hoe oud is je paard?",
+    "hint": "Een schatting is ook goed.",
+    "type": "number",
+    "ageConfig": {
+      "date_field": "geboortedatum",
+      "date_label": "Geboortedatum",
+      "toggle_label": "Ik weet de exacte geboortedatum",
+      "calculated_hint": "Leeftijd wordt automatisch berekend.",
+      "estimate_label": "Gebruik een geschatte leeftijd"
+    }
+  }
+}

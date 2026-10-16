@@ -301,7 +301,13 @@ const library_article_sections = new Table({
   body: column.text,
 }, { indexes: { byItem: ['item_id'] } });
 
+const library_filter_groups = new Table({
+  slug: column.text, label: column.text, order: column.integer, active: column.integer,
+});
+
 const library_categories = new Table({
+  group_id: column.text,
+  active: column.integer,
   slug: column.text,
   label: column.text,
   order: column.integer,
@@ -546,6 +552,7 @@ const intake_fields = new Table({
   section_id: column.text,
   answer_section_key: column.text,
   photo_config: column.text,
+  age_config: column.text,
   key: column.text,
   order: column.integer,
   label: column.text,
@@ -609,6 +616,7 @@ export const AppSchema = new Schema({
   library_contents,
   library_chapters,
   library_article_sections,
+  library_filter_groups,
   library_categories,
   library_item_categories,
   library_bookmarks,

@@ -52,7 +52,7 @@ export const navSections = [
         items: [
             { label: 'Protocol kopen', href: '/admin/plus-page', icon: BookOpen, roles: ['content_editor'] },
             { label: 'Library', href: '/admin/library', icon: BookOpen },
-            { label: 'Categories', href: '/admin/library-categories', icon: FolderTree },
+            { label: 'Bibliotheekfilters', href: '/admin/library-categories', icon: FolderTree },
             { label: 'Seasonal tips', href: '/admin/seasonal-tips', icon: CalendarHeart },
             { label: 'Nova chat', href: '/admin/nova', icon: Bot },
         ],

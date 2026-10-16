@@ -54,6 +54,7 @@ class IntakeQuestionnaireSeeder extends Seeder
                             'answer_section_key' => $fieldData['answerSection'] ?? null,
                             'label' => $fieldData['label'],
                             'photo_config' => $fieldData['photoConfig'] ?? null,
+                            'age_config' => $fieldData['ageConfig'] ?? null,
                             'type' => $fieldData['type'],
                             'hint' => $fieldData['hint'] ?? null,
                             'required' => $fieldData['required'] ?? false,

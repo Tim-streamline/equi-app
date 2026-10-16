@@ -6,6 +6,7 @@ use App\Models\LibraryArticleSection;
 use App\Models\LibraryAttachment;
 use App\Models\LibraryCategory;
 use App\Models\LibraryChapter;
+use App\Models\LibraryFilterGroup;
 use App\Models\LibraryItem;
 use App\Models\LibraryItemCategory;
 use App\Models\MediaAsset;
@@ -22,6 +23,7 @@ class LibraryDeployment
 {
     private const MODELS = [
         'therapists' => Therapist::class,
+        'library_filter_groups' => LibraryFilterGroup::class,
         'library_categories' => LibraryCategory::class,
         'library_items' => LibraryItem::class,
         'library_chapters' => LibraryChapter::class,
@@ -126,7 +128,7 @@ class LibraryDeployment
         }
         unset($file);
 
-        $manifest = ['version' => 2, 'exported_at' => now()->toIso8601String(), 'records' => $records, 'files' => array_values($files)];
+        $manifest = ['version' => 3, 'exported_at' => now()->toIso8601String(), 'records' => $records, 'files' => array_values($files)];
         $temporary = $directory.'/.manifest-'.Str::uuid();
         try {
             $json = json_encode($manifest, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR).PHP_EOL;
@@ -228,7 +230,7 @@ class LibraryDeployment
                     ? preg_replace_callback(self::URL_PATTERN, fn ($match) => $urls[html_entity_decode($match[0], ENT_QUOTES | ENT_HTML5)] ?? $match[0], $value)
                     : $value, $source);
                 foreach ($this->foreignKeys($table) as $field => $parent) {
-                    if ($row[$field] !== null) {
+                    if (array_key_exists($field, $row) && $row[$field] !== null) {
                         $row[$field] = $ids[$parent][$row[$field]];
                     }
                 }
@@ -241,7 +243,7 @@ class LibraryDeployment
                 }
                 $natural = match ($table) {
                     'therapists' => Arr::only($row, ['name', 'title']),
-                    'library_items', 'library_categories' => Arr::only($row, ['slug']),
+                    'library_items', 'library_categories', 'library_filter_groups' => Arr::only($row, ['slug']),
                     // Order is not unique: two blocks may legitimately share it.
                     'library_chapters', 'library_article_sections', 'library_attachments' => Arr::only($row, ['id']),
                     'library_item_categories' => Arr::only($row, ['item_id', 'category_id']),
@@ -303,7 +305,9 @@ class LibraryDeployment
             $fields[] = 'archived_at';
         }
 
-        if ($table === 'library_attachments') $fields[] = 'library_item_id';
+        if ($table === 'library_attachments') {
+            $fields[] = 'library_item_id';
+        }
 
         return array_values(array_diff(['id', ...$fields], ['uploaded_by']));
     }
@@ -311,6 +315,7 @@ class LibraryDeployment
     private function foreignKeys(string $table): array
     {
         return match ($table) {
+            'library_categories' => ['group_id' => 'library_filter_groups'],
             'library_items' => ['author_therapist_id' => 'therapists'],
             'library_chapters', 'library_article_sections' => ['item_id' => 'library_items'],
             'library_item_categories' => ['item_id' => 'library_items', 'category_id' => 'library_categories'],
@@ -321,23 +326,32 @@ class LibraryDeployment
 
     private function validateManifest(mixed $manifest): void
     {
-        if (! is_array($manifest) || ! in_array($manifest['version'] ?? null, [1, 2], true) || ! is_array($manifest['files'] ?? null)) {
+        if (! is_array($manifest) || ! in_array($manifest['version'] ?? null, [1, 2, 3], true) || ! is_array($manifest['files'] ?? null)) {
             throw new RuntimeException('Unsupported or invalid library bundle.');
         }
         $ids = [];
         foreach (self::MODELS as $table => $class) {
-            if ($table === 'library_attachments' && $manifest['version'] === 1 && ! isset($manifest['records'][$table])) continue;
+            if ($table === 'library_filter_groups' && $manifest['version'] < 3 && ! isset($manifest['records'][$table])) {
+                continue;
+            }
+            if ($table === 'library_attachments' && $manifest['version'] === 1 && ! isset($manifest['records'][$table])) {
+                continue;
+            }
             if (! is_array($manifest['records'][$table] ?? null)) {
                 throw new RuntimeException("Missing bundle records: {$table}");
             }
             $ids[$table] = [];
             foreach ($manifest['records'][$table] as $row) {
-                if (! is_array($row) || array_diff($this->fields($table), array_keys($row))
-                    || array_diff(array_keys($row), $this->fields($table)) || ! Str::isUuid($row['id']) || isset($ids[$table][$row['id']])) {
+                $fields = $this->fields($table);
+                if ($table === 'library_categories' && $manifest['version'] < 3 && is_array($row) && ! array_key_exists('group_id', $row)) {
+                    $fields = array_diff($fields, ['group_id', 'active']);
+                }
+                if (! is_array($row) || array_diff($fields, array_keys($row))
+                    || array_diff(array_keys($row), $fields) || ! Str::isUuid($row['id']) || isset($ids[$table][$row['id']])) {
                     throw new RuntimeException("Invalid bundle record: {$table}");
                 }
                 foreach ($this->foreignKeys($table) as $field => $parent) {
-                    if ($row[$field] !== null && ! isset($ids[$parent][$row[$field]])) {
+                    if (array_key_exists($field, $row) && $row[$field] !== null && ! isset($ids[$parent][$row[$field]])) {
                         throw new RuntimeException("Missing {$parent} reference in {$table}.{$field}");
                     }
                 }

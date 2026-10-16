@@ -29,6 +29,7 @@ streams:
                        created_at, updated_at
                 FROM library_items
                 WHERE auth.parameter('subscribed') = 1 AND ( published_at IS NOT NULL)
+            - SELECT * FROM library_filter_groups WHERE auth.parameter('subscribed') = 1
             - SELECT * FROM library_categories WHERE auth.parameter('subscribed') = 1
             - SELECT * FROM library_item_categories WHERE auth.parameter('subscribed') = 1
             - SELECT * FROM seasonal_tips WHERE auth.parameter('subscribed') = 1

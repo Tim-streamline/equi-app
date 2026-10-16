@@ -1,29 +1,23 @@
 import { KeyboardScrollView as ScrollView, KeyboardTextInput as TextInput, KeyboardViewport } from '@/components/ui/KeyboardForm';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { View, Text, Pressable, ActivityIndicator, Modal, useWindowDimensions } from 'react-native';
 import { useLocalSearchParams } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Search, X, ChevronDown, Check, SlidersHorizontal, ChevronLeft } from 'lucide-react-native';
+import { Search, X, Check, SlidersHorizontal, ChevronLeft } from 'lucide-react-native';
 import { LibraryCard } from '@/components/library/LibraryCard';
 import { useLibraryResource } from '@/hooks/useLibraryResource';
 import { useLibraryAccessRecords } from '@/hooks/useLibraryAccessRecords';
 import { useLibraryBookmarks } from '@/hooks/useLibraryBookmarks';
-import { type LibraryAccess } from '@/lib/library';
+import { libraryFormat, type LibraryAccess } from '@/lib/library';
 import { useTabBarPadding } from '@/hooks/useTabBarPadding';
-import { useLibraryCategories, useLibraryItemCategories, useLibraryItems, useValue } from '@/db/hooks';
-import { filterLibraryItems, toggleLibraryCategory } from '@/lib/library-filter';
-
-const libraryScopes = [
-  { value: 'all', label: 'Alles' },
-  { value: 'mine', label: 'Mijn items' },
-  { value: 'saved', label: 'Opgeslagen' },
-  { value: 'free', label: 'Gratis' },
-] as const;
-type LibraryScope = typeof libraryScopes[number]['value'];
+import { useLibraryCategories, useLibraryFilterGroups, useLibraryViewingHistory, useLibraryItemCategories, useLibraryItems, useValue } from '@/db/hooks';
+import { filterLibraryItems, toggleLibraryCategory, PERSONAL_FILTERS, LIBRARY_FORMATS, type PersonalFilter } from '@/lib/library-filter';
 
 export default function LibraryScreen() {
   const padBottom = useTabBarPadding();
   const categories = useLibraryCategories();
+  const groups = useLibraryFilterGroups();
+  const history = useLibraryViewingHistory();
   const list = useLibraryItems();
   const { data: liveAccess, error: accessError, refresh: refreshAccess } = useLibraryResource<LibraryAccess>('/access');
   const { grants, isLoading: accessLoading } = useLibraryAccessRecords();
@@ -38,9 +32,12 @@ export default function LibraryScreen() {
   const [activeCategoryIds, setActiveCategoryIds] = useState<string[]>([]);
   const [filtersOpen, setFiltersOpen] = useState(false);
   const { width, height } = useWindowDimensions();
-  const [scope, setScope] = useState<LibraryScope>('all');
-  const savedOnly = scope === 'saved';
-  const accessibleOnly = scope === 'mine';
+  const [personal, setPersonal] = useState<PersonalFilter[]>([]);
+  const [formats, setFormats] = useState<string[]>([]);
+  const savedOnly = personal.includes('saved');
+  const unlockedOnly = personal.includes('unlocked');
+  const activeIds = activeCategoryIds.filter(id => categories.some(c => c.id === id));
+  const categoryGroups = Object.fromEntries(categories.map(c => [c.id, c.groupId]));
   const { q, t } = useLocalSearchParams<{ q?: string; t?: string }>();
   const [searchQuery, setSearchQuery] = useState('');
   const searchInput = useRef<TextInput>(null);
@@ -48,23 +45,27 @@ export default function LibraryScreen() {
     if (typeof q === 'string') {
       setSearchQuery(q);
       setActiveCategoryIds([]);
-      setScope('all');
+      setPersonal([]); setFormats([]);
     }
   }, [q, t]);
-  const filteredList = useMemo(
-    () => filterLibraryItems(list, itemCategories, activeCategoryIds, searchQuery, {
-      credits: scope === 'free' ? ['free'] : undefined,
-      excludeFree: accessibleOnly,
-      savedOnly, accessibleOnly, savedIds: bookmarks.itemIds ?? [], access,
-    }),
-    [list, itemCategories, activeCategoryIds, searchQuery, scope, savedOnly, accessibleOnly, bookmarks.itemIds, access],
-  );
+  const filteredList = filterLibraryItems(list, itemCategories, activeIds, searchQuery, {
+    personal, formats, savedIds: bookmarks.itemIds ?? [], access, categoryGroups,
+    viewed: history.map(row => ({itemId: row.itemId as string, lastViewedAt: row.lastViewedAt as string | null})),
+  });
   const toggleCategory = (categoryId: string) => setActiveCategoryIds(current => toggleLibraryCategory(current, categoryId));
-  const clearFilters = () => { setActiveCategoryIds([]); setScope('all'); };
-  const waiting = (savedOnly && !bookmarks.itemIds) || (accessibleOnly && !access);
-  const filterError = savedOnly ? bookmarks.error : accessibleOnly && !access ? accessError : null;
-  const emptySaved = savedOnly && bookmarks.itemIds?.length === 0;
-  const activeCategories = categories.filter(category => activeCategoryIds.includes(category.id));
+  const togglePersonal = (id: PersonalFilter) => setPersonal(current => current.includes(id) ? current.filter(v => v !== id) : [...current, id]);
+  const toggleFormat = (id: string) => setFormats(current => toggleLibraryCategory(current, id));
+  const clearFilters = () => { setActiveCategoryIds([]); setPersonal([]); setFormats([]); };
+  const waiting = (savedOnly && !bookmarks.itemIds) || (unlockedOnly && !access);
+  const filterError = savedOnly ? bookmarks.error : unlockedOnly && !access ? accessError : null;
+  const emptySaved = personal.length === 1 && savedOnly && bookmarks.itemIds?.length === 0;
+  const activeCategories = categories.filter(category => activeIds.includes(category.id));
+  const chips = [
+    ...PERSONAL_FILTERS.filter(f => personal.includes(f.id)).map(f => ({key: `personal-${f.id}`, label: f.label, remove: () => togglePersonal(f.id)})),
+    ...activeCategories.map(c => ({key: c.id, label: c.label as string, remove: () => toggleCategory(c.id)})),
+    ...formats.map(f => ({key: `format-${f}`, label: libraryFormat(f), remove: () => toggleFormat(f)})),
+  ];
+  const formatChoices = LIBRARY_FORMATS.filter(f => ['article', 'video', 'audio'].includes(f) || list.some(item => item.format === f));
   const closeFilters = () => setFiltersOpen(false);
   const resultsLabel = waiting || filterError ? 'Terug naar bibliotheek'
     : `Toon ${filteredList.length} ${filteredList.length === 1 ? 'item' : 'items'}`;
@@ -89,28 +90,27 @@ export default function LibraryScreen() {
                 style={{ width: 44, height: 44, alignItems: 'center', justifyContent: 'center' }}><X size={18} color="#879392" /></Pressable>}
             </View>
             <Pressable accessibilityRole="button" accessibilityLabel="Filters openen"
-              accessibilityHint={`${activeCategories.length} actieve onderwerpfilters`}
+              accessibilityHint={`${chips.length} actieve filters`}
               accessibilityState={{ expanded: filtersOpen }} aria-expanded={filtersOpen}
               onPress={() => { searchInput.current?.blur(); setFiltersOpen(true); }}
               className="h-12 w-12 items-center justify-center rounded-pill bg-teal-700">
               <SlidersHorizontal size={22} color="#FBF8F3" />
-              {activeCategories.length > 0 && <View className="absolute -right-1 -top-1 min-w-5 items-center rounded-pill border-2 border-canvas bg-mint-500 px-1">
-                <Text className="font-bold text-[11px] text-white">{activeCategories.length}</Text>
+              {chips.length > 0 && <View className="absolute -right-1 -top-1 min-w-5 items-center rounded-pill border-2 border-canvas bg-mint-500 px-1">
+                <Text className="font-bold text-[11px] text-white">{chips.length}</Text>
               </View>}
             </Pressable>
           </View>
         </View>
         <View className="flex-row flex-wrap items-center gap-2 px-5 pb-3">
-          <LibraryScopeDropdown value={scope} onChange={setScope} />
-          {activeCategories.map(category => <Pressable key={category.id} accessibilityRole="button"
-            accessibilityLabel={`Verwijder filter: ${category.label}`} onPress={() => toggleCategory(category.id)}
+          {chips.map(chip => <Pressable key={chip.key} accessibilityRole="button"
+            accessibilityLabel={`Verwijder filter: ${chip.label}`} onPress={chip.remove}
             className="min-h-11 flex-row items-center gap-2 rounded-pill bg-[#E7F5F3] px-3.5" style={{ maxWidth: '100%' }}>
-            <Text className="shrink font-semi text-[14px] text-teal-700">{category.label}</Text>
+            <Text className="shrink font-semi text-[14px] text-teal-700">{chip.label}</Text>
             <X size={16} color="#127A79" />
           </Pressable>)}
-          {activeCategories.length > 0 && <Pressable accessibilityRole="button" accessibilityLabel="Onderwerpfilters wissen"
-            onPress={() => setActiveCategoryIds([])} className="min-h-11 justify-center px-2">
-            <Text className="font-semi text-[14px] text-ink-70 underline">Wis</Text>
+          {chips.length > 0 && <Pressable accessibilityRole="button" accessibilityLabel="Alle filters wissen"
+            onPress={clearFilters} className="min-h-11 justify-center px-2">
+            <Text className="font-semi text-[14px] text-ink-70 underline">Wis alles</Text>
           </Pressable>}
         </View>
         {!!filterError && <Pressable accessibilityRole="button" onPress={() => { void bookmarks.refresh(); void refreshAccess(); }} className="mx-5 mb-3 py-2">
@@ -140,18 +140,28 @@ export default function LibraryScreen() {
               <ChevronLeft size={26} color="#127A79" />
             </Pressable>
             <Text accessibilityRole="header" className="flex-1 font-bold text-[23px] text-ink">Filters</Text>
-            <Pressable accessibilityRole="button" accessibilityLabel="Alle onderwerpfilters wissen" onPress={() => setActiveCategoryIds([])}
+            <Pressable accessibilityRole="button" accessibilityLabel="Alle filters wissen" onPress={clearFilters}
               className="min-h-11 justify-center px-2">
               <Text className="font-semi text-[16px] text-teal-700">Wis alles</Text>
             </Pressable>
           </View>
           <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 24 }}>
-            <Text accessibilityRole="header" className="mb-4 font-bold text-[23px] text-teal-900">Onderwerp</Text>
-            <View className="flex-row flex-wrap gap-3">
-              {categories.map(category => <FilterChoice key={category.id} label={category.label}
-                selected={activeCategoryIds.includes(category.id)} onPress={() => toggleCategory(category.id)} />)}
+            <Text accessibilityRole="header" className="mb-3 font-bold text-[20px] text-teal-900">Persoonlijk</Text>
+            <View className="mb-3 flex-row flex-wrap gap-2">
+              {PERSONAL_FILTERS.map(filter => <FilterChoice key={filter.id} label={filter.label} selected={personal.includes(filter.id)} onPress={() => togglePersonal(filter.id)} />)}
             </View>
-            {categories.length === 0 && <Text className="text-[15px] text-ink-70">Er zijn nog geen onderwerpfilters beschikbaar.</Text>}
+            <Text className="mb-6 text-[13px] text-ink-50">Recent bekeken: de afgelopen 30 dagen.</Text>
+            {groups.map(group => <View key={group.id} className="mb-6">
+              <Text accessibilityRole="header" className="mb-3 font-bold text-[20px] text-teal-900">{group.label}</Text>
+              <View className="flex-row flex-wrap gap-2">
+                {categories.filter(c => c.groupId === group.id).map(category => <FilterChoice key={category.id} label={category.label}
+                  selected={activeIds.includes(category.id)} onPress={() => toggleCategory(category.id)} />)}
+              </View>
+            </View>)}
+            <Text accessibilityRole="header" className="mb-3 font-bold text-[20px] text-teal-900">Soort</Text>
+            <View className="flex-row flex-wrap gap-2">
+              {formatChoices.map(format => <FilterChoice key={format} label={libraryFormat(format)} selected={formats.includes(format)} onPress={() => toggleFormat(format)} />)}
+            </View>
           </ScrollView>
           <View className="border-t border-ink-8 px-5 py-4">
             <Pressable accessibilityRole="button" accessibilityLabel={resultsLabel} onPress={closeFilters}
@@ -171,39 +181,4 @@ function FilterChoice({ label, selected, onPress }: { label: string; selected: b
     {selected && <Check size={18} color="#FBF8F3" />}
     <Text className={`shrink font-semi text-[16px] ${selected ? 'text-canvas' : 'text-teal-900'}`}>{label}</Text>
   </Pressable>;
-}
-
-function LibraryScopeDropdown({ value, onChange }: { value: LibraryScope; onChange: (value: LibraryScope) => void }) {
-  const trigger = useRef<View>(null);
-  const [anchor, setAnchor] = useState<{ x: number; y: number } | null>(null);
-  const { width, height } = useWindowDimensions();
-  const label = libraryScopes.find(option => option.value === value)!.label;
-  const close = () => { setAnchor(null); };
-  return <>
-    <Pressable ref={trigger} accessibilityRole="button" accessibilityLabel={`Bibliotheekfilter: ${label}`}
-      accessibilityHint="Kies Alles, Mijn items, Opgeslagen of Gratis" accessibilityState={{ expanded: !!anchor }}
-      onPress={() => trigger.current?.measureInWindow((x, y, _width, triggerHeight) => setAnchor({ x, y: y + triggerHeight + 4 }))}
-      className="min-h-11 flex-row items-center gap-2 rounded-xl border border-teal-700 bg-white px-3">
-      <Text className="font-semi text-[13px] text-teal-700">{label}</Text>
-      <ChevronDown size={16} color="#127A79" />
-    </Pressable>
-    {anchor && <Modal transparent animationType="fade" statusBarTranslucent navigationBarTranslucent onRequestClose={close}>
-      <View style={{ flex: 1 }}>
-        <Pressable accessibilityRole="button" accessibilityLabel="Bibliotheekfilter sluiten" onPress={close}
-          style={{ position: 'absolute', top: 0, right: 0, bottom: 0, left: 0 }} />
-        <View accessibilityViewIsModal style={{ position: 'absolute', left: Math.max(12, Math.min(anchor.x, width - 212)), top: Math.max(12, Math.min(anchor.y, height - (libraryScopes.length * 48 + 32))), width: 200,
-          borderRadius: 12, borderWidth: 1, borderColor: '#CCD9D6', padding: 6, backgroundColor: '#FFFFFF', elevation: 8,
-          shadowColor: '#1B2A2A', shadowOpacity: 0.15, shadowRadius: 12, shadowOffset: { width: 0, height: 4 } }}>
-          {libraryScopes.map(option => <Pressable key={option.value} accessibilityRole="radio" accessibilityLabel={option.label}
-            accessibilityState={{ checked: option.value === value }}
-            onPress={() => { onChange(option.value); close(); }}
-            style={{ minHeight: 48, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 12, borderRadius: 8,
-              backgroundColor: option.value === value ? '#EFF6F3' : 'transparent' }}>
-            <Text className="font-semi text-[14px] text-teal-700">{option.label}</Text>
-            {option.value === value && <Check size={16} color="#127A79" />}
-          </Pressable>)}
-        </View>
-      </View>
-    </Modal>}
-  </>;
 }

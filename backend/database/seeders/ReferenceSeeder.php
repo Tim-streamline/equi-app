@@ -36,7 +36,7 @@ class ReferenceSeeder extends Seeder
             ['slug' => 'hoeven', 'label' => 'Hoeven'],
         ];
         foreach ($cats as $i => $c) {
-            LibraryCategory::create([...$c, 'order' => $i]);
+            LibraryCategory::firstOrCreate(['slug' => $c['slug']], [...$c, 'order' => $i]);
         }
     }
 

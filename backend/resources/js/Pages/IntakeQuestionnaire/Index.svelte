@@ -60,6 +60,7 @@
             link_json: '',
             repeater_sub_json: '',
             photo_config_json: '',
+            age_config_json: '',
         };
     }
 
@@ -134,6 +135,7 @@
             link_json: json(field.link),
             repeater_sub_json: json(field.repeater_sub),
             photo_config_json: json(field.photo_config),
+            age_config_json: json(field.age_config),
         });
         $fieldForm.reset();
         $fieldForm.clearErrors();
@@ -281,6 +283,7 @@
             </div>
 
             <div class="grid gap-4 md:grid-cols-2">
+                <div class="md:col-span-2"><Field label="Leeftijd-instellingen (JSON)" error={$fieldForm.errors.age_config_json} hint="Type number: date_field is de opslagsleutel van de geboortedatum. date_label, toggle_label, calculated_hint en estimate_label bepalen de teksten."><Textarea rows="6" bind:value={$fieldForm.age_config_json} /></Field></div>
                 <div class="md:col-span-2"><Field label="Foto-instellingen (JSON)" error={$fieldForm.errors.photo_config_json} hint="max: maximum aantal foto’s; year_required: jaartal verplicht per foto; allow_na: Niet van toepassing toestaan; slots: afzonderlijke aanzichten met id en label; example_url en example_caption: voorbeeldafbeelding. na_key verbindt een gedeelde keuze; existing_only toont alleen eerder opgeslagen foto’s."><Textarea rows="8" bind:value={$fieldForm.photo_config_json} placeholder={'{"max":10,"year_required":true,"allow_na":false}'} /></Field></div>
                 <Field label="Antwoordopties (JSON-array)" error={$fieldForm.errors.options_json}><Textarea rows="5" bind:value={$fieldForm.options_json} placeholder='["Ja", "Nee"]' /></Field>
                 <Field label="Zichtbaarheidsregel showIf (JSON-object)" error={$fieldForm.errors.show_if_json}><Textarea rows="5" bind:value={$fieldForm.show_if_json} placeholder={'{"paard.geslacht":"merrie"}'} /></Field>

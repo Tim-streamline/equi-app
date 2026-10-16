@@ -29,7 +29,7 @@ class IntakeRefinementsTest extends TestCase
             }
         }
         $horse = $questionnaire->sections()->where('key', 'paard')->firstOrFail();
-        $horse->fields()->where('key', 'geboortedatum')->update(['hint' => 'Oude hulptekst']);
+        $horse->fields()->create(['key' => 'geboortedatum', 'label' => 'Geboortedatum', 'type' => 'date', 'hint' => 'Oude hulptekst', 'optional' => true, 'active' => true]);
         $custom = $horse->fields()->create(['key' => 'custom', 'label' => 'Eigen beheervraag', 'type' => 'text', 'order' => 1000, 'active' => true]);
         $unchanged = $horse->fields()->where('key', 'gewicht')->firstOrFail();
         $unchanged->update(['label' => 'Eigen gewichtstekst', 'hint' => 'Bewaren']);

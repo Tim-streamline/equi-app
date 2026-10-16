@@ -62,6 +62,18 @@ export function isFieldRequired(field: Field): boolean {
   return true;
 }
 
+/** Strict calendar parsing, accepting legacy ISO and Dutch dates. No invented dates. */
+export function ageFromBirthdate(value: unknown, today = new Date()): number | undefined {
+  if (typeof value !== 'string') return undefined;
+  const iso = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value.trim());
+  const dutch = /^(\d{1,2})-(\d{1,2})-(\d{4})$/.exec(value.trim());
+  if (!iso && !dutch) return undefined;
+  const [year, month, day] = iso ? iso.slice(1).map(Number) : [Number(dutch![3]), Number(dutch![2]), Number(dutch![1])];
+  const date = new Date(year, month - 1, day);
+  if (year < 1000 || date.getFullYear() !== year || date.getMonth() !== month - 1 || date.getDate() !== day || date > today) return undefined;
+  return today.getFullYear() - year - (today.getMonth() < month - 1 || (today.getMonth() === month - 1 && today.getDate() < day) ? 1 : 0);
+}
+
 /**
  * Whether a field counts as genuinely answered. Stricter than `!isEmpty` for
  * option-based fields: a value is only valid if it still matches the field's
@@ -71,6 +83,11 @@ export function isFieldRequired(field: Field): boolean {
  * option label that was reworded — which would otherwise count as answered.
  */
 export function isFieldAnswered(field: Field, value: unknown, allAnswers?: IntakeAnswers, sectionId = ''): boolean {
+  if (field.type === 'number' && field.ageConfig) {
+    const date = allAnswers?.[field.answerSection ?? sectionId]?.[field.ageConfig?.date_field ?? ''];
+    if (date !== undefined && date !== null && date !== '') return ageFromBirthdate(date) !== undefined;
+    return (typeof value === 'number' || (typeof value === 'string' && /^\d+$/.test(value))) && Number.isInteger(Number(value)) && Number(value) >= 0;
+  }
   if (field.type === 'photo') return photoAnswered(field, value, allAnswers, sectionId);
   if (isEmpty(value)) return false;
   // A multi-box text field (`lines`) stores a string array; it counts as
@@ -95,8 +112,8 @@ export function isFieldAnswered(field: Field, value: unknown, allAnswers?: Intak
       (row) =>
         row != null &&
         typeof row === 'object' &&
-        Object.values(row as Record<string, unknown>).some(
-          (v) => typeof v === 'string' && v.trim() !== '',
+        Object.entries(row as Record<string, unknown>).some(
+          ([key, v]) => !key.startsWith('_') && typeof v === 'string' && v.trim() !== '',
         ),
     );
   }

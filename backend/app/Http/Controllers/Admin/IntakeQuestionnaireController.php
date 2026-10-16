@@ -181,6 +181,7 @@ class IntakeQuestionnaireController extends Controller
             'order' => ['required', 'integer', 'min:0', 'max:10000'],
             'active' => ['required', 'boolean'],
             'photo_config_json' => ['nullable', 'string', 'max:20000'],
+            'age_config_json' => ['nullable', 'string', 'max:20000'],
             'link_json' => ['nullable', 'string', 'max:20000'],
             'options_json' => ['nullable', 'string', 'max:50000'],
             'show_if_json' => ['nullable', 'string', 'max:50000'],
@@ -192,6 +193,7 @@ class IntakeQuestionnaireController extends Controller
 
         foreach ([
             'photo_config_json' => 'photo_config',
+            'age_config_json' => 'age_config',
             'link_json' => 'link',
             'options_json' => 'options',
             'show_if_json' => 'show_if',
@@ -207,6 +209,28 @@ class IntakeQuestionnaireController extends Controller
         // Older admin forms may omit photo settings; ordinary copy edits must retain them.
         if (! $request->exists('photo_config_json')) {
             $data['photo_config'] = $field?->photo_config;
+        }
+        if (! $request->exists('age_config_json')) {
+            $data['age_config'] = $field?->age_config;
+        }
+        if ($data['age_config'] !== null) {
+            $validator = Validator::make(['age' => $data['age_config']], [
+                'age' => ['required', 'array:date_field,date_label,toggle_label,calculated_hint,estimate_label'],
+                'age.date_field' => ['required', 'string', 'max:64', 'regex:/^[a-z0-9][a-z0-9_-]*$/'],
+                'age.date_label' => ['required', 'string', 'max:255'],
+                'age.toggle_label' => ['required', 'string', 'max:255'],
+                'age.calculated_hint' => ['required', 'string', 'max:255'],
+                'age.estimate_label' => ['required', 'string', 'max:255'],
+            ]);
+            if ($validator->fails()) {
+                throw ValidationException::withMessages(['age_config_json' => implode(' ', $validator->errors()->all())]);
+            }
+            if ($data['age_config']['date_field'] === $data['key']) {
+                throw ValidationException::withMessages(['age_config_json' => 'Leeftijd en geboortedatum moeten verschillende opslagsleutels hebben.']);
+            }
+            if ($field?->age_config && $field->age_config['date_field'] !== $data['age_config']['date_field']) {
+                throw ValidationException::withMessages(['age_config_json' => 'Behoud de bestaande geboortedatum-sleutel om opgeslagen antwoorden te behouden.']);
+            }
         }
         $this->validateFieldJsonShapes($data);
         if ($data['photo_config'] !== null) {
@@ -241,6 +265,13 @@ class IntakeQuestionnaireController extends Controller
             ->where(fn ($q) => $q->where('answer_section_key', $answerSection)
                 ->orWhere(fn ($q) => $q->whereNull('answer_section_key')->whereHas('section', fn ($q) => $q->where('key', $answerSection))))->exists()) {
             throw ValidationException::withMessages(['key' => 'Deze sleutel is al gekoppeld aan een intakevraag en de opgeslagen antwoorden.']);
+        }
+
+        if ($data['age_config'] !== null && IntakeField::where('key', $data['age_config']['date_field'])
+            ->where('active', true)->whereHas('section', fn ($q) => $q->where('questionnaire_id', $section->questionnaire_id))
+            ->where(fn ($q) => $q->where('answer_section_key', $answerSection)
+                ->orWhere(fn ($q) => $q->whereNull('answer_section_key')->whereHas('section', fn ($q) => $q->where('key', $answerSection))))->exists()) {
+            throw ValidationException::withMessages(['age_config_json' => 'Deze geboortedatum-sleutel is al gekoppeld aan een actieve vraag.']);
         }
 
         return $data;

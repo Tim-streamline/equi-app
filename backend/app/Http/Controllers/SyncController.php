@@ -67,6 +67,7 @@ class SyncController extends Controller
         'library_items' => Models\LibraryItem::class,
         'library_chapters' => Models\LibraryChapter::class,
         'library_article_sections' => Models\LibraryArticleSection::class,
+        'library_filter_groups' => Models\LibraryFilterGroup::class,
         'library_categories' => Models\LibraryCategory::class,
         'library_item_categories' => Models\LibraryItemCategory::class,
         'library_bookmarks' => Models\LibraryBookmark::class,
@@ -173,6 +174,20 @@ class SyncController extends Controller
                     validator($op['data'], ['therapist_id' => ['nullable', Models\Therapist::assignmentRule($currentTherapist)]], [
                         'therapist_id.exists' => 'Deze therapist is gearchiveerd of niet beschikbaar voor nieuwe koppelingen.',
                     ])->validate();
+                }
+                if ($op['type'] === 'library_progress' && $op['op'] !== 'DELETE' && isset($op['data']['last_viewed_at'])) {
+                    // Two offline devices may have created different row IDs for
+                    // the same view. Merge by owner/item and retain newer history.
+                    $existing = Models\LibraryProgress::find($op['id']);
+                    $view = validator($op['data'] + ['item_id' => $existing?->item_id], [
+                        'item_id' => ['required', 'uuid', 'exists:library_items,id'],
+                        'last_viewed_at' => ['required', 'date'],
+                    ])->validate();
+                    DB::statement('INSERT INTO library_progress (id,user_id,item_id,last_viewed_at,progress,position_sec,completed,created_at,updated_at) VALUES (?,?,?,?,0,0,false,?,?) ON CONFLICT (user_id,item_id) DO UPDATE SET last_viewed_at = GREATEST(library_progress.last_viewed_at, EXCLUDED.last_viewed_at), updated_at = EXCLUDED.updated_at',
+                        [$op['id'], $userId, $view['item_id'], $view['last_viewed_at'], now(), now()]);
+                    $applied++;
+
+                    continue;
                 }
                 $historical = $op['type'] === 'protocol_supplement_intakes' ? $this->validateIntake($op, $payload['timezone'] ?? null) : null;
                 $this->applyOp($modelClass, $op);

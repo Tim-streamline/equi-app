@@ -27,7 +27,7 @@ class AdminLibraryCategoryTest extends TestCase
             ->assertOk()
             ->assertInertia(fn (Assert $page) => $page
                 ->component('LibraryCategories/Index')
-                ->has('categories', 1));
+                ->has('groups', 3)->has('categories', 22));
 
         $this->actingAs($admin, 'admin')->post('/admin/library-categories', [
             'label' => 'Nieuwe categorie',

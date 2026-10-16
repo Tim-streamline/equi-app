@@ -39,7 +39,7 @@ function renderScreen(format, body, chapters = [], canRead = true) {
     './LibraryThumbnail': { LibraryThumbnail: 'LibraryThumbnail' },
     '@/components/ui/Button': { Button: 'Button' },
     '@/hooks/useLibraryResource': {},
-    '@/hooks/useLibraryContent': { useLibraryContent: () => ({ data: { canRead, body: canRead ? body : null, chapters: canRead ? chapters : [], item: { id: 'video-item', creditCost: 1 }, access: { hasPlus: false, unlockedIds: [], credits: 0 } } }) },
+    '@/hooks/useLibraryViewed': { useLibraryViewed() {} }, '@/hooks/useLibraryContent': { useLibraryContent: () => ({ data: { canRead, body: canRead ? body : null, chapters: canRead ? chapters : [], item: { id: 'video-item', creditCost: 1 }, access: { hasPlus: false, unlockedIds: [], credits: 0 } } }) },
     '@/components/library/LibraryBookmarkButton': { LibraryBookmarkButton: 'LibraryBookmarkButton' },
     '@/components/library/RelatedLibraryItems': { RelatedLibraryItems: 'RelatedLibraryItems' },
     '@/hooks/useTabBarPadding': { useTabBarPadding: () => 80 },

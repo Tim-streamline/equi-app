@@ -323,8 +323,15 @@ export function useLibraryChapters(itemId: string) {
 export function useLibraryArticleSections(itemId: string) {
   return sorted(useCamelQuery(`SELECT * FROM library_article_sections WHERE item_id = ?`, [itemId]));
 }
+export function useLibraryFilterGroups() {
+  return sorted(useCamelQuery(`SELECT * FROM library_filter_groups WHERE active = 1`));
+}
+export function useLibraryViewingHistory() {
+  const uid = useCurrentUserId();
+  return useCamelQuery(`SELECT item_id, last_viewed_at FROM library_progress WHERE user_id = ?`, [uid]);
+}
 export function useLibraryCategories() {
-  return sorted(useCamelQuery(`SELECT * FROM library_categories`));
+  return sorted(useCamelQuery(`SELECT c.* FROM library_categories c JOIN library_filter_groups g ON g.id = c.group_id WHERE c.active = 1 AND g.active = 1`));
 }
 export function useLibraryItemCategories(): LibraryItemCategoryLink[] {
   const rows = useCamelQuery(`SELECT * FROM library_item_categories`);

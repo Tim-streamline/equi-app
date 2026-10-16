@@ -56,6 +56,14 @@ class IntakeReview
                     'flagged_options' => array_values(array_filter(is_array($value) ? $value : [], fn ($v) => is_scalar($v) && ($this->matches($v, $field->critical_if) || $this->flagged($v, $field->flag_if, $none)))),
                     'attachments' => [],
                 ];
+                if ($field->type === 'number' && $field->age_config) {
+                    $date = $answers[$answerSection][$field->age_config['date_field'] ?? ''] ?? null;
+                    $age = app(IntakeAge::class)->fromDate($date) ?? $value;
+                    $row['type'] = 'text';
+                    $row['value'] = ($age === null || $age === '' ? '' : $age.' '.($field->unit ?? ''))
+                        .($date ? "\n".($field->age_config['date_label'] ?? '').': '.$date : '');
+                    $row['empty'] = $this->empty($row['value']);
+                }
                 if (in_array($field->type, ['photo', 'file'])) {
                     foreach (is_array($value) ? $value : [] as $reference) {
                         $id = is_string($reference) ? explode(':', $reference)[1] ?? '' : '';

@@ -37,6 +37,10 @@ class IntakeProgress
                 }
                 $total++;
                 $answered = ! $review->empty($value);
+                if ($field->type === 'number' && $field->age_config) {
+                    $date = $answers[$field->answer_section_key ?? $section->key][$field->age_config['date_field'] ?? ''] ?? null;
+                    $answered = app(IntakeAge::class)->answered($value, $date);
+                }
                 if ($field->type === 'radio') {
                     $answered = is_scalar($value) && in_array((string) $value, $field->options ?? [], true);
                 }
@@ -44,7 +48,7 @@ class IntakeProgress
                     $answered = is_array($value) && count(array_intersect(array_filter($value, 'is_string'), $field->options ?? [])) > 0;
                 }
                 if ($field->type === 'repeater') {
-                    $answered = is_array($value) && count(array_filter($value, fn ($row) => is_array($row) && count(array_filter($row, fn ($v) => is_string($v) && trim($v) !== '')) > 0)) > 0;
+                    $answered = is_array($value) && count(array_filter($value, fn ($row) => is_array($row) && count(array_filter($row, fn ($v, $key) => ! str_starts_with((string) $key, '_') && is_string($v) && trim($v) !== '', ARRAY_FILTER_USE_BOTH)) > 0)) > 0;
                 }
                 if ($field->type === 'photo') {
                     $answered = $photos->answered($field, $value, $answers);

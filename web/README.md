@@ -14,6 +14,19 @@ Open http://127.0.0.1:3000. The server starts Expo on port 8082 and proxies API 
 
 `BACKEND_URL`, `POWERSYNC_URL`, `HOST`, `PORT`, and `METRO_PORT` can be set in `.env` or the process environment. Do not copy the mobile app's `.env`: browser URLs are same-origin and its native API address is unnecessary.
 
+### LAN access
+
+Use HTTPS for LAN browsing: the browser database requires secure-context APIs that are unavailable over HTTP on a LAN IP. Keep `HOST=127.0.0.1` for local HTTP access and add `HTTPS_HOST=192.168.1.209` to `.env` to enable a separate HTTPS listener on that IP, also on port 3000.
+
+Generate a development certificate using an existing local mkcert authority:
+
+```sh
+mkdir -p .certs
+mkcert -cert-file .certs/lan.pem -key-file .certs/lan-key.pem 192.168.1.209 localhost 127.0.0.1
+```
+
+Restart `npm start`, then open `https://192.168.1.209:3000` from the same LAN. Each client device must trust the public `rootCA.pem` from `mkcert -CAROOT`. Never copy the CA private key to clients. `.certs/` is ignored by Git; alternative certificate paths can be set with `HTTPS_CERT` and `HTTPS_KEY`. Local access stays at `http://localhost:3000`. If the LAN IP changes, update `HTTPS_HOST` and regenerate the certificate.
+
 ## Build and run
 
 ```sh

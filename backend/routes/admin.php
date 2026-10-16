@@ -12,6 +12,7 @@ use App\Http\Controllers\Admin\IngredientController;
 use App\Http\Controllers\Admin\IntakeBookingController;
 use App\Http\Controllers\Admin\IntakeQuestionnaireController;
 use App\Http\Controllers\Admin\LibraryCategoryController;
+use App\Http\Controllers\Admin\LibraryFilterGroupController;
 use App\Http\Controllers\Admin\LibraryItemController;
 use App\Http\Controllers\Admin\MediaAssetController;
 use App\Http\Controllers\Admin\ModerationReportController;
@@ -100,6 +101,7 @@ Route::middleware('auth:admin')->group(function () {
         Route::get('library/attachments/{attachment}', [LibraryAttachmentController::class, 'admin'])->whereUuid('attachment')->name('library.attachments.show');
         Route::post('library/{library}/unpublish', [LibraryItemController::class, 'unpublish'])->whereUuid('library')->name('library.unpublish');
         Route::resource('library', LibraryItemController::class)->except('show');
+        Route::resource('library-filter-groups', LibraryFilterGroupController::class)->only(['store', 'update']);
         Route::resource('library-categories', LibraryCategoryController::class)->only(['index', 'store', 'update', 'destroy']);
         Route::resource('seasonal-tips', SeasonalTipController::class)->only(['index', 'store', 'update', 'destroy']);
         Route::resource('nova', NovaController::class)->only(['index', 'store', 'update', 'destroy']);

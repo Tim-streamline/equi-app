@@ -88,6 +88,9 @@ class ProtocolNutrition
     {
         $products = [];
         foreach (['huidige-bijvoeding' => 'bijvoeding-nu', 'balancer' => 'balancer-nu', 'huidig-extra' => 'supplementen-nu', 'snacks-details' => 'snacks-aanwezig'] as $field => $gate) {
+            if ($field === 'balancer' && isset($answers['__bag_feed_migration'])) {
+                continue;
+            }
             if (isset($answers[$gate]) && mb_strtolower(trim((string) $answers[$gate])) !== 'ja') {
                 continue;
             }
@@ -110,7 +113,8 @@ class ProtocolNutrition
                 $amount = $text('hoeveelheid') ?: $text('dosering') ?: $text('hoeveel');
                 $frequency = $text('voerbeurten') !== '' ? $text('voerbeurten').' voerbeurten per dag'
                     : ($text('hoevaak') ?: ($text('frequentie') ?: ($field === 'huidig-extra' && $amount !== '' ? 'per dag' : '')));
-                $products[] = ['source' => $field, 'name' => $name, 'dosage' => implode(' · ', array_filter([$amount, $frequency]))];
+                $source = $field === 'huidige-bijvoeding' && ($row['_source'] ?? null) === 'balancer' ? 'balancer' : $field;
+                $products[] = ['source' => $source, 'name' => $name, 'dosage' => implode(' · ', array_filter([$amount, $frequency]))];
             }
         }
         $minerals = $answers['mineralen-toegang'] ?? [];

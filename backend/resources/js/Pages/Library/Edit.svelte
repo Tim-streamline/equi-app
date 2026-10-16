@@ -11,7 +11,7 @@
     import { Card, CardContent, CardHeader, CardTitle, Button, Input, Textarea, Select } from '$lib/components/ui';
     import { ArrowLeft, Eye } from '@lucide/svelte';
 
-    let { item, categories, therapists, automaticThumbnailUrl, videoDurationMinutes, videoPosters = {}, suggestionItems = [] } = $props();
+    let { item, categories, groups = [], therapists, automaticThumbnailUrl, videoDurationMinutes, videoPosters = {}, suggestionItems = [] } = $props();
     const isNew = !item;
     // Use the editor's local calendar date, avoiding UTC shifts near midnight.
     const today = new Date();
@@ -189,14 +189,22 @@
             </Card>
 
             <Card>
-                <CardHeader><CardTitle>Categories</CardTitle></CardHeader>
-                <CardContent class="flex flex-wrap gap-2">
-                    {#each categories as c (c.id)}
-                        <button type="button" onclick={() => ($form.category_ids = toggle($form.category_ids, c.id))}
-                            class={'rounded-full border px-3 py-1 text-xs ' + ($form.category_ids.includes(c.id) ? 'border-primary bg-primary text-primary-foreground' : 'hover:bg-accent')}>
-                            {c.label}
-                        </button>
+                <CardHeader><CardTitle>Filtergroepen en subcategorieën</CardTitle></CardHeader>
+                <CardContent class="space-y-4">
+                    {#each groups as group (group.id)}
+                        <fieldset class="space-y-2">
+                            <legend class="font-medium">{group.label}{!group.active ? ' (gearchiveerd)' : ''}</legend>
+                            <div class="flex flex-wrap gap-2">
+                                {#each categories.filter(c => c.group_id === group.id && ((c.active && group.active) || $form.category_ids.includes(c.id))) as c (c.id)}
+                                    <button type="button" aria-pressed={$form.category_ids.includes(c.id)} onclick={() => ($form.category_ids = toggle($form.category_ids, c.id))}
+                                        class={'rounded-full border px-3 py-2 text-sm ' + ($form.category_ids.includes(c.id) ? 'border-primary bg-primary text-primary-foreground' : 'hover:bg-accent')}>
+                                        {c.label}{!c.active ? ' (gearchiveerd)' : ''}
+                                    </button>
+                                {/each}
+                            </div>
+                        </fieldset>
                     {/each}
+                    <Field error={$form.errors.category_ids} />
                 </CardContent>
             </Card>
 

@@ -12,6 +12,7 @@ import { useIntake } from '@/lib/intake/store';
 import { AttachmentField } from './AttachmentField';
 import { ConfiguredPhotoField, PhotoExample } from './ConfiguredPhotoField';
 import { FieldLabel } from './FieldLabel';
+import { AgeField } from './AgeField';
 
 /** Normalize a persisted value to an array — guards against stale answers
  * saved under a different field type (e.g. a radio value left behind when the
@@ -110,6 +111,7 @@ function renderInput(
         />
       );
     case 'number':
+      if (field.ageConfig) return <AgeField field={field} sectionId={sectionId} />;
       return (
         <TextInputField
           value={asText(value)}

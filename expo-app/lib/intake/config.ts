@@ -33,6 +33,7 @@ export function buildIntakeSchema(sectionRows: Row[], fieldRows: Row[]): Section
       ...(row.answer_section_key ? { answerSection: String(row.answer_section_key) } : {}),
       label: String(row.label),
       photoConfig: json<Field['photoConfig']>(row.photo_config),
+      ageConfig: json<Field['ageConfig']>(row.age_config),
       type: String(row.type) as Field['type'],
       hint: row.hint == null ? undefined : String(row.hint),
       required: bool(row.required),

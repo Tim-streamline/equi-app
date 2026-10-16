@@ -3,6 +3,7 @@ import { useRef, useState } from 'react';
 import { ActivityIndicator, Text, View } from 'react-native';
 import { router } from 'expo-router';
 import { libraryRequest } from '@/hooks/useLibraryResource';
+import { useLibraryViewed } from '@/hooks/useLibraryViewed';
 import { useLibraryContent } from '@/hooks/useLibraryContent';
 import { libraryMetadata, type LibraryAccess, type LibraryCardItem } from '@/lib/library';
 import { MarkdownBody } from './MarkdownBody';
@@ -16,6 +17,7 @@ type Content = { item: LibraryCardItem; access: LibraryAccess; canRead: boolean;
 
 export function LibraryContent({ itemId, preview }: { itemId: string; preview?: LibraryCardItem }) {
   const { data, error, refresh, update, pendingContent, isConnected, unavailable } = useLibraryContent(itemId);
+  useLibraryViewed(itemId, !!data?.canRead);
   const pending = useRef(false);
   const [busy, setBusy] = useState(false);
   const [confirmedCost, setConfirmedCost] = useState<number | null>(null);
