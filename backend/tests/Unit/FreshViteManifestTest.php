@@ -15,6 +15,9 @@ class FreshViteManifestTest extends TestCase
         $absoluteBuildDirectory = public_path($buildDirectory);
 
         File::ensureDirectoryExists($absoluteBuildDirectory);
+        $vite = app(Vite::class);
+        $originalHotFile = $vite->hotFile();
+        $vite->useHotFile($absoluteBuildDirectory.'/hot');
 
         try {
             $this->writeManifest($absoluteBuildDirectory, 'assets/app-old.js');
@@ -32,6 +35,7 @@ class FreshViteManifestTest extends TestCase
             $this->assertStringContainsString('assets/app-new.js', $secondTags);
             $this->assertStringNotContainsString('assets/app-old.js', $secondTags);
         } finally {
+            $vite->useHotFile($originalHotFile);
             File::deleteDirectory($absoluteBuildDirectory);
         }
     }

@@ -15,25 +15,26 @@ const intake = {};
 for (const name of ['schema', 'config', 'logic']) intake[`./${name}`] = load(`../lib/intake/${name}.ts`, intake);
 const { INTAKE_SCHEMA: schema, INTAKE_NONE_OPTIONS: noneOptions } = intake['./schema'];
 
-test('every intake section uses the save-and-return label with the existing navigation', () => {
+test('every intake section uses the save-and-return label and returns to the existing overview', () => {
   let id;
   const paths = [];
   const jsx = (type, props) => ({ type, props });
   const modules = {
-    'react/jsx-runtime': { jsx, jsxs: jsx }, react: { useMemo: fn => fn() },
+    'react/jsx-runtime': { jsx, jsxs: jsx }, react: { useEffect: () => {}, useRef: () => ({ current: null }), useMemo: fn => fn() },
     'react-native': { View: 'View', Text: 'Text', ScrollView: 'ScrollView', KeyboardAvoidingView: 'KeyboardAvoidingView', Platform: { OS: 'android' } },
-    'expo-router': { router: { replace: path => paths.push(path) }, useLocalSearchParams: () => ({ id }) },
+    'expo-router': { router: { dismissTo: path => paths.push(path) }, useLocalSearchParams: () => ({ id }) },
     'react-native-safe-area-context': { SafeAreaView: 'SafeAreaView', useSafeAreaInsets: () => ({ bottom: 0 }) },
     'lucide-react-native': { ChevronLeft: 'ChevronLeft', X: 'X' },
     '@/components/ui/Button': { Button: 'Button' }, '@/components/ui/IconButton': { IconButton: 'IconButton' },
     '@/components/intake/IntakeScrollView': { IntakeScrollView: 'IntakeScrollView' },
     '@/components/intake/IntakeField': { IntakeField: 'IntakeField' },
+    '@/lib/intake/schema': intake['./schema'],
     '@/lib/intake/schema-provider': { useIntakeSchema: () => ({ schema, noneOptions }) },
     '@/lib/intake/logic': intake['./logic'], '@/lib/intake/store': { useIntake: () => ({ state: { answers: {} } }) },
   };
   const { default: Section } = load('../app/intake/section/[id].tsx', modules);
   const flatten = node => Array.isArray(node) ? node.flatMap(flatten) : node && typeof node === 'object' ? [node, ...flatten(node.props?.children), ...flatten(node.props?.footer)] : [];
-  assert.equal(schema.length, 12);
+  assert.equal(schema.length, 13);
   for (const section of schema) {
     id = section.id;
     const nodes = flatten(Section());

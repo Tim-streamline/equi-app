@@ -29,6 +29,7 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 use Inertia\Response;
 use Throwable;
@@ -96,8 +97,13 @@ class ProtocolController extends Controller
         return back()->with('success', count($data['ids']).' protocollen verwerkt.');
     }
 
-    public function create(Request $request): Response
+    public function create(Request $request): Response|RedirectResponse
     {
+        $draft = app(ProtocolNutrition::class)->draftForHorse($request->string('horse_id')->toString());
+        if ($draft) {
+            return to_route('admin.protocols.edit', $draft);
+        }
+
         return Inertia::render('Protocols/Edit', [
             'protocol' => null,
             ...$this->editorOptions($request->string('horse_id')->toString()),
@@ -118,12 +124,20 @@ class ProtocolController extends Controller
 
         try {
             $protocol = DB::transaction(function () use ($data, $protocolTemplate) {
-                $protocol = Protocol::query()->create($this->protocolAttributes($data, $protocolTemplate));
+                Horse::whereKey($data['horse_id'])->lockForUpdate()->firstOrFail();
+                $drafts = Protocol::where('horse_id', $data['horse_id'])->where('status', 'draft')->whereNull('protocol_template_id')->lockForUpdate()->get();
+                if ($drafts->count() > 1) {
+                    throw ValidationException::withMessages(['horse_id' => 'Open het protocol vanuit de juiste intake. Er zijn meerdere concepten.']);
+                }
+                $protocol = $drafts->first() ?? new Protocol;
+                $protocol->fill($this->protocolAttributes($data, $protocolTemplate))->save();
                 $this->syncStructure($protocol, $data);
                 AuditLogger::created($protocol);
 
                 return $protocol;
             });
+        } catch (ValidationException $exception) {
+            throw $exception;
         } catch (Throwable $exception) {
             report($exception);
 
@@ -141,13 +155,13 @@ class ProtocolController extends Controller
         return Inertia::render('Protocols/Edit', [
             'protocol' => $protocol,
             'weeklyUpdates' => DB::table('protocol_weekly_updates')->where('protocol_id', $protocol->id)->orderByDesc('week_number')->get(),
-            ...$this->editorOptions($protocol->horse_id, $protocol->therapist_id),
+            ...$this->editorOptions($protocol->horse_id, $protocol->therapist_id, $protocol),
         ]);
     }
 
     public function update(SaveProtocolRequest $request, Protocol $protocol): RedirectResponse
     {
-        $data = $request->validated();
+        $data = $protocol->protocol_template_id ? $request->validated() : $this->withRequiredPhases($request->validated(), $protocol);
         if ($protocol->status === 'archived') {
             $data['status'] = 'archived';
         }
@@ -160,7 +174,7 @@ class ProtocolController extends Controller
                 }
                 $history = app(ProtocolDayHistory::class);
                 $history->preserve($protocol, CarbonImmutable::now($history->timezone($protocol)));
-                $attributes = $this->protocolAttributes($data);
+                $attributes = $this->protocolAttributes($data, $protocol->protocol_template_id ? null : ProtocolTemplate::findOrFail($data['protocol_template_id']));
                 if ($data['published'] && $protocol->published_at) {
                     $attributes['published_at'] = $protocol->published_at;
                 }
@@ -169,6 +183,8 @@ class ProtocolController extends Controller
                 $this->syncStructure($protocol, $data);
                 AuditLogger::updated($protocol, $before);
             });
+        } catch (ValidationException $exception) {
+            throw $exception;
         } catch (Throwable $exception) {
             report($exception);
 
@@ -197,7 +213,7 @@ class ProtocolController extends Controller
 
     public function updateStatus(Request $request, Protocol $protocol): RedirectResponse
     {
-        $status = $request->validate(['status' => ['required', 'in:active,paused,completed']])['status'];
+        $status = $request->validate(['status' => ['required', 'in:draft,active,paused,completed']])['status'];
         DB::transaction(function () use ($protocol, $status, $request) {
             $protocol = Protocol::whereKey($protocol->id)->lockForUpdate()->firstOrFail();
             abort_if($protocol->status === 'archived', 422, 'Herstel het protocol eerst vanuit het archief.');
@@ -211,11 +227,11 @@ class ProtocolController extends Controller
     }
 
     /** @return array<string, mixed> */
-    private function editorOptions(?string $selectedHorseId = null, ?string $currentTherapistId = null): array
+    private function editorOptions(?string $selectedHorseId = null, ?string $currentTherapistId = null, ?Protocol $protocol = null): array
     {
         $nutrition = app(ProtocolNutrition::class);
         $horses = Horse::query()->where('status', 'active')->with('owner:id,name,email')->orderBy('name')->get(['id', 'owner_id', 'name', 'breed', 'age', 'sex', 'weight_kg', 'status']);
-        $answers = $horses->mapWithKeys(fn ($horse) => [$horse->id => $nutrition->answers($horse)]);
+        $answers = $horses->mapWithKeys(fn ($horse) => [$horse->id => $nutrition->answers($protocol && $protocol->horse_id === $horse->id ? $protocol : $nutrition->draftForHorse($horse->id))]);
 
         return [
             'intakeWeights' => $horses->mapWithKeys(fn ($horse) => [$horse->id => $nutrition->weight($answers[$horse->id]['gewicht'] ?? null) ?? $horse->weight_kg]),
@@ -245,6 +261,7 @@ class ProtocolController extends Controller
     {
         $protocol->load([
             'protocolTemplate:id,name',
+            'intake',
             'horse:id,name,owner_id,breed,age,sex,weight_kg,status',
             'horse.owner:id,name,email',
             'therapist:id,name,title',
@@ -341,11 +358,11 @@ class ProtocolController extends Controller
     /** @param array<string, mixed> $data
      * @return array<string, mixed>
      */
-    private function withRequiredPhases(array $data): array
+    private function withRequiredPhases(array $data, ?Protocol $protocol = null): array
     {
         $horse = Horse::findOrFail($data['horse_id']);
         $nutrition = app(ProtocolNutrition::class);
-        $horseWeightKg = $nutrition->actualWeight((new Protocol(['customer_settings' => $data['customer_settings'] ?? []]))->setRelation('horse', $horse), $nutrition->answers($horse));
+        $horseWeightKg = $nutrition->actualWeight((new Protocol(['customer_settings' => $data['customer_settings'] ?? []]))->setRelation('horse', $horse), $nutrition->answers($protocol ?? $nutrition->draftForHorse($horse->id)));
         $definitions = ProtocolTemplatePhase::query()
             ->where('protocol_template_id', $data['protocol_template_id'])
             ->with('weeks', 'supplements.weeks')
@@ -424,7 +441,7 @@ class ProtocolController extends Controller
         $selectionIds = [];
         $protocol = $phase->protocol;
         $nutrition = app(ProtocolNutrition::class);
-        $weight = $nutrition->actualWeight($protocol, $nutrition->answers($protocol->horse));
+        $weight = $nutrition->actualWeight($protocol, $nutrition->answers($protocol));
 
         foreach ($supplements as $supplementData) {
             $isExisting = filled($supplementData['id'] ?? null);

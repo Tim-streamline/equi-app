@@ -205,12 +205,12 @@ class SyncAccessPolicy
 
         $horseId = $this->value('horse_id', $existing, $data);
 
-        return ! is_string($horseId) || $horseId === '' || $this->ownsHorse($userId, $horseId);
+        return is_string($horseId) && $this->ownsHorse($userId, $horseId);
     }
 
     private function ownsIntakeAnswer(string $userId, ?object $existing, array $data): bool
     {
-        if ($existing && ! DB::table('intake_bookings')->where('id', $existing->response_id)->where('user_id', $userId)->exists()) {
+        if ($existing && ! $this->ownsIntake($userId, $existing->response_id)) {
             return false;
         }
         $responseId = $this->value('response_id', $existing, $data);
@@ -218,9 +218,16 @@ class SyncAccessPolicy
             return false;
         }
 
+        return $this->ownsIntake($userId, $responseId);
+    }
+
+    private function ownsIntake(string $userId, string $id): bool
+    {
         return DB::table('intake_bookings')
-            ->where('id', $responseId)
-            ->where('user_id', $userId)
+            ->join('horses', 'horses.id', '=', 'intake_bookings.horse_id')
+            ->where('intake_bookings.id', $id)
+            ->where('intake_bookings.user_id', $userId)
+            ->where('horses.owner_id', $userId)
             ->exists();
     }
 

@@ -4,16 +4,30 @@ type Database = {
   execute(sql: string, params?: any[]): Promise<any>;
   writeTransaction<T>(callback: (tx: any) => Promise<T>): Promise<T>;
 };
-export const bookingQuery = `SELECT id, submitted_at, updated_at FROM intake_bookings WHERE user_id = ? AND horse_id = ? AND status != 'cancelled' ORDER BY created_at DESC, id DESC LIMIT 1`;
-export async function ensureIntake(db: Database, userId: string, horseId: string, newId: () => string): Promise<string> {
+// Choose the selected horse's unfinished protocol; completed history never steals its intake.
+export const bookingQuery = `SELECT i.id, i.submitted_at, i.updated_at FROM intake_bookings i
+ JOIN protocols p ON p.id = i.protocol_id
+ WHERE i.user_id = ? AND i.horse_id = ? AND i.status != 'cancelled'
+ AND p.status NOT IN ('completed','archived')
+ ORDER BY i.submitted_at IS NOT NULL, i.created_at DESC, i.id DESC LIMIT 1`;
+export async function openOrCreateIntake(db: Database, userId: string, horseId: string, create: () => Promise<string>): Promise<string> {
   if (!userId || !horseId) throw new Error('Selecteer eerst je paard om de intake in te vullen.');
+  const existing = await db.getOptional<{ id: string }>(bookingQuery, [userId, horseId]);
+  if (existing) return existing.id;
+  // Recover a purchased intake that has not synced yet. Never create an unpaid intake.
+  const id = await create();
+  return ensureIntake(db, userId, horseId, () => id);
+}
+export async function ensureIntake(db: Database, userId: string, horseId: string, authorizedId: () => string): Promise<string> {
+  if (!userId || !horseId) throw new Error('Selecteer eerst je paard om de intake in te vullen.');
+  const id = authorizedId();
   return db.writeTransaction(async tx => {
-    const row = await tx.getOptional(bookingQuery, [userId, horseId]);
-    if (row) return row.id;
-    const id = newId();
-    const now = new Date().toISOString();
-    await tx.execute(`INSERT INTO intake_bookings (id,user_id,horse_id,status,intake_status,started_at,created_at,updated_at) VALUES (?,?,?,'pending','draft',?,?,?)`, [id,userId,horseId,now,now,now]);
-    return id;
+    const row = await tx.getOptional('SELECT id,user_id,horse_id FROM intake_bookings WHERE id = ?', [id]);
+    if (row) {
+      if (row.user_id !== userId || row.horse_id !== horseId) throw new Error('Deze intake hoort bij een ander paard of account.');
+      return row.id;
+    }
+    throw new Error('Je intake wordt nog gesynchroniseerd. Probeer het zo opnieuw.');
   });
 }
 export async function saveAnswer(db: Database, bookingId: string, section: string, field: string, value: unknown, newId: () => string) {

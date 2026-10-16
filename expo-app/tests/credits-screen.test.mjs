@@ -37,11 +37,11 @@ test('credits overview is compact, hides missing bundles and navigates to histor
   page.render().find(n => n?.props?.accessibilityLabel === 'Creditgeschiedenis').props.onPress();
   assert.deepEqual(page.calls, ['/(tabs)/account/credit-history']);
 });
-test('cancellation end supersedes renewal date and inactive Basic never advertises new credits', () => {
+test('cancellation end supersedes renewal date and inactive subscriptions never advertises new credits', () => {
   const page = screen({ ...summary, endsAt: '2026-10-01T12:00:00Z' });
-  assert.match(page.text(), /Je Basic-abonnement loopt tot/);
+  assert.match(page.text(), /Je abonnement loopt tot/);
   assert.doesNotMatch(page.text(), /Je volgende/);
-  assert.doesNotMatch(screen({ ...summary, hasBasic: false }).text(), /Je volgende|Je Basic-abonnement loopt tot/);
+  assert.doesNotMatch(screen({ ...summary, hasBasic: false }).text(), /Je volgende|Je abonnement loopt tot/);
 });
 test('active bundles keep the temporary top-up and relevant expiry warning visible', () => {
   const page = screen({ ...summary, bundles: [{ id: 'one', credits: 7 }], expiring: [{ credits: 3, date: '2026-10-14', urgent: false }] });

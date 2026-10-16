@@ -1,4 +1,6 @@
+import { SubscriptionGate } from '@/components/subscription/SubscriptionGate';
 import '../global.css';
+import { BrowserPushLifecycle } from './BrowserPush';
 import './browser-alerts';
 import { ErrorBoundary } from '@sentry/react';
 import { Stack, router, usePathname, useRootNavigationState } from 'expo-router';
@@ -19,10 +21,11 @@ export default function RootLayout() {
   return <ErrorBoundary><GestureHandlerRootView style={{ flex: 1 }}>
     <SafeAreaProvider>
       <View style={{ flex: 1, width: '100%', maxWidth: 1100, alignSelf: 'center', backgroundColor: '#FBF8F3' }}>
-        <DbProvider><IntakeSchemaProvider><IntakeProvider>
+        <DbProvider><SubscriptionGate><IntakeSchemaProvider><IntakeProvider>
           <LibraryContentSync />
+          <BrowserPushLifecycle />
           <Navigation />
-        </IntakeProvider></IntakeSchemaProvider></DbProvider>
+        </IntakeProvider></IntakeSchemaProvider></SubscriptionGate></DbProvider>
       </View>
     </SafeAreaProvider>
   </GestureHandlerRootView></ErrorBoundary>;

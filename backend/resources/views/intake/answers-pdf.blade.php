@@ -31,6 +31,8 @@
 @foreach ($section['rows'] as $row)
 <h3>{{ $row['label'] }}</h3>
 @if ($row['type'] === 'sectionhead')
+@elseif (!empty($row['not_applicable']))
+<p>Niet van toepassing</p>
 @elseif ($row['empty'])
 <p class="empty">Niet ingevuld</p>
 @elseif (in_array($row['type'], ['photo', 'file'], true))
@@ -38,6 +40,8 @@
 <div class="photo">
 @if (isset($images[$file['id']]))<img src="{{ $images[$file['id']] }}" alt="{{ $file['name'] }}"><br>@endif
 {{ $file['name'] }}
+@if(!empty($file['year']))<br>Jaartal: {{ $file['year'] }}@endif
+@if(!empty($file['slot']))<br>{{ $file['slot'] }}@endif
 </div>
 @endforeach
 @elseif ($row['type'] === 'repeater')

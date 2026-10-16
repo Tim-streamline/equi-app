@@ -9,6 +9,7 @@ use App\Models\IntakeQuestionnaire;
 use App\Models\User;
 use App\Support\IntakeAnswersPdf;
 use App\Support\IntakeReview;
+use App\Support\SubscriptionAccess;
 use Database\Seeders\IntakeQuestionnaireSeeder;
 use Firebase\JWT\JWT;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -18,7 +19,7 @@ use Tests\TestCase;
 
 class IntakeComplaintPhysicalRefinementsTest extends TestCase
 {
-    use RefreshDatabase;
+    use RefreshDatabase, \Tests\Concerns\HasSubscription;
 
     public function test_upgrade_preserves_answers_attachments_and_customizations_with_correct_order(): void
     {
@@ -43,7 +44,9 @@ class IntakeComplaintPhysicalRefinementsTest extends TestCase
         $untouched = $complaint->fields()->where('key', 'allergie')->firstOrFail();
         $untouched->update(['label' => 'Eigen allergievraag']);
         $physical = $q->sections()->where('key', 'fysiek')->firstOrFail();
-        $photo = $physical->fields()->where('key', 'foto-huid')->firstOrFail();
+        $photo = $q->sections()->where('key', 'intake-fotos')->firstOrFail()->fields()->where('key', 'foto-huid')->firstOrFail();
+        // Reconstruct the pre-photo-section placement for this older migration.
+        $photo->update(['section_id' => $physical->id, 'answer_section_key' => null]);
         $photo->update(['required' => true, 'optional' => false]);
         $booking = $this->booking();
         $attachment = IntakeAttachment::create(['booking_id' => $booking->id, 'section_key' => 'fysiek', 'field_key' => 'foto-huid', 'path' => 'existing.jpg', 'name' => 'existing.jpg', 'mime' => 'image/jpeg']);
@@ -70,6 +73,7 @@ class IntakeComplaintPhysicalRefinementsTest extends TestCase
                 $this->assertSame(1, $section->fields()->where('key', $addition['field']['id'])->count());
             }
         }
+        (require database_path('migrations/2026_10_15_000004_move_intake_photos_into_section.php'))->up();
         $expected = json_decode(file_get_contents(database_path('data/intake-questionnaire.json')), true);
         foreach (['klacht', 'fysiek', 'gedrag'] as $id) {
             $definition = collect($expected['sections'])->firstWhere('id', $id);
@@ -140,6 +144,9 @@ class IntakeComplaintPhysicalRefinementsTest extends TestCase
 
     private function asApiUser(User $user): void
     {
+        if (! app(SubscriptionAccess::class)->active($user->id)) {
+            $this->subscribe($user);
+        }
         $key = openssl_pkey_new(['private_key_bits' => 2048, 'private_key_type' => OPENSSL_KEYTYPE_RSA]);
         openssl_pkey_export($key, $private);
         $path = storage_path('framework/testing/intake-complaint-public.pem');

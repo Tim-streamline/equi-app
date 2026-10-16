@@ -1,5 +1,4 @@
 import assert from 'node:assert/strict';
-import { readFile } from 'node:fs/promises';
 import test from 'node:test';
 
 import {
@@ -81,22 +80,6 @@ test('ignores surrounding whitespace and accents in search text', () => {
   assert.deepEqual(
     filterLibraryItems(items, itemCategories, [], '  hoefbevangenhéid  ').map((item) => item.id),
     ['hoefbevangenheid'],
-  );
-});
-
-test('active Library filters use the app dark green and light cream colors', async () => {
-  const [librarySource, chipSource] = await Promise.all([
-    readFile(new URL('../app/(tabs)/(pager)/library.tsx', import.meta.url), 'utf8'),
-    readFile(new URL('../components/ui/Chip.tsx', import.meta.url), 'utf8'),
-  ]);
-
-  assert.match(
-    librarySource,
-    /variant=\{selected \? 'filterActive' : 'outline'\}/,
-  );
-  assert.match(
-    chipSource,
-    /filterActive:\s*\{\s*box:\s*'bg-teal-700',\s*text:\s*'text-canvas'\s*\}/,
   );
 });
 

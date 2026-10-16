@@ -6,6 +6,7 @@ use App\Models\AdminUser;
 use App\Models\Horse;
 use App\Models\IntakeAttachment;
 use App\Models\IntakeBooking;
+use App\Models\IntakeField;
 use App\Models\IntakeQuestionnaire;
 use App\Models\User;
 use App\Support\IntakeAnswersPdf;
@@ -14,6 +15,7 @@ use Firebase\JWT\JWT;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Mail\Events\MessageSending;
+use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Storage;
@@ -23,17 +25,37 @@ use Tests\TestCase;
 
 class IntakeSubmissionMailTest extends TestCase
 {
-    use RefreshDatabase;
+    use RefreshDatabase, \Tests\Concerns\HasSubscription;
 
     private IntakeBooking $booking;
 
     private string $token;
+
+    public function test_existing_intake_attachments_need_ownership_but_not_plus(): void
+    {
+        Storage::fake('local');
+        $response = $this->withHeader('Authorization', 'Bearer '.$this->token)
+            ->postJson('/api/intakes/'.$this->booking->id.'/attachments', [
+                'horse_id' => $this->booking->horse_id, 'section' => 'paard', 'field' => 'foto',
+                'file' => UploadedFile::fake()->image('horse.jpg'),
+            ])->assertCreated();
+        $this->assertStringStartsWith('attachment:', $response->json('value'));
+        $this->assertDatabaseCount('intake_attachments', 1);
+        $this->assertDatabaseCount('plus_intake_entitlements', 0);
+        $this->booking->horse->update(['owner_id' => User::factory()->create()->id]);
+        $this->postJson('/api/intakes/'.$this->booking->id.'/attachments', [
+            'horse_id' => $this->booking->horse_id, 'section' => 'paard', 'field' => 'foto',
+            'file' => UploadedFile::fake()->image('denied.jpg'),
+        ])->assertForbidden();
+        $this->assertDatabaseCount('intake_attachments', 1);
+    }
 
     protected function setUp(): void
     {
         parent::setUp();
         config(['mail.default' => 'array', 'mail.from.address' => 'sender@example.test']);
         $user = User::factory()->create(['name' => 'Account Owner', 'email' => 'account@example.test']);
+        $this->subscribe($user);
         $horse = Horse::create(['owner_id' => $user->id, 'name' => 'Lúna / paard']);
         $this->booking = IntakeBooking::create(['user_id' => $user->id, 'horse_id' => $horse->id, 'intake_status' => 'draft', 'review_notes' => 'Private therapist notes']);
         $q = IntakeQuestionnaire::create(['slug' => 'protocol-intake', 'name' => 'Intake', 'active' => true]);
@@ -86,7 +108,7 @@ class IntakeSubmissionMailTest extends TestCase
     {
         $this->booking->forceFill(['answers_email_status' => 'pending', 'submission_email_status' => 'pending'])->save();
         $answers = $this->booking->answers()->count();
-        $field = \App\Models\IntakeField::where('key', 'email')->firstOrFail();
+        $field = IntakeField::where('key', 'email')->firstOrFail();
         $field->update(['hint' => 'Na het afronden van de intake ontvang je op dit adres een kopie van je antwoorden.']);
 
         $migration = require database_path('migrations/2026_09_30_020000_retire_intake_customer_copies.php');
@@ -98,8 +120,8 @@ class IntakeSubmissionMailTest extends TestCase
         $this->assertSame('pending', $this->booking->fresh()->submission_email_status);
         $this->assertSame($answers, $this->booking->answers()->count());
         $this->assertNull($field->fresh()->hint);
-        $this->assertArrayNotHasKey('intakes:send-answer-copies', \Illuminate\Support\Facades\Artisan::all());
-        $this->assertArrayHasKey('intakes:send-submission-notifications', \Illuminate\Support\Facades\Artisan::all());
+        $this->assertArrayNotHasKey('intakes:send-answer-copies', Artisan::all());
+        $this->assertArrayHasKey('intakes:send-submission-notifications', Artisan::all());
         $this->assertCount(0, $this->messages());
     }
 
@@ -217,7 +239,8 @@ class IntakeSubmissionMailTest extends TestCase
     {
         $this->upload([$this->submission(['intake_status' => 'draft', 'submitted_at' => null])])->assertOk();
         $this->assertNull($this->booking->fresh()->submission_email_status);
-        $victim = IntakeBooking::create(['user_id' => User::factory()->create()->id]);
+        $victimUser = User::factory()->create();
+        $victim = IntakeBooking::create(['user_id' => $victimUser->id, 'horse_id' => Horse::create(['owner_id' => $victimUser->id, 'name' => 'Victim horse'])->id]);
         $this->upload([$this->submission(), ['op' => 'PATCH', 'type' => 'intake_bookings', 'id' => $victim->id, 'data' => ['intake_status' => 'submitted']]])->assertForbidden();
         $this->assertNull($this->booking->fresh()->submission_email_status);
         $this->booking->update(['intake_status' => 'submitted', 'submitted_at' => now()]);

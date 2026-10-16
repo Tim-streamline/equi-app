@@ -56,7 +56,7 @@ class ProtocolPhaseNormalizationMigrationTest extends TestCase
             'title' => 'Two phases',
             'total_weeks' => 6,
             'current_week' => 2,
-            'status' => 'active',
+            'status' => 'paused',
         ]);
         foreach (range(1, 2) as $phaseNumber) {
             ProtocolPhase::query()->create([
@@ -76,7 +76,7 @@ class ProtocolPhaseNormalizationMigrationTest extends TestCase
             'title' => 'Preparation plus three phases',
             'total_weeks' => 8,
             'current_week' => 2,
-            'status' => 'active',
+            'status' => 'paused',
         ]);
         foreach (['Voorbereiding', 'Phase 1', 'Phase 2', 'Phase 3'] as $order => $title) {
             ProtocolPhase::query()->create([

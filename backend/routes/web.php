@@ -3,15 +3,19 @@
 use App\Http\Controllers\CommunityController;
 use App\Http\Controllers\CreditController;
 use App\Http\Controllers\HorseDashboardController;
+use App\Http\Controllers\IntakeActivityController;
 use App\Http\Controllers\IntakeAttachmentController;
 use App\Http\Controllers\LibraryAttachmentController;
 use App\Http\Controllers\LibraryController;
 use App\Http\Controllers\PasswordResetController;
 use App\Http\Controllers\PlusPageController;
+use App\Http\Controllers\PlusUpgradeController;
 use App\Http\Controllers\PowerSyncAuthController;
 use App\Http\Controllers\PushTokenController;
 use App\Http\Controllers\RegistrationController;
+use App\Http\Controllers\SubscriptionController;
 use App\Http\Controllers\SyncController;
+use App\Http\Controllers\WebPushController;
 use App\Http\Controllers\WebSessionController;
 use App\Http\Middleware\AuthenticatePowerSyncJwt;
 use App\Http\Middleware\AuthenticateWebAppSession;
@@ -20,6 +24,9 @@ use Illuminate\Support\Facades\Route;
 Route::get('/', function () {
     return view('welcome');
 });
+
+// Public instruction image; using an API path also works through the web app proxy.
+Route::get('/api/intake-examples/hooves', fn () => response()->file(public_path('images/intake-hoef-voorbeeld.png')));
 
 // JWKS endpoint consumed by the PowerSync service (configured as
 // POWERSYNC_JWKS_URL). Must be reachable from inside the docker network.
@@ -44,8 +51,20 @@ Route::middleware(AuthenticatePowerSyncJwt::class)
     ->post('/api/sync/upload', [SyncController::class, 'upload']);
 
 Route::middleware(AuthenticatePowerSyncJwt::class)->group(function () {
+    Route::post('/api/intakes/{booking}/activity', [IntakeActivityController::class, 'update'])->whereUuid('booking');
+    Route::get('/api/intakes/{booking}/resume', [IntakeActivityController::class, 'resume'])->whereUuid('booking');
+    Route::get('/api/subscription', [SubscriptionController::class, 'show']);
+    Route::post('/api/subscription/renew', [SubscriptionController::class, 'renew']);
+    Route::get('/api/protocol-purchases/access', [PlusUpgradeController::class, 'state']);
+    Route::post('/api/protocol-purchases/open', [PlusUpgradeController::class, 'start']);
+    Route::post('/api/protocol-purchases/create', [PlusUpgradeController::class, 'create'])->middleware('throttle:30,1');
+    Route::get('/api/plus/access', [PlusUpgradeController::class, 'state']);
+    Route::post('/api/plus/start', [PlusUpgradeController::class, 'start']);
     Route::post('/api/intakes/{id}/attachments', [IntakeAttachmentController::class, 'store'])->whereUuid('id')->middleware('throttle:60,1');
     Route::get('/api/intake-media/{attachment}', [IntakeAttachmentController::class, 'show'])->whereUuid('attachment');
+    Route::get('/api/notifications/web-push', [WebPushController::class, 'config']);
+    Route::post('/api/notifications/web-push', [WebPushController::class, 'store'])->middleware('throttle:30,1');
+    Route::post('/api/notifications/web-push/remove', [WebPushController::class, 'remove']);
     Route::post('/api/notifications/push-token', [PushTokenController::class, 'store']);
     Route::get('/api/horses/{horse}/dashboard', [HorseDashboardController::class, 'show']);
     Route::get('/api/home', [HorseDashboardController::class, 'home']);
@@ -108,5 +127,7 @@ Route::middleware(AuthenticatePowerSyncJwt::class)->prefix('api/library/credits'
 Route::get('/api/library-attachments/{attachment}', [LibraryAttachmentController::class, 'show'])
     ->whereUuid('attachment')->middleware('signed')->name('library.attachment');
 
+Route::get('/api/protocol-page', [PlusPageController::class, 'show']);
+Route::get('/api/protocol-page/images/{kind}', [PlusPageController::class, 'image'])->where('kind', 'hero|portrait');
 Route::get('/api/plus-page', [PlusPageController::class, 'show']);
 Route::get('/api/plus-page/images/{kind}', [PlusPageController::class, 'image'])->where('kind', 'hero|portrait');

@@ -4,7 +4,7 @@ Bedankt voor je aanmelding bij {{ config('app.brand_name') }}. Klik op de onders
 
 {{ $confirmationUrl }}
 
-De link is 15 minuten geldig. Laat het registratiescherm openstaan. Na het klikken op de link word je daar automatisch ingelogd, ook als je de e-mail op een ander apparaat opent.
+De link is 15 minuten geldig. Zodra je op de link klikt, wordt je account aangemaakt. Staat het registratiescherm nog open? Dan word je daar automatisch ingelogd, ook als je de e-mail op een ander apparaat opent. Heb je het scherm gesloten? Dan kun je daarna zelf inloggen met je e-mailadres en wachtwoord.
 
 Werkt de link niet? Kopieer de link en plak hem in je browser.
 

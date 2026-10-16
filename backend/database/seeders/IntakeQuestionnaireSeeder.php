@@ -51,7 +51,9 @@ class IntakeQuestionnaireSeeder extends Seeder
                         ['key' => $fieldData['id']],
                         [
                             'order' => $order,
+                            'answer_section_key' => $fieldData['answerSection'] ?? null,
                             'label' => $fieldData['label'],
+                            'photo_config' => $fieldData['photoConfig'] ?? null,
                             'type' => $fieldData['type'],
                             'hint' => $fieldData['hint'] ?? null,
                             'required' => $fieldData['required'] ?? false,

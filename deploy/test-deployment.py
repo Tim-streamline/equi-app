@@ -24,6 +24,7 @@ class DeploymentTest(unittest.TestCase):
         for folder in ["releases", "incoming", "shared/backups", "shared/storage/app/private", "shared/deploy-tools"]:
             (self.site / folder).mkdir(parents=True, exist_ok=True)
         (self.shared / "deploy-tools/ploi-nginx.php").write_text("helper")
+        (self.shared / "deploy-tools/check-schema-compatibility.php").write_text("helper")
         (self.shared / "live-nginx.conf").write_text("original config")
         self.previous_env = "APP_ENV=staging\nMAIL_HOST=old.example.test\n"
         self.next_env = "APP_ENV=staging\nMAIL_HOST=new.example.test\n"
@@ -52,6 +53,10 @@ args = ' '.join(sys.argv[1:])
 with open(os.environ['CALLS'], 'a') as f: f.write(name + ' ' + args + '\\n')
 if os.environ.get('FAIL') and os.environ['FAIL'] in name + ' ' + args: sys.exit(1)
 if name == 'php8.5':
+    if args.startswith('artisan migrate') and os.environ.get('INCOMPATIBLE_SCHEMA'):
+        Path(os.environ['SCHEMA_APPLIED']).touch()
+    if 'check-schema-compatibility.php ' in args and Path(os.environ['SCHEMA_APPLIED']).exists():
+        if not Path(sys.argv[3], 'database/migrations/2026_10_14_000002_enforce_protocol_intake_invariants.php').exists(): sys.exit(1)
     if args == 'artisan down --retry=15': Path('storage/down').touch()
     if args == 'artisan up': Path('storage/down').unlink(missing_ok=True)
     if args.startswith('.deploy/backup-database.php '): Path(sys.argv[2]).write_text('backup')
@@ -70,7 +75,8 @@ if name == 'curl':
             path.chmod(0o755)
         self.env = {**os.environ, "PATH": f"{self.bin}:{os.environ['PATH']}", "CALLS": str(self.root / "calls"), "LIVE_NGINX": str(self.shared / "live-nginx.conf"),
                     "DEPLOY_ENVIRONMENT": "staging", "DEPLOY_HOSTNAME": "equi-app.online",
-                    "DEPLOY_DATABASE": "equi_app_staging", "DEPLOY_PLOI_SERVER_ID": "121767", "DEPLOY_PLOI_SITE_ID": "406977"}
+                    "DEPLOY_DATABASE": "equi_app_staging", "DEPLOY_PLOI_SERVER_ID": "121767", "DEPLOY_PLOI_SITE_ID": "406977",
+                    "SCHEMA_APPLIED": str(self.shared / 'schema-applied')}
         source = self.root / "artifact"
         self.make_release(source, NEW)
         archive = self.site / "incoming" / f"{NEW}.tar.gz"
@@ -134,6 +140,41 @@ if name == 'curl':
         self.assertFalse((self.shared / "last-successful-release").exists())
         self.assertEqual((self.shared / "live-nginx.conf").read_text(), "original config")
         self.assertEqual((self.shared / ".env").read_text(), self.previous_env)
+
+    def test_failed_activation_keeps_incompatible_old_code_in_maintenance(self):
+        self.env['INCOMPATIBLE_SCHEMA'] = '1'
+        result = self.run_deploy('curl')
+        self.assertNotEqual(result.returncode, 0)
+        self.assertEqual((self.site / 'current').resolve(), self.old)
+        self.assertTrue((self.shared / 'storage/down').exists())
+        self.assertIn('maintenance remains enabled', result.stderr)
+        self.assertTrue((self.shared / 'backups' / f'{NEW}.dump').exists())
+
+    def test_explicit_rollback_refuses_incompatible_code_before_switching(self):
+        self.env['INCOMPATIBLE_SCHEMA'] = '1'
+        self.assertEqual(self.run_deploy().returncode, 0)
+        result = self.run_deploy(mode='rollback', identifier=OLD)
+        self.assertNotEqual(result.returncode, 0)
+        self.assertEqual((self.site / 'current').resolve().name, NEW)
+        self.assertFalse((self.shared / 'storage/down').exists())
+
+    def test_stale_artifact_cannot_bypass_schema_guard_using_deploy_mode(self):
+        (self.shared / 'schema-applied').touch()
+        result = self.run_deploy()
+        self.assertNotEqual(result.returncode, 0)
+        self.assertEqual((self.site / 'current').resolve(), self.old)
+        self.assertNotIn('artisan migrate', self.calls())
+        self.assertNotIn('artisan down', self.calls())
+
+    def test_compatible_rollback_remains_available_after_schema_change(self):
+        self.env['INCOMPATIBLE_SCHEMA'] = '1'
+        migrations = self.old / 'database/migrations'
+        migrations.mkdir(parents=True)
+        (migrations / '2026_10_14_000002_enforce_protocol_intake_invariants.php').touch()
+        self.assertEqual(self.run_deploy().returncode, 0)
+        result = self.run_deploy(mode='rollback', identifier=OLD)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual((self.site / 'current').resolve(), self.old)
 
     def test_explicit_rollback_does_not_run_migrations_or_imports(self):
         self.assertEqual(self.run_deploy().returncode, 0)
@@ -219,7 +260,7 @@ if name == 'curl':
             "expo-app": "package.json app.json tailwind.config.js tsconfig.json global.css nativewind-env.d.ts",
         }
         directories = {
-            "web": "components db scripts public",
+            "web": "components db lib scripts public",
             "expo-app": "app assets components constants db hooks lib",
         }
         for project in files:
@@ -236,6 +277,8 @@ if name == 'curl':
                 (base / name / "local").touch()
         (source / "expo-app/app/screen.tsx").write_text("shared screen")
         (source / "web/components/provider.tsx").write_text("web provider")
+        (source / "web/lib/browser-push.ts").write_text("browser push helpers")
+        (source / "web/public/push-sw.js").write_text("push service worker")
         (source / "web/public/site.webmanifest").write_text('{"name":"EquiApp"}')
         (source / "web/public/apple-touch-icon.png").write_bytes(b"icon")
         (source / "web/public/powersync").mkdir()
@@ -245,6 +288,8 @@ if name == 'curl':
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertEqual((packed / "expo-app/app/screen.tsx").read_text(), "shared screen")
         self.assertEqual((packed / "web/components/provider.tsx").read_text(), "web provider")
+        self.assertEqual((packed / "web/lib/browser-push.ts").read_text(), "browser push helpers")
+        self.assertEqual((packed / "web/public/push-sw.js").read_text(), "push service worker")
         self.assertTrue((packed / "web/index.js").is_file())
         self.assertEqual((packed / "web/public/site.webmanifest").read_text(), '{"name":"EquiApp"}')
         self.assertEqual((packed / "web/public/apple-touch-icon.png").read_bytes(), b"icon")

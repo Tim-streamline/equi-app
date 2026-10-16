@@ -22,10 +22,12 @@ destination="$site/releases/$release"
 previous="$(readlink -f current || true)"
 switched=0
 maintenance=0
+migrations_attempted=0
 nginx_changed=0
 env_changed=0
 env_backup=
 nginx_tool="$site/shared/deploy-tools/ploi-nginx.php"
+schema_tool="$site/shared/deploy-tools/check-schema-compatibility.php"
 nginx_backup=
 finish() {
     result=$?
@@ -47,12 +49,17 @@ finish() {
             echo "WARNING: Nginx restoration failed. Saved configuration: $nginx_backup" >&2
         fi
     fi
-    if ((maintenance)) && [[ -f "$site/current/artisan" ]]; then
+    if ((result != 0 && migrations_attempted)) && [[ -f "$site/current/artisan" ]] && \
+        ! "$php" "$schema_tool" "$destination" "$site/current"; then
+        (cd "$site/current" && "$php" artisan down --retry=15) || true
+        echo "Activation failed after an incompatible schema change; maintenance remains enabled. Database backup: $site/shared/backups/$release.dump" >&2
+    elif ((maintenance)) && [[ -f "$site/current/artisan" ]]; then
         (cd "$site/current" && "$php" artisan up) || true
     fi
     exit "$result"
 }
 trap finish EXIT
+[[ -s "$schema_tool" ]] || { echo 'Schema compatibility helper is missing' >&2; exit 1; }
 
 if [[ "$mode" == deploy ]]; then
     [[ ! -e "$destination" ]] || { echo 'Release already exists' >&2; exit 1; }
@@ -75,11 +82,13 @@ if [[ "$mode" == deploy ]]; then
     ln -s "$site/shared/storage/app/public" "$destination/public/storage"
 else
     [[ -f "$destination/.deploy/check-release.php" ]] || { echo 'Unknown rollback release' >&2; exit 1; }
+    "$php" "$schema_tool" "$site/current" "$destination"
 fi
 cd "$destination"
 "$php" artisan config:clear
 "$php" artisan package:discover --ansi
 "$php" .deploy/check-release.php
+"$php" "$schema_tool" "$destination" "$destination"
 # On rollback regenerate config caches from the current shared environment too.
 "$php" artisan config:cache
 "$php" artisan route:cache
@@ -116,6 +125,7 @@ if [[ "$mode" == deploy ]]; then
         (cd "$site/current" && "$php" artisan down --retry=15)
         maintenance=1
     fi
+    migrations_attempted=1
     "$php" artisan migrate --force --no-interaction
     if [[ ! -f storage/app/private/powersync_private.pem && ! -f storage/app/private/powersync_public.pem ]]; then
         "$php" artisan powersync:generate-keys

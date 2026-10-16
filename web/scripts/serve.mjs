@@ -60,7 +60,7 @@ const server = http.createServer(async (req, res) => {
     file = path.join(dist, 'index.html');
   }
   res.setHeader('Content-Type', mime[path.extname(file)] ?? 'application/octet-stream');
-  res.setHeader('Cache-Control', file.endsWith('.html') ? 'no-cache' : 'public, max-age=3600');
+  res.setHeader('Cache-Control', file.endsWith('.html') || file.endsWith('/push-sw.js') ? 'no-cache' : 'public, max-age=3600');
   pipeline(createReadStream(file), res, () => {});
 });
 // PowerSync streams and Expo's development websocket (Fast Refresh).

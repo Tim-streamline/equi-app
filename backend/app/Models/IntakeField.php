@@ -9,6 +9,8 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 #[Fillable([
     'section_id',
+    'answer_section_key',
+    'photo_config',
     'key',
     'order',
     'label',
@@ -37,6 +39,7 @@ class IntakeField extends Model
     protected function casts(): array
     {
         return [
+            'photo_config' => 'array',
             'order' => 'integer',
             'required' => 'boolean',
             'optional' => 'boolean',

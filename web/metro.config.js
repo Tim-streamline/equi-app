@@ -10,6 +10,7 @@ config.transformer.babelTransformerPath = require.resolve('react-native-svg-tran
 config.resolver.assetExts = config.resolver.assetExts.filter(ext => ext !== 'svg');
 config.resolver.sourceExts.push('svg');
 const overrides = new Map([
+  ['components/notifications/BrowserPushSettings.tsx', 'components/BrowserPush.tsx'],
   ['db/provider.web.tsx', 'db/provider.tsx'],
   ['db/provider.tsx', 'db/provider.tsx'],
   ['db/auth.ts', 'db/auth.ts'],

@@ -33,7 +33,7 @@ class AdminIntakeQuestionnaireTest extends TestCase
         $this->seed(IntakeQuestionnaireSeeder::class);
 
         $this->assertDatabaseCount('intake_questionnaires', 1);
-        $this->assertDatabaseCount('intake_sections', 12);
+        $this->assertDatabaseCount('intake_sections', 13);
         $this->assertDatabaseCount('intake_fields', 382);
         $this->assertDatabaseHas('intake_fields', [
             'key' => 'merrie-vruchtbaarheid',
@@ -59,7 +59,7 @@ class AdminIntakeQuestionnaireTest extends TestCase
             ->assertInertia(fn (Assert $page) => $page
                 ->component('IntakeQuestionnaire/Index')
                 ->where('questionnaire.slug', 'protocol-intake')
-                ->has('questionnaire.sections', 12));
+                ->has('questionnaire.sections', 13));
 
         $this->actingAs($this->admin, 'admin')
             ->put("/admin/intake-questionnaire/{$questionnaireId}", [

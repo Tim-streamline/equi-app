@@ -12,6 +12,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 use Inertia\Response;
 use Throwable;
@@ -21,7 +22,13 @@ class IntakeBookingController extends Controller
     public function index(Request $request): Response
     {
         $bookings = IntakeBooking::query()
-            ->when($request->string('status')->toString(), fn ($query, $s) => $query->where('status', $s))
+            ->when($request->string('status')->toString(), function ($query, $status) {
+                if ($status === 'draft') {
+                    $query->whereNull('submitted_at')->where('status', '!=', 'cancelled');
+                } else {
+                    $query->where('status', $status)->when($status === 'pending', fn ($q) => $q->whereNotNull('submitted_at'));
+                }
+            })
             ->when($request->string('therapist')->toString(), fn ($query, $t) => $query->where('therapist_id', $t))
             ->with('user:id,name,email', 'horse:id,name', 'therapist:id,name')
             ->orderByRaw('submitted_at DESC NULLS LAST')->orderByDesc('created_at')->orderBy('id')
@@ -33,7 +40,7 @@ class IntakeBookingController extends Controller
             'filters' => $request->only('status', 'therapist'),
             'therapists' => Therapist::orderBy('name')->get(['id', 'name']),
             'counts' => [
-                'pending' => IntakeBooking::where('status', 'pending')->count(),
+                'pending' => IntakeBooking::where('status', 'pending')->whereNotNull('submitted_at')->count(),
                 'confirmed' => IntakeBooking::where('status', 'confirmed')->count(),
             ],
         ]);
@@ -87,6 +94,8 @@ class IntakeBookingController extends Controller
                 $locked->delete();
                 AuditLogger::deleted($locked);
             });
+        } catch (ValidationException $exception) {
+            throw $exception;
         } catch (Throwable $exception) {
             report($exception);
 

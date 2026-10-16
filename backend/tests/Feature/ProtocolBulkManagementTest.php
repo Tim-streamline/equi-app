@@ -56,10 +56,10 @@ class ProtocolBulkManagementTest extends TestCase
         $this->admin();
         $horse = Horse::create(['name' => 'Matched', 'owner_id' => User::factory()->create()->id, 'status' => 'active']);
         foreach (range(1, 23) as $number) {
-            Protocol::create(['horse_id' => $horse->id, 'protocol_template_id' => ProtocolTemplate::firstOrCreate(['name' => 'Test template'])->id, 'title' => 'Protocol '.$number, 'status' => 'active']);
+            Protocol::create(['horse_id' => $horse->id, 'protocol_template_id' => ProtocolTemplate::firstOrCreate(['name' => 'Test template'])->id, 'title' => 'Protocol '.$number, 'status' => 'completed']);
         }
         $this->protocol('active', 'Other');
-        $this->get('/admin/protocols?q=Matched&status=active')->assertInertia(fn (Assert $page) => $page
+        $this->get('/admin/protocols?q=Matched&status=completed')->assertInertia(fn (Assert $page) => $page
             ->has('protocols.data', 20)->has('selectionIds', 23));
         $this->get('/admin/protocols?q=Other&status=active')->assertInertia(fn (Assert $page) => $page->has('selectionIds', 1));
     }

@@ -5,7 +5,6 @@ namespace Tests\Feature;
 use App\Http\Middleware\AuthenticatePowerSyncJwt;
 use App\Models\BewegingAdvies;
 use App\Models\Horse;
-use App\Models\IntakeBooking;
 use App\Models\LibraryItem;
 use App\Models\ManagementAdvies;
 use App\Models\Plan;
@@ -106,8 +105,9 @@ class HorseDashboardTest extends TestCase
         $horse = Horse::create(['owner_id' => $this->owner->id, 'name' => 'New horse', 'status' => 'active']);
         $url = '/api/horses/'.$horse->id.'/dashboard';
         $this->getJson($url)->assertOk()->assertJsonPath('variant', 'basic')->assertJsonPath('protocol', null);
-        $this->protocol->update(['horse_id' => $horse->id]);
-        $this->getJson($url)->assertOk()->assertJsonPath('variant', 'plus')->assertJsonPath('protocol.id', $this->protocol->id);
+        $protocol = $this->protocol->replicate()->fill(['horse_id' => $horse->id]);
+        $protocol->save();
+        $this->getJson($url)->assertOk()->assertJsonPath('variant', 'plus')->assertJsonPath('protocol.id', $protocol->id);
     }
 
     public function test_historical_days_use_their_phase_and_update_calendar_after_checking_and_unchecking(): void
@@ -313,7 +313,8 @@ class HorseDashboardTest extends TestCase
     public function test_nutrition_uses_target_when_set_and_falls_back_to_current_weight(): void
     {
         $this->protocol->update(['customer_settings' => ['target_weight_kg' => 400, 'sugar' => '<6%', 'protein' => '7–10%']]);
-        $response = IntakeBooking::create(['user_id' => $this->owner->id, 'horse_id' => $this->horse->id, 'intake_status' => 'submitted', 'submitted_at' => now()]);
+        $response = $this->protocol->intake;
+        $response->update(['intake_status' => 'submitted', 'submitted_at' => now()]);
         foreach (['huidige-bijvoeding' => [['merk' => 'Metazoa', 'product' => 'Fit', 'hoeveelheid' => '100 g'], ['merk' => 'Other', 'product' => 'Mix']], 'water-type' => ['Grondwater / bronwater']] as $field => $value) {
             $response->answers()->create(['section_id' => 'voeding', 'field_id' => $field, 'value' => json_encode($value)]);
         }
@@ -400,9 +401,9 @@ class HorseDashboardTest extends TestCase
         $otherHorse = Horse::create(['owner_id' => $this->owner->id, 'name' => 'Tweede paard', 'status' => 'active']);
         foreach ([
             ['horse_id' => $otherHorse->id],
-            ['published_at' => null],
-            ['published_at' => now()->addDay()],
-            ['published_at' => now()->subDays(2)],
+            ['published_at' => null, 'status' => 'draft'],
+            ['published_at' => now()->addDay(), 'status' => 'paused'],
+            ['published_at' => now()->subDays(2), 'status' => 'completed'],
             ['status' => 'paused'],
         ] as $attributes) {
             $excluded = $this->protocol->replicate()->fill($attributes);
@@ -446,12 +447,12 @@ class HorseDashboardTest extends TestCase
         SeasonalTip::create(['month' => 'augustus', 'month_order' => 8, 'body' => 'Managed seasonal text', 'active' => true, 'cta_item_id' => $item->id]);
         SeasonalTip::create(['month' => 'juli', 'month_order' => 7, 'body' => 'Outdated text', 'active' => true]);
         $this->getJson('/api/horses/'.$this->horse->id.'/dashboard')->assertOk()->assertJsonPath('variant', 'basic')
-            ->assertJsonPath('credits', 9)->assertJsonPath('showPlusUpsell', true)
+            ->assertJsonPath('credits', 9)->assertJsonPath('showPlusUpsell', false)
             ->assertJsonPath('seasonalTip.body', 'Managed seasonal text')->assertJsonCount(0, 'recommendations')->assertJsonPath('seasonalTip.item.id', $item->id);
         $plan = Plan::create(['slug' => 'plus', 'label' => 'Plus', 'name' => 'Plus', 'price_cents' => 100, 'currency' => 'EUR', 'interval' => 'month']);
         $plan->benefits()->create(['label' => 'Persoonlijk protocol', 'order' => 1]);
         $this->getJson('/api/horses/'.$this->horse->id.'/dashboard')->assertOk()
-            ->assertJsonPath('plusOffer.priceLabel', '€ 1,00')->assertJsonPath('plusOffer.benefits.0', 'Persoonlijk protocol');
+            ->assertJsonPath('plusOffer', null);
         $this->owner->subscriptions()->create(['plan_id' => $plan->id, 'status' => 'active', 'price_cents' => 100, 'currency' => 'EUR', 'interval' => 'month']);
         $this->getJson('/api/horses/'.$this->horse->id.'/dashboard')->assertOk()->assertJsonPath('variant', 'plus')
             ->assertJsonPath('protocol', null)->assertJsonPath('showPlusUpsell', false);

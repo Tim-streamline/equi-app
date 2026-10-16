@@ -27,9 +27,9 @@ class PlusPageTest extends TestCase
         $this->get('/admin/plus-page')->assertOk()->assertInertia(fn (AssertableInertia $page) => $page->component('PlusPage/Index')->has('content.steps', 4));
         $content = PlusPage::defaults(); $content['heroTitle'] = 'Aangepaste kop';
         $content['reviews'] = []; $content['faqs'] = []; $content['benefits'] = [];
-        $this->post('/admin/plus-page', ['content' => json_encode($content), 'hero' => UploadedFile::fake()->image('hero.jpg'), 'portrait' => UploadedFile::fake()->image('shelley.png')])->assertRedirect()->assertSessionHasNoErrors();
+        $this->post('/admin/plus-page', ['protocol_price_cents' => 19900, 'content' => json_encode($content), 'hero' => UploadedFile::fake()->image('hero.jpg'), 'portrait' => UploadedFile::fake()->image('shelley.png')])->assertRedirect()->assertSessionHasNoErrors();
         $page = PlusPage::current(); Storage::disk('local')->assertExists([$page->hero_path, $page->portrait_path]);
-        $this->getJson('/api/plus-page')->assertJsonPath('content.heroTitle', 'Aangepaste kop')->assertJsonCount(0, 'content.reviews');
+        $this->getJson('/api/plus-page')->assertJsonPath('protocolPriceCents', 19900)->assertJsonPath('content.price', '€ 199,00')->assertJsonPath('content.heroTitle', 'Aangepaste kop')->assertJsonCount(0, 'content.reviews');
         $this->get('/api/plus-page/images/portrait')->assertOk()->assertHeader('Content-Type', 'image/png');
         $this->assertDatabaseCount('subscriptions', 0); $this->assertDatabaseCount('plans', 0);
         $oldHero = $page->hero_path; $oldPortrait = $page->portrait_path;
@@ -43,6 +43,9 @@ class PlusPageTest extends TestCase
         Storage::fake('local'); $this->editor();
         $this->postJson('/admin/plus-page', ['content' => ['heroTitle' => 'Incomplete']])->assertUnprocessable();
         $this->post('/admin/plus-page', ['content' => json_encode(PlusPage::defaults()), 'hero' => UploadedFile::fake()->create('bad.svg', 1, 'image/svg+xml')])->assertSessionHasErrors('hero');
+        foreach ([0, -1, 1.5, 10000001] as $price) {
+            $this->postJson('/admin/plus-page', ['protocol_price_cents' => $price, 'content' => PlusPage::defaults()])->assertUnprocessable()->assertJsonValidationErrors('protocol_price_cents');
+        }
         $this->assertDatabaseCount('plus_pages', 0); $this->assertSame([], Storage::disk('local')->allFiles());
     }
     public function test_content_management_requires_editor_role(): void

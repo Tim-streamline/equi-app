@@ -32,7 +32,7 @@ class AdminBookingDeletionTest extends TestCase
 
     public function test_delete_removes_only_the_booking_and_updates_the_overview(): void
     {
-        $other = $this->booking->replicate();
+        $other = $this->booking->replicate(['protocol_id']);
         $other->save();
         $this->from('/admin/bookings/'.$this->booking->id)
             ->delete('/admin/bookings/'.$this->booking->id, ['confirm_delete' => true])

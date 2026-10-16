@@ -83,7 +83,7 @@ class LibraryController extends Controller
             if ($discovery->canRead($item, $access)) {
                 return;
             }
-            abort_if($item->is_plus, 403, 'Dit item is alleen beschikbaar met actief Plus.');
+            abort_if($item->is_plus, 403, 'Dit item is beschikbaar met een actief abonnement.');
             $cost = (int) $item->credit_cost;
             abort_if($request->integer('credits') !== $cost, 409, 'Het aantal benodigde credits is gewijzigd. Open het item opnieuw.');
             app(\App\Support\CreditLedger::class)->spend($user, $cost, $item->id);

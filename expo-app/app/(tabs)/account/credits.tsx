@@ -72,7 +72,7 @@ export default function CreditsScreen() {
           <Text accessibilityLiveRegion="polite" className="font-bold text-[36px] text-ink">{data.balance} credits</Text>
           <Text className="text-[16px] text-ink-70">Beschikbaar</Text>
           {data.hasBasic && (data.endsAt
-            ? <Text className="mt-2 text-[14px] text-ink-70">Je Basic-abonnement loopt tot {date(data.endsAt)}</Text>
+            ? <Text className="mt-2 text-[14px] text-ink-70">Je abonnement loopt tot {date(data.endsAt)}</Text>
             : data.nextRenewal && <Text className="mt-2 text-[14px] text-ink-70">Je volgende {data.monthlyCredits} credits komen op {date(data.nextRenewal)}</Text>)}
         </View>
         {data.expiring.length > 0 && <View className="gap-1 rounded-xl bg-mint-50 p-4">
@@ -80,16 +80,16 @@ export default function CreditsScreen() {
         </View>}
         <View className="gap-3 rounded-2xl border border-ink-8 bg-white p-5">
           <Text className="font-bold text-[19px] text-ink">Hoe credits werken</Text>
-          <View className="gap-1"><Text className="font-semi text-[15px] text-ink">{data.monthlyCredits} credits per maand</Text><Text className="text-[14px] leading-5 text-ink-70">Met Basic krijg je na iedere succesvolle verlenging {data.monthlyCredits} nieuwe credits. Ongebruikte Basic-credits kun je opsparen tot maximaal {data.membershipCap} credits.</Text></View>
+          <View className="gap-1"><Text className="font-semi text-[15px] text-ink">{data.monthlyCredits} credits per maand</Text><Text className="text-[14px] leading-5 text-ink-70">Met je abonnement krijg je na iedere succesvolle verlenging {data.monthlyCredits} nieuwe credits. Ongebruikte abonnementscredits kun je opsparen tot maximaal {data.membershipCap} credits.</Text></View>
           <View className="gap-1"><Text className="font-semi text-[15px] text-ink">Ontgrendel wat bij jou past</Text><Text className="text-[14px] leading-5 text-ink-70">Gebruik je credits voor artikelen, video's en andere bibliotheekitems. Een eenmaal ontgrendeld item hoef je nooit meer opnieuw met credits te ontgrendelen.</Text></View>
-          <View className="gap-1"><Text className="font-semi text-[15px] text-ink">Je bibliotheek wordt bewaard</Text><Text className="text-[14px] leading-5 text-ink-70">Ontgrendelde items blijven opgeslagen in je persoonlijke bibliotheek. Zolang Basic actief is kun je ze bekijken. Na beëindiging van Basic wordt de toegang gepauzeerd. Word je later opnieuw lid, dan krijg je direct weer toegang tot je eerder ontgrendelde items.</Text></View>
+          <View className="gap-1"><Text className="font-semi text-[15px] text-ink">Je bibliotheek wordt bewaard</Text><Text className="text-[14px] leading-5 text-ink-70">Ontgrendelde items blijven opgeslagen in je persoonlijke bibliotheek. Zolang je abonnement actief is kun je ze bekijken. Na beëindiging van je abonnement wordt de toegang gepauzeerd. Word je later opnieuw lid, dan krijg je direct weer toegang tot je eerder ontgrendelde items.</Text></View>
           <View className="gap-1"><Text className="font-semi text-[15px] text-ink">Extra credits</Text><Text className="text-[14px] leading-5 text-ink-70">Bijgekochte credits zijn {data.validityMonths} maanden geldig vanaf aankoopdatum.</Text></View>
         </View>
         {data.bundles.length > 0 && (data.checkoutAvailable
           ? <Button title="Credits bijkopen" onPress={() => setBuying(value => !value)} />
           : <TemporaryCreditButton disabled={busy} onAdded={() => refresh()} />)}
         {buying && data.checkoutAvailable && data.bundles.length > 0 && <View className="gap-3">
-          {!data.hasBasic && <Text className="text-ink-70">Je hebt een actief Basic-abonnement nodig om credits bij te kopen.</Text>}
+          {!data.hasBasic && <Text className="text-ink-70">Je hebt een actief abonnement nodig om credits bij te kopen.</Text>}
           {data.bundles.map(bundle => <View key={bundle.id} className="gap-2 rounded-2xl border border-ink-8 bg-white p-5">
             {!!bundle.label && <Text className="text-[13px] text-teal-700">{bundle.label}</Text>}
             <Text className="font-bold text-[20px] text-ink">{bundle.credits} credits</Text>

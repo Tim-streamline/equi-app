@@ -66,44 +66,14 @@ class ReferenceSeeder extends Seeder
 
     private function seedPlans(): void
     {
-        $free = Plan::create([
-            'slug' => 'free', 'label' => 'Gratis', 'name' => 'EquiApp Free',
-            'price_cents' => 0, 'currency' => 'EUR', 'interval' => 'monthly',
-            'price_suffix' => '/ maand', 'description' => 'Voor wie wil rondkijken.',
+        $subscription = Plan::create([
+            'slug' => 'subscription', 'label' => 'Abonnement', 'name' => 'EquiApp abonnement',
+            'price_cents' => 1200, 'currency' => 'EUR', 'interval' => 'monthly',
+            'price_suffix' => '/ maand', 'description' => 'Toegang tot alle appfuncties. Protocollen koop je apart; bibliotheekcredits blijven van toepassing.',
             'is_recommended' => false, 'order' => 0,
         ]);
-        foreach (['1 paard', 'Beperkte scans', 'Bibliotheek voorvertoning'] as $i => $b) {
-            PlanBenefit::create(['plan_id' => $free->id, 'label' => $b, 'order' => $i]);
-        }
-
-        $plus = Plan::create([
-            'slug' => 'plus', 'label' => 'Plus', 'name' => 'EquiApp Plus',
-            'price_cents' => 1200, 'currency' => 'EUR', 'interval' => 'monthly',
-            'price_suffix' => '/ maand', 'description' => 'Voor de actieve verzorger.',
-            'is_recommended' => false, 'order' => 1,
-        ]);
-        foreach ([
-            'Onbeperkte scans + AI-advies',
-            'Toegang tot alle bibliotheek-content',
-            'Direct vragen stellen aan Shelley',
-            'Tot 3 paarden',
-        ] as $i => $b) {
-            PlanBenefit::create(['plan_id' => $plus->id, 'label' => $b, 'order' => $i]);
-        }
-
-        $bundle = Plan::create([
-            'slug' => 'bundle', 'label' => 'Aanbevolen', 'name' => 'Opleiding bundel',
-            'price_cents' => 499700, 'currency' => 'EUR', 'interval' => 'one_time',
-            'price_suffix' => 'eenmalig', 'description' => 'EquiApp Plus + 8-maands opleiding.',
-            'is_recommended' => true, 'order' => 2,
-        ]);
-        foreach ([
-            'Alles uit Plus',
-            '8 maanden begeleiding van Shelley',
-            'Certificaat na afronding',
-            'Toegang tot live workshops',
-        ] as $i => $b) {
-            PlanBenefit::create(['plan_id' => $bundle->id, 'label' => $b, 'order' => $i]);
+        foreach (['Alle appfuncties', 'Bibliotheek met credits', 'Community', 'Paarden en protocollen beheren'] as $i => $benefit) {
+            PlanBenefit::create(['plan_id' => $subscription->id, 'label' => $benefit, 'order' => $i]);
         }
     }
 

@@ -34,6 +34,24 @@ test('late token renewal cannot restore a cleared session', async () => {
   assert.equal(await getSession(), null);
 });
 
+test('activation bypasses both a cached token and a request started before activation', async () => {
+  let finish, tokens = 0;
+  globalThis.fetch = async url => {
+    if (url.endsWith('/csrf')) return response({ token: 'csrf' });
+    tokens++;
+    if (tokens === 1) return new Promise(resolve => { finish = resolve; });
+    return response({ ...session('owner'), token: 'subscribed:1' });
+  };
+  const beforeActivation = getSession();
+  while (!finish) await new Promise(resolve => setImmediate(resolve));
+  const afterActivation = getSession(undefined, true);
+  finish(response({ ...session('owner'), token: 'subscribed:0' }));
+  assert.equal((await beforeActivation).token, 'subscribed:0');
+  assert.equal((await afterActivation).token, 'subscribed:1');
+  assert.equal((await getSession()).token, 'subscribed:1');
+  assert.equal(tokens, 2);
+});
+
 test('renewal refuses a different account from another browser tab', async () => {
   globalThis.fetch = async url => response(url.endsWith('/csrf') ? { token: 'csrf' } : session('first'));
   await login('first@example.test', 'secret');

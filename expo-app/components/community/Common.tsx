@@ -24,8 +24,8 @@ export function CommunityDialog({ open, close, title, children }: { open: boolea
 }
 export function MembershipNotice() {
   return <View className="mx-5 mb-4 rounded-2xl bg-mint-50 p-4">
-    <Text className="font-semi text-[15px] text-teal-700">Lees mee, stel vragen met Basic of Plus</Text>
-    <Text className="mt-1 mb-3 text-[14px] leading-5 text-ink-70">Lezen en bewaren is gratis. Met Basic of Plus kun je berichten plaatsen, antwoorden en liken.</Text>
+    <Text className="font-semi text-[15px] text-teal-700">Stel je vraag aan de community</Text>
+    <Text className="mt-1 mb-3 text-[14px] leading-5 text-ink-70">Met je abonnement kun je berichten lezen, plaatsen, beantwoorden en liken.</Text>
     <View className="self-start"><Action label="Bekijk abonnementen" onPress={() => router.push('/(tabs)/account/subscription')} /></View>
   </View>;
 }

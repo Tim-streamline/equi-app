@@ -1,3 +1,4 @@
+import { BrowserPushSettings } from '@/components/notifications/BrowserPushSettings';
 import { ActivityIndicator, Alert, ScrollView, Switch, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
@@ -35,6 +36,7 @@ export default function PreferencesScreen() {
             />
           </View>
         )}
+        <BrowserPushSettings />
       </ScrollView>
     </SafeAreaView>
   );

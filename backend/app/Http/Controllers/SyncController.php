@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models;
+use App\Support\ProtocolAccess;
 use App\Support\ProtocolDayHistory;
 use App\Support\SyncAccessPolicy;
 use Carbon\CarbonImmutable;
@@ -125,6 +126,14 @@ class SyncController extends Controller
                 }
                 $policy->authorize($userId, $op);
                 if ($op['type'] === 'intake_bookings') {
+                    $booking = Models\IntakeBooking::find($op['id']);
+                    app(ProtocolAccess::class)->authorizeBooking($userId, $op['data']['horse_id'] ?? $booking?->horse_id, $op['id']);
+                } elseif ($op['type'] === 'intake_answers') {
+                    $answer = Models\IntakeAnswer::find($op['id']);
+                    $booking = Models\IntakeBooking::findOrFail($op['data']['response_id'] ?? $answer?->response_id);
+                    app(ProtocolAccess::class)->authorizeBooking($userId, $booking->horse_id, $booking->id);
+                }
+                if ($op['type'] === 'intake_bookings') {
                     $before = Models\IntakeBooking::query()->lockForUpdate()->find($op['id']);
                     if ($op['op'] !== 'DELETE' && ! $before?->submitted_at && $before?->intake_status !== 'submitted') {
                         $newSubmissions[] = $op['id'];
@@ -167,6 +176,10 @@ class SyncController extends Controller
                 }
                 $historical = $op['type'] === 'protocol_supplement_intakes' ? $this->validateIntake($op, $payload['timezone'] ?? null) : null;
                 $this->applyOp($modelClass, $op);
+                if ($op['type'] === 'intake_answers' && isset($booking)) {
+                    $booking->forceFill(['last_activity_at' => now(), 'last_section' => $op['data']['section_id'] ?? $answer?->section_id ?? $booking->last_section,
+                        'last_field' => $op['data']['field_id'] ?? $answer?->field_id ?? $booking->last_field])->save();
+                }
                 if ($historical) {
                     [$protocol, $date, $itemId, $done, $now] = $historical;
                     app(ProtocolDayHistory::class)->setDone($protocol, $date, $itemId, $done, $now, false);

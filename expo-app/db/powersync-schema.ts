@@ -98,6 +98,8 @@ const protocols = new Table({
   started_at: column.text,
   status: column.text,
   published_at: column.text,
+  created_at: column.text,
+  updated_at: column.text,
 }, { indexes: { byHorse: ['horse_id'] } });
 
 const protocol_phases = new Table({
@@ -424,6 +426,9 @@ const subscriptions = new Table({
   renews_at: column.text,
   renews_label: column.text,
   cancelled_at: column.text,
+  paid_through: column.text,
+  ended_at: column.text,
+  cancel_requested_at: column.text,
   max_horses: column.integer,
 }, { indexes: { byUser: ['user_id'] } });
 
@@ -491,7 +496,12 @@ const nova_fallback_replies = new Table({
   order: column.integer,
 });
 
+const plus_intake_entitlements = new Table({
+  user_id: column.text, horse_id: column.text, booking_id: column.text,
+});
+
 const intake_bookings = new Table({
+  protocol_id: column.text,
   user_id: column.text,
   horse_id: column.text,
   therapist_id: column.text,
@@ -534,6 +544,8 @@ const intake_sections = new Table({
 
 const intake_fields = new Table({
   section_id: column.text,
+  answer_section_key: column.text,
+  photo_config: column.text,
   key: column.text,
   order: column.integer,
   label: column.text,
@@ -620,6 +632,7 @@ export const AppSchema = new Schema({
   chat_messages,
   nova_fallback_replies,
   intake_bookings,
+  plus_intake_entitlements,
   intake_questionnaires,
   intake_sections,
   intake_fields,

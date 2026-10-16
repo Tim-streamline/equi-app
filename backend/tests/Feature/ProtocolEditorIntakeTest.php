@@ -86,6 +86,23 @@ class ProtocolEditorIntakeTest extends TestCase
         $this->postJson('/admin/protocols/'.$protocol->id.'/status', ['status' => 'active'])->assertUnprocessable();
     }
 
+    public function test_new_protocol_page_can_open_without_a_selected_horse(): void
+    {
+        $this->get('/admin/protocols/create')->assertOk();
+    }
+
+    public function test_therapist_configures_the_intake_draft_without_creating_a_second_pair(): void
+    {
+        $this->get('/admin/protocols/create?horse_id='.$this->horse->id)
+            ->assertRedirect('/admin/protocols/'.$this->intake->protocol_id.'/edit');
+        $this->put('/admin/protocols/'.$this->intake->protocol_id, $this->payload)->assertSessionHasNoErrors();
+        $this->assertDatabaseCount('protocols', 1);
+        $this->assertDatabaseCount('intake_bookings', 1);
+        $this->assertSame($this->payload['protocol_template_id'], $this->intake->protocol->protocol_template_id);
+        $this->assertSame('Intake test', $this->intake->protocol->protocol_template_name);
+        $this->assertSame(['90 g', '15 g', '180 g'], $this->intake->protocol->phases->first()->supplements->pluck('dosage')->all());
+    }
+
     private function answer(string $field, mixed $value): void
     {
         $this->intake->answers()->updateOrCreate(['field_id' => $field], ['section_id' => $field === 'gewicht' ? 'paard' : 'voeding', 'value' => json_encode($value)]);
@@ -93,12 +110,12 @@ class ProtocolEditorIntakeTest extends TestCase
 
     public function test_submitted_intake_weight_drives_editor_and_authoritative_saved_doses(): void
     {
-        $this->get('/admin/protocols/create?horse_id='.$this->horse->id)->assertOk()->assertInertia(fn (Assert $page) => $page->where('intakeWeights.'.$this->horse->id, 535));
+        $this->get('/admin/protocols/'.$this->intake->protocol_id.'/edit')->assertOk()->assertInertia(fn (Assert $page) => $page->where('intakeWeights.'.$this->horse->id, 535));
         $this->post('/admin/protocols', $this->payload)->assertSessionHasNoErrors();
         $protocol = Protocol::firstOrFail();
         $this->assertSame(['90 g', '15 g', '180 g'], $protocol->phases->first()->supplements->pluck('dosage')->all());
         $this->assertSame(['automatic'], $protocol->phases->first()->supplements->pluck('dosage_mode')->unique()->values()->all());
-        $preview = $this->postJson('/admin/protocols/preview', $this->payload)->assertOk();
+        $preview = $this->postJson('/admin/protocols/'.$protocol->id.'/preview', $this->payload)->assertOk();
         $preview->assertJsonPath('protocol.nutrition.roughage.minimumKg', 10.7)->assertJsonPath('protocol.nutrition.roughage.maximumKg', 16.05);
     }
 
@@ -112,7 +129,7 @@ class ProtocolEditorIntakeTest extends TestCase
         $this->post('/admin/protocols', $payload)->assertSessionHasNoErrors();
         $protocol = Protocol::firstOrFail();
         $this->assertSame(['82 g persoonlijk', '15 g', '200 g'], $protocol->phases->first()->supplements->pluck('dosage')->all());
-        $data = app(HorseDashboard::class)->protocol($protocol, CarbonImmutable::parse('2026-09-01'), answers: app(ProtocolNutrition::class)->answers($this->horse));
+        $data = app(HorseDashboard::class)->protocol($protocol, CarbonImmutable::parse('2026-09-01'), answers: app(ProtocolNutrition::class)->answers($this->intake->protocol));
         $this->assertEquals(8, $data['nutrition']['roughage']['minimumKg']);
         $this->assertSame('Voedingsadvies op maat', $data['nutrition']['advice'][0]['title']);
         $this->get('/admin/protocols/'.$protocol->id.'/edit')->assertInertia(fn (Assert $page) => $page->where('protocol.phases.0.supplements.0.dosage_mode', 'manual')->where('protocol.customer_settings.weight_kg', 600));
@@ -129,7 +146,7 @@ class ProtocolEditorIntakeTest extends TestCase
     public function test_all_current_products_and_individual_overrides_reach_customer_output(): void
     {
         $nutrition = app(ProtocolNutrition::class);
-        $answers = $nutrition->answers($this->horse);
+        $answers = $nutrition->answers($this->intake->protocol);
         $feeds = $nutrition->currentFeeds($answers);
         $this->assertCount(7, $feeds);
         $this->assertCount(7, array_unique(array_column($feeds, 'id')));
@@ -201,7 +218,7 @@ class ProtocolEditorIntakeTest extends TestCase
         $payload['published'] = true;
         $this->post('/admin/protocols', $payload)->assertSessionHasNoErrors();
         $protocol = Protocol::firstOrFail();
-        $customer = app(HorseDashboard::class)->protocol($protocol, CarbonImmutable::parse('2026-09-15', 'Europe/Amsterdam'), answers: app(ProtocolNutrition::class)->answers($this->horse));
+        $customer = app(HorseDashboard::class)->protocol($protocol, CarbonImmutable::parse('2026-09-15', 'Europe/Amsterdam'), answers: app(ProtocolNutrition::class)->answers($this->intake->protocol));
         $previewNutrition = $preview->json('protocol.nutrition');
         $customerNutrition = $customer['nutrition'] + ['hayLibraryItem' => null, 'waterLibraryItem' => null];
         // Saving creates snapshot IDs; authored content and calculated values must match.

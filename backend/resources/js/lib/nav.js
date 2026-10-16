@@ -50,7 +50,7 @@ export const navSections = [
         title: 'Content',
         roles: ['content_editor'],
         items: [
-            { label: 'Ontdek Plus', href: '/admin/plus-page', icon: BookOpen, roles: ['content_editor'] },
+            { label: 'Protocol kopen', href: '/admin/plus-page', icon: BookOpen, roles: ['content_editor'] },
             { label: 'Library', href: '/admin/library', icon: BookOpen },
             { label: 'Categories', href: '/admin/library-categories', icon: FolderTree },
             { label: 'Seasonal tips', href: '/admin/seasonal-tips', icon: CalendarHeart },

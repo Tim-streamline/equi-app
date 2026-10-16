@@ -2,8 +2,9 @@
 
 namespace App\Http\Middleware;
 
+use App\Models\User;
+use App\Support\SubscriptionAccess;
 use Closure;
-use Firebase\JWT\JWK;
 use Firebase\JWT\JWT;
 use Firebase\JWT\Key;
 use Illuminate\Http\Request;
@@ -40,6 +41,13 @@ class AuthenticatePowerSyncJwt
 
         $request->attributes->set('powersync_user_id', $decoded->sub);
         $request->attributes->set('powersync_claims', (array) $decoded);
+
+        $user = User::find($decoded->sub);
+        abort_unless($user && ! $user->disabled_at, 403);
+        // Authentication and renewal remain reachable when account access has expired.
+        if (! $request->is('api/subscription', 'api/subscription/renew', 'api/notifications/web-push/remove')) {
+            app(SubscriptionAccess::class)->requireActive($user->id);
+        }
 
         return $next($request);
     }

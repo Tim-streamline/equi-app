@@ -2,12 +2,14 @@
 
 namespace App\Http\Requests\Admin;
 
+use App\Models\Protocol;
 use App\Models\ProtocolPhaseSupplement;
 use App\Models\ProtocolTemplatePhase;
 use App\Models\Supplement;
 use App\Models\Therapist;
 use App\Rules\ShortProtocolText;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Support\Str;
 use Illuminate\Validation\Validator;
 
 class SaveProtocolRequest extends FormRequest
@@ -28,7 +30,7 @@ class SaveProtocolRequest extends FormRequest
             'therapist_id' => ['nullable', 'uuid', Therapist::assignmentRule($this->route('protocol')?->therapist_id)],
             'title' => ['required', 'string', 'max:255'],
             'started_at' => ['nullable', 'date'],
-            'status' => ['required', $this->route('protocol')?->status === 'archived' ? 'in:archived' : 'in:active,paused,completed'],
+            'status' => ['required', $this->route('protocol')?->status === 'archived' ? 'in:archived' : 'in:draft,active,paused,completed'],
             'published' => ['required', 'boolean'],
 
             'customer_settings' => ['sometimes', 'array:weight_kg,use_target_weight,target_weight_kg,sugar,protein,weekly_update_day,feed_overrides,management,hay_library_item_id,water_library_item_id'],
@@ -116,6 +118,14 @@ class SaveProtocolRequest extends FormRequest
     public function after(): array
     {
         return [function (Validator $validator): void {
+            $protocol = $this->route('protocol');
+            if ($protocol && $protocol->horse_id !== $this->input('horse_id')) {
+                $validator->errors()->add('horse_id', 'Het paard van een bestaand protocol kan niet worden gewijzigd.');
+            }
+            if ($this->input('status') === 'active' && Str::isUuid((string) $this->input('horse_id')) && Protocol::where('horse_id', $this->input('horse_id'))->where('status', 'active')
+                ->when($protocol, fn ($q) => $q->whereKeyNot($protocol->id))->exists()) {
+                $validator->errors()->add('status', 'Dit paard heeft al een actief protocol. Rond dat eerst af of pauzeer het.');
+            }
             $hasCompactAnalysis = filled($this->input('analysis.summary'))
                 || filled($this->input('analysis.observations'));
             if ($this->boolean('published') && $hasCompactAnalysis) {
@@ -138,7 +148,7 @@ class SaveProtocolRequest extends FormRequest
             }
 
             $protocol = $this->route('protocol');
-            if ($protocol && $protocol->protocol_template_id !== $protocolTemplateId) {
+            if ($protocol?->protocol_template_id && $protocol->protocol_template_id !== $protocolTemplateId) {
                 $validator->errors()->add('protocol_template_id', 'De protocoltemplate van een bestaand protocol kan niet worden gewijzigd.');
 
                 return;

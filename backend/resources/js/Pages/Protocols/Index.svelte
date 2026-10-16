@@ -22,7 +22,7 @@
     function toggle(id) { selected = selected.includes(id) ? selected.filter((value) => value !== id) : [...selected, id]; }
     function bulk(action) {
         const ids = [...selected];
-        if (action === 'delete' && !window.confirm(`${ids.length} geselecteerde protocollen definitief verwijderen? Alle bijbehorende protocolgegevens worden verwijderd. Dit kan niet ongedaan worden gemaakt.`)) return;
+        if (action === 'delete' && !window.confirm(`${ids.length} geselecteerde protocollen definitief verwijderen? De bijbehorende intake, antwoorden, bijlagen en protocolgegevens worden verwijderd. Dit kan niet ongedaan worden gemaakt.`)) return;
         failure = '';
         busy = true;
         router.post('/admin/protocols/bulk', { action, ids, confirmed: action === 'delete' }, {

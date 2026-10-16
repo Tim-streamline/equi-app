@@ -1,3 +1,4 @@
+import { SubscriptionGate } from '@/components/subscription/SubscriptionGate';
 import '../global.css';
 
 import { Stack } from 'expo-router';
@@ -65,6 +66,7 @@ function RootLayout() {
     <GestureHandlerRootView style={{ flex: 1, backgroundColor: '#FBF8F3' }}>
       <SafeAreaProvider>
         <DbProvider>
+          <SubscriptionGate>
           <LibraryThumbnailPreloader />
           <LibraryContentSync />
           <ProtocolNotifications />
@@ -85,6 +87,7 @@ function RootLayout() {
               </View>
             </IntakeProvider>
           </IntakeSchemaProvider>
+          </SubscriptionGate>
         </DbProvider>
       </SafeAreaProvider>
     </GestureHandlerRootView>

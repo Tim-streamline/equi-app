@@ -5,7 +5,7 @@
     <p>Hallo {{ $name }},</p>
     <p>Bedankt voor je aanmelding bij {{ config('app.brand_name') }}. Klik op de onderstaande link om je e-mailadres te bevestigen:</p>
     <p><a href="{{ $confirmationUrl }}" style="display: inline-block; padding: 12px 20px; background: #127a79; color: #fff; border-radius: 8px; text-decoration: none;">Bevestig mijn e-mailadres</a></p>
-    <p>De link is 15 minuten geldig. Laat het registratiescherm openstaan. Na het klikken op de link word je daar automatisch ingelogd, ook als je de e-mail op een ander apparaat opent.</p>
+    <p>De link is 15 minuten geldig. Zodra je op de link klikt, wordt je account aangemaakt. Staat het registratiescherm nog open? Dan word je daar automatisch ingelogd, ook als je de e-mail op een ander apparaat opent. Heb je het scherm gesloten? Dan kun je daarna zelf inloggen met je e-mailadres en wachtwoord.</p>
     <p>Werkt de knop niet? Kopieer deze link en plak hem in je browser:<br><a href="{{ $confirmationUrl }}">{{ $confirmationUrl }}</a></p>
     <p>Heb je geen account aangevraagd? Dan kun je deze e-mail negeren.</p>
     <p>Met vriendelijke groet,<br>Het {{ config('app.brand_name') }}-team</p>

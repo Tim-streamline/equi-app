@@ -1,3 +1,4 @@
+import { PurchasedProtocols } from '@/components/intake/PurchasedProtocols';
 import { KeyboardTextInput as TextInput, KeyboardViewport as KeyboardAvoidingView, KeyboardScrollView } from '@/components/ui/KeyboardForm';
 import { LibraryThumbnail } from "@/components/library/LibraryThumbnail";
 import { useEffect, useRef, useState, type ReactNode } from "react";
@@ -27,8 +28,6 @@ import {
 import { Button } from "@/components/ui/Button";
 import { Avatar } from "@/components/ui/Avatar";
 import { useTabBarPadding } from "@/hooks/useTabBarPadding";
-import { IntakeEntryCard } from "@/components/intake/IntakeEntryCard";
-import { useIntake } from "@/lib/intake/store";
 import {
   useStoreMutations,
   useCurrentUser,
@@ -68,7 +67,6 @@ export default function ProtocolListScreen() {
   const [month, setMonth] = useState<string>();
   const { data, error, refresh, horseId } = useHorseDashboard(month);
   const user = useCurrentUser();
-  const { state: intake } = useIntake();
   const [orders, setOrders] = useState<DashboardSupplement[] | null>(null);
   const [phase, setPhase] = useState<DashboardPhase | null>(null);
   const [weeklyOpen, setWeeklyOpen] = useState(false);
@@ -159,22 +157,28 @@ export default function ProtocolListScreen() {
         </Pressable>
       )}
       {!data && !error && <ActivityIndicator color="#18BAB0" />}
-      {data && !protocol && (
+      {!protocol && (
         <ScrollView
           contentContainerStyle={{ padding: 20, paddingBottom: padBottom }}
         >
-          {!intake.submittedAt ? (
-            <IntakeEntryCard variant="standalone" />
-          ) : (
-            <View className="rounded-2xl bg-white p-5">
-              <Text className="font-bold text-[16px] text-ink">
-                Intake verzonden
+          <PurchasedProtocols />
+          {!!horseId && data?.horse.id === horseId && data.showPlusUpsell && (
+            <Pressable
+              accessibilityRole="link"
+              accessibilityLabel={`Protocol kopen voor ${data.horse.name}`}
+              onPress={() => router.push('/protocol-purchase')}
+              className="rounded-[22px] bg-[#FFF0EC] p-5"
+            >
+              <Text className="font-semi text-[17px] leading-[23px] text-ink">
+                Een persoonlijk protocol voor {data.horse.name}
               </Text>
-              <Text className="mt-2 text-[13px] text-ink-50">
-                Je protocol verschijnt hier zodra je therapeut het heeft
-                gepubliceerd.
+              <Text className="mt-2 text-[14px] leading-[22px] text-ink-70">
+                Koop een persoonlijk protocol voor je paard, afgestemd op jouw paard, zijn klachten en jullie doelen.
               </Text>
-            </View>
+              <Text className="mt-3 font-semi text-[14px] text-mint-700">
+                Protocol kopen →
+              </Text>
+            </Pressable>
           )}
         </ScrollView>
       )}
@@ -780,7 +784,7 @@ function Nutrition({
       </View>
       <LibraryLink
         title="Hooi laten analyseren of zelf testen"
-        description={`Bekijk hoe je een monster neemt en de uitslag beoordeelt.${hasPlus ? " Zonder credit met Plus." : ""}`}
+        description={`Bekijk hoe je een monster neemt en de uitslag beoordeelt.${hasPlus ? " Inbegrepen bij je abonnement." : ""}`}
         item={nutrition.hayLibraryItem}
         search="Hooianalyse"
         selection
@@ -840,7 +844,7 @@ function Nutrition({
               title="Water laten analyseren"
               description={
                 hasPlus
-                  ? "Bekijk de uitleg zonder credit met Plus."
+                  ? "Bekijk de uitleg met je abonnement."
                   : "Bekijk de uitleg in de bibliotheek."
               }
               item={nutrition.waterLibraryItem}

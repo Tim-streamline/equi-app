@@ -169,9 +169,9 @@
                     {/if}
                     <Field label="Order"><Input type="number" bind:value={$form.order} /></Field>
                     <label class="flex items-center gap-2 text-sm"><input type="checkbox" bind:checked={$form.is_featured} class="size-4 rounded border-input" /> Featured</label>
-                    <label class="flex items-center gap-2 text-sm"><input type="checkbox" bind:checked={$form.is_plus} class="size-4 rounded border-input" /> Plus only</label>
+                    <label class="flex items-center gap-2 text-sm"><input type="checkbox" bind:checked={$form.is_plus} class="size-4 rounded border-input" /> Inbegrepen bij abonnement</label>
                     {#if $form.is_plus}
-                        <p class="text-sm text-muted-foreground">Alleen voor actief Plus. Geen credits nodig. Eerder met credits ontgrendelde items blijven toegankelijk.</p>
+                        <p class="text-sm text-muted-foreground">Inbegrepen bij een actief abonnement. Geen credits nodig. Eerder met credits ontgrendelde items blijven toegankelijk.</p>
                     {:else}
                         <Field label="Credits (0 = gratis)" error={$form.errors.credit_cost}><Input type="number" min="0" bind:value={$form.credit_cost} /></Field>
                     {/if}

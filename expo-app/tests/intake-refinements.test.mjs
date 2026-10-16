@@ -13,11 +13,11 @@ const { INTAKE_SCHEMA, INTAKE_NONE_OPTIONS } = modules['./schema'];
 const { buildIntakeSchema } = modules['./config'];
 const { visibleFields, missingRequired, isFieldAnswered, fieldFlagged, answeredCount, countFlags } = modules['./logic'];
 const payload = JSON.parse(readFileSync(new URL('../../backend/database/data/intake-questionnaire.json', import.meta.url)));
-const synced = buildIntakeSchema(payload.sections.map(s => ({ ...s, key: s.id, order: s.nr })), payload.sections.flatMap(s => s.fields.map((f, order) => ({ ...f, key: f.id, section_id: s.id, order, show_if: JSON.stringify(f.showIf), flag_if: JSON.stringify(f.flagIf), critical_if: JSON.stringify(f.criticalIf), repeater_sub: JSON.stringify(f.sub) }))));
+const synced = buildIntakeSchema(payload.sections.map(s => ({ ...s, key: s.id, order: s.nr })), payload.sections.flatMap(s => s.fields.map((f, order) => ({ ...f, key: f.id, section_id: s.id, answer_section_key: f.answerSection, photo_config: JSON.stringify(f.photoConfig), order, show_if: JSON.stringify(f.showIf), flag_if: JSON.stringify(f.flagIf), critical_if: JSON.stringify(f.criticalIf), repeater_sub: JSON.stringify(f.sub) }))));
 
-test('the exported questionnaire matches the offline source including all 12 sections', () => {
+test('the exported questionnaire matches the offline source including all 13 sections', () => {
   assert.deepEqual(INTAKE_SCHEMA, payload.sections);
-  assert.equal(INTAKE_SCHEMA.length, 12);
+  assert.equal(INTAKE_SCHEMA.length, 13);
   assert.deepEqual(INTAKE_NONE_OPTIONS, payload.none_options);
 });
 for (const [name, schema] of [['offline', INTAKE_SCHEMA], ['synced', synced]]) {
@@ -109,16 +109,18 @@ for (const [name, schema] of [['offline', INTAKE_SCHEMA], ['synced', synced]]) {
     for (const choice of field('fysiek', 'bespiering').options.filter(o => o !== a.bespiering)) {
       assert.ok(!visible('fysiek', { ...a, bespiering: choice }).includes(id));
     }
-    assert.equal(field('fysiek', 'foto-huid').label, 'Foto van de klacht (indien van toepassing)');
-    assert.equal(field('fysiek', 'foto-hoeven').label, 'Maak foto’s van alle vier de hoeven');
-    assert.ok(missingRequired(s, {}).some(f => f.id === 'foto-hoeven'));
+    assert.equal(field('intake-fotos', 'foto-huid').label, 'Is je klacht zichtbaar?');
+    assert.equal(field('intake-fotos', 'foto-hoeven').label, 'De hoeven');
+    assert.ok(missingRequired(section('intake-fotos'), {}).some(f => f.id === 'foto-hoeven'));
     const answers = { bespiering: 'Normaal' };
     for (const f of visibleFields(s, answers)) {
       if (f.id === 'foto-huid' || f.id === 'bespiering') continue;
       answers[f.id] = f.type === 'photo' ? ['attachment:existing:foto.jpg'] : f.type === 'multi' ? [f.options[0]] : f.options?.[0] ?? 'Ingevuld';
     }
-    assert.deepEqual(missingRequired(s, answers), [], 'section can complete without a visible complaint photo');
-    assert.ok(isFieldAnswered(field('fysiek', 'foto-hoeven'), Array.from({ length: 8 }, (_, i) => `attachment:${i}:hoef.jpg`)));
+    answers['foto-hoeven'] = Array.from({length:4},(_,i)=>`attachment:hoof-${i}:hoef.jpg`);
+    const photoMeta = Object.fromEntries(answers['foto-hoeven'].map((ref,i)=>[`hoeven-slot-${i}`,ref]));
+    assert.deepEqual(missingRequired(s, answers, { fysiek: answers, __photos: photoMeta }), [], 'section can complete without a visible complaint photo');
+    assert.equal(isFieldAnswered(field('intake-fotos', 'foto-hoeven'), Array.from({ length: 8 }, (_, i) => `attachment:${i}:hoef.jpg`)), false, 'unlabelled older images need view labels, not another upload');
   });
   test(`${name}: complaint intake has the requested twelve main questions and conditional required followups (OPT-96)`, () => {
     const ids = ['hulpvraag', 'klacht-beschrijving', 'begonnen-wanneer', 'ontstaan-verandering', 'klacht-frequentie', 'klacht-ontwikkeling', 'klacht-patronen', 'klacht-invloed', 'huidige-aanpak', 'klacht-onderzocht', 'klacht-gelijktijdig', 'wens'];

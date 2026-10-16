@@ -3,13 +3,12 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { View, Text, Pressable, ActivityIndicator, Modal, useWindowDimensions } from 'react-native';
 import { useLocalSearchParams } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Search, X, ChevronDown, Check } from 'lucide-react-native';
+import { Search, X, ChevronDown, Check, SlidersHorizontal, ChevronLeft } from 'lucide-react-native';
 import { LibraryCard } from '@/components/library/LibraryCard';
 import { useLibraryResource } from '@/hooks/useLibraryResource';
 import { useLibraryAccessRecords } from '@/hooks/useLibraryAccessRecords';
 import { useLibraryBookmarks } from '@/hooks/useLibraryBookmarks';
 import { type LibraryAccess } from '@/lib/library';
-import { Chip } from '@/components/ui/Chip';
 import { useTabBarPadding } from '@/hooks/useTabBarPadding';
 import { useLibraryCategories, useLibraryItemCategories, useLibraryItems, useValue } from '@/db/hooks';
 import { filterLibraryItems, toggleLibraryCategory } from '@/lib/library-filter';
@@ -37,6 +36,8 @@ export default function LibraryScreen() {
   const itemCategories = useLibraryItemCategories();
   const placeholder = useValue('librarySearchPlaceholder') as string;
   const [activeCategoryIds, setActiveCategoryIds] = useState<string[]>([]);
+  const [filtersOpen, setFiltersOpen] = useState(false);
+  const { width, height } = useWindowDimensions();
   const [scope, setScope] = useState<LibraryScope>('all');
   const savedOnly = scope === 'saved';
   const accessibleOnly = scope === 'mine';
@@ -63,6 +64,10 @@ export default function LibraryScreen() {
   const waiting = (savedOnly && !bookmarks.itemIds) || (accessibleOnly && !access);
   const filterError = savedOnly ? bookmarks.error : accessibleOnly && !access ? accessError : null;
   const emptySaved = savedOnly && bookmarks.itemIds?.length === 0;
+  const activeCategories = categories.filter(category => activeCategoryIds.includes(category.id));
+  const closeFilters = () => setFiltersOpen(false);
+  const resultsLabel = waiting || filterError ? 'Terug naar bibliotheek'
+    : `Toon ${filteredList.length} ${filteredList.length === 1 ? 'item' : 'items'}`;
   return <View className="flex-1">
     <SafeAreaView edges={['top']} style={{ flex: 1 }}>
       <KeyboardViewport style={{ flex: 1 }}><ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={{ paddingBottom: padBottom }}>
@@ -73,23 +78,40 @@ export default function LibraryScreen() {
               : accessError ? <Pressable accessibilityRole="button" onPress={() => void refreshAccess()}><Text className="text-[13px] text-teal-700">Saldo opnieuw laden</Text></Pressable>
               : <ActivityIndicator accessibilityLabel="Credits laden" color="#127A79" />}
           </View>
-          <View className="flex-row items-center gap-2.5 rounded-xl border border-ink-8 bg-white pl-3.5 pr-1">
-            <Search size={18} color="rgba(27,42,42,0.5)" />
-            <TextInput ref={searchInput} value={searchQuery} onChangeText={setSearchQuery}
-              accessibilityLabel="Zoek in de bibliotheek" placeholder={placeholder} placeholderTextColor="rgba(27,42,42,0.4)"
-              returnKeyType="search" className="flex-1 py-3 font-sans text-[14px] text-ink" />
-            {searchQuery.length > 0 && <Pressable accessibilityRole="button" accessibilityLabel="Zoekterm wissen"
-              onPress={() => { setSearchQuery(''); searchInput.current?.focus(); }}
-              style={{ width: 44, height: 44, alignItems: 'center', justifyContent: 'center' }}><X size={18} color="#879392" /></Pressable>}
+          <View className="flex-row items-center gap-3">
+            <View className="flex-1 flex-row items-center gap-2.5 rounded-pill border border-ink-8 bg-white pl-3.5 pr-1" style={{ minWidth: 0 }}>
+              <Search size={18} color="rgba(27,42,42,0.5)" />
+              <TextInput ref={searchInput} value={searchQuery} onChangeText={setSearchQuery}
+                accessibilityLabel="Zoek in de bibliotheek" placeholder={placeholder} placeholderTextColor="rgba(27,42,42,0.4)"
+                returnKeyType="search" className="flex-1 py-3 font-sans text-[14px] text-ink" />
+              {searchQuery.length > 0 && <Pressable accessibilityRole="button" accessibilityLabel="Zoekterm wissen"
+                onPress={() => { setSearchQuery(''); searchInput.current?.focus(); }}
+                style={{ width: 44, height: 44, alignItems: 'center', justifyContent: 'center' }}><X size={18} color="#879392" /></Pressable>}
+            </View>
+            <Pressable accessibilityRole="button" accessibilityLabel="Filters openen"
+              accessibilityHint={`${activeCategories.length} actieve onderwerpfilters`}
+              accessibilityState={{ expanded: filtersOpen }} aria-expanded={filtersOpen}
+              onPress={() => { searchInput.current?.blur(); setFiltersOpen(true); }}
+              className="h-12 w-12 items-center justify-center rounded-pill bg-teal-700">
+              <SlidersHorizontal size={22} color="#FBF8F3" />
+              {activeCategories.length > 0 && <View className="absolute -right-1 -top-1 min-w-5 items-center rounded-pill border-2 border-canvas bg-mint-500 px-1">
+                <Text className="font-bold text-[11px] text-white">{activeCategories.length}</Text>
+              </View>}
+            </Pressable>
           </View>
         </View>
-        <View className="flex-row items-center pb-3 pl-5">
+        <View className="flex-row flex-wrap items-center gap-2 px-5 pb-3">
           <LibraryScopeDropdown value={scope} onChange={setScope} />
-          <View style={{ width: 1, height: 24, backgroundColor: '#CCD9D6', marginHorizontal: 10 }} />
-          <ScrollView horizontal keyboardShouldPersistTaps="handled" showsHorizontalScrollIndicator={false}
-            style={{ flex: 1 }} contentContainerStyle={{ paddingRight: 20, gap: 8, alignItems: 'center' }}>
-            {categories.map(c => <FilterChoice key={c.id} label={c.label} selected={activeCategoryIds.includes(c.id)} onPress={() => toggleCategory(c.id)} />)}
-          </ScrollView>
+          {activeCategories.map(category => <Pressable key={category.id} accessibilityRole="button"
+            accessibilityLabel={`Verwijder filter: ${category.label}`} onPress={() => toggleCategory(category.id)}
+            className="min-h-11 flex-row items-center gap-2 rounded-pill bg-[#E7F5F3] px-3.5" style={{ maxWidth: '100%' }}>
+            <Text className="shrink font-semi text-[14px] text-teal-700">{category.label}</Text>
+            <X size={16} color="#127A79" />
+          </Pressable>)}
+          {activeCategories.length > 0 && <Pressable accessibilityRole="button" accessibilityLabel="Onderwerpfilters wissen"
+            onPress={() => setActiveCategoryIds([])} className="min-h-11 justify-center px-2">
+            <Text className="font-semi text-[14px] text-ink-70 underline">Wis</Text>
+          </Pressable>}
         </View>
         {!!filterError && <Pressable accessibilityRole="button" onPress={() => { void bookmarks.refresh(); void refreshAccess(); }} className="mx-5 mb-3 py-2">
           <Text className="text-[13px] text-ink-70">{filterError} Tik om opnieuw te proberen.</Text>
@@ -109,12 +131,45 @@ export default function LibraryScreen() {
         </>}
       </ScrollView></KeyboardViewport>
     </SafeAreaView>
+    {filtersOpen && <Modal transparent animationType="fade" statusBarTranslucent navigationBarTranslucent onRequestClose={closeFilters}>
+      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: 'rgba(27,42,42,0.35)' }}>
+        <SafeAreaView accessibilityViewIsModal accessibilityLabel="Filters" style={{ width: '100%', maxWidth: width >= 768 ? 560 : undefined,
+          height: width >= 768 ? Math.min(680, height - 64) : '100%', backgroundColor: '#FBF8F3', borderRadius: width >= 768 ? 24 : 0, overflow: 'hidden' }}>
+          <View className="flex-row items-center gap-2 border-b border-ink-8 px-4 py-3">
+            <Pressable accessibilityRole="button" accessibilityLabel="Filters sluiten" onPress={closeFilters} className="h-11 w-11 items-center justify-center">
+              <ChevronLeft size={26} color="#127A79" />
+            </Pressable>
+            <Text accessibilityRole="header" className="flex-1 font-bold text-[23px] text-ink">Filters</Text>
+            <Pressable accessibilityRole="button" accessibilityLabel="Alle onderwerpfilters wissen" onPress={() => setActiveCategoryIds([])}
+              className="min-h-11 justify-center px-2">
+              <Text className="font-semi text-[16px] text-teal-700">Wis alles</Text>
+            </Pressable>
+          </View>
+          <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 24 }}>
+            <Text accessibilityRole="header" className="mb-4 font-bold text-[23px] text-teal-900">Onderwerp</Text>
+            <View className="flex-row flex-wrap gap-3">
+              {categories.map(category => <FilterChoice key={category.id} label={category.label}
+                selected={activeCategoryIds.includes(category.id)} onPress={() => toggleCategory(category.id)} />)}
+            </View>
+            {categories.length === 0 && <Text className="text-[15px] text-ink-70">Er zijn nog geen onderwerpfilters beschikbaar.</Text>}
+          </ScrollView>
+          <View className="border-t border-ink-8 px-5 py-4">
+            <Pressable accessibilityRole="button" accessibilityLabel={resultsLabel} onPress={closeFilters}
+              className="min-h-14 items-center justify-center rounded-pill bg-mint-500 px-5 py-3">
+              <Text className="font-bold text-[18px] text-white">{resultsLabel}</Text>
+            </Pressable>
+          </View>
+        </SafeAreaView>
+      </View>
+    </Modal>}
   </View>;
 }
 
 function FilterChoice({ label, selected, onPress }: { label: string; selected: boolean; onPress: () => void }) {
-  return <Pressable accessibilityRole="button" accessibilityLabel={label} accessibilityState={{ selected }} onPress={onPress} style={{ minHeight: 44, justifyContent: 'center' }}>
-    <Chip label={label} variant={selected ? 'filterActive' : 'outline'} />
+  return <Pressable accessibilityRole="checkbox" accessibilityLabel={label} accessibilityState={{ checked: selected }} aria-checked={selected} onPress={onPress}
+    className={`min-h-11 flex-row items-center gap-2 rounded-pill px-4 py-2.5 ${selected ? 'bg-teal-700' : 'bg-[#E7F5F3]'}`} style={{ maxWidth: '100%' }}>
+    {selected && <Check size={18} color="#FBF8F3" />}
+    <Text className={`shrink font-semi text-[16px] ${selected ? 'text-canvas' : 'text-teal-900'}`}>{label}</Text>
   </Pressable>;
 }
 

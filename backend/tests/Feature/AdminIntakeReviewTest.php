@@ -2,19 +2,31 @@
 
 namespace Tests\Feature;
 
-use App\Models\{AdminUser, Horse, IntakeBooking, IntakeField, IntakeQuestionnaire, IntakeSection, User};
+use App\Models\AdminUser;
+use App\Models\Horse;
+use App\Models\IntakeBooking;
+use App\Models\IntakeField;
+use App\Models\IntakeQuestionnaire;
+use App\Models\IntakeSection;
+use App\Models\User;
 use App\Support\IntakeReview;
+use App\Support\SubscriptionAccess;
+use Firebase\JWT\JWT;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
-use Illuminate\Support\Facades\{DB, Schema, Storage};
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Inertia\Testing\AssertableInertia as Assert;
 use Tests\TestCase;
 
 class AdminIntakeReviewTest extends TestCase
 {
-    use RefreshDatabase;
+    use RefreshDatabase, \Tests\Concerns\HasSubscription;
+
     private IntakeBooking $booking;
+
     private IntakeSection $section;
 
     protected function setUp(): void
@@ -31,9 +43,13 @@ class AdminIntakeReviewTest extends TestCase
     private function field(string $key, string $type = 'text', array $extra = [], mixed $value = null): IntakeField
     {
         $field = $this->section->fields()->create(array_merge(['key' => $key, 'label' => ucfirst($key), 'order' => $this->section->fields()->count(), 'type' => $type, 'active' => true], $extra));
-        if ($value !== null) $this->answer($key, $value);
+        if ($value !== null) {
+            $this->answer($key, $value);
+        }
+
         return $field;
     }
+
     private function answer(string $key, mixed $value): void
     {
         $this->booking->answers()->updateOrCreate(['section_id' => 'paard', 'field_id' => $key], ['value' => json_encode($value)]);
@@ -103,6 +119,33 @@ class AdminIntakeReviewTest extends TestCase
         $this->assertSame([], $this->booking->fresh()->accepted_triggers);
     }
 
+    public function test_offline_attachment_retries_preserve_id_and_file_and_cannot_rebind_it(): void
+    {
+        Storage::fake('local');
+        $this->field('photo', 'photo');
+        $this->field('other-photo', 'photo');
+        $this->asApiUser($this->booking->user);
+        $id = (string) Str::uuid();
+        $url = '/api/intakes/'.$this->booking->id.'/attachments';
+        $payload = ['attachment_id' => $id, 'horse_id' => $this->booking->horse_id, 'section' => 'paard', 'field' => 'photo'];
+        $first = $this->postJson($url, $payload + ['file' => UploadedFile::fake()->image('offline.jpg')])->assertCreated();
+        $this->assertSame('attachment:'.$id.':offline.jpg', $first->json('value'));
+        $files = Storage::disk('local')->allFiles();
+        $this->postJson($url, $payload + ['file' => UploadedFile::fake()->image('retry.jpg')])
+            ->assertOk()->assertJson(['value' => $first->json('value')]);
+        $this->assertDatabaseCount('intake_attachments', 1);
+        $this->assertSame($files, Storage::disk('local')->allFiles());
+        $this->postJson($url, array_replace($payload, ['field' => 'other-photo', 'file' => UploadedFile::fake()->image('other.jpg')]))->assertForbidden();
+        $otherHorse = Horse::create(['owner_id' => $this->booking->user_id, 'name' => 'Other']);
+        $otherBooking = IntakeBooking::create(['user_id' => $this->booking->user_id, 'horse_id' => $otherHorse->id]);
+        $this->postJson('/api/intakes/'.$otherBooking->id.'/attachments', array_replace($payload, [
+            'horse_id' => $otherHorse->id, 'file' => UploadedFile::fake()->image('other.jpg'),
+        ]))->assertForbidden();
+        $this->asApiUser(User::factory()->create());
+        $this->postJson($url, $payload + ['file' => UploadedFile::fake()->image('foreign.jpg')])->assertForbidden();
+        $this->assertDatabaseCount('intake_attachments', 1);
+    }
+
     public function test_real_attachment_upload_download_and_owner_isolation(): void
     {
         Storage::fake('local');
@@ -131,7 +174,7 @@ class AdminIntakeReviewTest extends TestCase
         Storage::fake('local');
         $this->field('photo', 'photo');
         $this->asApiUser($this->booking->user);
-        $id = (string) Str::uuid();
+        $id = $this->booking->id; // The purchase created this intake before the client synced it.
         $this->postJson('/api/intakes/'.$id.'/attachments', ['horse_id' => $this->booking->horse_id, 'section' => 'paard', 'field' => 'photo', 'file' => UploadedFile::fake()->image('horse.jpg')])->assertCreated();
         $this->postJson('/api/sync/upload', ['operations' => [['op' => 'PUT', 'type' => 'intake_bookings', 'id' => $id, 'data' => ['user_id' => $this->booking->user_id, 'horse_id' => $this->booking->horse_id, 'intake_status' => 'submitted', 'review_notes' => 'forged', 'accepted_triggers' => ['forged']]]]])->assertOk();
         $this->assertSame(1, IntakeBooking::whereKey($id)->count());
@@ -164,13 +207,18 @@ class AdminIntakeReviewTest extends TestCase
 
     private function asApiUser(User $user): void
     {
+        if (! app(SubscriptionAccess::class)->active($user->id)) {
+            $this->subscribe($user);
+        }
         $key = openssl_pkey_new(['private_key_bits' => 2048, 'private_key_type' => OPENSSL_KEYTYPE_RSA]);
         openssl_pkey_export($key, $private);
         $path = storage_path('framework/testing/intake-review-public.pem');
-        if (!is_dir(dirname($path))) mkdir(dirname($path), 0777, true);
+        if (! is_dir(dirname($path))) {
+            mkdir(dirname($path), 0777, true);
+        }
         file_put_contents($path, openssl_pkey_get_details($key)['key']);
         config(['powersync.public_key_path' => $path, 'powersync.audience' => 'equinova']);
-        $token = \Firebase\JWT\JWT::encode(['sub' => $user->id, 'aud' => 'equinova', 'iat' => time(), 'exp' => time()+3600], $private, 'RS256');
+        $token = JWT::encode(['sub' => $user->id, 'aud' => 'equinova', 'iat' => time(), 'exp' => time() + 3600], $private, 'RS256');
         $this->withHeader('Authorization', 'Bearer '.$token);
     }
 }

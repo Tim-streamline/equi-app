@@ -13,6 +13,16 @@ import {
 } from './schema';
 import { isConfiguredNoneOption } from './config';
 
+/** Resolve moved questions without rewriting stored answers or upload references. */
+export function answersForSection(section: Section, answers: IntakeAnswers): SectionAnswers {
+  const result = { ...(answers[section.id] ?? {}) };
+  for (const field of section.fields) {
+    const source = answers[field.answerSection ?? section.id];
+    if (source && Object.prototype.hasOwnProperty.call(source, field.id)) result[field.id] = source[field.id];
+  }
+  return result;
+}
+
 /** Field-level "the answer is non-empty" check used for `flagIf: 'non-empty'`. */
 export function isEmpty(v: unknown): boolean {
   if (v == null) return true;
@@ -60,7 +70,8 @@ export function isFieldRequired(field: Field): boolean {
  * e.g. an old slider value left under a field that is now a radio, or an
  * option label that was reworded — which would otherwise count as answered.
  */
-export function isFieldAnswered(field: Field, value: unknown): boolean {
+export function isFieldAnswered(field: Field, value: unknown, allAnswers?: IntakeAnswers, sectionId = ''): boolean {
+  if (field.type === 'photo') return photoAnswered(field, value, allAnswers, sectionId);
   if (isEmpty(value)) return false;
   // A multi-box text field (`lines`) stores a string array; it counts as
   // answered only when at least one of the boxes holds real text.
@@ -92,6 +103,29 @@ export function isFieldAnswered(field: Field, value: unknown): boolean {
   return true;
 }
 
+/** Photo metadata stays tied to the attachment, including after a section moves. */
+export const photoId = (reference: string) => reference.split(':')[1] ?? '';
+export const photoReferences = (value: unknown): string[] => Array.isArray(value)
+  ? value.filter((v): v is string => typeof v === 'string' && /^attachment:[^:]+:/.test(v)) : [];
+export const photoNaKey = (field: Field, sectionId: string) => field.photoConfig?.na_key ?? `na:${field.answerSection ?? sectionId}:${field.id}`;
+export function photoNotApplicable(field: Field, answers: IntakeAnswers = {}, sectionId = '') {
+  return !!field.photoConfig?.allow_na && answers.__photos?.[photoNaKey(field, sectionId)] === 'yes';
+}
+export function photoAnswered(field: Field, value: unknown, answers: IntakeAnswers = {}, sectionId = '') {
+  if (photoNotApplicable(field, answers, sectionId)) return true;
+  const refs = photoReferences(value), config = field.photoConfig;
+  if (!refs.length) return false;
+  if (config?.year_required && refs.some(ref => !validPhotoYear(answers.__photos?.[`year-${photoId(ref)}`]))) return false;
+  return !config?.slots?.length || config.slots.every(slot => refs.some(ref => answers.__photos?.[`slot-${photoId(ref)}`] === slot.id));
+}
+export function validPhotoYear(value: unknown): boolean {
+  return typeof value === 'string' && /^\d{4}$/.test(value) && Number(value) >= 1000 && Number(value) <= new Date().getFullYear();
+}
+export function needsAnswer(field: Field, value: unknown): boolean {
+  // Historical images are optional, but each supplied image needs its year.
+  return isFieldRequired(field) || !!(field.type === 'photo' && field.photoConfig?.year_required && photoReferences(value).length);
+}
+
 /** Count of selected options that are not a "none / not-applicable" sentinel. */
 function checkedCount(value: unknown, noneOptions: readonly string[]): number {
   if (Array.isArray(value)) return value.filter((v) => !isNoneOption(String(v), noneOptions)).length;
@@ -115,6 +149,7 @@ export function showField(
   allAnswers?: IntakeAnswers,
   noneOptions: readonly string[] = INTAKE_NONE_OPTIONS,
 ): boolean {
+  if (field.photoConfig?.existing_only && !photoReferences(sectionAnswers[field.id]).length) return false;
   if (!field.showIf) return true;
   for (const [k, trigger] of Object.entries(field.showIf)) {
     const value = k.includes('.')
@@ -149,6 +184,7 @@ export function visibleFields(
   allAnswers?: IntakeAnswers,
   noneOptions: readonly string[] = INTAKE_NONE_OPTIONS,
 ): Field[] {
+  if (allAnswers) answers = answersForSection(section, allAnswers);
   return section.fields
     .filter((f) => f.type !== 'sectionhead')
     .filter((f) => showField(f, answers, allAnswers, noneOptions));
@@ -161,6 +197,7 @@ export function visibleFieldsForRender(
   allAnswers?: IntakeAnswers,
   noneOptions: readonly string[] = INTAKE_NONE_OPTIONS,
 ): Field[] {
+  if (allAnswers) answers = answersForSection(section, allAnswers);
   return section.fields.filter((f) => showField(f, answers, allAnswers, noneOptions));
 }
 
@@ -175,8 +212,9 @@ export function missingRequired(
   allAnswers?: IntakeAnswers,
   noneOptions: readonly string[] = INTAKE_NONE_OPTIONS,
 ): Field[] {
+  if (allAnswers) answers = answersForSection(section, allAnswers);
   return visibleFields(section, answers, allAnswers, noneOptions).filter(
-    (f) => isFieldRequired(f) && !isFieldAnswered(f, answers[f.id]),
+    (f) => needsAnswer(f, answers[f.id]) && !isFieldAnswered(f, answers[f.id], allAnswers, section.id),
   );
 }
 
@@ -190,8 +228,9 @@ export function answeredCount(
   answered: number;
   total: number;
 } {
+  if (allAnswers) answers = answersForSection(section, allAnswers);
   const renderable = visibleFields(section, answers, allAnswers, noneOptions);
-  const answered = renderable.filter((f) => isFieldAnswered(f, answers[f.id])).length;
+  const answered = renderable.filter((f) => isFieldAnswered(f, answers[f.id], allAnswers, section.id)).length;
   return { answered, total: renderable.length };
 }
 
@@ -215,7 +254,7 @@ export function sectionStatus(
   allAnswers?: IntakeAnswers,
   noneOptions: readonly string[] = INTAKE_NONE_OPTIONS,
 ): SectionStatus {
-  if (isSectionComplete(section, answers, allAnswers, noneOptions) && Object.keys(answers).length > 0) {
+  if (isSectionComplete(section, answers, allAnswers, noneOptions)) {
     return 'done';
   }
   return isFirstUnfinished ? 'active' : 'todo';
@@ -234,8 +273,8 @@ export function intakeProgress(
   const total = schema.length;
   let done = 0;
   for (const sec of schema) {
-    const a = answers[sec.id] ?? {};
-    if (isSectionComplete(sec, a, answers, noneOptions) && Object.keys(a).length > 0) done++;
+    const a = answersForSection(sec, answers);
+    if (isSectionComplete(sec, a, answers, noneOptions)) done++;
   }
   return { done, total, pct: total ? Math.round((done / total) * 100) : 0 };
 }
@@ -247,8 +286,8 @@ export function nextSectionId(
   noneOptions: readonly string[] = INTAKE_NONE_OPTIONS,
 ): string {
   for (const sec of schema) {
-    const a = answers[sec.id] ?? {};
-    if (!isSectionComplete(sec, a, answers, noneOptions) || Object.keys(a).length === 0) return sec.id;
+    const a = answersForSection(sec, answers);
+    if (!isSectionComplete(sec, a, answers, noneOptions)) return sec.id;
   }
   return schema[schema.length - 1]?.id ?? '';
 }
@@ -277,7 +316,7 @@ export function fieldCritical(field: Field, value: unknown): boolean {
 /** Whether the entire intake is blocked from auto-start because of a critical answer. */
 export function hasCriticalAnswers(answers: IntakeAnswers, schema: Section[] = INTAKE_SCHEMA): boolean {
   for (const sec of schema) {
-    const a = answers[sec.id] ?? {};
+    const a = answersForSection(sec, answers);
     for (const f of sec.fields) {
       if (fieldCritical(f, a[f.id])) return true;
     }
@@ -293,10 +332,24 @@ export function countFlags(
 ): number {
   let n = 0;
   for (const sec of schema) {
-    const a = answers[sec.id] ?? {};
+    const a = answersForSection(sec, answers);
     for (const f of visibleFields(sec, a, answers, noneOptions)) {
       if (fieldFlagged(f, a[f.id], noneOptions)) n++;
     }
   }
   return n;
+}
+
+/** Reminder thresholds count applicable mandatory questions, never rounded section percentages. */
+export function requiredProgress(answers: IntakeAnswers, schema: Section[] = INTAKE_SCHEMA, noneOptions = INTAKE_NONE_OPTIONS) {
+  const required = schema.flatMap(section => visibleFields(section, answersForSection(section, answers), answers, noneOptions)
+    .filter(field => needsAnswer(field, answersForSection(section, answers)[field.id])).map(field => ({ section, field })));
+  const missing = required.filter(({ section, field }) => !isFieldAnswered(field, answersForSection(section, answers)[field.id], answers, section.id));
+  return { total: required.length, answered: required.length - missing.length, missing,
+    stage: required.length > 0 && missing.length === 0 ? 'ready' : required.length > 0 && (required.length - missing.length) / required.length >= .9 ? 'almost' : 'continue' };
+}
+
+export function isPhotoSection(section: Section): boolean {
+  const questions = section.fields.filter(field => field.type !== 'sectionhead');
+  return questions.length > 0 && questions.every(field => field.type === 'photo');
 }

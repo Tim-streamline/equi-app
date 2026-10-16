@@ -2,7 +2,7 @@
 # Schema: https://unpkg.com/@powersync/service-sync-rules@latest/schema/sync_rules.json
 #
 # The mobile client authenticates with a JWT whose `sub` is the Laravel user
-# UUID. Reference/catalog content is public to signed-in clients.
+# UUID. Feature streams require a server-signed active subscription claim.
 # Community posts, replies, reactions and private attachments use HTTP only.
 # User, horse, protocol, scan, billing, settings, chat, and intake rows are
 # scoped to the current user or to horses visible through ownership/sharing.
@@ -15,11 +15,11 @@ streams:
         auto_subscribe: true
         queries:
             # identity/reference
-            - SELECT * FROM therapists
+            - SELECT * FROM therapists WHERE auth.parameter('subscribed') = 1
 
             # scanner catalog
-            - SELECT * FROM products
-            - SELECT * FROM ingredients
+            - SELECT * FROM products WHERE auth.parameter('subscribed') = 1
+            - SELECT * FROM ingredients WHERE auth.parameter('subscribed') = 1
 
             # Public preview only; protected text is in the item-scoped stream below.
             - |
@@ -28,37 +28,37 @@ streams:
                        published_at, credit_cost, is_plus, is_featured, "order",
                        created_at, updated_at
                 FROM library_items
-                WHERE published_at IS NOT NULL
-            - SELECT * FROM library_categories
-            - SELECT * FROM library_item_categories
-            - SELECT * FROM seasonal_tips
+                WHERE auth.parameter('subscribed') = 1 AND ( published_at IS NOT NULL)
+            - SELECT * FROM library_categories WHERE auth.parameter('subscribed') = 1
+            - SELECT * FROM library_item_categories WHERE auth.parameter('subscribed') = 1
+            - SELECT * FROM seasonal_tips WHERE auth.parameter('subscribed') = 1
 
             # Catalog only. Community content is fetched through the authenticated
             # API so hidden/muted content and private media are not cached globally.
-            - SELECT * FROM community_categories
-            - SELECT * FROM community_tags
+            - SELECT * FROM community_categories WHERE auth.parameter('subscribed') = 1
+            - SELECT * FROM community_tags WHERE auth.parameter('subscribed') = 1
 
             # billing catalog
             - SELECT * FROM plans
             - SELECT * FROM plan_benefits
 
             # static assistant copy
-            - SELECT * FROM nova_fallback_replies
+            - SELECT * FROM nova_fallback_replies WHERE auth.parameter('subscribed') = 1
 
             # backend-managed protocol-intake definition
-            - SELECT * FROM intake_questionnaires WHERE active = TRUE
-            - SELECT * FROM intake_sections WHERE active = TRUE
-            - SELECT * FROM intake_fields WHERE active = TRUE
+            - SELECT * FROM intake_questionnaires WHERE auth.parameter('subscribed') = 1 AND ( active = TRUE)
+            - SELECT * FROM intake_sections WHERE auth.parameter('subscribed') = 1 AND ( active = TRUE)
+            - SELECT * FROM intake_fields WHERE auth.parameter('subscribed') = 1 AND ( active = TRUE)
 
     user_private:
         auto_subscribe: true
         queries:
-            - SELECT * FROM library_item_access WHERE user_id = auth.user_id()
+            - SELECT * FROM library_item_access WHERE auth.parameter('subscribed') = 1 AND ( user_id = auth.user_id())
             # Current user plus user rows needed to render visible horse shares.
             - |
                 SELECT * FROM users
                 WHERE id = auth.user_id()
-                   OR id IN (
+                   OR (auth.parameter('subscribed') = 1 AND (id IN (
                         SELECT hs.grantee_user_id
                         FROM horse_shares hs
                         JOIN horses h ON h.id = hs.horse_id
@@ -70,40 +70,39 @@ streams:
                         FROM horses h
                         JOIN horse_shares hs ON hs.horse_id = h.id
                         WHERE hs.grantee_user_id = auth.user_id()
-                   )
+                   )))
 
             # User-owned engagement/account rows.
-            - SELECT * FROM library_bookmarks WHERE user_id = auth.user_id()
-            - SELECT * FROM library_progress WHERE user_id = auth.user_id()
+            - SELECT * FROM library_bookmarks WHERE auth.parameter('subscribed') = 1 AND ( user_id = auth.user_id())
+            - SELECT * FROM library_progress WHERE auth.parameter('subscribed') = 1 AND ( user_id = auth.user_id())
             - SELECT * FROM subscriptions WHERE user_id = auth.user_id()
             - |
                 SELECT * FROM payments
-                WHERE subscription_id IN (
+                WHERE auth.parameter('subscribed') = 1 AND ( subscription_id IN (
                     SELECT id FROM subscriptions WHERE user_id = auth.user_id()
-                )
-            - SELECT * FROM notification_preferences WHERE user_id = auth.user_id()
-            - SELECT * FROM user_home_preferences WHERE id = auth.user_id()
-            - SELECT * FROM account_settings WHERE user_id = auth.user_id()
-            - SELECT * FROM data_exports WHERE user_id = auth.user_id()
-            - SELECT * FROM chat_sessions WHERE user_id = auth.user_id()
+                ))
+            - SELECT * FROM notification_preferences WHERE auth.parameter('subscribed') = 1 AND ( user_id = auth.user_id())
+            - SELECT * FROM user_home_preferences WHERE auth.parameter('subscribed') = 1 AND ( id = auth.user_id())
+            - SELECT * FROM account_settings WHERE auth.parameter('subscribed') = 1 AND ( user_id = auth.user_id())
+            - SELECT * FROM data_exports WHERE auth.parameter('subscribed') = 1 AND ( user_id = auth.user_id())
+            - SELECT * FROM chat_sessions WHERE auth.parameter('subscribed') = 1 AND ( user_id = auth.user_id())
             - |
                 SELECT * FROM chat_messages
-                WHERE session_id IN (
+                WHERE auth.parameter('subscribed') = 1 AND ( session_id IN (
                     SELECT id FROM chat_sessions WHERE user_id = auth.user_id()
-                )
-            - SELECT id, user_id, horse_id, therapist_id, scheduled_at, slot_label, duration_minutes, status, notes, intake_status, started_at, submitted_at, created_at, updated_at FROM intake_bookings WHERE user_id = auth.user_id()
+                ))
+            - SELECT id, protocol_id, user_id, horse_id, therapist_id, scheduled_at, slot_label, duration_minutes, status, notes, intake_status, started_at, submitted_at, created_at, updated_at FROM intake_bookings WHERE auth.parameter('subscribed') = 1 AND ( user_id = auth.user_id())
             - |
                 SELECT * FROM intake_answers
-                WHERE response_id IN (
+                WHERE auth.parameter('subscribed') = 1 AND ( response_id IN (
                     SELECT id FROM intake_bookings WHERE user_id = auth.user_id()
-                )
-
+                ))
     # One shared content payload per item. The client chooses an item, but the
     # server independently checks the replicated access projection for its JWT user.
     library_content:
         query: |
             SELECT * FROM library_contents
-            WHERE id = subscription.parameter('item_id')
+            WHERE auth.parameter('subscribed') = 1 AND id = subscription.parameter('item_id')
               AND id IN (SELECT item_id FROM library_item_access WHERE user_id = auth.user_id())
 
     horse_private:
@@ -112,15 +111,15 @@ streams:
             # A horse is visible to its owner and to users it has been shared with.
             - |
                 SELECT * FROM horses
-                WHERE owner_id = auth.user_id()
+                WHERE auth.parameter('subscribed') = 1 AND ( owner_id = auth.user_id()
                    OR id IN (
                         SELECT horse_id
                         FROM horse_shares
                         WHERE grantee_user_id = auth.user_id()
-                   )
+                   ))
             - |
                 SELECT * FROM horse_shares
-                WHERE horse_id IN (
+                WHERE auth.parameter('subscribed') = 1 AND ( horse_id IN (
                     SELECT id FROM horses
                     WHERE owner_id = auth.user_id()
                        OR id IN (
@@ -128,10 +127,10 @@ streams:
                             FROM horse_shares
                             WHERE grantee_user_id = auth.user_id()
                        )
-                )
+                ))
             - |
                 SELECT * FROM horse_stats
-                WHERE horse_id IN (
+                WHERE auth.parameter('subscribed') = 1 AND ( horse_id IN (
                     SELECT id FROM horses
                     WHERE owner_id = auth.user_id()
                        OR id IN (
@@ -139,10 +138,10 @@ streams:
                             FROM horse_shares
                             WHERE grantee_user_id = auth.user_id()
                        )
-                )
+                ))
             - |
                 SELECT * FROM timeline_events
-                WHERE horse_id IN (
+                WHERE auth.parameter('subscribed') = 1 AND ( horse_id IN (
                     SELECT id FROM horses
                     WHERE owner_id = auth.user_id()
                        OR id IN (
@@ -150,14 +149,12 @@ streams:
                             FROM horse_shares
                             WHERE grantee_user_id = auth.user_id()
                        )
-                )
-
+                ))
             # Protocol data for visible horses.
             # Phase content is served by the availability-filtered dashboard API only.
             - |
-                SELECT * FROM protocols
-                WHERE published_at IS NOT NULL
-                  AND horse_id IN (
+                SELECT id, horse_id, title, status, published_at, started_at, total_weeks, current_week, created_at, updated_at FROM protocols
+                WHERE auth.parameter('subscribed') = 1 AND ( horse_id IN (
                     SELECT id FROM horses
                     WHERE owner_id = auth.user_id()
                        OR id IN (
@@ -165,10 +162,10 @@ streams:
                             FROM horse_shares
                             WHERE grantee_user_id = auth.user_id()
                        )
-                )
+                ))
             - |
                 SELECT id, protocol_id, "order", title, state, week_start, week_end, chip_label, required, start_after_previous_phase_weeks, created_at, updated_at FROM protocol_phases
-                WHERE protocol_id IN (
+                WHERE auth.parameter('subscribed') = 1 AND ( protocol_id IN (
                     SELECT p.id FROM protocols p
                     JOIN horses h ON h.id = p.horse_id
                     WHERE p.published_at IS NOT NULL
@@ -178,10 +175,10 @@ streams:
                             FROM horse_shares
                             WHERE grantee_user_id = auth.user_id()
                        ))
-                )
+                ))
             - |
                 SELECT * FROM protocol_phase_weeks
-                WHERE protocol_phase_id IN (
+                WHERE auth.parameter('subscribed') = 1 AND ( protocol_phase_id IN (
                     SELECT pp.id FROM protocol_phases pp
                     JOIN protocols p ON p.id = pp.protocol_id
                     JOIN horses h ON h.id = p.horse_id
@@ -192,10 +189,10 @@ streams:
                             FROM horse_shares
                             WHERE grantee_user_id = auth.user_id()
                        ))
-                )
+                ))
             - |
                 SELECT * FROM protocol_analyses
-                WHERE protocol_id IN (
+                WHERE auth.parameter('subscribed') = 1 AND ( protocol_id IN (
                     SELECT p.id FROM protocols p
                     JOIN horses h ON h.id = p.horse_id
                     WHERE p.published_at IS NOT NULL
@@ -205,10 +202,10 @@ streams:
                             FROM horse_shares
                             WHERE grantee_user_id = auth.user_id()
                        ))
-                )
+                ))
             - |
                 SELECT * FROM protocol_advice
-                WHERE analysis_id IN (
+                WHERE auth.parameter('subscribed') = 1 AND ( analysis_id IN (
                     SELECT pa.id FROM protocol_analyses pa
                     JOIN protocols p ON p.id = pa.protocol_id
                     JOIN horses h ON h.id = p.horse_id
@@ -219,10 +216,10 @@ streams:
                             FROM horse_shares
                             WHERE grantee_user_id = auth.user_id()
                        ))
-                )
+                ))
             - |
                 SELECT * FROM protocol_voeding_adviezen
-                WHERE protocol_id IN (
+                WHERE auth.parameter('subscribed') = 1 AND ( protocol_id IN (
                     SELECT p.id FROM protocols p
                     JOIN horses h ON h.id = p.horse_id
                     WHERE p.published_at IS NOT NULL
@@ -232,10 +229,10 @@ streams:
                             FROM horse_shares
                             WHERE grantee_user_id = auth.user_id()
                        ))
-                )
+                ))
             - |
                 SELECT * FROM protocol_management_adviezen
-                WHERE protocol_id IN (
+                WHERE auth.parameter('subscribed') = 1 AND ( protocol_id IN (
                     SELECT p.id FROM protocols p
                     JOIN horses h ON h.id = p.horse_id
                     WHERE p.published_at IS NOT NULL
@@ -245,10 +242,10 @@ streams:
                             FROM horse_shares
                             WHERE grantee_user_id = auth.user_id()
                        ))
-                )
+                ))
             - |
                 SELECT * FROM protocol_beweging_adviezen
-                WHERE protocol_id IN (
+                WHERE auth.parameter('subscribed') = 1 AND ( protocol_id IN (
                     SELECT p.id FROM protocols p
                     JOIN horses h ON h.id = p.horse_id
                     WHERE p.published_at IS NOT NULL
@@ -258,10 +255,10 @@ streams:
                             FROM horse_shares
                             WHERE grantee_user_id = auth.user_id()
                        ))
-                )
+                ))
             - |
                 SELECT * FROM protocol_supplement_intakes
-                WHERE protocol_phase_supplement_id IN (
+                WHERE auth.parameter('subscribed') = 1 AND ( protocol_phase_supplement_id IN (
                     SELECT pps.id FROM protocol_phase_supplements pps
                     JOIN protocol_phases pp ON pp.id = pps.protocol_phase_id
                     JOIN protocols p ON p.id = pp.protocol_id
@@ -273,12 +270,11 @@ streams:
                             FROM horse_shares
                             WHERE grantee_user_id = auth.user_id()
                        ))
-                )
-
+                ))
             # Observations for visible horses.
             - |
                 SELECT * FROM observations
-                WHERE horse_id IN (
+                WHERE auth.parameter('subscribed') = 1 AND ( horse_id IN (
                     SELECT id FROM horses
                     WHERE owner_id = auth.user_id()
                        OR id IN (
@@ -286,10 +282,10 @@ streams:
                             FROM horse_shares
                             WHERE grantee_user_id = auth.user_id()
                        )
-                )
+                ))
             - |
                 SELECT * FROM observation_photos
-                WHERE observation_id IN (
+                WHERE auth.parameter('subscribed') = 1 AND ( observation_id IN (
                     SELECT o.id FROM observations o
                     JOIN horses h ON h.id = o.horse_id
                     WHERE h.owner_id = auth.user_id()
@@ -298,12 +294,11 @@ streams:
                             FROM horse_shares
                             WHERE grantee_user_id = auth.user_id()
                        )
-                )
-
+                ))
             # Scans for visible horses or scans made directly by the user.
             - |
                 SELECT * FROM scan_results
-                WHERE user_id = auth.user_id()
+                WHERE auth.parameter('subscribed') = 1 AND ( user_id = auth.user_id()
                    OR horse_id IN (
                         SELECT id FROM horses
                         WHERE owner_id = auth.user_id()
@@ -312,10 +307,10 @@ streams:
                                 FROM horse_shares
                                 WHERE grantee_user_id = auth.user_id()
                            )
-                   )
+                   ))
             - |
                 SELECT * FROM scan_ingredients
-                WHERE scan_id IN (
+                WHERE auth.parameter('subscribed') = 1 AND ( scan_id IN (
                     SELECT sr.id FROM scan_results sr
                     WHERE sr.user_id = auth.user_id()
                        OR sr.horse_id IN (
@@ -327,4 +322,4 @@ streams:
                                     WHERE grantee_user_id = auth.user_id()
                                )
                        )
-                )
+                ))

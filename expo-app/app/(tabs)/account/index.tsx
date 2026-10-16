@@ -42,7 +42,7 @@ export default function AccountScreen() {
   const user = useCurrentUser();
   const horses = useHorsesByOwner();
   const subscription = useActiveSubscription();
-  const plan = usePlan(subscription?.planId ?? 'plan-plus');
+  const plan = usePlan(subscription?.planId ?? '');
   const settings = useAccountSettings();
   const preferencesRoute = '/(tabs)/account/preferences';
   const preferenceEntry = settings.find((item) => item.title === 'Voorkeuren' || item.route === preferencesRoute);
@@ -149,10 +149,10 @@ export default function AccountScreen() {
                   <View className="flex-row items-start justify-between">
                     <View>
                       <View className="self-start rounded-pill bg-mint-500 px-3 py-1">
-                        <Text className="font-semi text-white text-[12px]">{plan.label as string}</Text>
+                        <Text className="font-semi text-white text-[12px]">Abonnement</Text>
                       </View>
                       <Text className="font-bold text-white mt-2.5" style={{ fontSize: 20 }}>
-                        {plan.name as string}
+                        EquiApp abonnement
                       </Text>
                       <Text className="text-white/70 mt-0.5 text-[12px]">
                         {(subscription.renewsLabel as string) ?? ''} · € {((subscription.priceCents as number) / 100).toFixed(0)} {plan.priceSuffix as string}

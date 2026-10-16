@@ -34,7 +34,7 @@ If serving `dist/` with another web server, serve real files first and fall back
 - Successful browser login (including registration completion) persists for 30 days using encrypted HttpOnly cookies, even after the shorter server session expires. This is a fixed deadline from the last successful login in that browser; browsing and token renewal do not extend it. Signing in again starts a new 30-day period. Logout, password reset, or a disabled account prevents renewal. Still-valid sessions from before this change upgrade automatically on their next authenticated request, with a one-time 30-day period starting then because legacy sessions did not record the original login time. Already-expired sessions still require login. The admin session lifetime remains separate.
 - Browser alerts implement the existing confirmation flows, uploads use browser `File` objects, and private images/videos use a session-protected endpoint with the same Community visibility policy.
 
-Synced database edits can queue while an open app is offline and upload after reconnection. A fresh page load requires an online session check, including when opened from a home-screen shortcut. Remote media is not cached for offline use. Browser push notifications are not implemented; other existing feature behavior follows the Expo app.
+Synced database edits can queue while an open app is offline and upload after reconnection. A fresh page load requires an online session check, including when opened from a home-screen shortcut. Remote media is not cached for offline use. Browser push uses the Push API and a notification-only service worker; other existing feature behavior follows the Expo app.
 
 ## Web icons
 
@@ -53,3 +53,22 @@ Backend regressions (run from `../backend`):
 ```sh
 ./vendor/bin/sail test --compact tests/Feature/WebSessionTest.php tests/Feature/HomePreferencesTest.php tests/Feature/CommunityTest.php
 ```
+
+## Browser notifications and intake access
+
+Browser push covers intake inactivity, protocol-phase availability, and purchased-credit expiry. It is enabled by default under Account → notification preferences, while an explicit opt-out is preserved. Browsers with notification permission already granted subscribe automatically; otherwise users grant browser permission using the settings button. It requires HTTPS (localhost is allowed); iPhone/iPad users must install the web app on the Home Screen first. The service worker does not cache app pages or private responses. SSE is unsuitable here because notifications must arrive after the tab closes.
+
+Opting out immediately invalidates pending enrollment in the page. Subscription changes and worker binding are serialized so removal runs after any registration already in flight. Background enrollment never changes the saved preference; only an explicit enable action can opt back in. Logout uses the same cleanup without changing the user's saved preference.
+
+Deployment prerequisites:
+
+- Run Composer install and Laravel migrations, then build the web app. Keep `/push-sw.js` at the origin root and serve it as JavaScript with revalidation, not the SPA fallback.
+- Configure `WEB_PUSH_PUBLIC_KEY`, `WEB_PUSH_PRIVATE_KEY`, and `WEB_PUSH_SUBJECT` (`mailto:` contact or HTTPS URL) in Laravel. Generate one VAPID pair using `Minishlink\WebPush\VAPID::createVapidKeys()` in a secure administrative shell. Keep the private key server-side and retain the same pair across deployments; rotating it requires browsers to subscribe again.
+- Keep the Laravel scheduler running. `intakes:send-reminders` runs every 15 minutes; `notifications:send-browser-reminders` runs every minute. Native Expo reminder schedules remain separate. Both obey account preferences; intake/protocol reminders additionally obey the protocol reminder setting.
+- Reload long-running backend workers after configuration changes. Missing VAPID configuration disables browser delivery and shows a clear setup message when enabling notifications.
+
+Subscriptions are encrypted, bound to the signed-in account, removed when expired, and unsubscribed on logout. The worker rejects deliveries for a different or signed-out account. Browser deliveries have independent deduplication from native Expo tickets. Provider acceptance is not proof that an OS displayed a notification: verify one real subscribed browser per supported platform before rollout.
+
+A single active subscription unlocks the app; expired accounts see only renewal. The shared gate also enforces synced expiry dates offline, and backend middleware rechecks access. Library credits remain in use. A protocol is purchased separately for a horse and comes with exactly one intake. Backend **Protocol kopen** configures the price for new purchases (default €147). `ProtocolPurchases::prepare()` snapshots it; a future trusted payment adapter must call `fulfillVerifiedPayment()` only after verifying the payment. Checkout and online renewal remain unavailable until payment integration exists. Legacy paid plan slugs are accepted with identical access; old included-intake grants no longer grant or restrict purchases. Deploy the matching PowerSync rules: feature streams require the signed `subscribed` claim, whose token expiry is capped at the current subscription boundary.
+
+Intake photos are regular CMS fields in the first section, “Intake fotos”. The deployment migration moves existing fields and retains their original answer/attachment namespace in `answer_section_key`, preserving uploads and queued offline edits. New photo questions use the standard section renderer and validation. Earlier `__photos` metadata remains available in historical admin reviews.

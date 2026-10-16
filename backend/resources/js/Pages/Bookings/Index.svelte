@@ -25,8 +25,8 @@
         <CardContent class="p-4">
             <div class="mb-4 flex flex-wrap gap-3">
                 <Select class="w-44" bind:value={status} onchange={apply} options={[
-                    { value: '', label: 'All statuses' }, { value: 'pending', label: 'Te beoordelen' },
-                    { value: 'confirmed', label: 'Confirmed' }, { value: 'done', label: 'Done' }, { value: 'cancelled', label: 'Cancelled' }]} />
+                    { value: '', label: 'All statuses' }, { value: 'draft', label: 'Nog niet ingediend' }, { value: 'pending', label: 'Te beoordelen' },
+                    { value: 'confirmed', label: 'Confirmed' }, { value: 'done', label: 'Done' }, { value: 'cancelled', label: 'Geannuleerd' }]} />
                 <Select class="w-48" bind:value={therapist} onchange={apply} options={[{ value: '', label: 'All therapists' }, ...therapists.map((t) => ({ value: t.id, label: t.name }))]} />
             </div>
             <Table>

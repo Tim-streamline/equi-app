@@ -214,3 +214,9 @@ php artisan deploy-library-items --path=/deploy/lib-assets
 php artisan deploy-library-items --export --path=/deploy/lib-assets
 php artisan deploy-library-items --verify --path=/deploy/lib-assets
 ```
+
+### Protocol/intake schema migration (2026-10-14)
+
+The next deployment includes transactional legacy-data reconciliation and required one-to-one protocol/intake constraints. The approved staging mapping, preservation guarantees and verification commands are documented in [protocol-intake-model.md](../docs/protocol-intake-model.md). The existing backup-before-migration sequence is retained.
+
+`check-schema-compatibility.php` is uploaded alongside the Nginx helper, including for rollback. It refuses to activate older code against the new required relationship or the single-subscription/separate-purchase model. If activation fails after this migration commits, automatic code restoration leaves the application in maintenance when the previous code is incompatible. Recover with the matching database backup and code, or a compatible release; database backups are never restored automatically.

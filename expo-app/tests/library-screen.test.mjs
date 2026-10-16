@@ -25,12 +25,12 @@ function screen() {
     'react/jsx-runtime': { jsx, jsxs: jsx, Fragment: 'Fragment' },
     react: {
       useState(initial) { const index = cursor++; if (!(index in values)) values[index] = initial; return [values[index], value => { values[index] = typeof value === 'function' ? value(values[index]) : value; }]; },
-      useEffect() {}, useMemo: fn => fn(), useRef: () => ({ current: { focus: () => focused++, measureInWindow: fn => fn(20, 160, 120, 44) } }),
+      useEffect() {}, useMemo: fn => fn(), useRef: () => ({ current: { focus: () => focused++, blur: () => {}, measureInWindow: fn => fn(20, 160, 120, 44) } }),
     },
     'react-native': { ...Object.fromEntries(['View', 'Text', 'ScrollView', 'Pressable', 'TextInput', 'ActivityIndicator', 'Modal'].map(name => [name, name])), useWindowDimensions: () => ({ width: 400, height: 800 }) },
     'react-native-safe-area-context': { SafeAreaView: 'SafeAreaView' },
     'expo-router': { useLocalSearchParams: () => ({}) },
-    'lucide-react-native': { Search: 'Search', ChevronDown: 'ChevronDown', Check: 'Check', X: 'X' },
+    'lucide-react-native': { Search: 'Search', ChevronDown: 'ChevronDown', Check: 'Check', X: 'X', SlidersHorizontal: 'SlidersHorizontal', ChevronLeft: 'ChevronLeft' },
     '@/components/library/LibraryCard': { LibraryCard: 'LibraryCard' },
     '@/components/ui/Chip': { Chip: 'Chip' },
     '@/hooks/useTabBarPadding': { useTabBarPadding: () => 76 },
@@ -39,9 +39,9 @@ function screen() {
     '@/hooks/useLibraryBookmarks': { useLibraryBookmarks: () => bookmarks },
     '@/lib/library': library, '@/lib/library-filter': filters,
     '@/db/hooks': {
-      useLibraryCategories: () => [{ id: 'hay', label: 'Hooi' }],
+      useLibraryCategories: () => [{ id: 'hay', label: 'Hooi' }, { id: 'lesson', label: 'Lessen' }],
       useLibraryItems: () => catalog,
-      useLibraryItemCategories: () => [{ itemId: 'paid', categoryId: 'hay' }, { itemId: 'free', categoryId: 'hay' }],
+      useLibraryItemCategories: () => [{ itemId: 'paid', categoryId: 'hay' }, { itemId: 'free', categoryId: 'hay' }, { itemId: 'plus', categoryId: 'lesson' }],
       useValue: () => 'Zoeken',
     },
   };
@@ -57,13 +57,14 @@ function screen() {
     press(label);
     assert.ok(!render().some(node => node.type === 'Modal'));
   };
-  return { render, press, select, ids, bookmarks, resource, localAccess, refreshes: () => refreshes, focused: () => focused };
+  const category = label => { press('Filters openen'); press(label); press('Filters sluiten'); };
+  return { render, press, select, category, ids, bookmarks, resource, localAccess, refreshes: () => refreshes, focused: () => focused };
 }
 
 test('actual Library screen composes saved, category and search; X preserves filters and focus', () => {
   const app = screen();
   assert.deepEqual(app.ids(), ['free', 'paid', 'plus']);
-  app.select('Opgeslagen'); app.press('Hooi');
+  app.select('Opgeslagen'); app.category('Hooi');
   assert.deepEqual(app.ids(), ['paid']);
   app.render().find(node => node.type === 'TextInput').props.onChangeText('missing');
   assert.deepEqual(app.ids(), []);
@@ -85,13 +86,13 @@ test('the dropdown has exactly four choices and Alles preserves category and sea
   assert.deepEqual(choices.map(n => n.props.accessibilityState.checked), [true, false, false, false]);
   app.press('Bibliotheekfilter sluiten');
   assert.ok(!app.render().some(n => n.type === 'Modal'));
-  app.select('Opgeslagen'); app.press('Hooi');
+  app.select('Opgeslagen'); app.category('Hooi');
   app.render().find(node => node.type === 'TextInput').props.onChangeText('meten');
   app.select('Alles');
   assert.deepEqual(app.ids(), ['paid']);
   app.press('Zoekterm wissen');
   assert.deepEqual(app.ids(), ['free', 'paid']);
-  app.press('Hooi');
+  app.category('Hooi');
   assert.deepEqual(app.ids(), ['free', 'paid', 'plus']);
   app.press('Bibliotheekfilter: Alles');
   app.render().find(n => n.type === 'Modal').props.onRequestClose();
@@ -109,7 +110,7 @@ test('Mijn items excludes free items while retaining purchases and eligible Plus
   app.resource.data.hasPlus = false;
   app.resource.data.unlockedIds = ['paid', 'plus'];
   assert.deepEqual(app.ids(), ['paid', 'plus'], 'a prior purchase keeps Plus-only content available');
-  app.press('Hooi');
+  app.category('Hooi');
   assert.deepEqual(app.ids(), ['paid']);
   app.render().find(node => node.type === 'TextInput').props.onChangeText('missing');
   assert.deepEqual(app.ids(), []);
@@ -123,7 +124,7 @@ test('Gratis shows only free non-Plus items and composes with search and categor
   app.resource.data.unlockedIds = ['paid', 'plus'];
   app.select('Gratis');
   assert.deepEqual(app.ids(), ['free'], 'purchased and Plus content is not free');
-  app.press('Hooi');
+  app.category('Hooi');
   assert.deepEqual(app.ids(), ['free']);
   app.render().find(node => node.type === 'TextInput').props.onChangeText('meten');
   assert.deepEqual(app.ids(), []);
@@ -174,4 +175,72 @@ test('Mijn items uses synced grants offline and removes revoked access even if H
   app.resource.data = { hasPlus: true, unlockedIds: ['paid'], credits: 7 };
   app.localAccess.grants = [];
   assert.deepEqual(app.ids(), []);
+});
+
+
+test('category choices live in the filter window and selected chips remove one category at a time', () => {
+  const app = screen();
+  assert.ok(!app.render().some(n => n.props.accessibilityRole === 'checkbox'));
+  assert.ok(!app.render().some(n => n.props.accessibilityLabel?.startsWith('Verwijder filter:')));
+  app.press('Filters openen');
+  assert.deepEqual(app.render().filter(n => n.props.accessibilityRole === 'checkbox').map(n => n.props.accessibilityLabel), ['Hooi', 'Lessen']);
+  app.press('Hooi');
+  const selected = app.render().find(n => n.props.accessibilityLabel === 'Hooi');
+  assert.equal(selected.props.accessibilityState.checked, true);
+  assert.equal(selected.props['aria-checked'], true);
+  assert.match(selected.props.className, /bg-teal-700/);
+  app.press('Toon 2 items');
+  assert.ok(!app.render().some(n => n.type === 'Modal'));
+  assert.deepEqual(app.ids(), ['free', 'paid']);
+  assert.equal(app.render().find(n => n.props.accessibilityLabel === 'Filters openen').props.accessibilityHint, '1 actieve onderwerpfilters');
+  app.category('Lessen');
+  assert.deepEqual(app.ids(), ['free', 'paid', 'plus'], 'categories retain OR matching');
+  const toolbar = app.render().find(n => n.type === 'View' && Array.isArray(n.props.children) && n.props.children.flat().some(child => child?.props?.accessibilityLabel === 'Verwijder filter: Hooi'));
+  assert.ok(toolbar, 'chips share the toolbar with the personal dropdown');
+  assert.equal(toolbar.props.children[0].type, 'Fragment');
+  app.press('Verwijder filter: Hooi');
+  assert.deepEqual(app.ids(), ['plus']);
+  assert.ok(!app.render().some(n => n.props.accessibilityLabel === 'Verwijder filter: Hooi'));
+  app.press('Verwijder filter: Lessen');
+  assert.deepEqual(app.ids(), ['free', 'paid', 'plus']);
+  assert.equal(app.render().find(n => n.props.accessibilityLabel === 'Filters openen').props.accessibilityHint, '0 actieve onderwerpfilters');
+});
+
+test('both category clear actions preserve the personal dropdown and search', () => {
+  const app = screen();
+  app.select('Opgeslagen');
+  app.render().find(n => n.type === 'TextInput').props.onChangeText('meten');
+  app.category('Lessen');
+  assert.deepEqual(app.ids(), []);
+  app.press('Filters openen');
+  app.press('Alle onderwerpfilters wissen');
+  app.press('Toon 1 item');
+  assert.deepEqual(app.ids(), ['paid']);
+  app.category('Lessen');
+  app.press('Onderwerpfilters wissen');
+  assert.deepEqual(app.ids(), ['paid']);
+  assert.ok(app.render().some(n => n.props.accessibilityLabel === 'Bibliotheekfilter: Opgeslagen'));
+  assert.equal(app.render().find(n => n.type === 'TextInput').props.value, 'meten');
+});
+
+test('closing via the system back action retains selected categories when reopening', () => {
+  const app = screen();
+  app.press('Filters openen');
+  app.press('Hooi');
+  app.render().find(n => n.type === 'Modal').props.onRequestClose();
+  assert.ok(!app.render().some(n => n.type === 'Modal'));
+  app.press('Filters openen');
+  assert.equal(app.render().find(n => n.props.accessibilityLabel === 'Hooi').props.accessibilityState.checked, true);
+  app.press('Hooi');
+  app.press('Toon 3 items');
+  assert.ok(!app.render().some(n => n.props.accessibilityLabel === 'Verwijder filter: Hooi'));
+});
+
+test('the filter window does not advertise a zero result count while personal data is unavailable', () => {
+  const app = screen();
+  app.bookmarks.itemIds = null;
+  app.select('Opgeslagen');
+  app.press('Filters openen');
+  app.press('Terug naar bibliotheek');
+  assert.ok(!app.render().some(n => n.type === 'Modal'));
 });

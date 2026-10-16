@@ -11,7 +11,7 @@ use Tests\TestCase;
 
 class SyncControllerEloquentEventsTest extends TestCase
 {
-    use RefreshDatabase;
+    use RefreshDatabase, \Tests\Concerns\HasSubscription;
 
     private array $events = [];
 
@@ -161,6 +161,7 @@ class SyncControllerEloquentEventsTest extends TestCase
 
     private function tokenFor(User $user): string
     {
+        if (! app(\App\Support\SubscriptionAccess::class)->active($user->id)) $this->subscribe($user);
         $now = time();
 
         return JWT::encode([

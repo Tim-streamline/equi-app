@@ -1,4 +1,5 @@
-import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from 'react';
+import { disableBrowserPush } from '../lib/browser-push';
+import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from 'react';
 import { ActivityIndicator, Pressable, Text, View } from 'react-native';
 import { WASQLiteOpenFactory } from '@powersync/web/umd';
 import { PowerSyncDatabase } from './powersync';
@@ -9,6 +10,7 @@ import { accountSession } from '@/lib/account-session';
 import { captureException } from '../components/error-tracking';
 import { getSession, login as signIn, register as signUp, type RegistrationInput, type RegistrationChallenge, type RegistrationCompletion, completeRegistration as confirmSignUp, logout as signOut, forgetSession, type LoginResponse } from './auth';
 import { LaravelConnector } from './connector';
+import { refreshSubscriptionConnection } from '@/db/refresh-subscription';
 import { databaseName } from './database-name';
 import { loginDestination } from './login-destination';
 
@@ -16,6 +18,7 @@ type SyncStatus = 'idle' | 'connecting' | 'syncing' | 'connected' | 'error';
 type DbContextValue = {
   powersync: PowerSyncDatabase; isLoggedIn: boolean; isConnected: boolean;
   syncStatus: SyncStatus; currentUserId: string | null; selectedHorseId: string | null;
+  refreshSubscriptionAccess: (signal: AbortSignal) => Promise<void>;
   selectHorse: (id: string) => void; login: (email: string, password: string) => Promise<void>; register: (input: RegistrationInput) => Promise<RegistrationChallenge>; completeRegistration: (input: RegistrationCompletion, password: string) => Promise<void>; logout: () => Promise<void>;
 };
 const DbContext = createContext<DbContextValue | null>(null);
@@ -118,6 +121,13 @@ export function DbProvider({ children }: { children: ReactNode }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [attempt]);
 
+  const refreshSubscriptionAccess = useCallback(async (signal: AbortSignal) => {
+    const current = active.current;
+    if (!current?.userId) throw new Error('Meld je opnieuw aan.');
+    const connector = new LaravelConnector(current.userId);
+    await refreshSubscriptionConnection(current.db, connector, signal => connector.fetchCredentials(signal, true), signal);
+  }, []);
+
   const login = (email: string, password: string) => accountSession.transition(async () => {
     const destination = loginDestination(window.location.search);
     await signIn(email, password);
@@ -133,6 +143,7 @@ export function DbProvider({ children }: { children: ReactNode }) {
     window.location.replace('/onboarding/add-horse');
   });
   const logout = () => accountSession.transition(async () => {
+    await disableBrowserPush().catch(() => {});
     await signOut();
     channel.current?.postMessage('changed');
     await open(null);
@@ -142,7 +153,7 @@ export function DbProvider({ children }: { children: ReactNode }) {
     <Pressable accessibilityRole="button" onPress={() => { setError(null); setAttempt(value => value + 1); }}><Text>Opnieuw proberen</Text></Pressable>
   </View>;
   if (!database) return <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}><ActivityIndicator accessibilityLabel="App laden" color="#127A79" /></View>;
-  return <PowerSyncContext.Provider value={database}><DbContext.Provider value={{ powersync: database, isLoggedIn: !!userId, isConnected: syncStatus === 'connected', syncStatus, currentUserId: userId, selectedHorseId, selectHorse, login, register, completeRegistration, logout }}>
+  return <PowerSyncContext.Provider value={database}><DbContext.Provider value={{ powersync: database, isLoggedIn: !!userId, isConnected: syncStatus === 'connected', syncStatus, currentUserId: userId, selectedHorseId, selectHorse, login, register, completeRegistration, logout, refreshSubscriptionAccess }}>
     {children}
   </DbContext.Provider></PowerSyncContext.Provider>;
 }

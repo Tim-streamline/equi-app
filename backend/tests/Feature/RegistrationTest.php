@@ -21,7 +21,7 @@ use Tests\TestCase;
 
 class RegistrationTest extends TestCase
 {
-    use RefreshDatabase;
+    use RefreshDatabase, \Tests\Concerns\HasSubscription;
 
     private string $privatePath;
 
@@ -101,6 +101,74 @@ class RegistrationTest extends TestCase
         $this->postJson('/api/auth/login', ['email' => $user->email, 'password' => 'password-for-test'])->assertOk();
     }
 
+    public function test_email_confirmation_creates_an_account_without_the_registration_page(): void
+    {
+        $this->beginRegistration();
+        $url = Mail::sent(RegistrationConfirmation::class)->last()->confirmationUrl;
+        $this->get($url)->assertOk()->assertSee('Je account is aangemaakt');
+        $this->assertGuest('web');
+        $user = User::sole();
+        $this->assertNotNull($user->email_verified_at);
+        $this->assertTrue(Hash::check('password-for-test', $user->password));
+        $this->assertDatabaseHas('pending_registrations', ['user_id' => $user->id, 'password_hash' => '']);
+
+        // Losing the page's token and later cleaning up its pending record cannot lose the account.
+        $this->travel(16)->minutes();
+        DB::table('pending_registrations')->where('expires_at', '<=', now())->delete();
+        $this->assertDatabaseCount('pending_registrations', 0);
+        $credentials = ['email' => $user->email, 'password' => 'password-for-test'];
+        $this->postJson('/api/auth/login', $credentials)->assertOk()->assertJsonPath('user.id', $user->id);
+        $csrf = $this->getJson('/web-session/csrf')->json('token');
+        $this->withHeader('X-CSRF-TOKEN', $csrf)->postJson('/web-session/login', $credentials)
+            ->assertOk()->assertJsonPath('user.id', $user->id);
+        $this->assertAuthenticatedAs($user, 'web');
+    }
+
+    public function test_confirmation_is_idempotent_and_does_not_require_login_token_signing(): void
+    {
+        $this->app->instance('env', 'staging');
+        $this->beginRegistration();
+        config(['powersync.private_key_path' => '/missing-registration-test-key']);
+        $url = Mail::sent(RegistrationConfirmation::class)->last()->confirmationUrl;
+        $this->get($url)->assertOk();
+        $user = User::sole();
+        $verifiedAt = $user->email_verified_at;
+        $this->travel(3)->minutes();
+        $this->get($url)->assertOk();
+        $this->assertDatabaseCount('users', 1);
+        $this->assertDatabaseCount('credit_grants', 1);
+        $this->assertSame(7, app(CreditLedger::class)->summary($user)['balance']);
+        $this->assertTrue($verifiedAt->equalTo($user->fresh()->email_verified_at));
+        $this->assertGuest('web');
+    }
+
+    public function test_original_page_can_finish_later_and_retries_do_not_extend_its_login_token(): void
+    {
+        $this->freezeTime();
+        $proof = $this->beginRegistration();
+        $this->get(Mail::sent(RegistrationConfirmation::class)->last()->confirmationUrl)->assertOk();
+        $user = User::sole();
+        $this->travel(3)->minutes();
+        $this->postJson('/api/auth/register/status', $proof)->assertOk()->assertJsonPath('status', 'confirmed');
+        $this->postJson('/api/auth/register/complete', $proof)->assertCreated()->assertJsonPath('user.id', $user->id);
+        $this->travel(1)->minutes();
+        $this->postJson('/api/auth/register/complete', $proof)->assertCreated()->assertJsonPath('user.id', $user->id);
+        $this->travel(1)->minutes();
+        $this->postJson('/api/auth/register/complete', $proof)->assertUnprocessable();
+        $this->assertDatabaseCount('users', 1);
+    }
+
+    public function test_previously_confirmed_pending_registrations_can_still_finish(): void
+    {
+        $proof = $this->beginRegistration();
+        // The previous backend confirmed the email without creating the account.
+        DB::table('pending_registrations')->update(['confirmed_at' => now()]);
+        $this->postJson('/api/auth/register/complete', $proof)->assertCreated();
+        $user = User::sole();
+        $this->assertNotNull($user->email_verified_at);
+        $this->assertDatabaseHas('pending_registrations', ['user_id' => $user->id, 'password_hash' => '']);
+    }
+
     public function test_staging_registration_receives_seven_test_credits_and_login_does_not_repeat_them(): void
     {
         $this->app->instance('env', 'staging');
@@ -115,6 +183,7 @@ class RegistrationTest extends TestCase
     public function test_new_owner_can_add_a_horse_through_the_existing_sync_path(): void
     {
         $registered = $this->completeRegistration()->assertCreated();
+        $this->subscribe(User::findOrFail($registered->json('user.id')));
         $horseId = (string) Str::uuid();
         $this->withHeader('Authorization', 'Bearer '.$registered->json('token'))->postJson('/api/sync/upload', ['operations' => [[
             'op' => 'PUT', 'type' => 'horses', 'id' => $horseId,
@@ -239,8 +308,8 @@ class RegistrationTest extends TestCase
     public function test_email_claimed_before_confirmation_cannot_be_overwritten(): void
     {
         $proof = $this->beginRegistration();
-        $this->get(Mail::sent(RegistrationConfirmation::class)->last()->confirmationUrl)->assertOk();
         $existing = User::factory()->create(['email' => 'New.Owner@Example.Test']);
+        $this->get(Mail::sent(RegistrationConfirmation::class)->last()->confirmationUrl)->assertStatus(410);
         $this->postJson('/api/auth/register/complete', $proof)->assertUnprocessable();
         $this->assertDatabaseCount('users', 1);
         $this->assertSame($existing->password, $existing->fresh()->password);

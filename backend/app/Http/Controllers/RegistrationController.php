@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Mail\RegistrationConfirmation;
 use App\Models\User;
 use App\Support\WebLogin;
+use Illuminate\Database\Query\Builder;
 use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -74,21 +75,26 @@ class RegistrationController extends Controller
             ->header('Cache-Control', 'no-store');
     }
 
-    /** The email UID confirms ownership; it never grants a login session. */
+    /** The email UID creates the verified account; it never grants a login session. */
     public function confirm(Request $request, string $uid): Response
     {
         $query = DB::table('pending_registrations')->where('uid_hash', hash('sha256', $uid))->where('expires_at', '>', now());
-        $confirmed = DB::transaction(function () use ($query, $request) {
-            $pending = $query->lockForUpdate()->first();
-            if (! $pending) {
-                return false;
-            }
-            if (! $pending->confirmed_at && ! $request->isMethod('HEAD')) {
-                $query->update(['confirmed_at' => now()]);
-            }
+        try {
+            $confirmed = DB::transaction(function () use ($query, $request) {
+                $pending = $query->lockForUpdate()->first();
+                if (! $pending) {
+                    return false;
+                }
+                // Link probes must not confirm ownership or create an account.
+                if ($request->isMethod('HEAD')) {
+                    return true;
+                }
 
-            return true;
-        });
+                return $this->createConfirmedUser($query, $pending) !== null;
+            });
+        } catch (UniqueConstraintViolationException) {
+            $confirmed = false;
+        }
 
         return response()->view('auth.registration-confirmed', ['confirmed' => $confirmed], $confirmed ? 200 : 410)
             ->header('Cache-Control', 'no-store')->header('Referrer-Policy', 'no-referrer');
@@ -118,25 +124,16 @@ class RegistrationController extends Controller
                 if (! $pending->confirmed_at) {
                     return 'Bevestig eerst je e-mailadres via de link in je e-mail.';
                 }
-                // Retrying a lost response must not create a second account or lose the login.
-                if ($pending->user_id) {
-                    $user = User::findOrFail($pending->user_id);
-
-                    return [$user, app(PowerSyncAuthController::class)->tokenResponse($user)];
-                }
-                if (User::whereRaw('lower(email) = ?', [$pending->email])->exists()) {
-                    $query->delete();
-
+                // Also finish confirmed requests created before account creation moved to the email link.
+                $user = $this->createConfirmedUser($query, $pending);
+                if (! $user) {
                     return 'Dit e-mailadres is al in gebruik. Log in met je bestaande account.';
                 }
-                $user = new User([
-                    'name' => $pending->name, 'email' => $pending->email, 'password' => $pending->password_hash,
-                    'avatar_initial' => mb_strtoupper(mb_substr($pending->name, 0, 1)),
-                ]);
-                $user->email_verified_at = $pending->confirmed_at;
-                $user->save();
                 $response = app(PowerSyncAuthController::class)->tokenResponse($user);
-                $query->update(['user_id' => $user->id, 'password_hash' => '', 'expires_at' => now()->addMinutes(2)]);
+                // Allow lost-response retries, without extending the token on each retry.
+                if (now()->addMinutes(2)->lessThan($pending->expires_at)) {
+                    $query->update(['expires_at' => now()->addMinutes(2)]);
+                }
 
                 return [$user, $response];
             });
@@ -156,6 +153,32 @@ class RegistrationController extends Controller
         }
 
         return $response->setStatusCode(201)->header('Cache-Control', 'no-store');
+    }
+
+    /** Called inside a transaction with the pending registration locked. */
+    private function createConfirmedUser(Builder $query, object $pending): ?User
+    {
+        if ($pending->user_id) {
+            return User::findOrFail($pending->user_id);
+        }
+        if (User::whereRaw('lower(email) = ?', [$pending->email])->exists()) {
+            $query->delete();
+
+            return null;
+        }
+        $user = new User([
+            'name' => $pending->name, 'email' => $pending->email, 'password' => $pending->password_hash,
+            'avatar_initial' => mb_strtoupper(mb_substr($pending->name, 0, 1)),
+        ]);
+        $user->email_verified_at = $pending->confirmed_at ?? now();
+        $user->save();
+        $query->update([
+            'confirmed_at' => $user->email_verified_at,
+            'user_id' => $user->id,
+            'password_hash' => '',
+        ]);
+
+        return $user;
     }
 
     private function registrationToken(Request $request): string

@@ -26,8 +26,9 @@ class PlusPage extends Model
     {
         $heroVersion = substr(hash('sha256', $this->hero_path ?? 'bundled-v1'), 0, 16);
         $portraitVersion = substr(hash('sha256', $this->portrait_path ?? ''), 0, 16);
-        return ['content' => $this->content,
-            'heroImageUrl' => '/api/plus-page/images/hero?v='.$heroVersion,
-            'portraitImageUrl' => $this->portrait_path ? '/api/plus-page/images/portrait?v='.$portraitVersion : null];
+        return ['protocolPriceCents' => (int) ($this->protocol_price_cents ?? 14700),
+            'content' => array_replace($this->content, ['price' => '€ '.number_format(($this->protocol_price_cents ?? 14700) / 100, 2, ',', '.'), 'period' => 'per protocol']),
+            'heroImageUrl' => '/api/protocol-page/images/hero?v='.$heroVersion,
+            'portraitImageUrl' => $this->portrait_path ? '/api/protocol-page/images/portrait?v='.$portraitVersion : null];
     }
 }

@@ -13,6 +13,7 @@ import {
   hasCriticalAnswers,
   isSectionComplete,
   missingRequired,
+  answersForSection,
 } from '@/lib/intake/logic';
 import { useIntake } from '@/lib/intake/store';
 
@@ -26,10 +27,9 @@ export default function IntakeSubmit() {
   // so we can both list them inline and surface them in the "you can't send
   // yet" notification when someone taps VERSTUREN too early.
   const missingBySection = schema.map((s) => {
-    const a = state.answers[s.id] ?? {};
+    const a = answersForSection(s, state.answers);
     const fields = missingRequired(s, a, state.answers, noneOptions);
-    const empty = Object.keys(a).length === 0;
-    return { section: s, fields, incomplete: empty || fields.length > 0 };
+    return { section: s, fields, incomplete: fields.length > 0 };
   }).filter((m) => m.incomplete);
 
   const onSubmit = async () => {
@@ -123,14 +123,16 @@ export default function IntakeSubmit() {
 
           <View className="mb-4 overflow-hidden rounded-2xl border border-ink-8 bg-white">
             {schema.map((s, i) => {
-              const a = state.answers[s.id] ?? {};
-              const done = isSectionComplete(s, a, state.answers, noneOptions) && Object.keys(a).length > 0;
-              const missing = missingRequired(s, a, state.answers, noneOptions).length;
+              const a = answersForSection(s, state.answers);
+              const done = isSectionComplete(s, a, state.answers, noneOptions);
+              const missingFields = missingRequired(s, a, state.answers, noneOptions);
+              const missing = missingFields.length;
+              const first = missingFields[0];
               return (
                 <Pressable
                   key={s.id}
                   onPress={() =>
-                    router.push({ pathname: '/intake/section/[id]', params: { id: s.id } } as any)
+                    router.push({ pathname: '/intake/section/[id]', params: { id: s.id, field: first?.id ?? '' } } as any)
                   }
                   className="flex-row items-center gap-3 px-3.5 py-3"
                   style={{

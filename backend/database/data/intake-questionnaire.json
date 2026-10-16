@@ -19,8 +19,313 @@
   ],
   "sections": [
     {
-      "id": "contact",
+      "id": "intake-fotos",
       "nr": 0,
+      "title": "Intake fotos",
+      "intro": "Je hoeft niet alles in één keer te doen. Voeg toe wat je al hebt en kom later terug voor de rest. Staat er een foto-opdracht tussen die niet van toepassing is op jouw paard? Dan kun je dat bij dat onderdeel aangeven.\n\nFoto’s worden tussentijds automatisch opgeslagen.",
+      "minutes": 10,
+      "icon": "camera",
+      "sub": "Verzamel hier de foto’s die ik nodig heb om een completer beeld te krijgen van je paard, het voer en de leefomgeving. Sommige foto’s zijn alleen nodig als ze op jouw paard van toepassing zijn.",
+      "fields": [
+        {
+          "id": "foto-historie",
+          "label": "Je paard door de jaren heen",
+          "type": "photo",
+          "optional": true,
+          "hint": "Deze foto’s helpen mij om te zien hoe de lichaamsconditie en het uiterlijk van je paard in de loop van de tijd zijn veranderd.\n\nUpload max. 10 foto’s waarop je hele paard goed zichtbaar is. Gebruik hiervoor geen rijfoto’s of foto’s waarop een zadel, deken of andere uitrusting een groot deel van het lichaam bedekt.\n\nVoeg foto’s toe van zover terug als je je paard hebt, tot maximaal 5 jaar geleden. Heb je je paard bijvoorbeeld pas één jaar, dan zijn foto’s tot dat jaar natuurlijk voldoende.\n\nJe hoeft niet het maximale aantal foto’s te uploaden. Een paar duidelijke foto’s van verschillende momenten is genoeg.",
+          "answerSection": "klacht",
+          "photoConfig": {
+            "max": 10,
+            "year_required": true
+          }
+        },
+        {
+          "id": "foto-hooi",
+          "label": "Het hooi dat je paard nu krijgt",
+          "type": "photo",
+          "hint": "Met deze foto’s krijg ik een indruk van het ruwvoer dat je paard daadwerkelijk eet, bijvoorbeeld van de structuur, kleur, stengeligheid en samenstelling.\n\nVoeg bij voorkeur één overzichtsfoto en één foto van dichterbij toe, zodat zowel het geheel als de structuur goed zichtbaar zijn.\n\nKies een representatief deel van het hooi en niet speciaal alleen het mooiste of slechtste stukje.",
+          "answerSection": "voer"
+        },
+        {
+          "id": "foto-mest",
+          "label": "Mest van je paard",
+          "type": "photo",
+          "required": true,
+          "hint": "De vorm, structuur, vochtigheid en samenhang van de mest geven aanvullende informatie naast je antwoorden over de ontlasting.\n\nMaak foto’s van verse mest voordat deze uit elkaar is gelopen of vermengd is met bodembedekking. Zorg dat zowel de volledige mesthoop als de structuur van dichterbij goed zichtbaar is.\n\nWisselt de mest sterk? Dan mag je foto’s van verschillende momenten toevoegen.",
+          "answerSection": "water"
+        },
+        {
+          "id": "foto-stal",
+          "label": "Stal, paddock of dagelijkse verblijfplaats",
+          "type": "photo",
+          "optional": true,
+          "answerSection": "huisvesting",
+          "hint": "Hiermee krijg ik een beeld van hoe je paard in het dagelijks leven wordt gehuisvest.\n\nMaak een overzichtsfoto waarop de normale dagelijkse situatie zichtbaar is (denk ook aan de voer-, drink- en schuilplaats). Je hoeft de stal of paddock niet speciaal schoon te maken of anders in te richten voor de foto.\n\nHeeft je paard meerdere belangrijke verblijfplaatsen? Dan mogen meerdere foto’s worden toegevoegd."
+        },
+        {
+          "id": "foto-weide",
+          "label": "Weide",
+          "type": "photo",
+          "optional": true,
+          "answerSection": "huisvesting",
+          "hint": "Alleen invullen als je paard op de weide komt.\n\nHiermee krijg ik een indruk van de begroeiing, bodem en algemene omgeving waarin je paard graast.\n\nMaak een overzichtsfoto waarop een zo groot mogelijk deel van de weide zichtbaar is en wat close-up foto’s waarop ook de begroeiing en bodem redelijk te beoordelen zijn.",
+          "photoConfig": {
+            "allow_na": true,
+            "na_key": "weide-na"
+          }
+        },
+        {
+          "id": "giftige-planten-foto",
+          "label": "Bomen, struiken of planten in de leefomgeving",
+          "type": "photo",
+          "optional": true,
+          "hint": "Alleen invullen als er bomen, struiken of planten staan waar je paard (soms) bij kan.\n\nDeze foto’s helpen mij om beter te kunnen zien om welke planten, struiken of bomen het gaat en hoe ze in de leefomgeving van je paard staan.\n\nMaak bij voorkeur een overzichtsfoto waarop zichtbaar is waar de plant, struik of boom staat én een foto van dichterbij waarop herkenbare kenmerken zoals bladeren, takken, bloemen, vruchten of zaden goed zichtbaar zijn.\n\nMaximaal 10 foto’s.",
+          "answerSection": "huisvesting",
+          "photoConfig": {
+            "max": 10,
+            "allow_na": true,
+            "na_key": "planten-na"
+          }
+        },
+        {
+          "id": "foto-zijaanzicht-links",
+          "label": "Hele paard van links",
+          "type": "photo",
+          "required": true,
+          "hint": "Met deze foto’s krijg ik een beter beeld van onder andere lichaamsconditie, bespiering en houding.\n\nZet je paard zo natuurlijk en recht mogelijk op een vlakke ondergrond. Zorg dat het hele paard, inclusief de hoeven, zichtbaar is. Fotografeer bij voorkeur bij goed daglicht en zonder deken, zadel of andere uitrusting die het lichaam bedekt. Houd de camera ongeveer ter hoogte van het midden van het lichaam en fotografeer zo recht mogelijk, niet sterk van boven of onder. Gebruik geen filters of andere beeldbewerking.",
+          "answerSection": "fysiek",
+          "photoConfig": {
+            "max": 1
+          }
+        },
+        {
+          "id": "foto-zijaanzicht-rechts",
+          "label": "Hele paard van rechts",
+          "type": "photo",
+          "required": true,
+          "hint": "Met deze foto’s krijg ik een beter beeld van onder andere lichaamsconditie, bespiering en houding.\n\nZet je paard zo natuurlijk en recht mogelijk op een vlakke ondergrond. Zorg dat het hele paard, inclusief de hoeven, zichtbaar is. Fotografeer bij voorkeur bij goed daglicht en zonder deken, zadel of andere uitrusting die het lichaam bedekt. Houd de camera ongeveer ter hoogte van het midden van het lichaam en fotografeer zo recht mogelijk, niet sterk van boven of onder. Gebruik geen filters of andere beeldbewerking.",
+          "answerSection": "fysiek",
+          "photoConfig": {
+            "max": 1
+          }
+        },
+        {
+          "id": "foto-vooraanzicht",
+          "label": "Vooraanzicht",
+          "type": "photo",
+          "required": true,
+          "answerSection": "fysiek",
+          "hint": "Met deze foto’s krijg ik een beter beeld van onder andere lichaamsconditie, bespiering en houding.\n\nZet je paard zo natuurlijk en recht mogelijk op een vlakke ondergrond. Zorg dat het hele paard, inclusief de hoeven, zichtbaar is. Fotografeer bij voorkeur bij goed daglicht en zonder deken, zadel of andere uitrusting die het lichaam bedekt. Houd de camera ongeveer ter hoogte van het midden van het lichaam en fotografeer zo recht mogelijk, niet sterk van boven of onder. Gebruik geen filters of andere beeldbewerking.",
+          "photoConfig": {
+            "max": 1
+          }
+        },
+        {
+          "id": "foto-achteraanzicht",
+          "label": "Achteraanzicht",
+          "type": "photo",
+          "required": true,
+          "answerSection": "fysiek",
+          "hint": "Met deze foto’s krijg ik een beter beeld van onder andere lichaamsconditie, bespiering en houding.\n\nZet je paard zo natuurlijk en recht mogelijk op een vlakke ondergrond. Zorg dat het hele paard, inclusief de hoeven, zichtbaar is. Fotografeer bij voorkeur bij goed daglicht en zonder deken, zadel of andere uitrusting die het lichaam bedekt. Houd de camera ongeveer ter hoogte van het midden van het lichaam en fotografeer zo recht mogelijk, niet sterk van boven of onder. Gebruik geen filters of andere beeldbewerking.",
+          "photoConfig": {
+            "max": 1
+          }
+        },
+        {
+          "id": "foto-huid",
+          "label": "Is je klacht zichtbaar?",
+          "type": "photo",
+          "required": false,
+          "hint": "Als de klacht of afwijking zichtbaar is, kan een foto helpen om beter te begrijpen wat je bedoelt.\n\nMaak bij voorkeur eerst een overzichtsfoto waarop duidelijk is waar op het paard de klacht zich bevindt. Voeg indien nuttig daarnaast een foto van dichterbij toe waarop het betreffende gebied duidelijk zichtbaar is. Gebruik scherpe, onbewerkte foto’s bij goed licht.",
+          "optional": true,
+          "answerSection": "fysiek",
+          "photoConfig": {
+            "allow_na": true,
+            "na_key": "klacht-na"
+          }
+        },
+        {
+          "id": "foto-hoeven",
+          "label": "De hoeven",
+          "type": "photo",
+          "required": true,
+          "hint": "Deze foto’s helpen mij om de vorm, stand en hoefwand van alle vier de hoeven goed met elkaar te vergelijken.\n\nZet je paard op een vlakke, harde ondergrond, bijvoorbeeld beton, klinkers of een andere egale verharde vloer. Maak van iedere hoef één foto recht van de zijkant.\n\nHoud je telefoon horizontaal en zo laag mogelijk, vrijwel op de grond, zodat de camera ongeveer op hoefhoogte zit. Houd de telefoon recht en parallel aan de hoef. Fotografeer dus niet schuin van boven, van voren of van achteren.\n\nZorg dat de volledige hoef vanaf de kroonrand tot aan de grond zichtbaar is en dat ook een stukje van het onderbeen in beeld staat. Zorg voor voldoende licht, een scherpe foto en maak de hoef indien nodig eerst schoon, zodat de hoefwand goed zichtbaar is.",
+          "optional": false,
+          "answerSection": "fysiek",
+          "photoConfig": {
+            "slots": [
+              {
+                "id": "lv",
+                "label": "Linkervoorhoef"
+              },
+              {
+                "id": "rv",
+                "label": "Rechtervoorhoef"
+              },
+              {
+                "id": "la",
+                "label": "Linkerachterhoef"
+              },
+              {
+                "id": "ra",
+                "label": "Rechterachterhoef"
+              }
+            ]
+          }
+        },
+        {
+          "id": "foto-slijmvlies",
+          "label": "Slijmvliezen",
+          "type": "photo",
+          "optional": true,
+          "hint": "De kleur en het uiterlijk van de slijmvliezen geven aanvullende informatie over de algemene fysieke indruk van je paard.\n\nMaak een scherpe foto van het tandvlees óf het slijmvlies rond het oog. Gebruik bij voorkeur natuurlijk daglicht en geen filter, zodat de kleur zo natuurgetrouw mogelijk zichtbaar is.",
+          "answerSection": "fysiek"
+        },
+        {
+          "id": "sec-hoef-upload",
+          "label": "Extra hoef foto’s bij een hoefgerelateerde hulpvraag",
+          "type": "sectionhead",
+          "answerSection": "fysiek",
+          "hint": "Alleen invullen als jouw klacht of hulpvraag met de hoeven, pees-, gewrichts-, bewegingsproblemen of staakgedrag te maken heeft.\n\nVan iedere hoef heb ik drie aanvullende foto’s nodig. Hiermee kan ik onder andere de zool, hielregio en zijkant beter bekijken en de vier hoeven met elkaar vergelijken. Totaal 12 foto’s.\n\nMaak de hoeven droog en voldoende schoon zodat de hoefstructuren goed zichtbaar zijn.\n\nZool: til de hoef op en fotografeer de volledige onderzijde zo recht mogelijk.\nAchterzijde / hielen: fotografeer recht vanaf de achterkant zodat de volledige achterzijde en beide hielen goed zichtbaar zijn.\nZijaanzicht: fotografeer de hoef zo recht mogelijk van opzij, met de volledige hoef in beeld.\n\nGebruik bij voorkeur ongeveer dezelfde afstand en camerahoek voor alle vier de hoeven zodat de foto’s goed met elkaar te vergelijken zijn.",
+          "photoConfig": {
+            "example_url": "/api/intake-examples/hooves",
+            "example_caption": "Voorbeeldfoto’s — David Landreville"
+          }
+        },
+        {
+          "id": "foto-hoef-instructie",
+          "label": "Eerder toegevoegde extra hoefbeelden",
+          "type": "photo",
+          "optional": true,
+          "hint": "Je eerder toegevoegde foto’s blijven hier bewaard. Gebruik voor nieuwe foto’s de afzonderlijke aanzichten hieronder.",
+          "answerSection": "fysiek",
+          "photoConfig": {
+            "existing_only": true,
+            "allow_na": true,
+            "na_key": "extra-hoeven-na"
+          }
+        },
+        {
+          "id": "foto-hoef-lv",
+          "label": "Extra hoefbeelden · Linkervoorhoef",
+          "type": "photo",
+          "optional": true,
+          "answerSection": "fysiek",
+          "hint": "Voeg voor deze hoef de drie aangegeven aanzichten toe. Alleen invullen als dit op je hulpvraag van toepassing is.",
+          "photoConfig": {
+            "allow_na": true,
+            "na_key": "extra-hoeven-na",
+            "slots": [
+              {
+                "id": "zool",
+                "label": "Zool"
+              },
+              {
+                "id": "achterzijde",
+                "label": "Achterzijde / hielen"
+              },
+              {
+                "id": "zijaanzicht",
+                "label": "Zijaanzicht"
+              }
+            ]
+          }
+        },
+        {
+          "id": "foto-hoef-rv",
+          "label": "Extra hoefbeelden · Rechtervoorhoef",
+          "type": "photo",
+          "optional": true,
+          "answerSection": "fysiek",
+          "hint": "Voeg voor deze hoef de drie aangegeven aanzichten toe. Alleen invullen als dit op je hulpvraag van toepassing is.",
+          "photoConfig": {
+            "allow_na": true,
+            "na_key": "extra-hoeven-na",
+            "slots": [
+              {
+                "id": "zool",
+                "label": "Zool"
+              },
+              {
+                "id": "achterzijde",
+                "label": "Achterzijde / hielen"
+              },
+              {
+                "id": "zijaanzicht",
+                "label": "Zijaanzicht"
+              }
+            ]
+          }
+        },
+        {
+          "id": "foto-hoef-la",
+          "label": "Extra hoefbeelden · Linkerachterhoef",
+          "type": "photo",
+          "optional": true,
+          "answerSection": "fysiek",
+          "hint": "Voeg voor deze hoef de drie aangegeven aanzichten toe. Alleen invullen als dit op je hulpvraag van toepassing is.",
+          "photoConfig": {
+            "allow_na": true,
+            "na_key": "extra-hoeven-na",
+            "slots": [
+              {
+                "id": "zool",
+                "label": "Zool"
+              },
+              {
+                "id": "achterzijde",
+                "label": "Achterzijde / hielen"
+              },
+              {
+                "id": "zijaanzicht",
+                "label": "Zijaanzicht"
+              }
+            ]
+          }
+        },
+        {
+          "id": "foto-hoef-ra",
+          "label": "Extra hoefbeelden · Rechterachterhoef",
+          "type": "photo",
+          "optional": true,
+          "answerSection": "fysiek",
+          "hint": "Voeg voor deze hoef de drie aangegeven aanzichten toe. Alleen invullen als dit op je hulpvraag van toepassing is.",
+          "photoConfig": {
+            "allow_na": true,
+            "na_key": "extra-hoeven-na",
+            "slots": [
+              {
+                "id": "zool",
+                "label": "Zool"
+              },
+              {
+                "id": "achterzijde",
+                "label": "Achterzijde / hielen"
+              },
+              {
+                "id": "zijaanzicht",
+                "label": "Zijaanzicht"
+              }
+            ]
+          }
+        },
+        {
+          "id": "hoefbevangenheid-rontgen-upload",
+          "label": "Röntgenfoto’s",
+          "type": "photo",
+          "optional": true,
+          "hint": "Alleen invullen als je röntgenfoto’s van je paard hebt. Voeg de beschikbare beelden toe. Maximaal 12 foto’s.",
+          "answerSection": "medisch",
+          "photoConfig": {
+            "max": 12,
+            "allow_na": true
+          }
+        }
+      ]
+    },
+    {
+      "id": "contact",
+      "nr": 1,
       "title": "Contactgegevens",
       "intro": "Laat hieronder weten hoe ik je kan bereiken.",
       "minutes": 2,
@@ -79,7 +384,7 @@
     },
     {
       "id": "paard",
-      "nr": 1,
+      "nr": 2,
       "title": "Over je paard",
       "intro": "De basics, zodat ik weet over wie we het hebben.",
       "minutes": 4,
@@ -309,7 +614,7 @@
     },
     {
       "id": "klacht",
-      "nr": 2,
+      "nr": 3,
       "title": "Klacht & hulpvraag",
       "intro": "Wat speelt er nu? Wees zo open en gedetailleerd mogelijk.",
       "minutes": 6,
@@ -571,13 +876,6 @@
           }
         },
         {
-          "id": "foto-historie",
-          "label": "Upload een paar foto's van je paard van de afgelopen 2-5 jaar.",
-          "type": "photo",
-          "optional": true,
-          "hint": "Dit helpt mij om een goed beeld te krijgen van je paard. Max 10 foto's."
-        },
-        {
           "id": "gedragsveranderingen",
           "label": "Heb je de laatste tijd veranderingen opgemerkt in het gedrag van je paard?",
           "type": "textarea",
@@ -601,7 +899,7 @@
     },
     {
       "id": "geschiedenis",
-      "nr": 3,
+      "nr": 4,
       "title": "(Medische) geschiedenis van je paard",
       "intro": "Vragen over de achtergrond, levensloop en belangrijke (medische) gebeurtenissen in het leven van jouw paard.",
       "minutes": 5,
@@ -1142,7 +1440,7 @@
     },
     {
       "id": "medisch",
-      "nr": 4,
+      "nr": 5,
       "title": "Medisch & specialisten",
       "intro": "Vragen over de huidige gezondheid van jouw paard, preventieve zorg en betrokken professionals.",
       "minutes": 6,
@@ -1686,16 +1984,6 @@
           }
         },
         {
-          "id": "hoefbevangenheid-rontgen-upload",
-          "label": "Upload de röntgenfoto’s hier",
-          "type": "photo",
-          "optional": true,
-          "hint": "Tot 12 foto's mogelijk.",
-          "showIf": {
-            "hoefbevangenheid-rontgen": "Ja"
-          }
-        },
-        {
           "id": "hoefbevangenheid-bevindingen",
           "label": "Is er volgens de dierenarts of op de röntgenfoto sprake van één of meer van onderstaande?",
           "type": "multi",
@@ -2074,7 +2362,7 @@
     },
     {
       "id": "voer",
-      "nr": 5,
+      "nr": 6,
       "title": "Voer & ruwvoer",
       "intro": "Wees specifiek in merknamen en hoeveelheden.",
       "minutes": 12,
@@ -2390,12 +2678,6 @@
             "Ooit gewogen, momenteel geschat",
             "Geschat"
           ]
-        },
-        {
-          "id": "foto-hooi",
-          "label": "Foto van het hooi",
-          "type": "photo",
-          "hint": "Pak een paar plukjes hooi uit de baal (liefst uit verschillende plekken), spreid deze los uit op een neutrale, egale ondergrond en maak een duidelijke foto van dichtbij."
         },
         {
           "id": "sec-voordroog",
@@ -3004,7 +3286,7 @@
     },
     {
       "id": "water",
-      "nr": 6,
+      "nr": 7,
       "title": "Water & uitscheiding",
       "intro": "Vragen over drinkgedrag, waterkwaliteit, de mest en urine van jouw paard.",
       "minutes": 5,
@@ -3286,19 +3568,12 @@
             "droog en hard",
             "wisselt per dag"
           ]
-        },
-        {
-          "id": "foto-mest",
-          "label": "Upload foto's van de mest van je paard",
-          "type": "photo",
-          "required": true,
-          "hint": "Maak 3 foto's: (1) van bovenaf van de mesthoop; (2) één mestbal voorzichtig een beetje open zodat de binnenkant zichtbaar is, close-up; (3) één verse mestbal geplet met je voet op een harde, schone ondergrond (geen zand/stro), close-up. Gebruik verse mest, daglicht, en stuur enkel scherpe foto's."
         }
       ]
     },
     {
       "id": "huisvesting",
-      "nr": 7,
+      "nr": 8,
       "title": "Huisvesting & weide",
       "intro": "Waar en hoe woont je paard.",
       "minutes": 10,
@@ -3422,18 +3697,6 @@
           "flagIf": [
             "zaagsel"
           ]
-        },
-        {
-          "id": "foto-stal",
-          "label": "Foto van de stal / paddock (indien van toepassing)",
-          "type": "photo",
-          "optional": true
-        },
-        {
-          "id": "foto-weide",
-          "label": "Foto van de weide (indien van toepassing)",
-          "type": "photo",
-          "optional": true
         },
         {
           "id": "paddock-ruwvoer",
@@ -3973,16 +4236,6 @@
           }
         },
         {
-          "id": "giftige-planten-foto",
-          "label": "Upload indien mogelijk 1–5 foto's van bomen, struiken of planten waar jouw paard toegang toe heeft.",
-          "type": "photo",
-          "optional": true,
-          "hint": "1 overzichtsfoto (afstand tot weide/paddock/voerplek/schuilplek/afrastering), 1–3 detailfoto’s van de plant/boom, en minimaal 1 scherpe close-up van een blad (liefst ook bast, vrucht, bloem of zaad indien aanwezig).",
-          "showIf": {
-            "giftige-planten": "Ja"
-          }
-        },
-        {
           "id": "sec-landbouw",
           "label": "Omgeving & landbouwpercelen",
           "type": "sectionhead"
@@ -4138,7 +4391,7 @@
     },
     {
       "id": "sociaal",
-      "nr": 8,
+      "nr": 9,
       "title": "Sociale interacties",
       "intro": "Het sociale leven en de groepsdynamiek van je paard.",
       "minutes": 6,
@@ -4383,7 +4636,7 @@
     },
     {
       "id": "gedrag",
-      "nr": 9,
+      "nr": 10,
       "title": "Gedrag & training",
       "intro": "Wie is je paard. Hoe gaat hij/zij met de wereld om en wat voor dingen doen jullie samen?",
       "minutes": 6,
@@ -4769,7 +5022,7 @@
     },
     {
       "id": "fysiek",
-      "nr": 10,
+      "nr": 11,
       "title": "Fysiek & foto's",
       "intro": "Een korte check + foto's. Geen perfecte fotograaf nodig, daglicht is genoeg.",
       "minutes": 10,
@@ -5077,97 +5330,12 @@
           "id": "fysiek-vrij",
           "label": "Is er iets fysieks dat je opvalt en niet hierboven aan bod is gekomen?",
           "type": "textarea"
-        },
-        {
-          "id": "foto-zijaanzicht-links",
-          "label": "Foto · hele paard van opzij - links",
-          "type": "photo",
-          "required": true,
-          "hint": "Op 3 m afstand, recht van opzij. Stilstaand op 4 benen."
-        },
-        {
-          "id": "foto-zijaanzicht-rechts",
-          "label": "Foto · hele paard van opzij - rechts",
-          "type": "photo",
-          "required": true,
-          "hint": "Op 3 m afstand, recht van opzij. Stilstaand op 4 benen."
-        },
-        {
-          "id": "foto-vooraanzicht",
-          "label": "Foto · vooraanzicht",
-          "type": "photo",
-          "required": true
-        },
-        {
-          "id": "foto-achteraanzicht",
-          "label": "Foto · achteraanzicht",
-          "type": "photo",
-          "required": true
-        },
-        {
-          "id": "foto-huid",
-          "label": "Foto van de klacht (indien van toepassing)",
-          "type": "photo",
-          "required": false,
-          "hint": "Is de klacht zichtbaar aan de buitenkant? Voeg dan een duidelijke foto toe waarop goed te zien is wat je bedoelt.",
-          "optional": true
-        },
-        {
-          "id": "foto-hoeven",
-          "label": "Maak foto’s van alle vier de hoeven",
-          "type": "photo",
-          "required": true,
-          "hint": "Maak van iedere hoef een duidelijke foto vanaf de voorkant én vanaf de zijkant. Zorg dat de volledige hoef goed zichtbaar is.",
-          "optional": false
-        },
-        {
-          "id": "foto-slijmvlies",
-          "label": "Foto · slijmvlies (tandvlees of oogwit)",
-          "type": "photo",
-          "optional": true,
-          "hint": "Optioneel maar enorm waardevol."
-        },
-        {
-          "id": "sec-hoef-upload",
-          "label": "Indien je hulpvraag hoefgerelateerd is",
-          "type": "sectionhead"
-        },
-        {
-          "id": "foto-hoef-instructie",
-          "label": "Upload van iedere hoef 3 foto's (12 in totaal)",
-          "type": "photo",
-          "optional": true,
-          "hint": "Per hoef: (1) onderzijde / zool, (2) achterzijde, (3) zijaanzicht. De hoeven moeten zeer goed schoongemaakt zijn: verwijder alle modder, zand, mest en losse vervuiling (gebruik indien nodig een staalborstel). Zorg voor goed licht en scherpe foto's, recht van voren / van opzij."
-        },
-        {
-          "id": "foto-hoef-lv",
-          "label": "Foto · linkervoorhoef (zool, achterzijde, zijaanzicht)",
-          "type": "photo",
-          "optional": true
-        },
-        {
-          "id": "foto-hoef-rv",
-          "label": "Foto · rechtervoorhoef (zool, achterzijde, zijaanzicht)",
-          "type": "photo",
-          "optional": true
-        },
-        {
-          "id": "foto-hoef-la",
-          "label": "Foto · linkerachterhoef (zool, achterzijde, zijaanzicht)",
-          "type": "photo",
-          "optional": true
-        },
-        {
-          "id": "foto-hoef-ra",
-          "label": "Foto · rechterachterhoef (zool, achterzijde, zijaanzicht)",
-          "type": "photo",
-          "optional": true
         }
       ]
     },
     {
       "id": "samenvatting",
-      "nr": 11,
+      "nr": 12,
       "title": "Versturen",
       "intro": "Loop nog een keer door je antwoorden voordat je het in stuurt. Na het insturen kan het niet meer worden aangepast.",
       "minutes": 2,

@@ -59,6 +59,7 @@
             protocol_if_json: '',
             link_json: '',
             repeater_sub_json: '',
+            photo_config_json: '',
         };
     }
 
@@ -68,15 +69,15 @@
 
     function createSection() {
         editingSection = null;
-        sectionForm.defaults({ questionnaire_id: questionnaire.id, key: '', title: '', intro: '', subtitle: '', icon: 'sparkles', minutes: 2, order: questionnaire.sections.length, active: true });
-        sectionForm.reset();
-        sectionForm.clearErrors();
+        $sectionForm.defaults({ questionnaire_id: questionnaire.id, key: '', title: '', intro: '', subtitle: '', icon: 'sparkles', minutes: 2, order: questionnaire.sections.length, active: true });
+        $sectionForm.reset();
+        $sectionForm.clearErrors();
         sectionOpen = true;
     }
 
     function editSection(section) {
         editingSection = section;
-        sectionForm.defaults({
+        $sectionForm.defaults({
             questionnaire_id: questionnaire.id,
             key: section.key,
             title: section.title,
@@ -87,8 +88,8 @@
             order: section.order,
             active: section.active,
         });
-        sectionForm.reset();
-        sectionForm.clearErrors();
+        $sectionForm.reset();
+        $sectionForm.clearErrors();
         sectionOpen = true;
     }
 
@@ -102,15 +103,15 @@
 
     function createField() {
         editingField = null;
-        fieldForm.defaults(emptyField());
-        fieldForm.reset();
-        fieldForm.clearErrors();
+        $fieldForm.defaults(emptyField());
+        $fieldForm.reset();
+        $fieldForm.clearErrors();
         fieldOpen = true;
     }
 
     function editField(field) {
         editingField = field;
-        fieldForm.defaults({
+        $fieldForm.defaults({
             section_id: field.section_id,
             key: field.key,
             label: field.label,
@@ -132,9 +133,10 @@
             protocol_if_json: json(field.protocol_if),
             link_json: json(field.link),
             repeater_sub_json: json(field.repeater_sub),
+            photo_config_json: json(field.photo_config),
         });
-        fieldForm.reset();
-        fieldForm.clearErrors();
+        $fieldForm.reset();
+        $fieldForm.clearErrors();
         fieldOpen = true;
     }
 
@@ -279,6 +281,7 @@
             </div>
 
             <div class="grid gap-4 md:grid-cols-2">
+                <div class="md:col-span-2"><Field label="Foto-instellingen (JSON)" error={$fieldForm.errors.photo_config_json} hint="max: maximum aantal foto’s; year_required: jaartal verplicht per foto; allow_na: Niet van toepassing toestaan; slots: afzonderlijke aanzichten met id en label; example_url en example_caption: voorbeeldafbeelding. na_key verbindt een gedeelde keuze; existing_only toont alleen eerder opgeslagen foto’s."><Textarea rows="8" bind:value={$fieldForm.photo_config_json} placeholder={'{"max":10,"year_required":true,"allow_na":false}'} /></Field></div>
                 <Field label="Antwoordopties (JSON-array)" error={$fieldForm.errors.options_json}><Textarea rows="5" bind:value={$fieldForm.options_json} placeholder='["Ja", "Nee"]' /></Field>
                 <Field label="Zichtbaarheidsregel showIf (JSON-object)" error={$fieldForm.errors.show_if_json}><Textarea rows="5" bind:value={$fieldForm.show_if_json} placeholder={'{"paard.geslacht":"merrie"}'} /></Field>
                 <Field label="Signaleringsregel flagIf (JSON)" error={$fieldForm.errors.flag_if_json}><Textarea rows="4" bind:value={$fieldForm.flag_if_json} placeholder='["Ja"] of "non-empty"' /></Field>

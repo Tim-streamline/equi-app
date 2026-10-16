@@ -15,16 +15,18 @@ import { useIntakeSchema } from '@/lib/intake/schema-provider';
 type Props = {
   /** Compact variant tones down padding when used as a Home banner. */
   variant?: 'banner' | 'standalone';
+  existingOnly?: boolean;
 };
 
-export function IntakeEntryCard({ variant = 'banner' }: Props) {
-  const { state, loaded } = useIntake();
+export function IntakeEntryCard({ variant = 'banner', existingOnly = false }: Props) {
+  const { state, loaded, bookingId } = useIntake();
   const protocol = useActiveProtocolForHorse();
   const { schema, noneOptions } = useIntakeSchema();
 
   // Pre-hydration the safer default is to render nothing — avoids a
   // "start your intake" flash on screens where the user already submitted.
   if (!loaded) return null;
+  if (existingOnly && !bookingId) return null;
   if (state.submittedAt) return null;
   // If the therapist has already delivered a protocol, the intake step is
   // implicitly complete — don't nag the user to re-do it.

@@ -14,6 +14,7 @@ class AuthenticateWebAppSession
         abort_unless($user, 401);
         $request->attributes->set('powersync_user_id', (string) $user->id);
 
+        app(\App\Support\SubscriptionAccess::class)->requireActive($user->id);
         $response = $next($request);
         $response->headers->set('Cache-Control', 'private, no-store');
 

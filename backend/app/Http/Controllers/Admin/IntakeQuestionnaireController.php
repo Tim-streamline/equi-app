@@ -10,6 +10,7 @@ use App\Support\AuditLogger;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
@@ -179,6 +180,7 @@ class IntakeQuestionnaireController extends Controller
             'placeholder' => ['nullable', 'string', 'max:1000'],
             'order' => ['required', 'integer', 'min:0', 'max:10000'],
             'active' => ['required', 'boolean'],
+            'photo_config_json' => ['nullable', 'string', 'max:20000'],
             'link_json' => ['nullable', 'string', 'max:20000'],
             'options_json' => ['nullable', 'string', 'max:50000'],
             'show_if_json' => ['nullable', 'string', 'max:50000'],
@@ -189,6 +191,7 @@ class IntakeQuestionnaireController extends Controller
         ]);
 
         foreach ([
+            'photo_config_json' => 'photo_config',
             'link_json' => 'link',
             'options_json' => 'options',
             'show_if_json' => 'show_if',
@@ -201,7 +204,44 @@ class IntakeQuestionnaireController extends Controller
             unset($data[$input]);
         }
 
+        // Older admin forms may omit photo settings; ordinary copy edits must retain them.
+        if (! $request->exists('photo_config_json')) {
+            $data['photo_config'] = $field?->photo_config;
+        }
         $this->validateFieldJsonShapes($data);
+        if ($data['photo_config'] !== null) {
+            $validator = Validator::make(['photo' => $data['photo_config']], [
+                'photo' => ['array:max,year_required,allow_na,na_key,slots,existing_only,example_url,example_caption'],
+                'photo.max' => ['sometimes', 'integer', 'min:1', 'max:100'],
+                'photo.year_required' => ['sometimes', 'boolean'],
+                'photo.allow_na' => ['sometimes', 'boolean'],
+                'photo.na_key' => ['sometimes', 'string', 'max:128', 'regex:/^[a-zA-Z0-9:_-]+$/'],
+                'photo.existing_only' => ['sometimes', 'boolean'],
+                'photo.slots' => ['sometimes', 'array', 'list', 'max:24'],
+                'photo.slots.*' => ['array:id,label'],
+                'photo.slots.*.id' => ['required', 'string', 'distinct', 'max:64', 'regex:/^[a-z0-9_-]+$/'],
+                'photo.slots.*.label' => ['required', 'string', 'max:255'],
+                'photo.example_url' => ['sometimes', 'string', 'max:2000', 'regex:~^(https://[^/]+/|/(?!/))~'],
+                'photo.example_caption' => ['sometimes', 'string', 'max:255'],
+            ]);
+            if ($validator->fails()) {
+                throw ValidationException::withMessages(['photo_config_json' => implode(' ', $validator->errors()->all())]);
+            }
+            if (isset($data['photo_config']['max']) && count($data['photo_config']['slots'] ?? []) > $data['photo_config']['max']) {
+                throw ValidationException::withMessages(['photo_config_json' => 'Het maximum mag niet lager zijn dan het aantal foto-aanzichten.']);
+            }
+        }
+
+        // Moving a question frees its presentation key, not its stored answer
+        // namespace. Do not let a new question reuse those historical answers.
+        $section = IntakeSection::findOrFail($data['section_id']);
+        $answerSection = $field?->answer_section_key ?? $section->key;
+        if (IntakeField::where('key', $data['key'])->when($field, fn ($q) => $q->whereKeyNot($field->id))
+            ->whereHas('section', fn ($q) => $q->where('questionnaire_id', $section->questionnaire_id))
+            ->where(fn ($q) => $q->where('answer_section_key', $answerSection)
+                ->orWhere(fn ($q) => $q->whereNull('answer_section_key')->whereHas('section', fn ($q) => $q->where('key', $answerSection))))->exists()) {
+            throw ValidationException::withMessages(['key' => 'Deze sleutel is al gekoppeld aan een intakevraag en de opgeslagen antwoorden.']);
+        }
 
         return $data;
     }
@@ -301,7 +341,7 @@ class IntakeQuestionnaireController extends Controller
     private function ensureFieldKeyCanChange(IntakeField $field, string $newKey): void
     {
         if ($field->key === $newKey || ! DB::table('intake_answers')
-            ->where('section_id', $field->section->key)
+            ->where('section_id', $field->answer_section_key ?? $field->section->key)
             ->where('field_id', $field->key)
             ->exists()) {
             return;

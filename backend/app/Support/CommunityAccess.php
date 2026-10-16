@@ -27,15 +27,12 @@ class CommunityAccess
             ->whereIn('type', ['mute', 'ban'])->whereNull('lifted_at')
             ->where(fn ($q) => $q->whereNull('expires_at')->orWhere('expires_at', '>', now()))->exists();
 
-        return ! $restricted && Subscription::where('user_id', $user->id)->where('status', 'active')
-            ->where(fn ($q) => $q->whereNull('started_at')->orWhereDate('started_at', '<=', today()))
-            ->where(fn ($q) => $q->whereNull('renews_at')->orWhereDate('renews_at', '>=', today()))
-            ->whereHas('plan', fn ($q) => $q->whereIn('slug', ['basic', 'basis', 'plus', 'bundle']))->exists();
+        return ! $restricted && app(SubscriptionAccess::class)->active($user->id) !== null;
     }
 
     public function participate(User $user): void
     {
-        abort_unless($this->canParticipate($user), 403, 'Plaatsen en reageren kan met Basic of Plus, zolang je account niet beperkt is.');
+        abort_unless($this->canParticipate($user), 403, 'Plaatsen en reageren kan met een actief abonnement, zolang je account niet beperkt is.');
     }
 
     public function visible(Builder $query, User $user, bool $replies = false): Builder

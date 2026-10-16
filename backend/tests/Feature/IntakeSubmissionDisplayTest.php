@@ -44,11 +44,14 @@ class IntakeSubmissionDisplayTest extends TestCase
             ->where('bookings.data.1.id', $older->id)
             ->where('bookings.data.1.status_label', 'done')
             ->where('bookings.data.2.id', $draft->id)
-            ->where('bookings.data.2.submitted_at_label', 'Nog niet ingediend'));
+            ->where('bookings.data.2.submitted_at_label', 'Nog niet ingediend')->where('bookings.data.2.status_label', 'Nog niet ingediend')->where('counts.pending', 1));
+        $this->get('/admin/bookings?status=pending')->assertInertia(fn (Assert $page) => $page->has('bookings.data', 1)->where('bookings.data.0.id', $submitted->id));
+        $draft->update(['status' => 'cancelled']);
+        $this->assertSame('Geannuleerd', $draft->fresh()->status_label);
         $this->get('/admin/bookings?status=done')->assertInertia(fn (Assert $page) => $page->has('bookings.data', 1)->where('bookings.data.0.id', $older->id));
         $this->get('/admin/bookings/'.$submitted->id)->assertInertia(fn (Assert $page) => $page->where('booking.submitted_at_label', '30-09-2026 00:24')->where('booking.status_label', 'Te beoordelen'));
         $submitted->update(['submitted_at' => null]);
-        $this->assertSame('Datum onbekend', $submitted->fresh()->submitted_at_label);
+        $this->assertSame('Nog niet ingediend', $submitted->fresh()->submitted_at_label);
         $submitted->update(['submitted_at' => '2026-12-01 23:24:00']);
         $this->assertSame('02-12-2026 00:24', $submitted->fresh()->submitted_at_label);
     }

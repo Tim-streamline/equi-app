@@ -3,8 +3,8 @@
 // <IntakeField/>. The sticky CTA jumps to the next not-yet-completed
 // section (or the submit screen on the last one).
 
-import { useMemo } from 'react';
-import { View, Text } from 'react-native';
+import { useEffect, useRef, useMemo } from 'react';
+import { View, Text, ScrollView } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ChevronLeft, X } from 'lucide-react-native';
@@ -14,19 +14,20 @@ import { IconButton } from '@/components/ui/IconButton';
 import { IntakeScrollView } from '@/components/intake/IntakeScrollView';
 import { IntakeField } from '@/components/intake/IntakeField';
 import { useIntakeSchema } from '@/lib/intake/schema-provider';
-import { showField, answeredCount } from '@/lib/intake/logic';
+import { showField, answeredCount, answersForSection, isPhotoSection, isSectionComplete } from '@/lib/intake/logic';
 import { useIntake } from '@/lib/intake/store';
 
 export default function IntakeSectionScreen() {
-  const { id } = useLocalSearchParams<{ id: string }>();
+  const { id, field: requestedField } = useLocalSearchParams<{ id: string; field?: string }>();
+  const scroll = useRef<ScrollView>(null);
   const insets = useSafeAreaInsets();
   const { schema, noneOptions } = useIntakeSchema();
   const section = id ? schema.find((candidate) => candidate.id === id) : undefined;
-  const { state } = useIntake();
-  const sectionId = section?.id ?? '';
+  const { state, trackActivity } = useIntake();
+  useEffect(() => { if (id) trackActivity(id); }, [id, trackActivity]);
   const answers = useMemo(
-    () => state.answers[sectionId] ?? {},
-    [sectionId, state.answers],
+    () => section ? answersForSection(section, state.answers) : {},
+    [section, state.answers],
   );
   // Filter fields by showIf, but keep sectionheads since they wrap visible
   // children — the renderer just skips numbering them. Hook lives above the
@@ -64,7 +65,7 @@ export default function IntakeSectionScreen() {
     <View className="flex-1 bg-canvas">
       <SafeAreaView edges={['top']} style={{ flex: 1 }}>
         <View className="flex-row items-center justify-between gap-2 px-4 pb-3 pt-2">
-          <IconButton onPress={() => router.back()}>
+          <IconButton accessibilityLabel="Terug naar intakeoverzicht" onPress={() => router.dismissTo('/intake/overview')}>
             <ChevronLeft size={22} color="#1B2A2A" />
           </IconButton>
           <View className="flex-1 items-center">
@@ -81,7 +82,7 @@ export default function IntakeSectionScreen() {
               {section.title}
             </Text>
           </View>
-          <IconButton onPress={() => router.replace('/intake/overview' as any)}>
+          <IconButton accessibilityLabel="Terug naar intakeoverzicht" onPress={() => router.dismissTo('/intake/overview')}>
             <X size={20} color="#1B2A2A" />
           </IconButton>
         </View>
@@ -95,7 +96,7 @@ export default function IntakeSectionScreen() {
           </View>
         </View>
 
-        <IntakeScrollView footer={
+        <IntakeScrollView scrollRef={scroll} footer={
         <View
           className="gap-2 px-5 pt-3"
           style={{
@@ -106,7 +107,7 @@ export default function IntakeSectionScreen() {
           <Button
             title="Opslaan en terug naar overzicht"
             variant="primary"
-            onPress={() => router.replace('/intake/overview' as any)}
+            onPress={() => router.dismissTo('/intake/overview')}
           />
           <View className="flex-row items-center justify-center gap-1.5">
             <View className="h-1.5 w-1.5 rounded-full bg-mint-500" />
@@ -126,16 +127,19 @@ export default function IntakeSectionScreen() {
               </Text>
             )}
 
+            {isPhotoSection(section) && isSectionComplete(section, answers, state.answers, noneOptions) && (
+              <Text className="mb-4 font-semi text-mint-700">Foto’s compleet ✓</Text>
+            )}
             {visible.map((f) => {
               if (f.type !== 'sectionhead') fieldCounter += 1;
               return (
+                <View key={f.id} onTouchStart={() => trackActivity(section.id, f.id)} onLayout={event => { if (requestedField === f.id) scroll.current?.scrollTo({ y: event.nativeEvent.layout.y, animated: false }); }}>
                 <IntakeField
-                  key={f.id}
                   field={f}
                   sectionId={section.id}
                   n={fieldCounter}
                   noneOptions={noneOptions}
-                />
+                /></View>
               );
             })}
         </IntakeScrollView>

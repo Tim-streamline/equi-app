@@ -196,5 +196,5 @@ test('preloader starts from synced rows, retries on foreground/timer, and stops 
 
 test('native app mounts preloading inside the database provider before screen navigation', async () => {
   const source = await readFile(new URL('../app/_layout.tsx', import.meta.url), 'utf8');
-  assert.match(source, /<DbProvider>\s*<LibraryThumbnailPreloader \/>/);
+  assert.match(source, /<DbProvider>\s*<SubscriptionGate>\s*<LibraryThumbnailPreloader \/>/);
 });

@@ -11,8 +11,20 @@
         <p style="color: #127a79; font-weight: bold;">{{ config('app.brand_name') }}</p>
         @if ($confirmed)
             <h1>Je e-mailadres is bevestigd</h1>
-            <p>Ga terug naar het registratiescherm in de app of browser. Je wordt daar automatisch ingelogd.</p>
-            <p>Je kunt dit tabblad sluiten.</p>
+            <p>Je account is aangemaakt. Je kunt nu inloggen met je e-mailadres en wachtwoord.</p>
+            <div id="browser-confirmation">
+                <p>Staat het registratiescherm nog open in de app of browser? Dan word je daar automatisch ingelogd.</p>
+                <p>Je kunt dit tabblad sluiten.</p>
+            </div>
+            <p id="pwa-confirmation" hidden>
+                <a href="{{ config('app.web_url') }}" style="display: inline-block; padding: 12px 20px; background: #127a79; color: #fff; border-radius: 8px; text-decoration: none;">Open EquiApp</a>
+            </p>
+            <script>
+                if (window.matchMedia?.('(display-mode: standalone)').matches || window.navigator.standalone === true) {
+                    document.getElementById('browser-confirmation').hidden = true;
+                    document.getElementById('pwa-confirmation').hidden = false;
+                }
+            </script>
         @else
             <h1>Deze link is niet meer geldig</h1>
             <p>De bevestigingslink is verlopen of vervangen door een nieuwe link. Ga terug naar het registratiescherm en vraag een nieuwe bevestigingsmail aan.</p>

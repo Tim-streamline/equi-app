@@ -29,7 +29,7 @@ class CreditLedgerTest extends TestCase
     }
     private function basic(): Subscription
     {
-        $plan = Plan::firstOrCreate(['slug' => 'basic'], ['label' => 'Basic', 'name' => 'Basic', 'price_cents' => 495, 'interval' => 'monthly']);
+        $plan = Plan::firstOrCreate(['slug' => 'subscription'], ['label' => 'Abonnement', 'name' => 'EquiApp abonnement', 'price_cents' => 495, 'interval' => 'monthly']);
         return Subscription::create(['user_id' => $this->user->id, 'plan_id' => $plan->id, 'status' => 'active', 'price_cents' => 495, 'interval' => 'monthly', 'paid_through' => now()->addMonth(), 'renews_at' => now()->addMonth()]);
     }
     private function order(string $kind = 'purchased', int $credits = 10, ?Subscription $s = null): object

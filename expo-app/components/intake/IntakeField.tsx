@@ -2,7 +2,7 @@
 // reads/writes the value through the IntakeProvider. Sticking to one parent
 // component keeps auto-save behavior uniform across every input type.
 
-import { View, Text, Pressable, Image } from 'react-native';
+import { View, Text, Pressable } from 'react-native';
 import { Check, Plus, Trash2 } from 'lucide-react-native';
 
 import { IntakeTextInput as TextInput } from './IntakeScrollView';
@@ -10,10 +10,8 @@ import { Field, FieldValue, RepeaterSub } from '@/lib/intake/schema';
 import { isFieldRequired, isNoneOption } from '@/lib/intake/logic';
 import { useIntake } from '@/lib/intake/store';
 import { AttachmentField } from './AttachmentField';
+import { ConfiguredPhotoField, PhotoExample } from './ConfiguredPhotoField';
 import { FieldLabel } from './FieldLabel';
-
-/** Bundled example strip shown under the "hoefgerelateerd" upload header. */
-const HOOF_EXAMPLE = require('@/assets/images/intake-hoef-voorbeeld.png');
 
 /** Normalize a persisted value to an array — guards against stale answers
  * saved under a different field type (e.g. a radio value left behind when the
@@ -44,8 +42,9 @@ type Props = {
 
 export function IntakeField({ field, sectionId, n, noneOptions }: Props) {
   const { state, setField } = useIntake();
-  const value = state.answers[sectionId]?.[field.id];
-  const set = (next: FieldValue) => setField(sectionId, field.id, next);
+  const answerSection = field.answerSection ?? sectionId;
+  const value = state.answers[answerSection]?.[field.id];
+  const set = (next: FieldValue) => setField(answerSection, field.id, next);
 
   if (field.type === 'sectionhead') {
     return (
@@ -54,17 +53,8 @@ export function IntakeField({ field, sectionId, n, noneOptions }: Props) {
           {field.label}
         </Text>
         {field.hint && <Text className="mt-2 text-[13.5px] leading-[20px] text-ink-70">{field.hint}</Text>}
-        {field.id === 'sec-hoef-upload' && (
-          <View className="mt-3">
-            <Image
-              source={HOOF_EXAMPLE}
-              style={{ width: '100%', height: 96, borderRadius: 12, resizeMode: 'cover' }}
-            />
-            <Text className="mt-1 text-[11px] text-ink-50">
-              Voorbeeld: onderzijde, achterzijde, zijaanzicht · bron: David Landreville
-            </Text>
-          </View>
-        )}
+        <PhotoExample field={field} />
+
       </View>
     );
   }
@@ -78,7 +68,7 @@ export function IntakeField({ field, sectionId, n, noneOptions }: Props) {
         required={isFieldRequired(field)}
         link={field.link}
       />
-      {renderInput(field, value, set, noneOptions, sectionId)}
+      {renderInput(field, value, set, noneOptions, answerSection)}
     </View>
   );
 }
@@ -157,8 +147,9 @@ function renderInput(
         />
       );
     case 'photo':
+      return <ConfiguredPhotoField field={field} sectionId={sectionId} value={value} onChange={set} />;
     case 'file':
-      return <AttachmentField value={asArray(value)} onChange={set} section={sectionId} field={field.id} photo={field.type === 'photo'} />;
+      return <AttachmentField value={asArray(value)} onChange={set} section={sectionId} field={field.id} photo={false} />;
     case 'repeater':
       return (
         <RepeaterField

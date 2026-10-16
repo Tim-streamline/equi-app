@@ -2,22 +2,31 @@
 
 namespace App\Support;
 
-use App\Models\Horse;
-use App\Models\IntakeBooking;
 use App\Models\Protocol;
+use Illuminate\Support\Str;
 
 class ProtocolNutrition
 {
-    public function answers(Horse $horse): array
+    public function answers(?Protocol $protocol): array
     {
-        $response = IntakeBooking::query()->where('horse_id', $horse->id)
-            ->whereNotNull('submitted_at')->orderByDesc('submitted_at')->with('answers')->first();
+        $response = $protocol?->intake()->whereNotNull('submitted_at')->with('answers')->first();
 
         return $response?->answers->mapWithKeys(function ($answer) {
             $decoded = json_decode($answer->value, true);
 
             return [$answer->field_id => json_last_error() === JSON_ERROR_NONE ? $decoded : $answer->value];
         })->all() ?? [];
+    }
+
+    /** Only an unconfigured draft can be used before opening a specific protocol editor. */
+    public function draftForHorse(string $horseId): ?Protocol
+    {
+        if (! Str::isUuid($horseId)) {
+            return null;
+        }
+        $drafts = Protocol::where('horse_id', $horseId)->where('status', 'draft')->whereNull('protocol_template_id')->limit(2)->get();
+
+        return $drafts->count() === 1 ? $drafts->first() : null;
     }
 
     public function forProtocol(Protocol $protocol, array $answers): array

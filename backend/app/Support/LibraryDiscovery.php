@@ -35,12 +35,7 @@ class LibraryDiscovery
     public function access(User $user): array
     {
         return [
-            'hasPlus' => $user->subscriptions()->where('status', 'active')
-                ->where(fn ($q) => $q->whereNull('started_at')->orWhereDate('started_at', '<=', today()))
-                ->whereNull('ended_at')
-                ->where(fn ($q) => $q->whereNull('paid_through')->orWhere('paid_through', '>', now()))
-                ->where(fn ($q) => $q->whereNull('cancelled_at')->orWhereDate('cancelled_at', '>', today()))
-                ->whereHas('plan', fn ($q) => $q->where('slug', 'plus'))->exists(),
+            'hasPlus' => app(SubscriptionAccess::class)->active($user->id) !== null,
             'credits' => app(CreditLedger::class)->summary($user)['balance'],
             'hasBasic' => (bool) app(CreditLedger::class)->basic($user),
             'unlockedIds' => DB::table('library_unlocks')->where('user_id', $user->id)->pluck('item_id')->all(),

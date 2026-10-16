@@ -13,7 +13,7 @@ use Tests\TestCase;
 
 class SyncControllerAuthorizationTest extends TestCase
 {
-    use RefreshDatabase;
+    use RefreshDatabase, \Tests\Concerns\HasSubscription;
 
     private string $privateKey = '';
 
@@ -209,13 +209,14 @@ class SyncControllerAuthorizationTest extends TestCase
     public function test_new_bookings_cannot_use_archived_therapists_but_history_remains_editable(): void
     {
         $user = User::factory()->create();
+        $horse = Horse::create(['owner_id' => $user->id, 'name' => 'Nova', 'status' => 'active']);
         $therapist = Therapist::create(['name' => 'Archived therapist']);
         $therapist->forceFill(['archived_at' => now()])->save();
-        $id = (string) Str::uuid();
+        $id = \App\Models\IntakeBooking::create(['user_id' => $user->id, 'horse_id' => $horse->id])->id;
         $operation = ['op' => 'PUT', 'type' => 'intake_bookings', 'id' => $id,
-            'data' => ['user_id' => $user->id, 'therapist_id' => $therapist->id, 'scheduled_at' => now()->toDateTimeString(), 'status' => 'pending']];
+            'data' => ['user_id' => $user->id, 'horse_id' => $horse->id, 'therapist_id' => $therapist->id, 'scheduled_at' => now()->toDateTimeString(), 'status' => 'pending']];
         $this->postSyncAs($user, [$operation])->assertUnprocessable()->assertJsonValidationErrors('therapist_id');
-        $this->assertDatabaseMissing('intake_bookings', ['id' => $id]);
+        $this->assertDatabaseHas('intake_bookings', ['id' => $id, 'therapist_id' => null]);
         $therapist->forceFill(['archived_at' => null])->save();
         $this->postSyncAs($user, [$operation])->assertOk();
         $therapist->forceFill(['archived_at' => now()])->save();
@@ -261,6 +262,7 @@ class SyncControllerAuthorizationTest extends TestCase
 
     private function tokenFor(User $user): string
     {
+        if (! app(\App\Support\SubscriptionAccess::class)->active($user->id)) $this->subscribe($user);
         $now = time();
 
         return JWT::encode([

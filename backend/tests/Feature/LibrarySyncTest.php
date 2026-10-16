@@ -17,6 +17,7 @@ use Tests\TestCase;
 class LibrarySyncTest extends TestCase
 {
     use RefreshDatabase;
+    use \Tests\Concerns\HasSubscription;
 
     private function item(array $attributes = []): LibraryItem
     {
@@ -48,6 +49,7 @@ class LibrarySyncTest extends TestCase
     public function test_access_projection_matches_api_for_free_paid_plus_and_permanent_unlocks(): void
     {
         $basic = User::factory()->create();
+        $this->plus($basic);
         $plus = User::factory()->create();
         $this->plus($plus);
         $free = $this->item();
@@ -71,6 +73,7 @@ class LibrarySyncTest extends TestCase
     public function test_real_credit_purchase_grants_access_atomically_and_is_idempotent(): void
     {
         $user = User::factory()->create();
+        $this->plus($user);
         $item = $this->item(['credit_cost' => 2]);
         $this->customer($user);
         app(CreditLedger::class)->grant($user, 5, 'test');
@@ -91,6 +94,8 @@ class LibrarySyncTest extends TestCase
         DB::table('subscriptions')->where('id', $subscription->id)->update(['status' => 'cancelled']);
         $this->assertDatabaseMissing('library_item_access', ['item_id' => $item->id]);
         DB::table('library_unlocks')->insert(['user_id' => $user->id, 'item_id' => $item->id]);
+        $this->assertDatabaseCount('library_item_access', 0);
+        $subscription->refresh()->update(['status' => 'active']);
         $this->assertDatabaseHas('library_item_access', ['item_id' => $item->id, 'reason' => 'unlocked']);
         $item->update(['published_at' => null]);
         $this->assertDatabaseCount('library_item_access', 0);
@@ -99,6 +104,7 @@ class LibrarySyncTest extends TestCase
         $this->assertDatabaseCount('library_item_access', 0);
         $user->update(['disabled_at' => null]);
         $this->assertDatabaseCount('library_item_access', 1);
+        $item->update(['is_plus' => false, 'credit_cost' => 2]);
         DB::table('library_unlocks')->where('user_id', $user->id)->delete();
         $this->assertDatabaseCount('library_item_access', 0);
     }
@@ -114,6 +120,9 @@ class LibrarySyncTest extends TestCase
         $this->travel(3)->minutes();
         $this->artisan('library:refresh-access')->assertSuccessful();
         $this->assertDatabaseMissing('library_item_access', ['item_id' => $premium->id]);
+        $this->assertDatabaseMissing('library_item_access', ['item_id' => $future->id]);
+        $this->plus($user);
+        $this->artisan('library:refresh-access')->assertSuccessful();
         $this->assertDatabaseHas('library_item_access', ['item_id' => $future->id]);
     }
 
@@ -156,6 +165,7 @@ class LibrarySyncTest extends TestCase
     public function test_grants_rollback_with_source_transaction_and_clients_cannot_write_projections(): void
     {
         $user = User::factory()->create();
+        $this->plus($user);
         $item = $this->item(['credit_cost' => 2]);
         DB::beginTransaction();
         DB::table('library_unlocks')->insert(['user_id' => $user->id, 'item_id' => $item->id]);

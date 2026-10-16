@@ -31,7 +31,9 @@ class TherapistArchivingTest extends TestCase
 
     public function test_legacy_delete_archives_and_preserves_bookings_and_library_authorship(): void
     {
-        $booking = IntakeBooking::create(['user_id' => User::factory()->create()->id,
+        $user = User::factory()->create();
+        $intakeHorse = Horse::create(['owner_id' => $user->id, 'name' => 'Intake horse']);
+        $booking = IntakeBooking::create(['user_id' => $user->id, 'horse_id' => $intakeHorse->id,
             'therapist_id' => $this->therapist->id, 'scheduled_at' => now(), 'status' => 'confirmed']);
         $horse = Horse::create(['owner_id' => $booking->user_id, 'name' => 'Historical horse', 'status' => 'active']);
         $template = ProtocolTemplate::create(['name' => 'Historical template']);
@@ -89,7 +91,9 @@ class TherapistArchivingTest extends TestCase
     public function test_archived_therapist_cannot_be_newly_assigned_to_a_booking(): void
     {
         $active = Therapist::create(['name' => 'Active therapist']);
-        $booking = IntakeBooking::create(['user_id' => User::factory()->create()->id,
+        $user = User::factory()->create();
+        $intakeHorse = Horse::create(['owner_id' => $user->id, 'name' => 'Intake horse']);
+        $booking = IntakeBooking::create(['user_id' => $user->id, 'horse_id' => $intakeHorse->id,
             'therapist_id' => $active->id, 'scheduled_at' => now(), 'status' => 'confirmed']);
         $this->post('/admin/therapists/'.$this->therapist->id.'/archive')->assertRedirect();
         $this->put('/admin/bookings/'.$booking->id, ['scheduled_at' => now()->addDay()->toDateTimeString(),

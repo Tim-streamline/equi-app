@@ -32,7 +32,7 @@ class UserSeeder extends Seeder
             'onboarded_at' => now()->subWeeks(3),
             'created_at' => now()->subWeeks(7),
         ]);
-        $this->bootstrapUser($anchorUser, $plans['plus']);
+        $this->bootstrapUser($anchorUser, $plans['subscription']);
 
         // 24 random users.
         for ($i = 0; $i < 24; $i++) {
@@ -48,12 +48,11 @@ class UserSeeder extends Seeder
                 'onboarded_at' => fake()->boolean(85) ? fake()->dateTimeBetween('-6 months', '-1 week') : null,
                 'created_at' => fake()->dateTimeBetween('-12 months', '-1 week'),
             ]);
-            $planSlug = fake()->randomElement(['free', 'free', 'plus', 'plus', 'plus', 'bundle']);
-            $this->bootstrapUser($user, $plans[$planSlug]);
+            $this->bootstrapUser($user, fake()->boolean(70) ? $plans['subscription'] : null);
         }
     }
 
-    private function bootstrapUser(User $user, Plan $plan): void
+    private function bootstrapUser(User $user, ?Plan $plan): void
     {
         NotificationPreference::create([
             'user_id' => $user->id,
@@ -80,7 +79,7 @@ class UserSeeder extends Seeder
             ]);
         }
 
-        if ($plan->slug === 'free') return;
+        if (! $plan) return;
 
         $started = fake()->dateTimeBetween('-12 months', '-2 weeks');
         $sub = Subscription::create([
@@ -94,7 +93,8 @@ class UserSeeder extends Seeder
             'started_label' => 'Sinds ' . $this->dutchMonth($started) . ' ' . $started->format('Y'),
             'renews_at' => $plan->interval === 'monthly' ? now()->addDays(fake()->numberBetween(1, 28)) : null,
             'renews_label' => $plan->interval === 'monthly' ? 'Verlengt ' . now()->addDays(7)->format('j') . ' ' . $this->dutchMonth(now()->addDays(7)) : null,
-            'max_horses' => $plan->slug === 'plus' ? 3 : 5,
+            'max_horses' => 3,
+            'paid_through' => now()->addMonth(),
         ]);
 
         if ($plan->interval === 'monthly') {

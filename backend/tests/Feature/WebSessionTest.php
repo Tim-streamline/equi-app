@@ -21,6 +21,7 @@ use Tests\TestCase;
 class WebSessionTest extends TestCase
 {
     use RefreshDatabase;
+    use \Tests\Concerns\HasSubscription;
 
     private string $keyPath;
 
@@ -115,6 +116,7 @@ class WebSessionTest extends TestCase
         ]);
         $this->csrf();
         $this->postJson('/web-session/login', ['email' => $user->email, 'password' => 'web-password'])->assertOk();
+        $this->subscribe($user);
         $this->get('/web-session/media/'.$id)->assertOk();
         $post->update(['moderation_status' => 'hidden']);
         $this->getJson('/web-session/media/'.$id)->assertNotFound();

@@ -33,6 +33,7 @@ test('field renderer supports multiple medicines, other names, condition introdu
     'react/jsx-runtime': runtime, 'react-native': native, 'lucide-react-native': icons,
     './IntakeScrollView': { IntakeTextInput: 'TextInput' },
     '@/lib/intake/logic': pure['./logic'], '@/lib/intake/store': { useIntake: () => ({ state, setField: (s, f, value) => { (state.answers[s] ??= {})[f] = value; } }) },
+    './ConfiguredPhotoField': { ConfiguredPhotoField: 'ConfiguredPhoto', PhotoExample: () => null },
     './AttachmentField': { AttachmentField: 'AttachmentField' }, './FieldLabel': { FieldLabel: 'FieldLabel' },
     '@/assets/images/intake-hoef-voorbeeld.png': {},
   });
@@ -55,23 +56,28 @@ test('field renderer supports multiple medicines, other names, condition introdu
   assert.deepEqual(state.answers.klacht.acuut, ['Geen van bovenstaande']);
 });
 
-test('blood-test upload has one limits line, allows five files, and rejects oversized files', async () => {
+test('offline blood-test selection shows size restrictions only on validation failure and allows five files', async () => {
   const originalFetch = globalThis.fetch;
   let value = [], picks = 0, uploads = 0, size = 20;
   const state = []; let hook = 0;
   const { AttachmentField } = load('../components/intake/AttachmentField.tsx', {
     'react/jsx-runtime': runtime,
-    react: { useEffect: () => {}, useState: initial => { const i = hook++; if (!(i in state)) state[i] = initial; return [state[i], next => { state[i] = next; }]; } },
+    react: { useRef: value => ({ current: value }), useEffect: () => {}, useState: initial => { const i = hook++; if (!(i in state)) state[i] = initial; return [state[i], next => { state[i] = next; }]; } },
     'react-native': { ...native, Platform: { OS: 'web' } }, 'lucide-react-native': icons,
     'expo-image-picker': {}, 'expo-document-picker': { getDocumentAsync: async () => { picks++; return { canceled: false, assets: [{ name: 'blood.pdf', uri: 'blob:fixture', mimeType: 'application/pdf', size, file: new File(['blood'], 'blood.pdf', { type: 'application/pdf' }) }] }; } },
     '@/db/auth': { getApiBaseUrl: () => 'https://test.invalid' }, '@/db/connector': { getOrMintToken: async () => 'fixture-token' },
+    '@/db/provider': { useDb: () => ({ currentUserId: 'owner' }) },
+    '@/lib/account-session': { accountSession: { revision: 0 } },
+    '@/lib/intake/attachments/storage': { saveAttachment: async (record, asset) => { uploads++; assert.ok(asset.file); assert.equal(record.userId, 'owner'); } },
+    '@/lib/intake/attachments/events': {},
     '@/lib/intake/store': { useIntake: () => ({ ensureBooking: async () => 'fixture-booking', horseId: 'fixture-horse' }) },
   });
   const draw = () => { hook = 0; return AttachmentField({ value, onChange: next => { value = next; }, section: 'klacht', field: 'bloedonderzoek', photo: false }); };
   const button = () => flatten(draw()).find(n => n.type === 'Pressable' && n.props.accessibilityRole === 'button');
-  globalThis.fetch = async (url, options) => { uploads++; assert.equal(options.body.get('field'), 'bloedonderzoek'); return { ok: true, json: async () => ({ value: `attachment:${uploads}:blood.pdf` }) }; };
+  globalThis.fetch = async () => { assert.fail('Adding an attachment must not use the network'); };
   try {
-    assert.equal(text(draw()).match(/PDF, JPG, PNG of WebP/g).length, 1);
+    assert.doesNotMatch(text(draw()), /JPG|PNG|WebP|15 MB/);
+    assert.ok(text(draw()).includes('Maximaal 5 bestanden'));
     assert.ok(text(button()).includes('Bloeduitslag toevoegen'));
     for (let i = 0; i < 5; i++) { button().props.onPress(); await new Promise(resolve => setImmediate(resolve)); }
     assert.equal(value.length, 5); assert.equal(uploads, 5);
@@ -91,6 +97,7 @@ test('supplement repeaters support add/remove and every new none option clears o
     'react/jsx-runtime': runtime, 'react-native': native, 'lucide-react-native': icons,
     './IntakeScrollView': { IntakeTextInput: 'TextInput' },
     '@/lib/intake/logic': pure['./logic'], '@/lib/intake/store': { useIntake: () => ({ state, setField: (s, f, value) => { (state.answers[s] ??= {})[f] = value; } }) },
+    './ConfiguredPhotoField': { ConfiguredPhotoField: 'ConfiguredPhoto', PhotoExample: () => null },
     './AttachmentField': { AttachmentField: 'AttachmentField' }, './FieldLabel': { FieldLabel: 'FieldLabel' },
     '@/assets/images/intake-hoef-voorbeeld.png': {},
   });
@@ -125,6 +132,7 @@ test('behavior signals clear none and unknown in both directions and retain mult
     'react/jsx-runtime': runtime, 'react-native': native, 'lucide-react-native': icons,
     './IntakeScrollView': { IntakeTextInput: 'TextInput' },
     '@/lib/intake/logic': pure['./logic'], '@/lib/intake/store': { useIntake: () => ({ state, setField: (s, f, value) => { (state.answers[s] ??= {})[f] = value; } }) },
+    './ConfiguredPhotoField': { ConfiguredPhotoField: 'ConfiguredPhoto', PhotoExample: () => null },
     './AttachmentField': { AttachmentField: 'AttachmentField' }, './FieldLabel': { FieldLabel: 'FieldLabel' },
     '@/assets/images/intake-hoef-voorbeeld.png': {},
   });
@@ -143,21 +151,25 @@ test('behavior signals clear none and unknown in both directions and retain mult
   press('Weet ik niet'); assert.deepEqual(state.answers.gedrag[f.id], ['Weet ik niet']);
 });
 
-test('hoof photo upload retains all eight front and side photos and allows removal (OPT-95)', async () => {
+test('offline hoof photo selection retains all eight front and side photos and allows removal (OPT-95)', async () => {
   const originalFetch = globalThis.fetch;
   let value = [], uploads = 0;
   const state = []; let hook = 0;
   const { AttachmentField } = load('../components/intake/AttachmentField.tsx', {
     'react/jsx-runtime': runtime,
-    react: { useEffect: () => {}, useState: initial => { const i = hook++; if (!(i in state)) state[i] = initial; return [state[i], next => { state[i] = next; }]; } },
+    react: { useRef: value => ({ current: value }), useEffect: () => {}, useState: initial => { const i = hook++; if (!(i in state)) state[i] = initial; return [state[i], next => { state[i] = next; }]; } },
     'react-native': { ...native, Platform: { OS: 'web' } }, 'lucide-react-native': icons,
     'expo-image-picker': { launchImageLibraryAsync: async () => ({ canceled: false, assets: [{ fileName: 'hoef.jpg', uri: 'blob:fixture', mimeType: 'image/jpeg', fileSize: 20, file: new File(['photo'], 'hoef.jpg', { type: 'image/jpeg' }) }] }) },
     'expo-document-picker': {},
     '@/db/auth': { getApiBaseUrl: () => 'https://test.invalid' }, '@/db/connector': { getOrMintToken: async () => 'fixture-token' },
+    '@/db/provider': { useDb: () => ({ currentUserId: 'owner' }) },
+    '@/lib/account-session': { accountSession: { revision: 0 } },
+    '@/lib/intake/attachments/storage': { saveAttachment: async (record, asset) => { uploads++; assert.ok(asset.file); assert.equal(record.userId, 'owner'); } },
+    '@/lib/intake/attachments/events': {},
     '@/lib/intake/store': { useIntake: () => ({ ensureBooking: async () => 'fixture-booking', horseId: 'fixture-horse' }) },
   });
   const draw = () => { hook = 0; return AttachmentField({ value, onChange: next => { value = next; }, section: 'fysiek', field: 'foto-hoeven', photo: true }); };
-  globalThis.fetch = async (url, options) => { uploads++; assert.equal(options.body.get('field'), 'foto-hoeven'); return { ok: true, json: async () => ({ value: `attachment:${uploads}:hoef.jpg` }) }; };
+  globalThis.fetch = async () => { assert.fail('Adding an attachment must not use the network'); };
   try {
     for (let i = 0; i < 8; i++) {
       const button = flatten(draw()).find(n => n.type === 'Pressable' && n.props.accessibilityRole === 'button');
@@ -171,11 +183,17 @@ test('hoof photo upload retains all eight front and side photos and allows remov
 });
 
 test('submitted intake routes cannot reopen answers, while drafts and confirmation remain available', () => {
-  let loaded = false, submittedAt = null, route = 'welcome';
+  let loaded = false, submittedAt = null, route = 'welcome', horseId = 'horse', horsesLoading = true, hasSynced = false, horses = [];
   const { default: Layout } = load('../app/intake/_layout.tsx', {
     'react/jsx-runtime': runtime,
+    react: { useEffect: () => {}, useState: initial => [initial === undefined ? { horseId: 'horse', value: { intakeAvailable: true } } : initial, () => {}] },
+    'react-native': { Text: 'Text', View: 'View' },
+    '@/components/ui/Button': { Button: 'Button' },
+    '@/hooks/useHorseDashboard': { dashboardRequest: async () => ({}) },
+    '@powersync/react': { useStatus: () => ({ hasSynced }), useQuery: () => ({ data: horses, isLoading: horsesLoading }) },
+    '@/db/hooks': { useCurrentUserId: () => 'user' },
     'expo-router': { Redirect: 'Redirect', Stack: 'Stack', useSegments: () => ['intake', route] },
-    '@/lib/intake/store': { useIntake: () => ({ loaded, state: { submittedAt } }) },
+    '@/lib/intake/store': { useIntake: () => ({ loaded, horseId, bookingId: 'purchased-intake', state: { submittedAt } }) },
   });
   assert.equal(Layout(), null);
   loaded = true;
@@ -186,4 +204,38 @@ test('submitted intake routes cannot reopen answers, while drafts and confirmati
   }
   route = 'sent';
   assert.equal(Layout().type, 'Stack');
+  horseId = '';
+  assert.equal(Layout().type, 'View', 'horse data still loading must not redirect');
+  horsesLoading = false; hasSynced = true; horses = [{ id: 'horse' }];
+  assert.equal(Layout().type, 'View', 'wait for the selected horse hook to catch up');
+  horses = [];
+  assert.equal(Layout().props.href, '/onboarding/add-horse');
+});
+
+test('a hydrated existing draft opens offline without requesting Plus access', async () => {
+  let bookingId = 'existing-booking', loaded = true, requests = 0;
+  let effects = [];
+  const { default: Layout } = load('../app/intake/_layout.tsx', {
+    'react/jsx-runtime': runtime,
+    react: { useEffect: effect => effects.push(effect), useState: initial => [initial, () => {}] },
+    'react-native': native,
+    '@/components/ui/Button': { Button: 'Button' },
+    '@/hooks/useHorseDashboard': { dashboardRequest: async () => { requests++; throw new Error('offline'); } },
+    '@powersync/react': { useStatus: () => ({ hasSynced: true }), useQuery: () => ({ data: [{ id: 'horse' }], isLoading: false }) },
+    '@/db/hooks': { useCurrentUserId: () => 'user' },
+    'expo-router': { Redirect: 'Redirect', Stack: 'Stack', useSegments: () => ['intake', 'welcome'] },
+    '@/lib/intake/store': { useIntake: () => ({ loaded, bookingId, horseId: 'horse', state: { submittedAt: null } }) },
+  });
+  assert.equal(Layout().type, 'Stack');
+  effects.splice(0).forEach(effect => effect());
+  assert.equal(requests, 0);
+  loaded = false; bookingId = null;
+  assert.equal(Layout(), null);
+  effects.splice(0).forEach(effect => effect());
+  assert.equal(requests, 0, 'wait for local hydration before considering creation');
+  loaded = true;
+  assert.equal(Layout(), null);
+  effects.splice(0).forEach(effect => effect());
+  await new Promise(resolve => setImmediate(resolve));
+  assert.equal(requests, 1, 'new intake still checks online access');
 });

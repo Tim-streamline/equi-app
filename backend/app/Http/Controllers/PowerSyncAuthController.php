@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\User;
+use App\Support\SubscriptionAccess;
 use Firebase\JWT\JWT;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -65,7 +66,16 @@ class PowerSyncAuthController extends Controller
 
     public function tokenResponse(User $user, ?int $expiresAt = null): JsonResponse
     {
+        abort_if($user->disabled_at, 403, 'Dit account is niet beschikbaar.');
         $ttl = (int) config('powersync.token_ttl');
+        $subscription = app(SubscriptionAccess::class)->active($user->id);
+        if ($subscription) {
+            foreach (['paid_through', 'ended_at', 'cancelled_at'] as $field) {
+                if ($subscription->$field) {
+                    $ttl = min($ttl, max(1, $subscription->$field->timestamp - now()->timestamp));
+                }
+            }
+        }
         if ($expiresAt !== null) {
             $ttl = min($ttl, $expiresAt - now()->timestamp);
             abort_if($ttl <= 0, 401);
@@ -91,6 +101,7 @@ class PowerSyncAuthController extends Controller
             'iss' => config('powersync.issuer'),
             'aud' => config('powersync.audience'),
             'sub' => (string) $user->id,
+            'subscribed' => app(SubscriptionAccess::class)->active($user->id) ? 1 : 0,
             'iat' => $now,
             'exp' => $now + $ttl,
         ];

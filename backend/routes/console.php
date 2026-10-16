@@ -24,3 +24,6 @@ Schedule::command('credits:grant-test-monthly')->hourly()->withoutOverlapping();
 Schedule::command('intakes:send-submission-notifications')->everyMinute()->withoutOverlapping();
 
 Schedule::call(fn () => DB::table('pending_registrations')->where('expires_at', '<=', now())->delete())->hourly();
+
+Schedule::command('intakes:send-reminders')->everyFifteenMinutes()->withoutOverlapping();
+Schedule::command('notifications:send-browser-reminders')->everyMinute()->withoutOverlapping();

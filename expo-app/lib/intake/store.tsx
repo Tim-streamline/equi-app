@@ -1,9 +1,11 @@
+import { useGlobalSearchParams } from 'expo-router';
+import { dashboardRequest } from '@/hooks/useHorseDashboard';
 // Offline answers belong to the selected horse's booking, which is also its intake.
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { useQuery } from '@powersync/react';
 import { Alert } from 'react-native';
 import { FieldValue, IntakeAnswers } from './schema';
-import { bookingQuery, ensureIntake, saveAnswer } from './persistence';
+import { bookingQuery, openOrCreateIntake, saveAnswer } from './persistence';
 import { useDb } from '@/db/provider';
 import { useCurrentUserId, useCurrentHorseId } from '@/db/hooks';
 
@@ -14,7 +16,8 @@ type Ctx = {
   setField: (section: string, field: string, value: FieldValue) => void;
   resetSection: (section: string) => void;
   submit: () => Promise<void>; reset: () => void;
-  ensureBooking: () => Promise<string>; horseId: string;
+  trackActivity: (section: string, field?: string) => void;
+  ensureBooking: () => Promise<string>; horseId: string; bookingId: string | null;
 };
 const IntakeContext = createContext<Ctx | null>(null);
 const newId = () => typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function' ? crypto.randomUUID() : 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => { const r = Math.random() * 16 | 0; return (c === 'x' ? r : (r & 3) | 8).toString(16); });
@@ -24,14 +27,22 @@ export function IntakeProvider({ children }: { children: ReactNode }) {
   const userId = useCurrentUserId();
   const horseId = useCurrentHorseId();
   // An account/horse switch must never leave another horse's answers in the form.
-  return <HorseIntakeProvider key={`${userId}:${horseId}`} userId={userId} horseId={horseId}>{children}</HorseIntakeProvider>;
+  return <IntakeSelection key={`${userId}:${horseId}`} userId={userId} horseId={horseId}>{children}</IntakeSelection>;
 }
-function HorseIntakeProvider({ userId, horseId, children }: { userId: string; horseId: string; children: ReactNode }) {
+function IntakeSelection({ userId, horseId, children }: { userId: string; horseId: string; children: ReactNode }) {
+  const { bookingId } = useGlobalSearchParams<{ bookingId?: string }>();
+  const [selected, setSelected] = useState<string | null>(null);
+  const requested = typeof bookingId === 'string' && /^[a-f0-9-]{36}$/i.test(bookingId) ? bookingId : null;
+  useEffect(() => { if (requested) setSelected(requested); }, [requested]);
+  const id = requested ?? selected;
+  return <HorseIntakeProvider key={id ?? 'current'} userId={userId} horseId={horseId} selectedId={id}>{children}</HorseIntakeProvider>;
+}
+function HorseIntakeProvider({ userId, horseId, selectedId, children }: { userId: string; horseId: string; selectedId: string | null; children: ReactNode }) {
   const { powersync } = useDb();
   const [state, setState] = useState<IntakeState>(EMPTY);
   const dirty = useRef(false);
   const queue = useRef<Promise<unknown>>(Promise.resolve());
-  const { data: bookings, isLoading: bookingLoading } = useQuery<{ id: string; submitted_at: string | null; updated_at: string | null }>(bookingQuery, [userId, horseId]);
+  const { data: bookings, isLoading: bookingLoading } = useQuery<{ id: string; submitted_at: string | null; updated_at: string | null }>(selectedId ? 'SELECT id, submitted_at, updated_at FROM intake_bookings WHERE user_id = ? AND horse_id = ? AND id = ? AND status != \'cancelled\'' : bookingQuery, selectedId ? [userId, horseId, selectedId] : [userId, horseId]);
   const booking = bookings?.[0];
   const { data: answers, isLoading: answersLoading } = useQuery<{ section_id: string; field_id: string; value: string | null; updated_at: string }>(
     'SELECT section_id, field_id, value, updated_at FROM intake_answers WHERE response_id = ?', [booking?.id ?? '']);
@@ -46,7 +57,22 @@ function HorseIntakeProvider({ userId, horseId, children }: { userId: string; ho
     }
     setState({ answers: next, submittedAt: booking?.submitted_at ?? null, savedAt });
   }, [bookings, answers, loaded, booking]);
-  const ensureBooking = useCallback(() => ensureIntake(powersync, userId, horseId, newId), [powersync, userId, horseId]);
+  const authorizedBooking = useRef<Promise<string> | null>(null);
+  const ensureBooking = useCallback(() => {
+    if (booking?.id) return Promise.resolve(booking.id);
+    if (selectedId) return Promise.reject(new Error('Deze intake wordt nog gesynchroniseerd of hoort niet bij dit paard.'));
+    if (!authorizedBooking.current) authorizedBooking.current = openOrCreateIntake(powersync, userId, horseId, async () => {
+      const { bookingId } = await dashboardRequest('/api/protocol-purchases/open', { horse_id: horseId });
+      return bookingId;
+    }).then(id => {
+      if (booking?.id && booking.id !== id) throw new Error('De gekoppelde intake is gewijzigd. Open de intake opnieuw nadat de synchronisatie is voltooid.');
+      return id;
+    }).finally(() => { authorizedBooking.current = null; });
+    return authorizedBooking.current;
+  }, [powersync, userId, horseId, booking?.id, selectedId]);
+  const trackActivity = useCallback((section: string, field?: string) => {
+    void ensureBooking().then(id => dashboardRequest(`/api/intakes/${id}/activity`, { section, field })).catch(() => {});
+  }, [ensureBooking]);
   const enqueue = useCallback((task: () => Promise<unknown>) => {
     const work = queue.current.then(task);
     queue.current = work.catch(error => { Alert.alert('Intake niet opgeslagen', error instanceof Error ? error.message : 'Probeer opnieuw.'); });
@@ -89,14 +115,18 @@ function HorseIntakeProvider({ userId, horseId, children }: { userId: string; ho
       });
     }).catch(() => {});
   }, [enqueue, ensureBooking, powersync]);
-  const value = useMemo(() => ({ state, loaded, setField, resetSection, submit, reset, ensureBooking, horseId }), [state, loaded, setField, resetSection, submit, reset, ensureBooking, horseId]);
+  const bookingId = booking?.id ?? null;
+  const value = useMemo(() => ({ state, loaded, setField, resetSection, submit, reset, ensureBooking, trackActivity, horseId, bookingId }), [state, loaded, setField, resetSection, submit, reset, ensureBooking, trackActivity, horseId, bookingId]);
   return <IntakeContext.Provider value={value}>{children}</IntakeContext.Provider>;
 }
 export function useIntake(): Ctx { const context = useContext(IntakeContext); if (!context) throw new Error('useIntake must be inside IntakeProvider'); return context; }
 /** "Opgeslagen 2 min geleden"-style helper. Returns null when never saved. */
 export function formatSavedAgo(savedAt: string | null, now: Date = new Date()): string | null {
   if (!savedAt) return null;
-  const ts = new Date(savedAt).getTime();
+  // PowerSync can return Laravel's UTC timestamps without an explicit zone.
+  const timestamp = /^\d{4}-\d{2}-\d{2}[ T]\d{2}:\d{2}:\d{2}(?:\.\d+)?$/.test(savedAt)
+    ? `${savedAt.replace(' ', 'T')}Z` : savedAt;
+  const ts = new Date(timestamp).getTime();
   if (Number.isNaN(ts)) return null;
   const seconds = Math.max(0, Math.floor((now.getTime() - ts) / 1000));
   if (seconds < 30) return 'Net opgeslagen';

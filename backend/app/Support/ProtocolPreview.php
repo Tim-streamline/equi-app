@@ -27,7 +27,7 @@ class ProtocolPreview
         $protocol->id = $stored?->id ?? (string) Str::uuid();
         $protocol->setRelation('horse', $horse);
         $nutrition = app(ProtocolNutrition::class);
-        $answers = $nutrition->answers($horse);
+        $answers = $nutrition->answers($stored ?? $nutrition->draftForHorse($horse->id));
         $weight = $nutrition->actualWeight($protocol, $answers);
         $phases = new Collection;
         $previousStart = null;

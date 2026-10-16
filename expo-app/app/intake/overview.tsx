@@ -1,11 +1,12 @@
-// Section overview "hub" — shows progress, auto-save state, and the 10
+import { isPhotoSection } from '@/lib/intake/logic';
+// Section overview "hub" — shows progress, auto-save state, and the intake
 // sections with their per-section status. Tapping a section pushes the
 // section detail screen. Reachable from welcome.tsx or directly from the
 // home/protocol-tab entry points when the customer has already started.
 
 import { useEffect, useState } from 'react';
 import { View, Text, ScrollView, Pressable } from 'react-native';
-import { router } from 'expo-router';
+import { router, useNavigation } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { ChevronLeft, MoreHorizontal, Check, X, AlertTriangle } from 'lucide-react-native';
 
@@ -13,6 +14,8 @@ import { IconButton } from '@/components/ui/IconButton';
 import { Section } from '@/lib/intake/schema';
 import { useIntakeSchema } from '@/lib/intake/schema-provider';
 import {
+  answeredCount,
+  answersForSection,
   intakeProgress,
   isSectionComplete,
   nextSectionId,
@@ -22,6 +25,7 @@ import { formatSavedAgo, useIntake } from '@/lib/intake/store';
 type Status = 'done' | 'active' | 'todo';
 
 export default function IntakeOverview() {
+  const rootNavigation = useNavigation('/');
   const { state } = useIntake();
   const { schema, disclaimerShort, noneOptions } = useIntakeSchema();
   const { done, total, pct } = intakeProgress(state.answers, schema, noneOptions);
@@ -39,7 +43,11 @@ export default function IntakeOverview() {
     <View className="flex-1 bg-canvas">
       <SafeAreaView edges={['top']} style={{ flex: 1 }}>
         <View className="flex-row items-center justify-between gap-3 px-4 pb-3 pt-2">
-          <IconButton onPress={() => router.back()}>
+          <IconButton accessibilityLabel="Terug naar de app" onPress={() => {
+            // Leave the entire intake stack, including any previously visited sections.
+            if (rootNavigation.canGoBack()) rootNavigation.goBack();
+            else router.replace('/(tabs)/(pager)/protocol');
+          }}>
             <ChevronLeft size={22} color="#1B2A2A" />
           </IconButton>
           <Text className="flex-1 text-center font-semi text-[17px] text-ink">
@@ -101,14 +109,15 @@ export default function IntakeOverview() {
 
           <View className="mx-4 gap-2">
             {schema.map((s) => {
-              const a = state.answers[s.id] ?? {};
+              const a = answersForSection(s, state.answers);
+              const progress = answeredCount(s, a, state.answers, noneOptions);
               const status: Status =
-                isSectionComplete(s, a, state.answers, noneOptions) && Object.keys(a).length > 0
+                isSectionComplete(s, a, state.answers, noneOptions)
                   ? 'done'
                   : s.id === upcomingId
                     ? 'active'
                     : 'todo';
-              return <SectionRow key={s.id} sec={s} status={status} />;
+              return <SectionRow key={s.id} sec={s} status={status} answered={progress.answered} total={progress.total} />;
             })}
           </View>
 
@@ -138,7 +147,7 @@ export default function IntakeOverview() {
   );
 }
 
-function SectionRow({ sec, status }: { sec: Section; status: Status }) {
+function SectionRow({ sec, status, answered, total }: { sec: Section; status: Status; answered: number; total: number }) {
   const active = status === 'active';
   const done = status === 'done';
 
@@ -176,6 +185,7 @@ function SectionRow({ sec, status }: { sec: Section; status: Status }) {
           <Text className="font-bold text-[15px] text-ink">{sec.title}</Text>
         </View>
         <Text className="mt-0.5 text-[12px] leading-[16px] text-ink-50">{sec.sub}</Text>
+        {done && isPhotoSection(sec) && <Text className="mt-1 text-xs text-mint-700">Foto’s compleet ✓</Text>}
       </View>
       <View
         className={`rounded-pill px-2.5 py-1 ${
@@ -183,11 +193,12 @@ function SectionRow({ sec, status }: { sec: Section; status: Status }) {
         }`}
       >
         <Text
+          accessibilityLabel={`${answered} van ${total} vragen beantwoord`}
           className={`font-bold text-[11px] ${
             active ? 'text-white' : done ? 'text-mint-700' : 'text-ink-50'
           }`}
         >
-          {active ? 'Verder' : done ? '✓ Klaar' : `~${sec.minutes} min`}
+          {answered} / {total}
         </Text>
       </View>
     </Pressable>

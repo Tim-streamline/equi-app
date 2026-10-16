@@ -10,8 +10,8 @@ class IntakeQuestionnaireSyncDefinitionTest extends TestCase
     {
         $rules = file_get_contents(base_path('powersync/sync_rules.yaml'));
 
-        $this->assertStringContainsString('SELECT * FROM intake_questionnaires WHERE active = TRUE', $rules);
-        $this->assertStringContainsString('SELECT * FROM intake_sections WHERE active = TRUE', $rules);
-        $this->assertStringContainsString('SELECT * FROM intake_fields WHERE active = TRUE', $rules);
+        $this->assertStringContainsString('SELECT * FROM intake_questionnaires WHERE auth.parameter(\'subscribed\') = 1 AND ( active = TRUE)', $rules);
+        $this->assertStringContainsString('SELECT * FROM intake_sections WHERE auth.parameter(\'subscribed\') = 1 AND ( active = TRUE)', $rules);
+        $this->assertStringContainsString('SELECT * FROM intake_fields WHERE auth.parameter(\'subscribed\') = 1 AND ( active = TRUE)', $rules);
     }
 }

@@ -1,7 +1,7 @@
 import { KeyboardScrollView as ScrollView, KeyboardViewport as KeyboardAvoidingView } from '@/components/ui/KeyboardForm';
 import { useRef, useState } from 'react';
 import { ActivityIndicator, Platform, View, Text } from 'react-native';
-import { Redirect, router } from 'expo-router';
+import { Redirect, router, useLocalSearchParams } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { SubHeader } from '@/components/ui/SubHeader';
 import { Field } from '@/components/ui/Field';
@@ -10,6 +10,8 @@ import { useStoreMutations } from '@/db/hooks';
 import { useDb } from '@/db/provider';
 
 export default function AddHorseScreen() {
+  const { returnTo } = useLocalSearchParams<{ returnTo?: string }>();
+  const destination = returnTo === 'horse-picker' ? { pathname: '/(tabs)/(pager)/home' as const, params: { horsePicker: String(Date.now()) } } : '/(tabs)/(pager)/home' as const;
   const { isLoggedIn, currentUserId, selectHorse } = useDb();
   const { upsertHorse } = useStoreMutations();
   const [name, setName] = useState('');
@@ -20,7 +22,7 @@ export default function AddHorseScreen() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const saving = useRef(false);
-  const finish = () => { if (!saving.current) router.replace('/(tabs)/(pager)/home'); };
+  const finish = () => { if (!saving.current) router.replace(destination); };
   async function save() {
     if (saving.current || !currentUserId) return;
     setError('');
@@ -37,7 +39,7 @@ export default function AddHorseScreen() {
         status: 'active', createdAt: new Date().toISOString(), updatedAt: new Date().toISOString(),
       });
       selectHorse(id);
-      router.replace('/(tabs)/(pager)/home');
+      router.replace(destination);
     } catch {
       setError('Je paard kon niet worden opgeslagen. Probeer opnieuw.');
     } finally { saving.current = false; setBusy(false); }

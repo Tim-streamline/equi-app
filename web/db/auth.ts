@@ -40,7 +40,16 @@ export async function login(email: string, password: string): Promise<LoginRespo
 }
 export async function getSession(signal?: AbortSignal, force = false): Promise<LoginResponse | null> {
   if (!force && session && session.expiresAt > Date.now() + 60_000) return session;
-  if (pending) return pending;
+  if (pending) {
+    if (!force) return pending;
+    // An in-flight request may have started before subscription activation.
+    // Finish it, then mint a token that reflects the new access state.
+    const current = revision;
+    await pending;
+    if (current !== revision) throw new Error('Je sessie is gewijzigd.');
+    if (signal?.aborted) throw new Error('Request cancelled.');
+    return getSession(signal, true);
+  }
   const current = revision;
   const expectedUser = session?.user.id;
   const operation = (async () => {

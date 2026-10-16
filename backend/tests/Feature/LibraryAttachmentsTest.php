@@ -103,20 +103,22 @@ class LibraryAttachmentsTest extends TestCase
         $file = $item->attachments()->create(['title' => 'Checklist', 'name' => 'lesson.pdf', 'path' => 'lesson.pdf', 'size_bytes' => 16]);
         $base = '/api/library/'.$item->id; $open = $base.'/attachments/'.$file->id.'/open';
         $this->getJson($base)->assertJsonPath('attachments', []);
-        $this->postJson($open)->assertForbidden();
+        $this->postJson($open)->assertStatus(402);
         $this->get('/api/library-attachments/'.$file->id.'?user='.$user->id)->assertForbidden();
         $subscription = $this->plus($user);
         $this->getJson($base)->assertJsonPath('attachments.0.title', 'Checklist')->assertJsonMissingPath('attachments.0.path');
         $link = $this->postJson($open)->assertOk()->json('url');
         $this->get($link)->assertOk()->assertHeader('Content-Type', 'application/pdf');
-        $subscription->update(['paid_through' => now()->subMinute()]); $this->get($link)->assertForbidden();
+        $subscription->update(['paid_through' => now()->subMinute()]); $this->get($link)->assertStatus(402);
         DB::table('library_unlocks')->insert(['user_id' => $user->id, 'item_id' => $item->id]);
+        $this->get($link)->assertStatus(402);
+        $subscription->update(['paid_through' => now()->addMonth()]);
         $this->get($link)->assertOk();
         $item->update(['published_at' => null]); $this->get($link)->assertNotFound();
         $item->update(['published_at' => now()]); $user->update(['disabled_at' => now()]); $this->get($link)->assertForbidden();
         $user->update(['disabled_at' => null]); $this->travel(3)->minutes(); $this->get($link)->assertForbidden();
         $other = $this->item(); $this->postJson('/api/library/'.$other->id.'/attachments/'.$file->id.'/open')->assertNotFound();
-        $this->customer(); $this->postJson($open)->assertForbidden();
+        $this->customer(); $this->postJson($open)->assertStatus(402);
     }
     public function test_deleting_item_removes_private_files(): void
     {

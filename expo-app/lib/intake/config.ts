@@ -30,7 +30,9 @@ export function buildIntakeSchema(sectionRows: Row[], fieldRows: Row[]): Section
     const sectionId = String(row.section_id ?? '');
     const field: Field = {
       id: String(row.key),
+      ...(row.answer_section_key ? { answerSection: String(row.answer_section_key) } : {}),
       label: String(row.label),
+      photoConfig: json<Field['photoConfig']>(row.photo_config),
       type: String(row.type) as Field['type'],
       hint: row.hint == null ? undefined : String(row.hint),
       required: bool(row.required),

@@ -4,16 +4,16 @@
     import Field from '$lib/components/Field.svelte';
     import { Button, Input, Textarea } from '$lib/components/ui';
     import { useForm } from '@inertiajs/svelte';
-    let { content, heroImageUrl, portraitImageUrl } = $props();
-    const form = useForm({ content: structuredClone(content), hero: null, portrait: null, remove_portrait: false });
+    let { content, heroImageUrl, portraitImageUrl, protocolPriceCents } = $props();
+    const form = useForm({ protocol_price_cents: protocolPriceCents, content: structuredClone(content), hero: null, portrait: null, remove_portrait: false });
     const sections = [
-        ['Intro en prijs', ['heroTitle', 'heroBody', 'price', 'period', 'heroButton']],
+        ['Intro en prijs', ['heroTitle', 'heroBody', 'period', 'heroButton']],
         ['Hoe het werkt', ['stepsTitle', 'stepsButton']],
         ['Shelley', ['guideTitle', 'guideBody', 'guideSignature']],
         ['Reviews en prijsblok', ['reviewsTitle', 'priceButton', 'priceNote']],
         ['Afsluiter en bevestiging', ['closingTitle', 'confirmationTitle', 'confirmationPlan', 'confirmationProtocol', 'confirmationButton', 'welcomeTitle', 'welcomeBody']],
     ];
-    const labels = { heroTitle: 'Kop', heroBody: 'Introductie', price: 'Prijs', period: 'Periode', heroButton: 'Eerste knop', stepsTitle: 'Titel stappen', stepsButton: 'Knop na stappen', guideTitle: 'Titel begeleider', guideBody: 'Over Shelley', guideSignature: 'Ondertekening', reviewsTitle: 'Titel reviews', priceButton: 'Knop prijsblok', priceNote: 'Regel onder prijs', closingTitle: 'Afsluitende kop', confirmationTitle: 'Titel bevestiging', confirmationPlan: 'Abonnementregel', confirmationProtocol: 'Protocolregel', confirmationButton: 'Bevestigingsknop', welcomeTitle: 'Titel welkom', welcomeBody: 'Welkomsttekst' };
+    const labels = { heroTitle: 'Kop', heroBody: 'Introductie', price: 'Prijs', period: 'Periode', heroButton: 'Eerste knop', stepsTitle: 'Titel stappen', stepsButton: 'Knop na stappen', guideTitle: 'Titel begeleider', guideBody: 'Over Shelley', guideSignature: 'Ondertekening', reviewsTitle: 'Titel reviews', priceButton: 'Knop prijsblok', priceNote: 'Regel onder prijs', closingTitle: 'Afsluitende kop', confirmationTitle: 'Titel bevestiging', confirmationPlan: 'Aankoopregel', confirmationProtocol: 'Protocolregel', confirmationButton: 'Bevestigingsknop', welcomeTitle: 'Titel welkom', welcomeBody: 'Welkomsttekst' };
     const lists = { steps: { label: 'Stappen', fields: { title: 'Titel', body: 'Tekst' } }, reviews: { label: 'Reviews', fields: { title: 'Kop', quote: 'Citaat', name: 'Naam' } }, faqs: { label: 'Veelgestelde vragen', fields: { question: 'Vraag', answer: 'Antwoord' } } };
     function move(key, index, delta) {
         const rows = [...$form.content[key]];
@@ -29,10 +29,11 @@
     }
 </script>
 
-<AdminLayout title="Ontdek Plus">
-    <PageHeader title="Ontdek Plus" description="Teksten, foto's en reviews van de Plus-pagina in de app." />
+<AdminLayout title="Protocol kopen">
+    <PageHeader title="Protocol kopen" description="Teksten, foto's en reviews van de protocolpagina in de app." />
     <form onsubmit={submit} class="max-w-4xl space-y-8 pb-12">
-        <p class="text-sm text-muted-foreground">Deze pagina beheert de presentatie. Prijzen en teksten hier wijzigen geen abonnementen, betalingen of intakegegevens.</p>
+        <p class="text-sm text-muted-foreground">Deze pagina beheert de presentatie. De protocolprijs geldt voor nieuwe aankopen. Bestaande aankopen en abonnementen blijven ongewijzigd.</p>
+        <Field label="Prijs voor nieuwe protocollen (eurocenten)" error={$form.errors.protocol_price_cents}><Input type="number" min="1" step="1" bind:value={$form.protocol_price_cents} /></Field>
         {#if Object.keys($form.errors).length}<div role="alert" class="rounded-lg border border-destructive p-4 text-sm text-destructive">{#each Object.values($form.errors) as error}<p>{error}</p>{/each}</div>{/if}
         <section class="grid gap-6 rounded-xl border bg-card p-5 sm:grid-cols-2">
             <div class="space-y-3"><h2 class="font-semibold">Hero-foto</h2><img src={heroImageUrl} alt="Huidige hero" class="h-[140px] w-full rounded-lg object-cover object-center" /><label class="block text-sm">Foto vervangen<input class="mt-2 block w-full" type="file" accept="image/jpeg,image/png,image/webp" onchange={e => $form.hero = e.currentTarget.files?.[0] ?? null} /></label></div>
@@ -53,7 +54,7 @@
                 <Button type="button" variant="outline" disabled={$form.content[key].length >= 20} onclick={() => $form.content[key] = [...$form.content[key], Object.fromEntries(Object.keys(list.fields).map(field => [field, '']))]}>Toevoegen</Button>
             </section>
         {/each}
-        <section class="space-y-3 border-t pt-5"><h2 class="font-semibold">Plus-voordelen</h2>{#each $form.content.benefits as benefit, i}<div class="flex gap-2"><Input bind:value={$form.content.benefits[i]} /><Button type="button" variant="outline" onclick={() => $form.content.benefits = $form.content.benefits.filter((_, j) => j !== i)}>Verwijderen</Button></div>{/each}<Button type="button" variant="outline" disabled={$form.content.benefits.length >= 20} onclick={() => $form.content.benefits = [...$form.content.benefits, '']}>Voordeel toevoegen</Button></section>
+        <section class="space-y-3 border-t pt-5"><h2 class="font-semibold">Protocolvoordelen</h2>{#each $form.content.benefits as benefit, i}<div class="flex gap-2"><Input bind:value={$form.content.benefits[i]} /><Button type="button" variant="outline" onclick={() => $form.content.benefits = $form.content.benefits.filter((_, j) => j !== i)}>Verwijderen</Button></div>{/each}<Button type="button" variant="outline" disabled={$form.content.benefits.length >= 20} onclick={() => $form.content.benefits = [...$form.content.benefits, '']}>Voordeel toevoegen</Button></section>
         <div class="sticky bottom-0 border-t bg-background py-4"><Button type="submit" disabled={$form.processing}>{$form.processing ? 'Opslaan…' : 'Wijzigingen opslaan'}</Button></div>
     </form>
 </AdminLayout>

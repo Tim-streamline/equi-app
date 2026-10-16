@@ -11,11 +11,12 @@ use Tests\TestCase;
 class LibraryUnpublishTest extends TestCase
 {
     use RefreshDatabase;
+    use \Tests\Concerns\HasSubscription;
 
     public function test_unpublish_preserves_content_and_unlocks_revokes_access_and_allows_republication(): void
     {
         Storage::fake('local');
-        $user = User::factory()->create();
+        $user = User::factory()->create(); $this->subscribe($user);
         $admin = AdminUser::create(['name' => 'Editor', 'email' => 'draft@example.test', 'password' => 'password', 'role' => 'content_editor', 'active' => true]);
         $related = LibraryItem::create(['title' => 'Related', 'slug' => 'related', 'format' => 'article', 'published_at' => now()->subDay()]);
         $item = LibraryItem::create(['title' => 'Lesson', 'slug' => 'lesson', 'format' => 'article', 'body' => 'Saved body', 'description' => 'Saved description', 'credit_cost' => 2, 'is_featured' => true, 'published_at' => now()->subDay(), 'featured_suggestion_ids' => [$related->id]]);

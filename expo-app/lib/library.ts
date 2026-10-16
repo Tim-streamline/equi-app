@@ -10,7 +10,7 @@ export function libraryFormat(format?: string) {
 
 export function libraryAccessLabel(item: LibraryCardItem, access?: LibraryAccess | null): { label: string; locked: boolean } {
   if (access?.unlockedIds.includes(item.id)) return { label: 'Ontgrendeld', locked: false };
-  if (item.isPlus) return { label: 'Alleen voor Plus', locked: !(access?.allowedIds ? access.allowedIds.includes(item.id) : access?.hasPlus) };
+  if (item.isPlus) return { label: 'Inbegrepen bij je abonnement', locked: !(access?.allowedIds ? access.allowedIds.includes(item.id) : access?.hasPlus) };
   const credits = Number(item.creditCost) || 0;
   return credits > 0 ? { label: `${credits} ${credits === 1 ? 'credit' : 'credits'}`, locked: true } : { label: 'Gratis', locked: false };
 }

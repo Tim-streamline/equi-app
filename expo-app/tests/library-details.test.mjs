@@ -82,8 +82,8 @@ test('readable content bypasses purchase; locked Plus-only items offer Plus inst
     assert.ok(!page.render().includes('Ontgrendel dit item')); assert.ok(page.render().some(node => node?.type === 'MarkdownBody'));
   }
   const page = screen({ ...locked, item: { ...item, isPlus: true } });
-  assert.ok(page.button('Bekijk Plus')); assert.ok(!page.button('Ontgrendel voor 2 credits'));
-  page.press('Bekijk Plus'); assert.equal(page.calls[0], '/(tabs)/(pager)/protocol');
+  assert.ok(page.button('Bekijk abonnement')); assert.ok(!page.button('Ontgrendel voor 2 credits'));
+  page.press('Bekijk abonnement'); assert.equal(page.calls[0], '/(tabs)/account/subscription');
 });
 test('metadata omits invalid duration values and uses each actual content type', () => {
   for (const durationLabel of [undefined, null, '', 'undefined', 'null', '0 min', '0', '00:00']) {
@@ -115,6 +115,7 @@ test('previous account response cannot update the current library', async t => {
 test('native token renewal preserves credentials offline and clears only rejected credentials', async () => {
   let clears = 0, fail = new Error('Network request failed');
   const connector = load(connectorCode, {
+    '@/lib/intake/attachments/sync': { uploadIntakeAttachments: async () => {} },
     './auth': { loadCredentials: async () => ({ userId: 'owner' }), getApiBaseUrl: () => 'https://example.test', login: async () => { throw fail; }, clearCredentials: async () => { clears++; } },
     '@/lib/library-events': { notifyLibraryUnlock() {} },
     '@/lib/account-session': { accountSession: { revision: 0, forSession: async (_revision, action) => action() } },

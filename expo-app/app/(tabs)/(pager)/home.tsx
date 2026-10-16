@@ -1,6 +1,7 @@
+import { PurchasedProtocols } from '@/components/intake/PurchasedProtocols';
 import { IntakeEntryCard } from "@/components/intake/IntakeEntryCard";
 import { LibraryCard } from "@/components/library/LibraryCard";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   View,
   Text,
@@ -11,7 +12,7 @@ import {
   RefreshControl,
   Alert,
 } from "react-native";
-import { router } from "expo-router";
+import { router, useLocalSearchParams } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
 import {
   ChevronDown,
@@ -39,6 +40,8 @@ export default function HomeScreen() {
   const horses = useHorsesByOwner().filter((item) => item.status === "active");
   const { selectHorse } = useDb();
   const [pickerOpen, setPickerOpen] = useState(false);
+  const { horsePicker } = useLocalSearchParams<{ horsePicker?: string }>();
+  useEffect(() => { if (horsePicker) setPickerOpen(true); }, [horsePicker]);
   const padBottom = useTabBarPadding();
   const [refreshing, setRefreshing] = useState(false);
   const seasonal = data?.seasonalTip;
@@ -118,7 +121,7 @@ export default function HomeScreen() {
             <Text className="font-semi text-[13px] text-mint-700">+ Paard toevoegen</Text>
           </Pressable>}
         </View>
-        {hasHorse && data?.hasPlus && !data.protocol && <IntakeEntryCard />}
+        {hasHorse && <PurchasedProtocols />}
         {!!error && (
           <Pressable
             onPress={() => void refresh()}
@@ -162,18 +165,18 @@ export default function HomeScreen() {
             {hasHorse && data.showPlusUpsell && (
               <Pressable
                 accessibilityRole="link"
-                onPress={() => router.push("/plus")}
+                onPress={() => router.push("/protocol-purchase")}
                 className="rounded-[22px] bg-[#FFF0EC] p-5"
               >
                 <Text className="font-semi text-[17px] leading-[23px] text-ink">
                   Wil je jouw paard écht gericht ondersteunen?
                 </Text>
                 <Text className="mt-2 text-[14px] leading-[22px] text-ink-70">
-                  Ga voor Plus en ontvang een persoonlijk protocol op maat,
+                  Koop een persoonlijk protocol voor je paard,
                   afgestemd op jouw paard, zijn klachten en jullie doelen.
                 </Text>
                 <Text className="mt-3 font-semi text-[14px] text-mint-700">
-                  Ontdek Plus →
+                  Protocol kopen →
                 </Text>
               </Pressable>
             )}
@@ -223,6 +226,11 @@ export default function HomeScreen() {
               ))}
             </ScrollView>
             <SafeAreaView edges={["bottom"]}>
+              <Pressable accessibilityRole="button" accessibilityLabel="Paard toevoegen vanuit paardenlijst"
+                onPress={() => { setPickerOpen(false); router.push({ pathname: '/onboarding/add-horse', params: { returnTo: 'horse-picker' } }); }}
+                className="mt-3 rounded-full border border-mint-500 p-3">
+                <Text className="text-center font-semi text-mint-700">+ Paard toevoegen</Text>
+              </Pressable>
               <Pressable
                 onPress={() => setPickerOpen(false)}
                 className="mt-2 rounded-full bg-mint-500 p-3"
@@ -253,7 +261,7 @@ function ProtocolCard({ data }: { data: HorseDashboard }) {
       className="mb-4 rounded-[22px] bg-white p-5"
     >
       <Text className="text-[10px] uppercase tracking-[1.3px] text-ink-50">
-        {data.horse.name}&apos;s Plus-protocol
+        {data.horse.name}&apos;s protocol
       </Text>
       <Text className="mt-3 font-bold text-[18px] text-ink">
         {protocol.statusLabel}

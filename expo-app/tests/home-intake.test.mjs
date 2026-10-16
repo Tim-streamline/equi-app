@@ -14,35 +14,38 @@ function load(path, modules) {
   }, exports);
   return exports;
 }
-const intakeModules = {};
-for (const name of ['schema', 'config', 'logic']) intakeModules[`./${name}`] = load(`../lib/intake/${name}.ts`, intakeModules);
+
 const flatten = node => Array.isArray(node) ? node.flatMap(flatten)
   : node && typeof node === 'object' ? [node, ...flatten(node.props?.children)] : [node];
 const text = node => flatten(node).filter(value => typeof value === 'string' || typeof value === 'number').join('');
 
 // Render actual Home, shared card and progress logic; mock provider boundaries and native UI.
 function screen() {
-  const horses = ['plus', 'basic', 'submitted', 'partial'].map(id => ({ id, name: id, status: 'active' }));
+  const horses = ['purchased', 'unpurchased', 'submitted', 'partial'].map(id => ({ id, name: id, status: 'active' }));
   const intakes = Object.fromEntries(horses.map(horse => [horse.id, { loaded: true, state: { answers: {}, submittedAt: null } }]));
   intakes.submitted.state.submittedAt = '2026-09-29T12:00:00Z';
   intakes.partial.state.answers = { paard: { naam: 'Luna' } };
-  let selected = 'plus', ready = true, delivered = false;
+  let selected = 'purchased', ready = true, delivered = false;
   const routes = [];
+  const purchases = { purchased: [{ id: 'p1', title: 'Protocol Nova', status: 'draft', booking_id: 'i1', submitted_at: null }], unpurchased: [], submitted: [{ id: 'p2', title: 'Protocol Luna', status: 'draft', booking_id: 'i2', submitted_at: '2026-10-01' }], partial: [{ id: 'p3', title: 'Vervolgprotocol', status: 'draft', booking_id: 'i3', submitted_at: null }] };
   const jsx = (type, props) => typeof type === 'function' ? type(props) : ({ type, props });
   const modules = {
     '@/constants/brand': { BRAND_NAME: 'EquiApp' },
     'react/jsx-runtime': { jsx, jsxs: jsx, Fragment: 'Fragment' },
-    react: { useState: value => [value, () => {}] },
+    react: { useEffect: () => {}, useState: value => [value, () => {}] },
     'react-native': Object.fromEntries(['View', 'Text', 'ScrollView', 'Pressable', 'Modal', 'ActivityIndicator', 'RefreshControl', 'Alert'].map(name => [name, name])),
     'react-native-safe-area-context': { SafeAreaView: 'SafeAreaView' },
-    'expo-router': { router: { push: path => routes.push(path) } },
+    'expo-router': { useLocalSearchParams: () => ({}), router: { push: path => routes.push(path) } },
     'lucide-react-native': Object.fromEntries(['ChevronDown', 'Sparkles', 'UserRound', 'ClipboardList', 'ArrowRight', 'Check'].map(name => [name, name])),
     '@/db/hooks': {
+      useCurrentHorseId: () => selected, useCurrentUserId: () => 'u',
       useCurrentUser: () => ({ name: 'Tim' }),
       useHorse: () => horses.find(horse => horse.id === selected) ?? {},
       useHorsesByOwner: () => horses,
       useActiveProtocolForHorse: () => delivered ? { id: 'protocol' } : null,
     },
+    '@powersync/react': { useQuery: (_sql, [horse, user]) => { assert.equal(user, 'u'); return { data: purchases[horse] ?? [] }; } },
+    '@/components/ui/Button': { Button: 'Button' },
     '@/db/provider': { useDb: () => ({ selectHorse: id => { selected = id; } }) },
     '@/hooks/useHorseDashboard': { useHorseDashboard: () => ({
       data: ready ? { horse: { id: selected }, greeting: selected ? 'Welkom, Tim' : 'Goedemorgen, Tim', hasPlus: !!selected && selected !== 'basic', recommendations: selected ? [] : [1, 2, 3, 4].map(id => ({ id: `item-${id}`, title: `Item ${id}` })), protocol: null } : null,
@@ -56,84 +59,43 @@ function screen() {
     '@/components/ui/ConnectionStatus': { ConnectionStatus: 'ConnectionStatus' },
     '@/components/library/LibraryCard': { LibraryCard: 'LibraryCard' },
     '@/lib/intake/store': { useIntake: () => intakes[selected] },
-    '@/lib/intake/schema-provider': { useIntakeSchema: () => ({ schema: intakeModules['./schema'].INTAKE_SCHEMA, noneOptions: intakeModules['./schema'].INTAKE_NONE_OPTIONS }) },
-    '@/lib/intake/logic': intakeModules['./logic'],
   };
-  const card = load('../components/intake/IntakeEntryCard.tsx', modules);
-  modules['@/components/intake/IntakeEntryCard'] = card;
+  modules['@/components/intake/PurchasedProtocols'] = load('../components/intake/PurchasedProtocols.tsx', modules);
   const home = load('../app/(tabs)/(pager)/home.tsx', modules);
   const render = () => flatten(home.default());
-  const entry = () => render().find(node => node?.type === 'Pressable' && node.props.accessibilityLabel?.includes('intake'));
+  const entry = () => render().find(node => node?.type === 'Button' && node.props.title === 'Intake openen');
   const select = id => {
     const row = render().find(node => node?.type === 'Pressable' && node.props.accessibilityState && text(node) === id);
     assert.ok(row, `Horse picker option ${id}`);
     row.props.onPress();
   };
-  return { render, entry, select, routes, intakes, card: () => card.IntakeEntryCard({ variant: 'standalone' }),
+  return { render, entry, select, routes, intakes, purchases,
     set ready(value) { ready = value; }, set delivered(value) { delivered = value; }, clearHorse() { selected = ''; }, withoutHorse() { selected = ''; horses.length = 0; }, addHorse(id) { horses.push({ id, name: id, status: 'active' }); selected = id; },
   };
 }
 
-test('Plus Home shows supplied copy between greeting and library and opens the existing intake', () => {
-  const app = screen(), tree = app.render(), card = app.entry();
-  assert.ok(card);
-  assert.ok(tree.indexOf('Welkom, Tim') < tree.indexOf('PROTOCOL INTAKE'));
-  assert.ok(tree.indexOf('PROTOCOL INTAKE') < tree.indexOf('Ontdek in de bibliotheek'));
-  for (const copy of ['Start jouw protocol intake', '11 korte secties · ongeveer 60 minuten', 'Op basis van deze informatie wordt jouw protocol gemaakt.', 'Start intake →']) assert.ok(text(card).includes(copy), copy);
-  assert.ok(!card.props.className.includes('mx-'), 'card aligns with padded Home content');
-  card.props.onPress();
-  assert.deepEqual(app.routes, ['/intake']);
-});
-
-test('partial answers offer continue and submission removes the card', () => {
-  const app = screen();
-  app.select('partial');
-  assert.equal(app.entry().props.accessibilityLabel, 'Ga verder met jouw protocol intake');
-  assert.ok(text(app.entry()).includes('Ga verder →'));
+test('Home lists the purchased protocol and opens its exact intake', () => {
+  const app = screen(), tree = app.render();
+  assert.ok(tree.includes('Protocol Nova'));
+  assert.ok(tree.indexOf('Welkom, Tim') < tree.indexOf('Protocol Nova'));
+  assert.ok(tree.indexOf('Protocol Nova') < tree.indexOf('Ontdek in de bibliotheek'));
   app.entry().props.onPress();
-  assert.deepEqual(app.routes, ['/intake']);
-  app.intakes.partial.state.submittedAt = '2026-09-29T13:00:00Z';
-  assert.equal(app.entry(), undefined);
-  assert.ok(app.render().includes('Ontdek in de bibliotheek'));
+  assert.deepEqual(app.routes, [{ pathname: '/intake', params: { bookingId: 'i1' } }]);
 });
-
-test('horse picker follows each horse’s Plus and intake state', () => {
+test('selected horse determines purchased intakes, including when dashboard is offline', () => {
+  const app = screen(); app.select('unpurchased'); assert.equal(app.entry(), undefined);
+  app.select('partial'); app.ready = false; assert.ok(app.entry());
+  app.entry().props.onPress();
+  assert.deepEqual(app.routes, [{ pathname: '/intake', params: { bookingId: 'i3' } }]);
+  app.select('submitted'); assert.equal(app.entry(), undefined);
+  assert.ok(text(app.render()).includes('Je intake is verstuurd.'));
+});
+test('finished protocols stay visible alongside a newly purchased intake', () => {
   const app = screen();
-  for (const id of ['basic', 'submitted']) { app.select(id); assert.equal(app.entry(), undefined, id); }
-  app.select('partial');
-  assert.ok(text(app.entry()).includes('Ga verder →'));
-  app.select('plus');
-  assert.ok(text(app.entry()).includes('Start intake →'));
-  app.clearHorse();
-  assert.equal(app.entry(), undefined);
+  app.purchases.purchased.push({ id: 'old', title: 'Vorig protocol', status: 'completed', booking_id: 'old-intake', submitted_at: null });
+  assert.ok(app.render().includes('Vorig protocol')); assert.ok(app.render().includes('Afgerond'));
+  assert.equal(app.render().filter(n => n?.type === 'Button' && n.props.title === 'Intake openen').length, 1);
 });
-
-test('card waits for dashboard and intake hydration and hides for a delivered protocol', () => {
-  const app = screen();
-  app.ready = false;
-  assert.equal(app.entry(), undefined);
-  app.ready = true;
-  app.intakes.plus.loaded = false;
-  assert.equal(app.entry(), undefined);
-  app.intakes.plus.loaded = true;
-  assert.ok(app.entry());
-  app.delivered = true;
-  assert.equal(app.entry(), undefined);
-});
-
-test('Protocol standalone retains its copy, route and submission behavior', () => {
-  const app = screen();
-  assert.ok(text(app.card()).includes('Start jouw protocol intake'));
-  assert.ok(!text(app.card()).includes('Start intake →'));
-  app.select('partial');
-  assert.ok(text(app.card()).includes('Ga verder met je intake'));
-  assert.ok(text(app.card()).includes('Verder →'));
-  app.card().props.onPress();
-  assert.deepEqual(app.routes, ['/intake']);
-  app.select('submitted');
-  assert.equal(app.card(), null);
-});
-
 
 test('an account without a horse has personal greeting, both add actions, and four library items without protocol tasks', () => {
   const app = screen();
@@ -153,10 +115,10 @@ test('an account without a horse has personal greeting, both add actions, and fo
     action.props.onPress();
   }
   assert.deepEqual(app.routes, ['/onboarding/add-horse', '/onboarding/add-horse']);
-  app.addHorse('basic');
+  app.addHorse('unpurchased');
   assert.ok(app.render().some(node => node?.props?.accessibilityLabel === 'Wissel paard'));
   assert.ok(!text(app.render()).includes('Je paard toevoegen aan EquiApp?'));
   assert.equal(app.entry(), undefined);
-  app.addHorse('plus');
-  assert.ok(app.entry(), 'Adding a Plus horse immediately uses its intake variant');
+  app.addHorse('purchased');
+  assert.ok(app.entry(), 'Switching to a horse shows its purchased intake');
 });

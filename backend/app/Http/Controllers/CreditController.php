@@ -51,7 +51,7 @@ class CreditController extends Controller
                 abort_unless($previous->bundle_id === $data['bundleId'] && $previous->item_id === ($data['itemId'] ?? null), 409);
                 return $previous;
             }
-            abort_unless($ledger->basic($user), 403, 'Je hebt Basic nodig om credits bij te kopen.');
+            abort_unless($ledger->basic($user), 403, 'Je hebt een actief abonnement nodig om credits bij te kopen.');
             $bundle = DB::table('credit_bundles')->where('id', $data['bundleId'])->where('active', true)->first();
             abort_unless($bundle, 404, 'Deze bundel is niet meer beschikbaar.');
             $id = (string) Str::uuid();
@@ -81,7 +81,7 @@ class CreditController extends Controller
         $user = $this->user($request);
         $ledger->locked($user, function () use ($user, $ledger) {
             $subscription = $ledger->basic($user);
-            abort_unless($subscription, 404, 'Geen actief Basic-abonnement.');
+            abort_unless($subscription, 404, 'Geen actief abonnement.');
             $subscription->update(['cancel_requested_at' => $subscription->cancel_requested_at ?? now()]);
         });
         return response()->json($ledger->summary($user));

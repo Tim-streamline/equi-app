@@ -38,6 +38,7 @@ class LibraryAttachmentController extends Controller
     private function authorizeRead(User $user, LibraryItem $item): void
     {
         abort_if($user->disabled_at, 403);
+        app(\App\Support\SubscriptionAccess::class)->requireActive($user->id);
         abort_unless($item->published_at && $item->published_at->lte(now()), 404);
         $discovery = app(LibraryDiscovery::class);
         abort_unless($discovery->canRead($item, $discovery->access($user)), 403);

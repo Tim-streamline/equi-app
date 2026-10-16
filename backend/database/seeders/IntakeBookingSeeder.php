@@ -7,6 +7,7 @@ use App\Models\IntakeBooking;
 use App\Models\Therapist;
 use App\Models\User;
 use Illuminate\Database\Seeder;
+use Illuminate\Support\Str;
 
 class IntakeBookingSeeder extends Seeder
 {
@@ -20,7 +21,7 @@ class IntakeBookingSeeder extends Seeder
         // The anchor user's pending intake (matches the frontend mock).
         $anchorUser = User::where('email', UserSeeder::ANCHOR_EMAIL)->firstOrFail();
         $nova = Horse::where('owner_id', $anchorUser->id)->where('name', 'Nova')->first();
-        IntakeBooking::create([
+        IntakeBooking::updateOrCreate(['id' => $nova->protocols()->first()?->intake?->id ?? (string) Str::uuid()], [
             'user_id' => $anchorUser->id,
             'horse_id' => $nova?->id,
             'therapist_id' => $shelley->id,
@@ -32,16 +33,19 @@ class IntakeBookingSeeder extends Seeder
 
         foreach (User::where('id', '!=', $anchorUser->id)->inRandomOrder()->limit(15)->get() as $user) {
             $horse = Horse::where('owner_id', $user->id)->where('status', 'active')->first();
+            if (! $horse) {
+                continue;
+            }
             $when = fake()->dateTimeBetween('-2 months', '+3 weeks');
             $weekday = (int) $when->format('N') - 1;
-            IntakeBooking::create([
+            IntakeBooking::updateOrCreate(['id' => $horse->protocols()->first()?->intake?->id ?? (string) Str::uuid()], [
                 'user_id' => $user->id,
                 'horse_id' => $horse?->id,
                 'therapist_id' => fake()->randomElement($therapistIds),
                 'scheduled_at' => $when,
-                'slot_label' => $days[$weekday] . ' ' . $when->format('j') . ' ' . $months[(int) $when->format('n') - 1] . ' · ' . $when->format('H:i'),
+                'slot_label' => $days[$weekday].' '.$when->format('j').' '.$months[(int) $when->format('n') - 1].' · '.$when->format('H:i'),
                 'duration_minutes' => fake()->randomElement([30, 45, 60]),
-                'status' => $when < new \DateTime() ? fake()->randomElement(['done', 'cancelled', 'done']) : fake()->randomElement(['pending', 'confirmed', 'pending']),
+                'status' => $when < new \DateTime ? fake()->randomElement(['done', 'cancelled', 'done']) : fake()->randomElement(['pending', 'confirmed', 'pending']),
                 'notes' => fake()->boolean(30) ? fake()->sentence() : null,
             ]);
         }

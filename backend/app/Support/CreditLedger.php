@@ -17,12 +17,7 @@ class CreditLedger
 
     public function basic(User $user): ?Subscription
     {
-        return $user->subscriptions()->with('plan')->where('status', 'active')
-            ->whereHas('plan', fn ($q) => $q->where('slug', 'basic'))
-            ->where(fn ($q) => $q->whereNull('started_at')->orWhereDate('started_at', '<=', today()))
-            ->whereNull('ended_at')->where('paid_through', '>', now())
-            ->where(fn ($q) => $q->whereNull('cancelled_at')->orWhere('cancelled_at', '>', now()))
-            ->orderByDesc('paid_through')->first();
+        return app(SubscriptionAccess::class)->active($user->id);
     }
 
     public function locked(User $user, callable $work): mixed
@@ -43,7 +38,7 @@ class CreditLedger
                     $subscription = Subscription::find($g->subscription_id);
                     $dates = array_filter([$subscription?->cancel_requested_at ? $subscription->paid_through : null, $subscription?->ended_at, $subscription?->cancelled_at]);
                     $g->expires_at = $dates ? min(array_map(fn ($d) => CarbonImmutable::parse($d)->toDateTimeString(), $dates)) : null;
-                    if (! $subscription || $subscription->status === 'cancelled' || $subscription->plan?->slug !== 'basic') $g->expires_at = now()->toDateTimeString();
+                    if (! $subscription || $subscription->status === 'cancelled' || $subscription->plan?->slug === 'free') $g->expires_at = now()->toDateTimeString();
                 }
                 return $g;
             })->filter(fn ($g) => $g->remaining > 0)
@@ -102,7 +97,7 @@ class CreditLedger
         $id = (string) Str::uuid();
         DB::table('credit_grants')->insert(['id' => $id, 'user_id' => $user->id, 'source' => $source, 'expires_at' => $expiry, 'subscription_id' => $subscriptionId, 'order_id' => $orderId, 'created_at' => now(), 'updated_at' => now()]);
         $g = DB::table('credit_grants')->find($id);
-        $this->entry($user, $g, $amount, $source, match ($source) { 'membership' => 'Basic verlenging', 'purchased' => 'Credits bijgekocht', 'promotional' => 'Tijdelijke credits toegevoegd', default => 'Creditcorrectie' }, reason: $reason);
+        $this->entry($user, $g, $amount, $source, match ($source) { 'membership' => 'Abonnement verlenging', 'purchased' => 'Credits bijgekocht', 'promotional' => 'Tijdelijke credits toegevoegd', default => 'Creditcorrectie' }, reason: $reason);
         return $id;
     }
 
@@ -129,7 +124,7 @@ class CreditLedger
             if ($order->kind === 'membership') {
                 $s = Subscription::whereKey($order->subscription_id)->lockForUpdate()->firstOrFail();
                 // No grants after cancellation, including a provider retry for a new period.
-                abort_unless($s->plan->slug === 'basic' && ! $s->cancel_requested_at && ! $s->ended_at && $order->period_end, 409, 'Basic is niet meer verlengbaar.');
+                abort_unless($s->plan->slug !== 'free' && ! $s->cancel_requested_at && ! $s->ended_at && $order->period_end, 409, 'Dit abonnement is niet meer verlengbaar.');
                 $end = CarbonImmutable::parse($order->period_end);
                 if (! $s->paid_through || $end->gt($s->paid_through)) {
                     $s->update(['paid_through' => $end, 'renews_at' => $end, 'status' => 'active']);

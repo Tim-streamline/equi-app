@@ -46,6 +46,7 @@ function harness(fetch) {
   }
   const auth = load('../db/auth.ts');
   modules['./auth'] = modules['@/db/auth'] = auth;
+  modules['@/lib/intake/attachments/sync'] = { uploadIntakeAttachments: async () => {} };
   const connector = load('../db/connector.ts');
   modules['@/db/connector'] = connector;
   const { dashboardRequest } = load('../hooks/useHorseDashboard.ts');

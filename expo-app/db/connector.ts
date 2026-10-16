@@ -12,6 +12,7 @@ import type {
 } from '@powersync/react-native';
 
 import { accountSession } from '@/lib/account-session';
+import { uploadIntakeAttachments } from '@/lib/intake/attachments/sync';
 
 import {
   clearCredentials,
@@ -70,9 +71,9 @@ export async function getOrMintToken(signal?: AbortSignal, forceRefresh = false)
 }
 
 export class LaravelConnector implements PowerSyncBackendConnector {
-  async fetchCredentials(): Promise<PowerSyncCredentials | null> {
+  async fetchCredentials(signal?: AbortSignal): Promise<PowerSyncCredentials | null> {
     console.log('[connector] fetchCredentials called');
-    const minted = await mintToken();
+    const minted = await mintToken(signal);
     if (!minted) {
       console.warn('[connector] fetchCredentials: no minted token');
       return null;
@@ -81,6 +82,8 @@ export class LaravelConnector implements PowerSyncBackendConnector {
   }
 
   async uploadData(database: AbstractPowerSyncDatabase): Promise<void> {
+    const revision = accountSession.revision;
+    const checkSession = () => { if (revision !== accountSession.revision) throw new Error('Je sessie is gewijzigd.'); };
     const batch = await database.getNextCrudTransaction();
     if (!batch) return;
 
@@ -88,6 +91,11 @@ export class LaravelConnector implements PowerSyncBackendConnector {
     if (!token) {
       throw new Error('No PowerSync credentials available for upload');
     }
+
+    const credentials = await loadCredentials();
+    checkSession();
+    if (!credentials) throw new Error('Meld je opnieuw aan.');
+    await uploadIntakeAttachments(batch.crud, credentials.userId, token, checkSession);
 
     const res = await fetch(`${getApiBaseUrl()}/api/sync/upload`, {
       method: 'POST',

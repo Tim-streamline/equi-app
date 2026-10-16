@@ -13,7 +13,7 @@
     function save(event) { event.preventDefault(); const opts = { onSuccess: () => { editing = null; form.defaults({ label: '', credits: 1, price_cents: 100, currency: 'EUR', active: false, order: 0 }); form.reset(); } }; editing ? $form.put(`/admin/credits/bundles/${editing}`, opts) : $form.post('/admin/credits/bundles', opts); }
 </script>
 <AdminLayout title="Credits">
-    <PageHeader title="Credits" description="Instellingen, bundels en betaaltransacties. Basic-prijzen beheer je bij Plans." />
+    <PageHeader title="Credits" description="Instellingen, bundels en betaaltransacties. Abonnementsprijzen beheer je bij Plans." />
     <form onsubmit={(e) => { e.preventDefault(); $config.put('/admin/credits/settings'); }} class="mb-8 grid max-w-2xl gap-4 sm:grid-cols-3">
         <Field label="Credits per betaalde verlenging" error={$config.errors.monthly_credits}><Input type="number" min="0" bind:value={$config.monthly_credits} /></Field>
         <Field label="Maximum membership-credits" error={$config.errors.membership_cap}><Input type="number" min="0" bind:value={$config.membership_cap} /></Field>

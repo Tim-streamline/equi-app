@@ -53,6 +53,7 @@
     const initialHorses = untrack(() => horses);
     const initialSelectedHorseId = untrack(() => selectedHorseId);
     const isNew = !initialProtocol;
+    const canChooseTemplate = !initialProtocol?.protocol_template_id;
     let pendingSave = $state(false);
     let saveError = $state('');
     let nextClientKey = 0;
@@ -256,7 +257,7 @@
     }
 
     let workingTemplate = $state(initialTemplate);
-    let activeSection = $state(isNew ? 'basis' : 'planning');
+    let activeSection = $state(canChooseTemplate ? 'basis' : 'planning');
     let activePhaseKey = $state(initialPhases[0]?.client_key ?? null);
     let phaseToAddId = $state('');
     let overviewOpen = $state(false);
@@ -290,7 +291,7 @@
     })));
     const statusOptions = [
         { value: 'paused', label: 'Gepauzeerd' },
-        { value: 'active', label: 'Actief' },
+        { value: 'draft', label: 'Concept' }, { value: 'active', label: 'Actief' },
         { value: 'completed', label: 'Afgerond' },
         ...(protocol?.status === 'archived' ? [{ value: 'archived', label: 'Gearchiveerd' }] : []),
     ];
@@ -749,7 +750,7 @@
                     <div>
                         <div class="mb-2 text-[10px] font-bold uppercase tracking-[0.14em] text-[#108A82]">Paard</div>
                         {#if isNew}
-                            <Select bind:value={$form.horse_id} placeholder="Kies een paard" options={horseOptions} onchange={updateSuggestedTitle} />
+                            <Select disabled={!isNew} bind:value={$form.horse_id} placeholder="Kies een paard" options={horseOptions} onchange={updateSuggestedTitle} />
                             {#if $form.errors.horse_id}<p class="mt-1 text-xs text-destructive">{$form.errors.horse_id}</p>{/if}
                         {:else}
                             <div class="text-base font-bold">{selectedHorse?.name}</div>
@@ -784,7 +785,7 @@
                             <div class="grid gap-5 md:grid-cols-2">
                                 <div>
                                     <Field label="Protocol template" error={$form.errors.protocol_template_id}>
-                                        {#if isNew}
+                                        {#if canChooseTemplate}
                                             <Select bind:value={protocolTemplateChoice} options={protocolTemplateOptions} onchange={requestProtocolTemplateChange} />
                                         {:else}
                                             <div class="flex h-10 items-center justify-between rounded-xl border border-[#1B2A2A]/10 bg-[#FBF8F3] px-3 text-sm">
@@ -792,7 +793,7 @@
                                             </div>
                                         {/if}
                                     </Field>
-                                    {#if !isNew}<p class="mt-1 text-xs text-[#1B2A2A]/40">De protocoltemplate staat vast na creatie.</p>{/if}
+                                    {#if !canChooseTemplate}<p class="mt-1 text-xs text-[#1B2A2A]/40">De protocoltemplate staat vast na creatie.</p>{/if}
                                 </div>
                                 <Field label="Protocolnaam" error={$form.errors.title}><Input bind:value={$form.title} /></Field>
                                 <Field label="Behandelaar" error={$form.errors.therapist_id}><Select bind:value={$form.therapist_id} placeholder="Geen behandelaar" options={therapistOptions} /></Field>

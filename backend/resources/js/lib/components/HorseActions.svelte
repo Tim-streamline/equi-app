@@ -91,6 +91,9 @@
             <p>Weet je zeker dat je dit paard definitief wilt verwijderen? Alle gekoppelde gegevens die bij dit paard horen kunnen hierdoor verloren gaan. Deze actie kan niet ongedaan worden gemaakt.</p>
             {#if loading}<p role="status" class="text-muted-foreground">Gekoppelde gegevens controleren…</p>{/if}
             {#if preview}
+                {#if preview.removed.bookings?.count > 0}
+                    <p role="alert" class="rounded-lg bg-destructive/10 p-3 text-destructive">Let op: dit paard heeft {preview.removed.bookings.count} gekoppelde intake(s) of booking(s). Als je doorgaat, worden deze eerst definitief verwijderd, inclusief alle antwoorden en bijlagen. Daarna wordt het paard verwijderd.</p>
+                {/if}
                 <div class="rounded-lg border border-destructive/30 bg-destructive/5 p-3">
                     <p class="font-medium">Wordt definitief verwijderd</p>
                     <ul class="mt-2 list-inside list-disc space-y-1">
@@ -102,7 +105,7 @@
                 </div>
                 <div class="rounded-lg border p-3">
                     <p class="font-medium">Blijft bewaard bij het gebruikersaccount</p>
-                    <p class="mt-1 text-muted-foreground">Scans, bookings, intakes, chats en gegevensexports blijven behouden. De koppeling met dit paard wordt verwijderd.</p>
+                    <p class="mt-1 text-muted-foreground">Scans, chats en gegevensexports blijven behouden. De koppeling met dit paard wordt verwijderd.</p>
                     <ul class="mt-2 list-inside list-disc space-y-1">
                         {#each Object.values(preview.detached).filter((item) => item.count > 0) as item}
                             <li>{item.label}: {item.count}</li>

@@ -142,7 +142,7 @@ class CommunityTest extends TestCase
         $subscription = $this->paid();
         $this->patchJson('/api/community/posts/'.$this->post->id, ['body' => 'Hijacked'])->assertForbidden();
         $this->deleteJson('/api/community/posts/'.$this->post->id)->assertForbidden();
-        $subscription->update(['renews_at' => now()->subDay()]);
+        $subscription->update(['paid_through' => now()->subDay()]);
         $this->postJson('/api/community/posts', ['body' => 'Expired'])->assertForbidden();
     }
 

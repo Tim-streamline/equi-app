@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import ts from 'typescript';
 
-async function screen(file, { db = {}, mutations = {}, platform = 'android', auth = {} } = {}) {
+async function screen(file, { db = {}, mutations = {}, platform = 'android', auth = {}, params = {} } = {}) {
   const source = await readFile(new URL(`../app/onboarding/${file}.tsx`, import.meta.url), 'utf8');
   const { outputText } = ts.transpileModule(source, { compilerOptions: { jsx: ts.JsxEmit.ReactJSX, module: ts.ModuleKind.CommonJS } });
   const state = [], refs = [], routes = [], effects = [], queuedEffects = [];
@@ -23,7 +23,7 @@ async function screen(file, { db = {}, mutations = {}, platform = 'android', aut
       useRef: initial => { const i = refIndex++; return refs[i] ??= { current: initial }; },
     },
     'react-native': { ...Object.fromEntries(['ActivityIndicator', 'KeyboardAvoidingView', 'ScrollView', 'Text', 'View'].map(name => [name,name])), Platform: { OS: platform } },
-    'expo-router': { Redirect: 'Redirect', router: { replace: path => routes.push(path), back: () => routes.push('back') } },
+    'expo-router': { useLocalSearchParams: () => params, Redirect: 'Redirect', router: { replace: path => routes.push(path), back: () => routes.push('back') } },
     'react-native-safe-area-context': { SafeAreaView: 'SafeAreaView' },
     '@/components/ui/SubHeader': { SubHeader: 'SubHeader' },
     '@/components/ui/Field': { Field: 'Field' },
@@ -171,3 +171,10 @@ test('a failed resend shows the error and resumes polling the previous valid lin
   confirmed=true; await page.tick(); assert.equal(completed,1); assert.deepEqual(page.routes,['/onboarding/add-horse']);
   page.dispose();
 });
+
+ test('horse picker creation returns to the picker with the new horse selected', async () => {
+ const selected=[];
+ const page=await screen('add-horse',{params:{returnTo:'horse-picker'},db:{isLoggedIn:true,currentUserId:'owner',selectHorse:id=>selected.push(id)},mutations:{upsertHorse:async()=> 'new-horse'}});
+ page.fill('Naam van je paard','Nova'); await page.press('Paard toevoegen');
+ assert.deepEqual(selected,['new-horse']); assert.equal(page.routes[0].pathname,'/(tabs)/(pager)/home'); assert.ok(page.routes[0].params.horsePicker);
+ });

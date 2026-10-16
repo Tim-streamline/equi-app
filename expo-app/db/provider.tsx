@@ -27,6 +27,7 @@ import { accountSession } from '@/lib/account-session';
 import { captureException } from '@/lib/error-tracking';
 import { AppSchema } from './powersync-schema';
 import { LaravelConnector } from './connector';
+import { refreshSubscriptionConnection } from './refresh-subscription';
 import {
   clearCredentials,
   loadCredentials,
@@ -67,6 +68,7 @@ type DbContextValue = {
   register: (input: RegistrationInput) => Promise<RegistrationChallenge>;
   completeRegistration: (input: RegistrationCompletion, password: string) => Promise<void>;
   logout: () => Promise<void>;
+  refreshSubscriptionAccess: (signal: AbortSignal) => Promise<void>;
 };
 
 const DbContext = createContext<DbContextValue | null>(null);
@@ -158,6 +160,12 @@ export function DbProvider({ children }: { children: ReactNode }) {
   );
 
   const register = registerRequest;
+  const refreshSubscriptionAccess = useCallback(async (signal: AbortSignal) => {
+    if (!powersync || !currentUserId) throw new Error('Meld je opnieuw aan.');
+    const connector = new LaravelConnector();
+    connectedRef.current = true;
+    await refreshSubscriptionConnection(powersync, connector, signal => connector.fetchCredentials(signal), signal);
+  }, [powersync, currentUserId]);
   const completeRegistration = useCallback((input: RegistrationCompletion, password: string) => accountSession.transition(async () => {
     if (!powersync) throw new Error('Database not ready');
     const res = await completeRegistrationRequest(input);
@@ -204,8 +212,9 @@ export function DbProvider({ children }: { children: ReactNode }) {
       register,
       completeRegistration,
       logout,
+      refreshSubscriptionAccess,
     };
-  }, [powersync, isLoggedIn, syncStatus, currentUserId, selectedHorseId, login, register, completeRegistration, logout]);
+  }, [powersync, isLoggedIn, syncStatus, currentUserId, selectedHorseId, login, register, completeRegistration, logout, refreshSubscriptionAccess]);
 
   if (!powersync || !value) {
     return (

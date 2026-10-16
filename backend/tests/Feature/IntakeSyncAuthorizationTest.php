@@ -2,8 +2,10 @@
 
 namespace Tests\Feature;
 
+use App\Models\Horse;
 use App\Models\IntakeBooking;
 use App\Models\User;
+use App\Support\ProtocolAccess;
 use Firebase\JWT\JWT;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Str;
@@ -11,9 +13,46 @@ use Tests\TestCase;
 
 class IntakeSyncAuthorizationTest extends TestCase
 {
-    use RefreshDatabase;
+    use RefreshDatabase, \Tests\Concerns\HasSubscription;
 
     private string $privateKey = '';
+
+    public function test_existing_intake_can_sync_answers_and_submit_without_plus_but_cannot_create_another(): void
+    {
+        $user = User::factory()->create();
+        $horse = Horse::create(['owner_id' => $user->id, 'name' => 'Nova']);
+        $booking = IntakeBooking::create(['user_id' => $user->id, 'horse_id' => $horse->id]);
+        $id = (string) Str::uuid();
+        $this->postSyncAs($user, [
+            ['op' => 'PUT', 'type' => 'intake_bookings', 'id' => $booking->id, 'data' => ['user_id' => $user->id, 'horse_id' => $horse->id]],
+            ['op' => 'PUT', 'type' => 'intake_answers', 'id' => $id, 'data' => ['response_id' => $booking->id, 'section_id' => 'paard', 'field_id' => 'naam', 'value' => '"Offline Nova"']],
+        ])->assertOk();
+        $this->postSyncAs($user, [
+            ['op' => 'PATCH', 'type' => 'intake_answers', 'id' => $id, 'data' => ['value' => '"Updated offline"']],
+            ['op' => 'PATCH', 'type' => 'intake_bookings', 'id' => $booking->id, 'data' => ['intake_status' => 'submitted']],
+        ])->assertOk();
+        $this->assertDatabaseHas('intake_answers', ['id' => $id, 'value' => '"Updated offline"']);
+        $this->assertNotNull($booking->fresh()->submitted_at);
+        $this->postSyncAs($user, [['op' => 'DELETE', 'type' => 'intake_answers', 'id' => $id]])->assertOk();
+        $this->postSyncAs($user, [['op' => 'PUT', 'type' => 'intake_bookings', 'id' => (string) Str::uuid(),
+            'data' => ['user_id' => $user->id, 'horse_id' => $horse->id]]])->assertForbidden();
+        $this->assertDatabaseCount('intake_bookings', 1);
+    }
+
+    public function test_offline_writes_still_reject_foreign_bookings_and_transferred_horses_without_plus(): void
+    {
+        $owner = User::factory()->create();
+        $other = User::factory()->create();
+        $horse = Horse::create(['owner_id' => $owner->id, 'name' => 'Nova']);
+        $booking = IntakeBooking::create(['user_id' => $owner->id, 'horse_id' => $horse->id]);
+        $operation = ['op' => 'PUT', 'type' => 'intake_answers', 'id' => (string) Str::uuid(),
+            'data' => ['response_id' => $booking->id, 'section_id' => 'paard', 'field_id' => 'naam', 'value' => '"No"']];
+        $this->postSyncAs($other, [$operation])->assertForbidden();
+        $horse->update(['owner_id' => $other->id]);
+        $this->postSyncAs($owner, [$operation])->assertForbidden();
+        $this->postSyncAs($other, [$operation])->assertForbidden();
+        $this->assertDatabaseCount('intake_answers', 0);
+    }
 
     protected function setUp(): void
     {
@@ -44,7 +83,8 @@ class IntakeSyncAuthorizationTest extends TestCase
     public function test_owner_can_create_their_own_intake_response_and_answer(): void
     {
         $user = User::factory()->create();
-        $responseId = (string) Str::uuid();
+        $horse = Horse::create(['owner_id' => $user->id, 'name' => 'Nova']);
+        $responseId = IntakeBooking::create(['user_id' => $user->id, 'horse_id' => $horse->id])->id;
         $answerId = (string) Str::uuid();
 
         $this->postSyncAs($user, [
@@ -52,7 +92,7 @@ class IntakeSyncAuthorizationTest extends TestCase
                 'op' => 'PUT',
                 'type' => 'intake_bookings',
                 'id' => $responseId,
-                'data' => ['user_id' => $user->id, 'intake_status' => 'draft'],
+                'data' => ['user_id' => $user->id, 'horse_id' => $horse->id, 'intake_status' => 'draft'],
             ],
             [
                 'op' => 'PUT',
@@ -89,7 +129,8 @@ class IntakeSyncAuthorizationTest extends TestCase
     public function test_agriculture_answers_survive_authenticated_mobile_upload_and_reload(): void
     {
         $user = User::factory()->create();
-        $response = IntakeBooking::query()->create(['user_id' => $user->id, 'intake_status' => 'draft']);
+        $horse = Horse::create(['owner_id' => $user->id, 'name' => 'Nova']);
+        $response = IntakeBooking::query()->create(['user_id' => $user->id, 'horse_id' => $horse->id, 'intake_status' => 'draft']);
         $answers = [
             'landbouw-nabij' => 'Ja',
             'landbouw-afstand' => 'Minder dan 50 meter',
@@ -127,6 +168,7 @@ class IntakeSyncAuthorizationTest extends TestCase
         $attacker = User::factory()->create();
         $response = IntakeBooking::query()->create([
             'user_id' => $owner->id,
+            'horse_id' => Horse::create(['owner_id' => $owner->id, 'name' => 'Victim horse'])->id,
             'intake_status' => 'draft',
         ]);
 
@@ -149,8 +191,8 @@ class IntakeSyncAuthorizationTest extends TestCase
     {
         $owner = User::factory()->create();
         $attacker = User::factory()->create();
-        $victimBooking = IntakeBooking::create(['user_id' => $owner->id]);
-        $ownBooking = IntakeBooking::create(['user_id' => $attacker->id]);
+        $victimBooking = IntakeBooking::create(['user_id' => $owner->id, 'horse_id' => Horse::create(['owner_id' => $owner->id, 'name' => 'Test horse'])->id]);
+        $ownBooking = IntakeBooking::create(['user_id' => $attacker->id, 'horse_id' => Horse::create(['owner_id' => $attacker->id, 'name' => 'Test horse'])->id]);
         $answer = $victimBooking->answers()->create(['section_id' => 'paard', 'field_id' => 'naam', 'value' => '"Nova"']);
         $this->postSyncAs($attacker, [['op' => 'PATCH', 'type' => 'intake_answers', 'id' => $answer->id,
             'data' => ['response_id' => $ownBooking->id, 'value' => '"Stolen"']]])->assertForbidden();
@@ -160,6 +202,7 @@ class IntakeSyncAuthorizationTest extends TestCase
     public function test_old_client_intake_writes_require_an_update_instead_of_being_silently_lost(): void
     {
         $user = User::factory()->create();
+        $horse = Horse::create(['owner_id' => $user->id, 'name' => 'Nova']);
         $this->postSyncAs($user, [['op' => 'PUT', 'type' => 'intake_responses', 'id' => (string) Str::uuid(),
             'data' => ['user_id' => $user->id, 'status' => 'draft']]])->assertStatus(409);
     }
@@ -173,6 +216,7 @@ class IntakeSyncAuthorizationTest extends TestCase
 
     private function tokenFor(User $user): string
     {
+        if (! app(\App\Support\SubscriptionAccess::class)->active($user->id)) $this->subscribe($user);
         $now = time();
 
         return JWT::encode([

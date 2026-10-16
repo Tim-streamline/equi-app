@@ -58,9 +58,9 @@ export function LibraryContent({ itemId, preview }: { itemId: string; preview?: 
         {isConnected && <ActivityIndicator accessibilityLabel="Inhoud downloaden" color="#127A79" />}
         <Text className="text-ink-70">{isConnected ? 'Inhoud wordt gedownload…' : 'Deze inhoud is nog niet gedownload. Maak verbinding om het item offline te kunnen lezen.'}</Text>
       </View> : !data.canRead && data.item.isPlus ? <View className="mx-5 mt-5 gap-3 rounded-2xl bg-mint-50 p-5">
-        <Text className="font-bold text-[20px] text-ink">Alleen voor Plus</Text>
-        <Text className="text-[15px] text-ink-70">Dit item is beschikbaar met actief Plus. Je kunt het niet met credits ontgrendelen.</Text>
-        <Button title="Bekijk Plus" onPress={() => router.push('/(tabs)/(pager)/protocol')} />
+        <Text className="font-bold text-[20px] text-ink">Inbegrepen bij je abonnement</Text>
+        <Text className="text-[15px] text-ink-70">Dit item is beschikbaar met een actief abonnement.</Text>
+        <Button title="Bekijk abonnement" onPress={() => router.push('/(tabs)/account/subscription')} />
       </View> : !data.canRead ? <View className="mx-5 mt-5 gap-3 rounded-2xl bg-mint-50 p-5">
         <Text className="font-bold text-[20px] text-ink">Ontgrendel dit item</Text>
           <Text className="text-[15px] text-ink-70">{insufficient ? `Je hebt nog ${credits(cost - balance)} nodig` : `Je hebt ${credits(balance)}`}</Text>

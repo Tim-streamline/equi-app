@@ -3,7 +3,10 @@
 namespace App\Support;
 
 use App\Models\Horse;
+use App\Models\IntakeAttachment;
+use App\Models\IntakeBooking;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 
 class HorseDeletion
 {
@@ -12,6 +15,7 @@ class HorseDeletion
     {
         $groups = [
             'removed' => [
+                'bookings' => ['intake_bookings', 'Intakes en bookings (inclusief antwoorden en bijlagen)'],
                 'protocols' => ['protocols', 'Protocollen (inclusief fases en adviezen)'],
                 'observations' => ['observations', 'Observaties (inclusief fotokoppelingen)'],
                 'shares' => ['horse_shares', 'Gedeelde toegang'],
@@ -21,7 +25,6 @@ class HorseDeletion
             ],
             'detached' => [
                 'scans' => ['scan_results', 'Scans'],
-                'bookings' => ['intake_bookings', 'Bookings'],
                 'chats' => ['chat_sessions', 'Chats'],
                 'exports' => ['data_exports', 'Gegevensexports'],
             ],
@@ -47,8 +50,26 @@ class HorseDeletion
             $locked = Horse::query()->lockForUpdate()->findOrFail($horse->id);
             $links = $this->preview($locked);
             $before = $locked->getAttributes();
+            $bookings = IntakeBooking::where('horse_id', $locked->id)->lockForUpdate()->get();
+            $paths = IntakeAttachment::whereIn('booking_id', $bookings->modelKeys())->pluck('path')->all();
+            $locked->protocols()->delete();
+            foreach ($bookings as $booking) {
+                // Answers, attachments and reminder deliveries cascade with the intake.
+                // The horse deletion below cascades protocols, intakes and their answers.
+                AuditLogger::deleted($booking);
+            }
             $locked->delete();
             AuditLogger::log('deleted', $locked, before: $before + ['linked_data' => $links]);
+            DB::afterCommit(function () use ($paths) {
+                // Files must survive a database rollback. Cleanup failure cannot undo a commit.
+                try {
+                    if ($paths && ! Storage::disk('local')->delete($paths)) {
+                        throw new \RuntimeException('Could not clean up deleted horse intake attachments.');
+                    }
+                } catch (\Throwable $exception) {
+                    report($exception);
+                }
+            });
         });
     }
 }

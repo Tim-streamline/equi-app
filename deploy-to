@@ -81,7 +81,7 @@ if ((!build_only)); then
 fi
 remote_activate() {
     ssh "${ssh_options[@]}" "$server" "mkdir -p '$site/shared/deploy-tools'"
-    rsync -a -e 'ssh -o BatchMode=yes -o ConnectTimeout=15' "$repo_dir/deploy/ploi-nginx.php" "$server:$site/shared/deploy-tools/"
+    rsync -a -e 'ssh -o BatchMode=yes -o ConnectTimeout=15' "$repo_dir/deploy/ploi-nginx.php" "$repo_dir/deploy/check-schema-compatibility.php" "$server:$site/shared/deploy-tools/"
     # Upload runtime configuration separately from the immutable/public build.
     # Activation installs it atomically under the deployment lock.
     if [[ "$2" == deploy ]]; then

@@ -5,6 +5,7 @@ namespace App\Support;
 use App\Models\IntakeAttachment;
 use App\Models\IntakeBooking;
 use App\Models\IntakeQuestionnaire;
+use App\Models\IntakeSection;
 
 /** One evaluator for the admin review, print output and future protocol generation. */
 class IntakeReview
@@ -20,16 +21,23 @@ class IntakeReview
         }
         $none = $questionnaire?->none_options ?? ['geen'];
         $sections = [];
+        $photos = app(IntakePhotoRules::class);
+        $usedMetadata = [];
         $safety = [];
         $triggers = [];
         $attachments = IntakeAttachment::where('booking_id', $booking->id)->get()->keyBy('id');
         foreach ($questionnaire?->sections ?? [] as $section) {
             $rows = [];
+            $sectionAnswers = $this->sectionAnswers($section, $answers);
             foreach ($section->fields as $field) {
-                if (! $this->visible($field->show_if, $answers[$section->key] ?? [], $answers, $none)) {
+                if (! $this->visible($field->show_if, $sectionAnswers, $answers, $none)) {
                     continue;
                 }
-                $value = $answers[$section->key][$field->key] ?? null;
+                $value = $sectionAnswers[$field->key] ?? null;
+                if (($field->photo_config['existing_only'] ?? false) && ! $photos->references($value)) {
+                    continue;
+                }
+                $answerSection = $field->answer_section_key ?? $section->key;
                 $critical = $this->matches($value, $field->critical_if);
                 $flag = $critical || $this->flagged($value, $field->flag_if, $none);
                 $hits = [];
@@ -40,7 +48,7 @@ class IntakeReview
                     }
                 }
                 $row = [
-                    'id' => $section->key.'.'.$field->key, 'key' => $field->key, 'section' => $section->key,
+                    'id' => $answerSection.'.'.$field->key, 'key' => $field->key, 'section' => $section->key,
                     'label' => $field->label, 'type' => $field->type, 'unit' => $field->unit,
                     'sub' => $field->repeater_sub ?? [], 'value' => $value,
                     'empty' => $this->empty($value), 'required' => ! $field->optional,
@@ -52,12 +60,29 @@ class IntakeReview
                     foreach (is_array($value) ? $value : [] as $reference) {
                         $id = is_string($reference) ? explode(':', $reference)[1] ?? '' : '';
                         $file = $attachments->get($id);
-                        if ($file && $file->section_key === $section->key && $file->field_key === $field->key) {
+                        if ($file && $file->section_key === $answerSection && $file->field_key === $field->key) {
                             $row['attachments'][] = ['id' => $file->id, 'name' => $file->name, 'image' => str_starts_with($file->mime, 'image/'),
-                                'url' => route('admin.intake-media', $file->id)];
+                                'year' => $answers['__photos']['year-'.$file->id] ?? null, 'url' => route('admin.intake-media', $file->id)];
                         }
                     }
                     $row['empty'] = $row['attachments'] === [];
+                }
+                if ($field->type === 'photo') {
+                    $row['not_applicable'] = $photos->notApplicable($field, $answers);
+                    if ($row['not_applicable']) {
+                        $row['empty'] = false;
+                    }
+                    $config = $field->photo_config ?? [];
+                    if ($config['allow_na'] ?? false) {
+                        $usedMetadata[] = $config['na_key'] ?? 'na:'.$answerSection.':'.$field->key;
+                    }
+                    $slots = array_column($config['slots'] ?? [], 'label', 'id');
+                    foreach ($row['attachments'] as &$photo) {
+                        $photo['slot'] = $slots[$answers['__photos']['slot-'.$photo['id']] ?? ''] ?? null;
+                        $usedMetadata[] = 'year-'.$photo['id'];
+                        $usedMetadata[] = 'slot-'.$photo['id'];
+                    }
+                    unset($photo);
                 }
                 $rows[] = $row;
                 if ($field->critical_if) {
@@ -72,6 +97,22 @@ class IntakeReview
                 'intro' => $section->intro, 'rows' => $rows, 'count' => count($questions),
                 'flags' => count(array_filter($questions, fn ($r) => $r['flagged']))];
         }
+        // Retain metadata entered through the retired custom photo screen in
+        // historical reviews. It no longer defines questions or completion rules.
+        $legacy = [];
+        foreach ($answers['__photos'] ?? [] as $key => $value) {
+            if (in_array($key, $usedMetadata, true)) {
+                continue;
+            }
+            $legacy[] = ['id' => '__photos.'.$key, 'key' => $key, 'section' => '__photos',
+                'label' => $key, 'type' => 'text', 'unit' => null, 'sub' => [], 'value' => $value,
+                'empty' => $this->empty($value), 'required' => false, 'flagged' => false,
+                'critical' => false, 'protocol' => [], 'flagged_options' => [], 'attachments' => []];
+        }
+        if ($legacy) {
+            $sections[] = ['id' => '__photos', 'nr' => count($sections), 'title' => 'Eerder opgeslagen fotogegevens',
+                'intro' => null, 'rows' => $legacy, 'count' => count($legacy), 'flags' => 0];
+        }
         $rows = array_merge([], ...array_column($sections, 'rows'));
         $questions = array_values(array_filter($rows, fn ($r) => $r['type'] !== 'sectionhead'));
 
@@ -81,6 +122,19 @@ class IntakeReview
             'blocked' => count(array_filter($safety, fn ($r) => $r['critical'])) > 0,
             'accepted' => array_values(array_intersect($booking->accepted_triggers ?? [], array_column($triggers, 'id'))),
             'notes' => $booking->review_notes ?? '', 'updated_at' => $booking->review_updated_at?->toISOString()];
+    }
+
+    public function sectionAnswers(IntakeSection $section, array $answers): array
+    {
+        $values = $answers[$section->key] ?? [];
+        foreach ($section->fields as $field) {
+            $source = $answers[$field->answer_section_key ?? $section->key] ?? [];
+            if (array_key_exists($field->key, $source)) {
+                $values[$field->key] = $source[$field->key];
+            }
+        }
+
+        return $values;
     }
 
     public function empty(mixed $value): bool
@@ -121,7 +175,7 @@ class IntakeReview
         return $this->matches($value, $rule);
     }
 
-    private function visible(?array $conditions, array $section, array $answers, array $none): bool
+    public function visible(?array $conditions, array $section, array $answers, array $none): bool
     {
         foreach ($conditions ?? [] as $key => $condition) {
             $value = str_contains($key, '.') ? data_get($answers, $key) : ($section[$key] ?? null);

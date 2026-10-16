@@ -22,7 +22,7 @@ class PlusPageController extends Controller
             $request->merge(['content' => json_decode($request->input('content'), true)]);
         }
         $defaults = PlusPage::defaults();
-        $rules = ['content' => ['required', 'array:'.implode(',', array_keys($defaults))],
+        $rules = ['protocol_price_cents' => ['sometimes', 'required', 'integer', 'min:1', 'max:10000000'], 'content' => ['required', 'array:'.implode(',', array_keys($defaults))],
             'hero' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:10240'],
             'portrait' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:10240'],
             'remove_portrait' => ['boolean']];
@@ -47,8 +47,9 @@ class PlusPageController extends Controller
                 // Seed once, then serialize edits to the singleton row.
                 PlusPage::query()->insertOrIgnore(['id' => PlusPage::PAGE_ID, 'content' => json_encode(PlusPage::defaults()), 'created_at' => now(), 'updated_at' => now()]);
                 $page = PlusPage::whereKey(PlusPage::PAGE_ID)->lockForUpdate()->firstOrFail();
-                $before = $page->only(['content', 'hero_path', 'portrait_path']);
+                $before = $page->only(['content', 'hero_path', 'portrait_path', 'protocol_price_cents']);
                 $page->content = $data['content'];
+                if (isset($data['protocol_price_cents'])) $page->protocol_price_cents = $data['protocol_price_cents'];
                 foreach (['hero_path', 'portrait_path'] as $field) {
                     if (isset($created[$field]) || ($field === 'portrait_path' && ($data['remove_portrait'] ?? false))) {
                         if ($page->$field) $removed[] = $page->$field;
@@ -63,6 +64,6 @@ class PlusPageController extends Controller
             throw $error;
         }
         Storage::disk('local')->delete($removed);
-        return back()->with('success', 'Ontdek Plus bijgewerkt.');
+        return back()->with('success', 'Protocolpagina bijgewerkt.');
     }
 }

@@ -15,6 +15,8 @@ class HorseSeederTest extends TestCase
     public function test_database_seeder_assigns_nova_to_the_anchor_user(): void
     {
         $this->seed();
+        $this->assertDatabaseCount('plans', 1);
+        $this->assertDatabaseHas('plans', ['slug' => 'subscription']);
 
         $anchorUser = User::where('email', UserSeeder::ANCHOR_EMAIL)->firstOrFail();
 

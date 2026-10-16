@@ -19,11 +19,11 @@ export function BasicCancellation() {
   }
   if (!data?.hasBasic) return null;
   return <View className="mt-5 gap-3">
-    {data.endsAt ? <Text className="text-ink-70">Je Basic-abonnement loopt tot {creditDate(data.endsAt)}</Text> : confirming ? <>
-      <Text className="text-ink">Basic opzeggen? Je behoudt toegang tot het einde van je betaalde periode. Daarna vervallen je Basic-credits. Je ontgrendelde items blijven behouden.</Text>
+    {data.endsAt ? <Text className="text-ink-70">Je abonnement loopt tot {creditDate(data.endsAt)}</Text> : confirming ? <>
+      <Text className="text-ink">Abonnement opzeggen? Je behoudt toegang tot het einde van je betaalde periode. Daarna vervallen je abonnementscredits. Je ontgrendelde items blijven behouden.</Text>
       <Button title="Opzegging bevestigen" disabled={busy} onPress={() => void cancel()} />
       <Button title="Annuleren" variant="text" disabled={busy} onPress={() => setConfirming(false)} />
-    </> : <Button title="Basic opzeggen" variant="text" onPress={() => setConfirming(true)} />}
+    </> : <Button title="Abonnement opzeggen" variant="text" onPress={() => setConfirming(true)} />}
     {!!error && <Text accessibilityRole="alert" className="text-ink-70">{error}</Text>}
   </View>;
 }

@@ -35,3 +35,10 @@ export function creditNotificationRoute(data: unknown, userId: string) {
   return value.type === 'credit_expiry' && value.userId === userId
     ? { pathname: '/(tabs)/account/credits' as const } : null;
 }
+
+export function intakeNotificationRoute(data: unknown, userId: string) {
+  if (!data || typeof data !== 'object') return null;
+  const value = data as { type?: unknown; userId?: unknown; bookingId?: unknown };
+  return value.type === 'intake_reminder' && value.userId === userId && typeof value.bookingId === 'string' && /^[a-f0-9-]{36}$/i.test(value.bookingId)
+    ? { pathname: '/intake/reminder' as const, params: { bookingId: value.bookingId, userId } } : null;
+}

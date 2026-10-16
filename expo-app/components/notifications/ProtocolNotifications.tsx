@@ -8,7 +8,7 @@ import { useDb } from '@/db/provider';
 import { useCurrentUser } from '@/db/hooks';
 import { dashboardRequest, deviceTimezone } from '@/hooks/useHorseDashboard';
 import { accountSession } from '@/lib/account-session';
-import { phaseNotificationRoute, creditNotificationRoute } from '@/lib/protocol-notifications';
+import { phaseNotificationRoute, creditNotificationRoute, intakeNotificationRoute } from '@/lib/protocol-notifications';
 
 Notifications.setNotificationHandler({
   handleNotification: async () => ({ shouldPlaySound: true, shouldSetBadge: false, shouldShowBanner: true, shouldShowList: true }),
@@ -43,6 +43,7 @@ export function ProtocolNotifications() {
         }
         if (Platform.OS === 'android') {
           await Notifications.setNotificationChannelAsync('protocol', { name: 'Protocol', importance: Notifications.AndroidImportance.DEFAULT });
+          await Notifications.setNotificationChannelAsync('intake', { name: 'Intake', importance: Notifications.AndroidImportance.DEFAULT });
           await Notifications.setNotificationChannelAsync('credits', { name: 'Credits', importance: Notifications.AndroidImportance.DEFAULT });
         }
         let permission = await Notifications.getPermissionsAsync();
@@ -70,7 +71,7 @@ export function ProtocolNotifications() {
     let cancelled = false;
     const open = async (response: Notifications.NotificationResponse) => {
       const id = response.notification.request.identifier;
-      const route = phaseNotificationRoute(response.notification.request.content.data, currentUserId, id)
+      const route = intakeNotificationRoute(response.notification.request.content.data, currentUserId) ?? phaseNotificationRoute(response.notification.request.content.data, currentUserId, id)
         ?? creditNotificationRoute(response.notification.request.content.data, currentUserId);
       if (!route || handling.current.has(id)) return;
       handling.current.add(id);

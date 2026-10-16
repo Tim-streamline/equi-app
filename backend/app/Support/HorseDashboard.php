@@ -18,9 +18,9 @@ class HorseDashboard
 
     public function build(User $user, ?Horse $horse, CarbonImmutable $now, ?string $month = null): array
     {
-        $answers = $horse ? $this->nutrition->answers($horse) : [];
         $protocol = $horse?->protocols()->where('status', 'active')->whereNotNull('published_at')
             ->where('published_at', '<=', $now)->orderByDesc('published_at')->first();
+        $answers = $this->nutrition->answers($protocol);
         $discovery = app(LibraryDiscovery::class);
         $access = $discovery->access($user);
         $hasPlus = $access['hasPlus'];
@@ -60,25 +60,24 @@ class HorseDashboard
             ->where(fn ($q) => $q->whereNotNull('active_from')->orWhere('month_order', $now->month))
             ->orderByRaw('active_from IS NULL ASC')->orderByDesc('active_from')->orderByDesc('updated_at')->first();
         $tipItem = $tip ? $items->firstWhere('id', $tip->cta_item_id) : null;
-        $plusPlan = Plan::query()->where('slug', 'plus')->with('benefits')->first();
+
 
         return [
             'timezone' => $now->timezoneName, 'generatedAt' => $now->toIso8601String(), 'date' => $now->toDateString(),
             'greeting' => ($now->hour < 12 ? 'Goedemorgen' : ($now->hour < 18 ? 'Goedemiddag' : 'Goedenavond')).', '.explode(' ', trim($user->name))[0],
             'horse' => ['id' => $horse?->id ?? '', 'name' => $horse?->name ?? ''],
-            'hasPlus' => $hasPlus, 'showPlusUpsell' => $horse && ! $hasPlus && ! $protocol,
+            'hasPlus' => $hasPlus, 'showPlusUpsell' => $horse && $horse->owner_id === $user->id && ! app(ProtocolAccess::class)->existingForHorse($user->id, $horse->id) && ! $protocol,
             'variant' => $horse ? ($hasPlus || $protocol ? 'plus' : 'basic') : 'without-horse',
             'credits' => app(CreditLedger::class)->summary($user)['balance'],
-            'plusOffer' => $plusPlan ? ['name' => $plusPlan->name, 'description' => $plusPlan->description,
-                'priceLabel' => ($plusPlan->currency === 'EUR' ? '€' : $plusPlan->currency).' '.number_format($plusPlan->price_cents / 100, 2, ',', '.'),
-                'priceSuffix' => $plusPlan->price_suffix, 'benefits' => $plusPlan->benefits->pluck('label')->all()] : null,
+            'plusOffer' => null,
             'seasonalTip' => $tip ? ['id' => $tip->id, 'intro' => Str::limit(trim(preg_replace('/\s+/u', ' ', strip_tags($tip->body))), 180), 'month' => $tip->month, 'title' => $tip->title ?: $tipItem?->title, 'body' => $tip->body, 'item' => $tipItem ? $itemData($tipItem) : null] : null,
             'recommendations' => $recommendations, 'protocol' => $data,
         ];
     }
 
-    public function protocol(Protocol $protocol, CarbonImmutable $now, ?string $month = null, array $answers = [], bool $preview = false): array
+    public function protocol(Protocol $protocol, CarbonImmutable $now, ?string $month = null, ?array $answers = null, bool $preview = false): array
     {
+        $answers ??= $this->nutrition->answers($protocol);
         $protocol->loadMissing(['phases.weeks', 'phases.supplements.weeks', 'analysis.advice', 'voedingAdviezen', 'managementAdviezen', 'bewegingAdviezen']);
         $start = $protocol->started_at ? CarbonImmutable::parse($protocol->started_at->toDateString(), $now->timezone)->startOfDay() : null;
         $totalWeeks = max((int) $protocol->total_weeks, (int) $protocol->phases->flatMap->weeks->max('protocol_week_number'));

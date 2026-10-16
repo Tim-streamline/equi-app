@@ -53,7 +53,7 @@
             <Badge>{booking.submitted_at ? 'Intake ingevuld' : 'Intake in concept'}</Badge>
             <Badge variant={statusVariant(booking.status)}>{booking.status_label}</Badge>
             <Button variant="outline" onclick={exportPdf}>Exporteer PDF</Button>
-            {#if booking.horse_id}<Link href={`/admin/protocols/create?horse_id=${booking.horse_id}`} class="inline-flex h-11 items-center rounded-full bg-primary px-5 font-semibold text-white">Protocol opstellen</Link>{/if}
+            {#if booking.horse_id}<Link href={`/admin/protocols/${booking.protocol_id}/edit`} class="inline-flex h-11 items-center rounded-full bg-primary px-5 font-semibold text-white">Protocol opstellen</Link>{/if}
         {/snippet}
     </PageHeader>
     <div role="tablist" aria-label="Booking" class="mb-6 flex gap-6 border-b">

@@ -4,7 +4,9 @@
     const text = (value) => Array.isArray(value) ? value.join('\n') : String(value ?? '');
 </script>
 
-{#if row.empty}
+{#if row.not_applicable}
+    <span>Niet van toepassing</span>
+{:else if row.empty}
     <span class="text-muted-foreground">Niet ingevuld</span>
 {:else if row.type === 'multi'}
     <div class="flex flex-wrap gap-2">
@@ -18,7 +20,7 @@
             {#if file.image && row.type === 'photo'}
                 <button class="photo" onclick={() => openPhoto(file)} aria-label={`Vergroot ${file.name}`}>
                     <img src={file.url} alt={file.name} loading={printMode ? 'eager' : 'lazy'} />
-                    <span>{file.name}</span>
+                    <span>{file.name}</span>{#if file.year}<span>Jaartal: {file.year}</span>{/if}{#if file.slot}<span>{file.slot}</span>{/if}
                 </button>
             {:else}
                 <a href={`${file.url}?download=1`} class="inline-flex items-center gap-2 text-primary underline"><FileText size={18} />{file.name}<Download size={15} /></a>
