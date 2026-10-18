@@ -18,10 +18,10 @@ export function FieldLabel({ n, label, hint, required, link, photo }: Props) {
   return (
     <View className="mb-2">
       <View className="flex-row items-baseline gap-2">
-        <Text className="font-bold text-[11px] tracking-display text-ink-50">
+        {n > 0 && <Text className="font-bold text-[11px] tracking-display text-ink-50">
           {String(n).padStart(2, '0')}
-        </Text>
-        <Text className={photo ? "flex-1 font-bold text-[18px] leading-[24px] text-ink" : "flex-1 font-semi text-[14.5px] leading-[20px] text-ink"}>
+        </Text>}
+        <Text className={photo ? `flex-1 font-bold ${n === 0 ? 'text-[21px] leading-[28px]' : 'text-[18px] leading-[24px]'} text-ink` : "flex-1 font-semi text-[14.5px] leading-[20px] text-ink"}>
           {parts ? (
             <>
               {parts[0]}

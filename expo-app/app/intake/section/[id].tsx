@@ -8,7 +8,7 @@ import { useEffect, useRef, useMemo } from 'react';
 import { View, Text, ScrollView } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
-import { ChevronLeft, X } from 'lucide-react-native';
+import { Check, ChevronLeft, CloudUpload, X } from 'lucide-react-native';
 
 import { Button } from '@/components/ui/Button';
 import { IconButton } from '@/components/ui/IconButton';
@@ -56,6 +56,7 @@ export default function IntakeSectionScreen() {
   // Every visible question answered (not just the required ones) flips the
   // counter from red to green.
   const allAnswered = total > 0 && filled === total;
+  const photoSection = isPhotoSection(section);
 
   // Walking field number across the visible (non-sectionhead) fields so the
   // eyebrow numbers reset cleanly per section and stay continuous through
@@ -65,7 +66,7 @@ export default function IntakeSectionScreen() {
   return (
     <View className="flex-1 bg-canvas">
       <SafeAreaView edges={['top']} style={{ flex: 1 }}>
-        <View className="flex-row items-center justify-between gap-2 px-4 pb-3 pt-2">
+        <View className={`flex-row items-center justify-between gap-2 px-4 pb-3 pt-2 ${photoSection ? 'bg-white' : ''}`}>
           <IconButton accessibilityLabel="Terug naar intakeoverzicht" onPress={() => router.dismissTo('/intake/overview')}>
             <ChevronLeft size={22} color="#1B2A2A" />
           </IconButton>
@@ -88,26 +89,26 @@ export default function IntakeSectionScreen() {
           </IconButton>
         </View>
 
-        <View className="px-5">
+        {photoSection ? <View className="flex-row gap-1 bg-white px-5 pb-4">
+          {schema.map((item, index) => <View key={item.id} className={`h-1 flex-1 rounded-pill ${index <= section.nr ? 'bg-mint-500' : 'bg-ink-8'}`} />)}
+        </View> : <View className="px-5">
           <View className="h-1 overflow-hidden rounded-pill bg-ink-8">
-            <View
-              className="h-full rounded-pill bg-mint-500"
-              style={{ width: `${pct}%` }}
-            />
+            <View className="h-full rounded-pill bg-mint-500" style={{ width: `${pct}%` }} />
           </View>
-        </View>
+        </View>}
 
         <IntakeScrollView scrollRef={scroll} footer={
         <View
           className="gap-2 px-5 pt-3"
           style={{
-            backgroundColor: 'rgba(251,248,243,0.96)',
+            backgroundColor: photoSection ? '#FFFFFF' : 'rgba(251,248,243,0.96)',
             paddingBottom: insets.bottom + 16,
           }}
         >
           <Button
             title={state.submittedAt ? "Terug naar overzicht" : "Opslaan en terug naar overzicht"}
             variant="primary"
+            className={photoSection ? 'rounded-full' : undefined}
             onPress={() => router.dismissTo('/intake/overview')}
           />
           <View className="flex-row items-center justify-center gap-1.5">
@@ -122,20 +123,32 @@ export default function IntakeSectionScreen() {
           </View>
         </View>
         }>
-            {!!(section.intro || section.presentation?.offline_notice) && (
+            {photoSection ? <View className="mb-6 rounded-[22px] bg-[#E8F4F2] p-5">
+              {!!section.intro && <Text className="text-[15px] leading-[24px] text-[#174B49]">{section.intro.split('\n\n')[0]}</Text>}
+              <View className="mt-4 gap-3 border-t border-[#D0E5E2] pt-4">
+                <View className="flex-row items-center gap-3">
+                  <View className="h-7 w-7 items-center justify-center rounded-full bg-white"><Check size={15} color="#168D87" /></View>
+                  <Text className="flex-1 text-[13px] leading-[19px] text-[#315D5B]">Foto’s worden tussentijds automatisch opgeslagen.</Text>
+                </View>
+                {!!section.presentation?.offline_notice && <View className="flex-row items-center gap-3">
+                  <View className="h-7 w-7 items-center justify-center rounded-full bg-white"><CloudUpload size={15} color="#168D87" /></View>
+                  <Text className="flex-1 text-[13px] leading-[19px] text-[#315D5B]">{section.presentation.offline_notice}</Text>
+                </View>}
+              </View>
+            </View> : !!(section.intro || section.presentation?.offline_notice) && (
               <View className={section.presentation?.intro_style === 'card' ? 'mb-5 rounded-2xl bg-teal-700 p-5' : 'mb-4'}>
                 {!!section.intro && <Text className={section.presentation?.intro_style === 'card' ? 'text-[16px] leading-[24px] text-white' : 'text-[16px] leading-[23px] text-ink-70'}>{section.intro}</Text>}
                 {!!section.presentation?.offline_notice && <Text className={section.presentation?.intro_style === 'card' ? 'mt-4 text-[14px] leading-[21px] text-white' : 'mt-4 text-sm text-ink-70'}>{section.presentation.offline_notice}</Text>}
               </View>
             )}
 
-            {isPhotoSection(section) && isSectionComplete(section, answers, state.answers, noneOptions) && (
+            {photoSection && isSectionComplete(section, answers, state.answers, noneOptions) && (
               <Text className="mb-4 font-semi text-mint-700">Foto’s compleet ✓</Text>
             )}
             {visible.map((f) => {
               if (f.type !== 'sectionhead') fieldCounter += 1;
               return (
-                <View key={f.id} onTouchStart={() => trackActivity(section.id, f.id)} onLayout={event => { if (requestedField === f.id) scroll.current?.scrollTo({ y: event.nativeEvent.layout.y, animated: false }); }}>
+                <View key={f.id} className={photoSection && f.type === 'photo' ? 'mb-5 rounded-[24px] bg-white p-5 shadow-sm' : ''} onTouchStart={() => trackActivity(section.id, f.id)} onLayout={event => { if (requestedField === f.id) scroll.current?.scrollTo({ y: event.nativeEvent.layout.y, animated: false }); }}>
                 <IntakeField
                   field={f}
                   sectionId={section.id}

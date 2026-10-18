@@ -30,8 +30,8 @@ export function PhotoExample({ field }: { field: Field }) {
 }
 
 /** Generic photo controls. Categories, slots and rules come from the editable questionnaire. */
-export function ConfiguredPhotoField({ field, sectionId, value, onChange }: {
-  field: Field; sectionId: string; value: FieldValue; onChange: (value: string[]) => void;
+export function ConfiguredPhotoField({ field, sectionId, value, onChange, design = false }: {
+  field: Field; sectionId: string; value: FieldValue; onChange: (value: string[]) => void; design?: boolean;
 }) {
   const { state, setField, submitting } = useIntake();
   const readOnly = !!state.submittedAt || submitting;
@@ -39,7 +39,7 @@ export function ConfiguredPhotoField({ field, sectionId, value, onChange }: {
   latest.current = value;
   const change = (next: string[]) => { latest.current = next; onChange(next); };
   const config = field.photoConfig ?? {};
-  if (config.grouped_hooves) return <GroupedHoofPhotos field={field} sectionId={sectionId} />;
+  if (config.grouped_hooves) return <GroupedHoofPhotos field={field} sectionId={sectionId} design={design} />;
   const refs = photoReferences(value);
   const na = photoNotApplicable(field, state.answers, sectionId);
   const metadata = state.answers.__photos ?? {};
@@ -68,14 +68,21 @@ export function ConfiguredPhotoField({ field, sectionId, value, onChange }: {
     </View>}
   </View> : undefined;
   return <View className="gap-3">
-    <PhotoExample field={field} />
+    {!design && <PhotoExample field={field} />}
     {!!config.allow_na && !readOnly && <Pressable accessibilityRole="checkbox" accessibilityState={{ checked: na }}
       onPress={() => setField('__photos', photoNaKey(field, sectionId), na ? '' : 'yes')}
-      className="rounded-xl border border-ink-15 bg-white p-3">
-      <Text className="text-sm text-ink">{na ? '☑' : '☐'} Niet van toepassing</Text>
+      className={design ? 'flex-row items-center gap-3 py-2' : 'rounded-xl border border-ink-15 bg-white p-3'}>
+      {design && <View className={`h-5 w-5 items-center justify-center rounded border ${na ? 'border-mint-600 bg-mint-600' : 'border-ink-30 bg-white'}`}>
+        {na && <Text className="text-[13px] leading-[16px] text-white">✓</Text>}
+      </View>}
+      <Text className={design ? 'text-[13px] text-ink-70' : 'text-sm text-ink'}>{design ? '' : na ? '☑ ' : '☐ '}Niet van toepassing{design ? ' op mijn paard' : ''}</Text>
     </Pressable>}
-    {na ? <Text className="text-sm text-ink-50">{readOnly ? 'Niet van toepassing' : 'Afgehandeld. Je kunt deze keuze later wijzigen. Eerder toegevoegde foto’s blijven bewaard.'}</Text>
-      : slots.length ? <View className="gap-5">
+    {na ? (design ? readOnly && <Text className="text-sm text-ink-50">Niet van toepassing</Text>
+      : <Text className="text-sm text-ink-50">{readOnly ? 'Niet van toepassing' : 'Afgehandeld. Je kunt deze keuze later wijzigen. Eerder toegevoegde foto’s blijven bewaard.'}</Text>)
+      : <>
+        {design && <PhotoInstructions field={field} design />}
+        {design && <PhotoExample field={field} />}
+        {slots.length ? <View className="gap-5">
         {slots.map(slot => {
           const selected = photoSlotReferences(field, slot, value, state.answers, sectionId);
           return <View key={slot.id} className="gap-2">
@@ -88,7 +95,7 @@ export function ConfiguredPhotoField({ field, sectionId, value, onChange }: {
               }
               for (const ref of next) setSlot(ref, slot.id);
               change([...photoReferences(latest.current).filter(ref => !selected.includes(ref)), ...next]);
-            }} section={sectionId} field={slot.answer_field ?? field.id} photo max={1} renderMetadata={renderMetadata} />
+            }} section={sectionId} field={slot.answer_field ?? field.id} photo max={1} renderMetadata={renderMetadata} photoDesign={design} compactUpload />
           </View>;
         })}
         {!readOnly && !fixedHoofViews && slots.length > 1 && <AttachmentField value={[]} onChange={() => {}} section={sectionId} field={field.id} photo
@@ -102,7 +109,7 @@ export function ConfiguredPhotoField({ field, sectionId, value, onChange }: {
               if (!slot.answer_field) setSlot(ref, slot.id);
               change([...photoReferences(latest.current), ref]);
             }
-          }} />}
+          }} photoDesign={design} />}
         {!!unassigned.length && <View className="gap-2">
           <Text className="text-sm text-ink">Eerder toegevoegd — kies het aanzicht voor deze foto’s. Opnieuw uploaden is niet nodig.</Text>
           <AttachmentField value={unassigned} max={0} section={sectionId} field={field.id} photo
@@ -116,12 +123,13 @@ export function ConfiguredPhotoField({ field, sectionId, value, onChange }: {
             })}</View>} />
         </View>}
       </View> : <AttachmentField value={refs} onChange={change} section={sectionId} field={field.id} photo
-        max={config.existing_only ? 0 : config.max} renderMetadata={renderMetadata} />}
-    {!!config.max && !na && <Text className="text-xs text-ink-50">Maximaal {config.max} foto’s.</Text>}
+        max={config.existing_only ? 0 : config.max} renderMetadata={renderMetadata} photoDesign={design} />}
+      </>}
+    {!!config.max && !na && !design && <Text className="text-xs text-ink-50">Maximaal {config.max} foto’s.</Text>}
   </View>;
 }
 
-function GroupedHoofPhotos({ field, sectionId }: { field: Field; sectionId: string }) {
+function GroupedHoofPhotos({ field, sectionId, design }: { field: Field; sectionId: string; design: boolean }) {
   const { state, setField, submitting } = useIntake();
   const readOnly = !!state.submittedAt || submitting;
   const na = photoNotApplicable(field, state.answers, sectionId);
@@ -130,13 +138,16 @@ function GroupedHoofPhotos({ field, sectionId }: { field: Field; sectionId: stri
   const latest = useRef<Record<string, string[]>>({});
   for (const group of groups) latest.current[group.field] = photoReferences(state.answers[field.answerSection ?? sectionId]?.[group.field]);
   return <View className="gap-3">
-    {!readOnly && <Pressable accessibilityRole="checkbox" accessibilityState={{ checked: na }}
+    {!!field.photoConfig?.allow_na && !readOnly && <Pressable accessibilityRole="checkbox" accessibilityState={{ checked: na }}
       onPress={() => setField('__photos', photoNaKey(field, sectionId), na ? '' : 'yes')}
-      className="rounded-xl border border-ink-15 bg-white p-3">
-      <Text className="text-sm text-ink">{na ? '☑' : '☐'} Niet van toepassing</Text>
+      className="flex-row items-center gap-3 py-2">
+      <View className={`h-5 w-5 items-center justify-center rounded border ${na ? 'border-mint-600 bg-mint-600' : 'border-ink-30 bg-white'}`}>
+        {na && <Text className="text-[13px] leading-[16px] text-white">✓</Text>}
+      </View>
+      <Text className="text-[13px] text-ink-70">Niet van toepassing op mijn paard</Text>
     </Pressable>}
-    {na ? <Text className="text-sm text-ink-50">Niet van toepassing</Text> : <>
-      <PhotoInstructions field={field} />
+    {na ? readOnly && <Text className="text-sm text-ink-50">Niet van toepassing</Text> : <>
+      <PhotoInstructions field={field} design={design} />
       <PhotoExample field={field} />
       {groups.map(group => <View key={group.field} className="gap-3 pt-2">
         <Text className="font-bold text-[16px] text-ink">{group.label}</Text>
@@ -152,7 +163,7 @@ function GroupedHoofPhotos({ field, sectionId }: { field: Field; sectionId: stri
               latest.current[group.field] = updated;
               for (const ref of next) setField('__photos', `slot-${photoId(ref)}`, slot.id);
               setField(field.answerSection ?? sectionId, group.field, updated);
-            }} section={field.answerSection ?? sectionId} field={group.field} photo max={1} />
+            }} section={field.answerSection ?? sectionId} field={group.field} photo max={1} photoDesign={design} compactUpload />
           </View>;
         })}
       </View>)}

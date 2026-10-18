@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { View, Text, Pressable, Image, Platform, ActivityIndicator } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import * as DocumentPicker from 'expo-document-picker';
-import { Camera, FileText, Trash2 } from 'lucide-react-native';
+import { Camera, FileText, Plus, Trash2 } from 'lucide-react-native';
 import { getApiBaseUrl } from '@/db/auth';
 import { getOrMintToken } from '@/db/connector';
 import { useDb } from '@/db/provider';
@@ -72,8 +72,9 @@ export function Photo({ reference }: { reference: string }) {
 }
 type PickedAsset = ImagePicker.ImagePickerAsset | DocumentPicker.DocumentPickerAsset;
 type PhotoSlot = { id: string; label: string; field: string };
-export function AttachmentField({ value, onChange, section, field, photo, max, renderMetadata, slots, onSlotAdded }: {
+export function AttachmentField({ value, onChange, section, field, photo, max, renderMetadata, slots, onSlotAdded, photoDesign = false, compactUpload = false }: {
   slots?: PhotoSlot[]; onSlotAdded?: (reference: string, slotId: string) => void;
+  photoDesign?: boolean; compactUpload?: boolean;
   max?: number; renderMetadata?: (reference: string) => React.ReactNode;
   value: string[]; onChange: (value: string[]) => void; section: string; field: string; photo: boolean;
 }) {
@@ -180,9 +181,20 @@ export function AttachmentField({ value, onChange, section, field, photo, max, r
         {!readOnly && <Pressable disabled={busy} accessibilityLabel="Bijlage verwijderen" onPress={() => onChange(value.filter((_, i) => i !== index))}><Trash2 size={18} color="#9b3f3f" /></Pressable>}
       </View>)}
     </View>
-    {!readOnly && !pending && (!slots || !limitReached) && <Pressable accessibilityRole="button" disabled={busy || limitReached} onPress={() => void add()} className="flex-row items-center justify-center gap-2 rounded-xl border border-dashed border-ink-15 bg-white p-4">
-      {busy ? <ActivityIndicator color="#108a82"/> : photo ? <Camera size={20} color="#108a82"/> : <FileText size={20} color="#108a82"/>}
-      <Text className="font-semi text-mint-700">{busy ? 'Opslaan…' : photo ? (slots ? 'Foto’s kiezen voor aanzichten' : remaining() > 1 ? 'Foto’s toevoegen' : 'Foto toevoegen') : bloodTest ? 'Bloeduitslag toevoegen' : 'Document toevoegen'}</Text>
+    {!readOnly && !pending && (!slots || !limitReached) && <Pressable accessibilityRole="button" disabled={busy || limitReached} onPress={() => void add()}
+      className={photo && photoDesign
+        ? `items-center justify-center rounded-[20px] border border-dashed border-[#A8DCDA] bg-[#EAF9F7] ${compactUpload ? 'min-h-[115px] p-4' : 'min-h-[175px] p-6'}`
+        : 'flex-row items-center justify-center gap-2 rounded-xl border border-dashed border-ink-15 bg-white p-4'}>
+      {photo && photoDesign ? <>
+        <View className={`items-center justify-center rounded-full bg-mint-500 shadow-sm ${compactUpload ? 'h-10 w-10' : 'h-13 w-13'}`}>
+          {busy ? <ActivityIndicator color="white" /> : <Plus size={compactUpload ? 21 : 25} color="white" />}
+        </View>
+        <Text className="mt-3 font-semi text-[15px] text-[#174B49]">{busy ? 'Toevoegen…' : slots ? 'Foto’s kiezen voor aanzichten' : remaining() > 1 ? 'Foto’s toevoegen' : 'Foto toevoegen'}</Text>
+        {!!max && !slots && <Text className="mt-1 text-[12px] text-ink-50">Maximaal {max} {max === 1 ? 'foto' : 'foto’s'}</Text>}
+      </> : <>
+        {busy ? <ActivityIndicator color="#108a82"/> : photo ? <Camera size={20} color="#108a82"/> : <FileText size={20} color="#108a82"/>}
+        <Text className="font-semi text-mint-700">{busy ? (photo ? 'Toevoegen…' : 'Opslaan…') : photo ? (slots ? 'Foto’s kiezen voor aanzichten' : remaining() > 1 ? 'Foto’s toevoegen' : 'Foto toevoegen') : bloodTest ? 'Bloeduitslag toevoegen' : 'Document toevoegen'}</Text>
+      </>}
     </Pressable>}
     {!readOnly && pending && <View className="gap-3">
       <Text className="text-sm text-ink">Kies het aanzicht voor iedere foto.</Text>
@@ -200,7 +212,7 @@ export function AttachmentField({ value, onChange, section, field, photo, max, r
       </View>)}
       <Pressable accessibilityRole="button" disabled={busy || pending.assignments.some(id => !slots?.some(slot => slot.id === id))}
         onPress={() => void savePending()} className="rounded-xl border border-ink-15 p-4">
-        <Text className="font-semi text-mint-700">{busy ? 'Opslaan…' : 'Foto’s opslaan'}</Text>
+        <Text className="font-semi text-mint-700">{busy ? 'Toevoegen…' : 'Foto’s opslaan'}</Text>
       </Pressable>
       <Pressable accessibilityRole="button" disabled={busy} onPress={() => setPending(null)} className="p-3"><Text className="text-ink">Annuleren</Text></Pressable>
     </View>}
