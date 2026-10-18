@@ -1,4 +1,4 @@
-import { useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Image, Pressable, Text, View } from 'react-native';
 import { IntakeTextInput } from './IntakeScrollView';
 import { AttachmentField } from './AttachmentField';
@@ -9,9 +9,20 @@ import { getApiBaseUrl } from '@/db/auth';
 
 export function PhotoExample({ field }: { field: Field }) {
   const url = field.photoConfig?.example_url;
+  const uri = url?.startsWith('/') ? `${getApiBaseUrl()}${url}` : url;
+  const [dimensions, setDimensions] = useState<{ uri: string; aspectRatio: number }>();
+  useEffect(() => {
+    if (!uri) return;
+    let active = true;
+    Image.getSize(uri, (width, height) => {
+      if (active && width > 0 && height > 0) setDimensions({ uri, aspectRatio: width / height });
+    }, () => {});
+    return () => { active = false; };
+  }, [uri]);
+  const aspectRatio = dimensions?.uri === uri ? dimensions?.aspectRatio : undefined;
   if (!url) return null;
   return <View className="my-3 gap-2">
-    <Image source={{ uri: url.startsWith('/') ? `${getApiBaseUrl()}${url}` : url }} resizeMode="contain" style={{ width: '100%', height: 280 }} accessibilityLabel={field.photoConfig?.example_caption ?? field.label} />
+    <Image source={{ uri }} resizeMode="contain" style={{ width: '100%', ...(aspectRatio ? { aspectRatio } : { height: 280 }) }} accessibilityLabel={field.photoConfig?.example_caption ?? field.label} />
     {!!field.photoConfig?.example_caption && <Text className="text-xs text-ink-50">{field.photoConfig.example_caption}</Text>}
     {!!field.photoConfig?.example_after && <Text className="text-[16px] leading-[23px] text-ink-70">{field.photoConfig.example_after}</Text>}
   </View>;
