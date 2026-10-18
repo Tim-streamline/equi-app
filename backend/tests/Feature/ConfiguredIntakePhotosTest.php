@@ -129,6 +129,31 @@ class ConfiguredIntakePhotosTest extends TestCase
         $this->assertStringContainsString('Caption 1', $html);
     }
 
+    public function test_extra_hoof_photos_count_as_one_question_with_twelve_views_or_not_applicable(): void
+    {
+        $this->seed(IntakeQuestionnaireSeeder::class);
+        $booking = $this->booking();
+        $field = IntakeField::where('key', 'sec-hoef-upload')->sole();
+        $this->assertSame('photo', $field->type);
+        $this->assertCount(12, $field->photo_config['slots']);
+        $progress = app(IntakeProgress::class)->forBooking($booking);
+        $this->assertContains(['section' => 'intake-fotos', 'field' => $field->key], $progress['missing']);
+        foreach ($field->photo_config['slots'] as $index => $slot) {
+            $id = 'hoof-'.$index;
+            $saved = $booking->answers()->firstOrNew(['section_id' => 'fysiek', 'field_id' => $slot['answer_field']]);
+            $saved->value = json_encode([...json_decode($saved->value ?? '[]', true), 'attachment:'.$id.':hoof.jpg']);
+            $saved->save();
+            $booking->answers()->create(['section_id' => '__photos', 'field_id' => 'slot-'.$id,
+                'value' => json_encode($slot['answer_slot'])]);
+            $missing = app(IntakeProgress::class)->forBooking($booking->fresh())['missing'];
+            $this->assertSame($index < 11, in_array(['section' => 'intake-fotos', 'field' => $field->key], $missing, true));
+        }
+        $booking->answers()->create(['section_id' => '__photos', 'field_id' => 'extra-hoeven-na', 'value' => '"yes"']);
+        $this->assertNotContains(['section' => 'intake-fotos', 'field' => $field->key], app(IntakeProgress::class)->forBooking($booking->fresh())['missing']);
+        $this->assertSame(1, collect(app(IntakeReview::class)->forBooking($booking->fresh())['sections'][0]['rows'])
+            ->filter(fn ($row) => $row['key'] === 'sec-hoef-upload')->count());
+    }
+
     public function test_grouped_sources_accept_offline_uploads_but_keep_ownership_and_field_checks(): void
     {
         $this->seed(IntakeQuestionnaireSeeder::class);

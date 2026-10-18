@@ -130,8 +130,28 @@ export function photoNotApplicable(field: Field, answers: IntakeAnswers = {}, se
 }
 /** A configured slot can retain a pre-existing answer/attachment namespace. */
 export function photoSlotReferences(field: Field, slot: NonNullable<NonNullable<Field['photoConfig']>['slots']>[number], value: unknown, answers: IntakeAnswers = {}, sectionId = '') {
-  if (slot.answer_field) return photoReferences(slot.answer_field === field.id ? value : answers[field.answerSection ?? sectionId]?.[slot.answer_field]);
+  if (slot.answer_field) {
+    const refs = photoReferences(slot.answer_field === field.id ? value : answers[field.answerSection ?? sectionId]?.[slot.answer_field]);
+    return slot.answer_slot ? refs.filter(ref => answers.__photos?.[`slot-${photoId(ref)}`] === slot.answer_slot) : refs;
+  }
   return photoReferences(value).filter(ref => answers.__photos?.[`slot-${photoId(ref)}`] === slot.id);
+}
+
+/** Present the four stored hoof answers as one question while retaining their original upload keys. */
+export function groupedPhotoFields(fields: Field[]): Field[] {
+  const heading = fields.find(field => field.id === 'sec-hoef-upload');
+  if (!heading || heading.type !== 'sectionhead') return fields;
+  const hoofIds = ['foto-hoef-lv', 'foto-hoef-rv', 'foto-hoef-la', 'foto-hoef-ra'];
+  const hooves = hoofIds.map(id => fields.find(field => field.id === id));
+  if (hooves.some(field => !field?.photoConfig?.slots?.length)) return fields;
+  const groups = hooves.map(field => ({ field: field!.id, label: field!.label,
+    slots: field!.photoConfig!.slots!.map(slot => ({ id: slot.id, label: slot.label })) }));
+  const grouped: Field = { ...heading, type: 'photo', optional: false,
+    photoConfig: { ...heading.photoConfig, allow_na: true, na_key: 'extra-hoeven-na', legacy_field: 'foto-hoef-instructie', grouped_hooves: groups,
+      slots: groups.flatMap(group => group.slots.map(slot => ({ id: `${group.field}-${slot.id}`,
+        label: `${group.label} — ${slot.label}`, answer_field: group.field, answer_slot: slot.id }))) } };
+  return fields.filter(field => !hoofIds.includes(field.id) && field.id !== 'foto-hoef-instructie')
+    .map(field => field.id === heading.id ? grouped : field);
 }
 export function photoFieldReferences(field: Field, value: unknown, answers: IntakeAnswers = {}, sectionId = '') {
   return Array.from(new Set([...photoReferences(value), ...(field.photoConfig?.slots ?? []).flatMap(slot => photoSlotReferences(field, slot, value, answers, sectionId))]));
@@ -210,7 +230,7 @@ export function visibleFields(
   noneOptions: readonly string[] = INTAKE_NONE_OPTIONS,
 ): Field[] {
   if (allAnswers) answers = answersForSection(section, allAnswers);
-  return section.fields
+  return groupedPhotoFields(section.fields)
     .filter((f) => f.type !== 'sectionhead')
     .filter((f) => showField(f, answers, allAnswers, noneOptions));
 }
@@ -223,7 +243,7 @@ export function visibleFieldsForRender(
   noneOptions: readonly string[] = INTAKE_NONE_OPTIONS,
 ): Field[] {
   if (allAnswers) answers = answersForSection(section, allAnswers);
-  return section.fields.filter((f) => showField(f, answers, allAnswers, noneOptions));
+  return groupedPhotoFields(section.fields).filter((f) => showField(f, answers, allAnswers, noneOptions));
 }
 
 /**

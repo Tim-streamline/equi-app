@@ -69,10 +69,10 @@ export function IntakeField({ field, sectionId, n, noneOptions }: Props) {
         label={field.label}
         hint={field.hint}
         photo={field.type === 'photo'}
-        required={isFieldRequired(field)}
+        required={isFieldRequired(field) && !field.photoConfig?.grouped_hooves}
         link={field.link}
       />
-      {field.type === 'photo' && <PhotoInstructions field={field} />}
+      {field.type === 'photo' && !field.photoConfig?.grouped_hooves && <PhotoInstructions field={field} />}
       {state.submittedAt && !['photo', 'file'].includes(field.type)
         ? <ReadOnlyAnswer field={field} value={value} answers={state.answers[answerSection] ?? {}} />
         : renderInput(field, value, set, noneOptions, answerSection)}

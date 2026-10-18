@@ -53,7 +53,9 @@ export type PhotoConfig = {
   year_required?: boolean;
   allow_na?: boolean;
   na_key?: string;
-  slots?: { id: string; label: string; answer_field?: string }[];
+  slots?: { id: string; label: string; answer_field?: string; answer_slot?: string }[];
+  grouped_hooves?: { field: string; label: string; slots: { id: string; label: string }[] }[];
+  legacy_field?: string;
   caption?: { label: string; placeholder?: string };
   example_after?: string;
   existing_only?: boolean;
@@ -384,7 +386,7 @@ export const INTAKE_SCHEMA: Section[] = [
       {
         "id": "sec-hoef-upload",
         "label": "Extra hoef foto’s bij een hoefgerelateerde hulpvraag",
-        "type": "sectionhead",
+        "type": "photo",
         "answerSection": "fysiek",
         "hint": "Alleen invullen als jouw klacht of hulpvraag met de hoeven, pees-, gewrichts-, bewegingsproblemen of staakgedrag te maken heeft.",
         "photoConfig": {
@@ -392,121 +394,160 @@ export const INTAKE_SCHEMA: Section[] = [
           "example_caption": "Voorbeeldfoto’s — David Landreville",
           "example_after": "Extra tip: Gebruik dezelfde afstand en camerahoek voor alle vier de hoeven zodat de foto’s goed met elkaar te vergelijken zijn.",
           "instruction_label": "Zo maak je de foto",
-          "instructions": "Upload van iedere hoef een extra foto van:\n- zool;\n- achterzijde vanaf de hielen;\n- zijaanzicht.\n\nMaak de hoeven droog en voldoende schoon zodat de hoefstructuren goed zichtbaar zijn.\n\n• Zool: Til de hoef op en fotografeer de volledige onderzijde zo recht mogelijk.\n• Achterzijde / hielen: Fotografeer recht vanaf de achterkant zodat de volledige achterzijde en beide hielen goed zichtbaar zijn.\n• Zijaanzicht: Fotografeer de hoef zo recht mogelijk van opzij, met de volledige hoef in beeld."
-        }
-      },
-      {
-        "id": "foto-hoef-lv",
-        "label": "Linkervoorhoef",
-        "type": "photo",
-        "optional": true,
-        "answerSection": "fysiek",
-        "photoConfig": {
+          "instructions": "Upload van iedere hoef een extra foto van:\n- zool;\n- achterzijde vanaf de hielen;\n- zijaanzicht.\n\nMaak de hoeven droog en voldoende schoon zodat de hoefstructuren goed zichtbaar zijn.\n\n• Zool: Til de hoef op en fotografeer de volledige onderzijde zo recht mogelijk.\n• Achterzijde / hielen: Fotografeer recht vanaf de achterkant zodat de volledige achterzijde en beide hielen goed zichtbaar zijn.\n• Zijaanzicht: Fotografeer de hoef zo recht mogelijk van opzij, met de volledige hoef in beeld.",
           "allow_na": true,
           "na_key": "extra-hoeven-na",
+          "grouped_hooves": [
+            {
+              "field": "foto-hoef-lv",
+              "label": "Linkervoorhoef",
+              "slots": [
+                {
+                  "id": "zool",
+                  "label": "Zool"
+                },
+                {
+                  "id": "achterzijde",
+                  "label": "Achterzijde / hielen"
+                },
+                {
+                  "id": "zijaanzicht",
+                  "label": "Zijaanzicht"
+                }
+              ]
+            },
+            {
+              "field": "foto-hoef-rv",
+              "label": "Rechtervoorhoef",
+              "slots": [
+                {
+                  "id": "zool",
+                  "label": "Zool"
+                },
+                {
+                  "id": "achterzijde",
+                  "label": "Achterzijde / hielen"
+                },
+                {
+                  "id": "zijaanzicht",
+                  "label": "Zijaanzicht"
+                }
+              ]
+            },
+            {
+              "field": "foto-hoef-la",
+              "label": "Linkerachterhoef",
+              "slots": [
+                {
+                  "id": "zool",
+                  "label": "Zool"
+                },
+                {
+                  "id": "achterzijde",
+                  "label": "Achterzijde / hielen"
+                },
+                {
+                  "id": "zijaanzicht",
+                  "label": "Zijaanzicht"
+                }
+              ]
+            },
+            {
+              "field": "foto-hoef-ra",
+              "label": "Rechterachterhoef",
+              "slots": [
+                {
+                  "id": "zool",
+                  "label": "Zool"
+                },
+                {
+                  "id": "achterzijde",
+                  "label": "Achterzijde / hielen"
+                },
+                {
+                  "id": "zijaanzicht",
+                  "label": "Zijaanzicht"
+                }
+              ]
+            }
+          ],
           "slots": [
             {
-              "id": "zool",
-              "label": "Zool"
+              "id": "foto-hoef-lv-zool",
+              "label": "Linkervoorhoef — Zool",
+              "answer_field": "foto-hoef-lv",
+              "answer_slot": "zool"
             },
             {
-              "id": "achterzijde",
-              "label": "Achterzijde / hielen"
+              "id": "foto-hoef-lv-achterzijde",
+              "label": "Linkervoorhoef — Achterzijde / hielen",
+              "answer_field": "foto-hoef-lv",
+              "answer_slot": "achterzijde"
             },
             {
-              "id": "zijaanzicht",
-              "label": "Zijaanzicht"
+              "id": "foto-hoef-lv-zijaanzicht",
+              "label": "Linkervoorhoef — Zijaanzicht",
+              "answer_field": "foto-hoef-lv",
+              "answer_slot": "zijaanzicht"
+            },
+            {
+              "id": "foto-hoef-rv-zool",
+              "label": "Rechtervoorhoef — Zool",
+              "answer_field": "foto-hoef-rv",
+              "answer_slot": "zool"
+            },
+            {
+              "id": "foto-hoef-rv-achterzijde",
+              "label": "Rechtervoorhoef — Achterzijde / hielen",
+              "answer_field": "foto-hoef-rv",
+              "answer_slot": "achterzijde"
+            },
+            {
+              "id": "foto-hoef-rv-zijaanzicht",
+              "label": "Rechtervoorhoef — Zijaanzicht",
+              "answer_field": "foto-hoef-rv",
+              "answer_slot": "zijaanzicht"
+            },
+            {
+              "id": "foto-hoef-la-zool",
+              "label": "Linkerachterhoef — Zool",
+              "answer_field": "foto-hoef-la",
+              "answer_slot": "zool"
+            },
+            {
+              "id": "foto-hoef-la-achterzijde",
+              "label": "Linkerachterhoef — Achterzijde / hielen",
+              "answer_field": "foto-hoef-la",
+              "answer_slot": "achterzijde"
+            },
+            {
+              "id": "foto-hoef-la-zijaanzicht",
+              "label": "Linkerachterhoef — Zijaanzicht",
+              "answer_field": "foto-hoef-la",
+              "answer_slot": "zijaanzicht"
+            },
+            {
+              "id": "foto-hoef-ra-zool",
+              "label": "Rechterachterhoef — Zool",
+              "answer_field": "foto-hoef-ra",
+              "answer_slot": "zool"
+            },
+            {
+              "id": "foto-hoef-ra-achterzijde",
+              "label": "Rechterachterhoef — Achterzijde / hielen",
+              "answer_field": "foto-hoef-ra",
+              "answer_slot": "achterzijde"
+            },
+            {
+              "id": "foto-hoef-ra-zijaanzicht",
+              "label": "Rechterachterhoef — Zijaanzicht",
+              "answer_field": "foto-hoef-ra",
+              "answer_slot": "zijaanzicht"
             }
-          ]
-        }
-      },
-      {
-        "id": "foto-hoef-rv",
-        "label": "Rechtervoorhoef",
-        "type": "photo",
-        "optional": true,
-        "answerSection": "fysiek",
-        "photoConfig": {
-          "allow_na": true,
-          "na_key": "extra-hoeven-na",
-          "slots": [
-            {
-              "id": "zool",
-              "label": "Zool"
-            },
-            {
-              "id": "achterzijde",
-              "label": "Achterzijde / hielen"
-            },
-            {
-              "id": "zijaanzicht",
-              "label": "Zijaanzicht"
-            }
-          ]
-        }
-      },
-      {
-        "id": "foto-hoef-la",
-        "label": "Linkerachterhoef",
-        "type": "photo",
-        "optional": true,
-        "answerSection": "fysiek",
-        "photoConfig": {
-          "allow_na": true,
-          "na_key": "extra-hoeven-na",
-          "slots": [
-            {
-              "id": "zool",
-              "label": "Zool"
-            },
-            {
-              "id": "achterzijde",
-              "label": "Achterzijde / hielen"
-            },
-            {
-              "id": "zijaanzicht",
-              "label": "Zijaanzicht"
-            }
-          ]
-        }
-      },
-      {
-        "id": "foto-hoef-ra",
-        "label": "Rechterachterhoef",
-        "type": "photo",
-        "optional": true,
-        "answerSection": "fysiek",
-        "photoConfig": {
-          "allow_na": true,
-          "na_key": "extra-hoeven-na",
-          "slots": [
-            {
-              "id": "zool",
-              "label": "Zool"
-            },
-            {
-              "id": "achterzijde",
-              "label": "Achterzijde / hielen"
-            },
-            {
-              "id": "zijaanzicht",
-              "label": "Zijaanzicht"
-            }
-          ]
-        }
-      },
-      {
-        "id": "foto-hoef-instructie",
-        "label": "Eerder toegevoegde extra hoefbeelden",
-        "type": "photo",
-        "optional": true,
-        "hint": "Je eerder toegevoegde foto’s blijven hier bewaard. Gebruik voor nieuwe foto’s de afzonderlijke aanzichten hieronder.",
-        "answerSection": "fysiek",
-        "photoConfig": {
-          "existing_only": true,
-          "allow_na": true,
-          "na_key": "extra-hoeven-na"
-        }
+          ],
+          "legacy_field": "foto-hoef-instructie"
+        },
+        "optional": false
       },
       {
         "id": "hoefbevangenheid-rontgen-upload",

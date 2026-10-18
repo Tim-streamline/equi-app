@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
 import { Image, Pressable, Text, View } from 'react-native';
 import { IntakeTextInput } from './IntakeScrollView';
-import { AttachmentField } from './AttachmentField';
+import { PhotoInstructions } from './PhotoInstructions';
+import { AttachmentField, Photo } from './AttachmentField';
 import { useIntake } from '@/lib/intake/store';
 import { photoId, photoNaKey, photoNotApplicable, photoReferences, photoSlotReferences, validPhotoYear } from '@/lib/intake/logic';
 import type { Field, FieldValue } from '@/lib/intake/schema';
@@ -38,10 +39,12 @@ export function ConfiguredPhotoField({ field, sectionId, value, onChange }: {
   latest.current = value;
   const change = (next: string[]) => { latest.current = next; onChange(next); };
   const config = field.photoConfig ?? {};
+  if (config.grouped_hooves) return <GroupedHoofPhotos field={field} sectionId={sectionId} />;
   const refs = photoReferences(value);
   const na = photoNotApplicable(field, state.answers, sectionId);
   const metadata = state.answers.__photos ?? {};
   const slots = config.slots ?? [];
+  const fixedHoofViews = ['foto-hoef-lv', 'foto-hoef-rv', 'foto-hoef-la', 'foto-hoef-ra'].includes(field.id);
   const slotOf = (ref: string) => metadata[`slot-${photoId(ref)}`];
   const unassigned = refs.filter(ref => !slots.some(slot => photoSlotReferences(field, slot, value, state.answers, sectionId).includes(ref)));
   const setSlot = (ref: string, slot: string) => setField('__photos', `slot-${photoId(ref)}`, slot);
@@ -88,7 +91,7 @@ export function ConfiguredPhotoField({ field, sectionId, value, onChange }: {
             }} section={sectionId} field={slot.answer_field ?? field.id} photo max={1} renderMetadata={renderMetadata} />
           </View>;
         })}
-        {!readOnly && slots.length > 1 && <AttachmentField value={[]} onChange={() => {}} section={sectionId} field={field.id} photo
+        {!readOnly && !fixedHoofViews && slots.length > 1 && <AttachmentField value={[]} onChange={() => {}} section={sectionId} field={field.id} photo
           slots={slots.filter(slot => !photoSlotReferences(field, slot, value, state.answers, sectionId).length)
             .map(slot => ({ id: slot.id, label: slot.label, field: slot.answer_field ?? field.id }))}
           onSlotAdded={(ref, slotId) => {
@@ -115,5 +118,48 @@ export function ConfiguredPhotoField({ field, sectionId, value, onChange }: {
       </View> : <AttachmentField value={refs} onChange={change} section={sectionId} field={field.id} photo
         max={config.existing_only ? 0 : config.max} renderMetadata={renderMetadata} />}
     {!!config.max && !na && <Text className="text-xs text-ink-50">Maximaal {config.max} foto’s.</Text>}
+  </View>;
+}
+
+function GroupedHoofPhotos({ field, sectionId }: { field: Field; sectionId: string }) {
+  const { state, setField, submitting } = useIntake();
+  const readOnly = !!state.submittedAt || submitting;
+  const na = photoNotApplicable(field, state.answers, sectionId);
+  const groups = field.photoConfig?.grouped_hooves ?? [];
+  const legacy = photoReferences(state.answers[field.answerSection ?? sectionId]?.[field.photoConfig?.legacy_field ?? '']);
+  const latest = useRef<Record<string, string[]>>({});
+  for (const group of groups) latest.current[group.field] = photoReferences(state.answers[field.answerSection ?? sectionId]?.[group.field]);
+  return <View className="gap-3">
+    {!readOnly && <Pressable accessibilityRole="checkbox" accessibilityState={{ checked: na }}
+      onPress={() => setField('__photos', photoNaKey(field, sectionId), na ? '' : 'yes')}
+      className="rounded-xl border border-ink-15 bg-white p-3">
+      <Text className="text-sm text-ink">{na ? '☑' : '☐'} Niet van toepassing</Text>
+    </Pressable>}
+    {na ? <Text className="text-sm text-ink-50">Niet van toepassing</Text> : <>
+      <PhotoInstructions field={field} />
+      <PhotoExample field={field} />
+      {groups.map(group => <View key={group.field} className="gap-3 pt-2">
+        <Text className="font-bold text-[16px] text-ink">{group.label}</Text>
+        {group.slots.map(slot => {
+          const configured = field.photoConfig?.slots?.find(item => item.answer_field === group.field && item.answer_slot === slot.id);
+          if (!configured) return null;
+          const selected = photoSlotReferences(field, configured, undefined, state.answers, sectionId);
+          return <View key={slot.id} className="gap-2">
+            <Text className="font-semi text-ink">{slot.label}</Text>
+            <AttachmentField value={selected} onChange={next => {
+              const current = latest.current[group.field] ?? [];
+              const updated = [...current.filter(ref => !selected.includes(ref)), ...next];
+              latest.current[group.field] = updated;
+              for (const ref of next) setField('__photos', `slot-${photoId(ref)}`, slot.id);
+              setField(field.answerSection ?? sectionId, group.field, updated);
+            }} section={field.answerSection ?? sectionId} field={group.field} photo max={1} />
+          </View>;
+        })}
+      </View>)}
+      {!!legacy.length && <View className="gap-2 pt-2">
+        <Text className="font-semi text-ink">Eerder toegevoegde extra hoefbeelden</Text>
+        <View className="flex-row flex-wrap gap-3">{legacy.map(ref => <Photo key={ref} reference={ref} />)}</View>
+      </View>}
+    </>}
   </View>;
 }

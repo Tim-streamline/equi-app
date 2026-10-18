@@ -15,7 +15,7 @@ import { IconButton } from '@/components/ui/IconButton';
 import { IntakeScrollView } from '@/components/intake/IntakeScrollView';
 import { IntakeField } from '@/components/intake/IntakeField';
 import { useIntakeSchema } from '@/lib/intake/schema-provider';
-import { showField, answeredCount, answersForSection, isPhotoSection, isSectionComplete } from '@/lib/intake/logic';
+import { visibleFieldsForRender, answeredCount, answersForSection, isPhotoSection, isSectionComplete } from '@/lib/intake/logic';
 import { useIntake } from '@/lib/intake/store';
 
 export default function IntakeSectionScreen() {
@@ -34,7 +34,7 @@ export default function IntakeSectionScreen() {
   // children — the renderer just skips numbering them. Hook lives above the
   // missing-section guard so the order stays stable across renders.
   const visible = useMemo(
-    () => (section ? section.fields.filter((f) => showField(f, answers, state.answers, noneOptions)) : []),
+    () => (section ? visibleFieldsForRender(section, answers, state.answers, noneOptions) : []),
     [section, answers, state.answers, noneOptions],
   );
 

@@ -78,6 +78,11 @@ class IntakeReview
                                 break;
                             }
                         }
+                        if ($slotLabel === null && ($field->photo_config['legacy_field'] ?? null)
+                            && in_array($reference, $photos->references($answers[$answerSection][$field->photo_config['legacy_field']] ?? null), true)) {
+                            $sourceField = $field->photo_config['legacy_field'];
+                            $slotLabel = 'Eerder toegevoegde extra hoefbeelden';
+                        }
                         if ($file && $file->section_key === $answerSection && $file->field_key === $sourceField) {
                             $row['attachments'][] = ['id' => $file->id, 'name' => $file->name, 'image' => str_starts_with($file->mime, 'image/'),
                                 'year' => $answers['__photos']['year-'.$file->id] ?? null,
