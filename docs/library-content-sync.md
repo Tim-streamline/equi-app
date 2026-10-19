@@ -10,6 +10,14 @@ PowerSync independently authorizes the subscription against this table using the
 JWT user ID. Supplying an item ID or a forged user ID does not grant access.
 Both projection tables reject client uploads.
 
+The authorization subquery also filters `library_item_access.item_id` by the
+requested subscription item. Without this filter, each item subscription
+enumerates all of the user's grants again: 100 grants with 101 subscriptions
+produce 10,100 parameter rows and can terminate the entire client stream with
+`PSYNC_S2305`. The compiler regression verifies that the same request resolves
+only 100 grant rows while excluding the unauthorized item. This keeps the shared
+item buckets and server-side access checks intact.
+
 Access follows the existing library rules: published free items, explicit credit
 unlocks, and Plus items covered by an active Plus subscription. Disabled users
 have no grants. Database triggers update grants in the source transaction,

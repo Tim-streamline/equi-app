@@ -189,11 +189,11 @@ export function AttachmentField({ value, onChange, section, field, photo, max, r
         <View className={`items-center justify-center rounded-full bg-mint-500 shadow-sm ${compactUpload ? 'h-10 w-10' : 'h-13 w-13'}`}>
           {busy ? <ActivityIndicator color="white" /> : <Plus size={compactUpload ? 21 : 25} color="white" />}
         </View>
-        <Text className="mt-3 font-semi text-[15px] text-[#174B49]">{busy ? 'Toevoegen…' : slots ? 'Foto’s kiezen voor aanzichten' : remaining() > 1 ? 'Foto’s toevoegen' : 'Foto toevoegen'}</Text>
+        <Text className="mt-3 font-semi text-[15px] text-[#174B49]">{busy ? 'Toevoegen…' : remaining() > 1 ? 'Foto’s toevoegen' : 'Foto toevoegen'}</Text>
         {!!max && !slots && <Text className="mt-1 text-[12px] text-ink-50">Maximaal {max} {max === 1 ? 'foto' : 'foto’s'}</Text>}
       </> : <>
         {busy ? <ActivityIndicator color="#108a82"/> : photo ? <Camera size={20} color="#108a82"/> : <FileText size={20} color="#108a82"/>}
-        <Text className="font-semi text-mint-700">{busy ? (photo ? 'Toevoegen…' : 'Opslaan…') : photo ? (slots ? 'Foto’s kiezen voor aanzichten' : remaining() > 1 ? 'Foto’s toevoegen' : 'Foto toevoegen') : bloodTest ? 'Bloeduitslag toevoegen' : 'Document toevoegen'}</Text>
+        <Text className="font-semi text-mint-700">{busy ? (photo ? 'Toevoegen…' : 'Opslaan…') : photo ? (remaining() > 1 ? 'Foto’s toevoegen' : 'Foto toevoegen') : bloodTest ? 'Bloeduitslag toevoegen' : 'Document toevoegen'}</Text>
       </>}
     </Pressable>}
     {!readOnly && pending && <View className="gap-3">

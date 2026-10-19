@@ -44,7 +44,6 @@ export function ConfiguredPhotoField({ field, sectionId, value, onChange, design
   const na = photoNotApplicable(field, state.answers, sectionId);
   const metadata = state.answers.__photos ?? {};
   const slots = config.slots ?? [];
-  const fixedHoofViews = ['foto-hoef-lv', 'foto-hoef-rv', 'foto-hoef-la', 'foto-hoef-ra'].includes(field.id);
   const slotOf = (ref: string) => metadata[`slot-${photoId(ref)}`];
   const unassigned = refs.filter(ref => !slots.some(slot => photoSlotReferences(field, slot, value, state.answers, sectionId).includes(ref)));
   const setSlot = (ref: string, slot: string) => setField('__photos', `slot-${photoId(ref)}`, slot);
@@ -98,18 +97,6 @@ export function ConfiguredPhotoField({ field, sectionId, value, onChange, design
             }} section={sectionId} field={slot.answer_field ?? field.id} photo max={1} renderMetadata={renderMetadata} photoDesign={design} compactUpload />
           </View>;
         })}
-        {!readOnly && !fixedHoofViews && slots.length > 1 && <AttachmentField value={[]} onChange={() => {}} section={sectionId} field={field.id} photo
-          slots={slots.filter(slot => !photoSlotReferences(field, slot, value, state.answers, sectionId).length)
-            .map(slot => ({ id: slot.id, label: slot.label, field: slot.answer_field ?? field.id }))}
-          onSlotAdded={(ref, slotId) => {
-            const slot = slots.find(item => item.id === slotId);
-            if (!slot) return;
-            if (slot.answer_field && slot.answer_field !== field.id) setField(sectionId, slot.answer_field, [ref]);
-            else {
-              if (!slot.answer_field) setSlot(ref, slot.id);
-              change([...photoReferences(latest.current), ref]);
-            }
-          }} photoDesign={design} />}
         {!!unassigned.length && <View className="gap-2">
           <Text className="text-sm text-ink">Eerder toegevoegd — kies het aanzicht voor deze foto’s. Opnieuw uploaden is niet nodig.</Text>
           <AttachmentField value={unassigned} max={0} section={sectionId} field={field.id} photo

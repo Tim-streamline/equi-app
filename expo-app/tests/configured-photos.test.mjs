@@ -179,21 +179,11 @@ test('captions are optional, independently saved per image, and fully configured
  assert.equal(app.render().find(n=>n.type==='Upload').props.renderMetadata,undefined);
 });
 
-test('batch assignments preserve configured body answer fields and hoof view metadata', () => {
+test('configured views expose only their fixed upload fields', () => {
  for (const id of ['foto-zijaanzicht-links', 'foto-hoeven']) {
   const f=field(id), app=ui(f,{fysiek:{}});
-  let batch=app.render().find(n=>n.type==='Upload' && n.props.slots);
-  assert.deepEqual(batch.props.slots.map(s=>s.id),f.photoConfig.slots.map(s=>s.id));
-  for (const slot of f.photoConfig.slots) {
-   batch=app.render().find(n=>n.type==='Upload' && n.props.slots);
-   batch.props.onSlotAdded(`attachment:${slot.id}:horse.jpg`,slot.id);
-  }
-  batch=app.render().find(n=>n.type==='Upload' && n.props.slots);
-  assert.deepEqual(batch.props.slots,[]);
-  assert.equal(photoAnswered(f,app.state.answers.fysiek[f.id],app.state.answers,'fysiek'),true);
-  for (const slot of f.photoConfig.slots) {
-   if (slot.answer_field) assert.deepEqual(app.state.answers.fysiek[slot.answer_field],[`attachment:${slot.id}:horse.jpg`]);
-   else assert.equal(app.state.answers.__photos[`slot-${slot.id}`],slot.id);
-  }
+  const uploads=app.render().filter(n=>n.type==='Upload');
+  assert.equal(uploads.length,f.photoConfig.slots.length);
+  assert.ok(uploads.every(upload=>!upload.props.slots && upload.props.max===1));
  }
 });
