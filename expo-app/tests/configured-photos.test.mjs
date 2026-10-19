@@ -138,8 +138,23 @@ test('grouped hoof controls show one not-applicable choice and save in the origi
  assert.equal(app.state.answers.__photos['slot-hoof-0'],'zool');
  app.render().find(n=>n.props?.accessibilityRole==='checkbox').props.onPress();
  assert.equal(app.render().filter(n=>n.type==='Upload').length,0);
- const old=ui(f,{fysiek:{'foto-hoef-instructie':['attachment:old:hoof.jpg']}});
- assert.equal(old.render().filter(n=>n.type==='Photo').length,1);
+});
+
+test('legacy hoof photos can be removed from their original answer without changing named views',()=>{
+ const f=field('sec-hoef-upload');
+ const app=ui(f,{fysiek:{'foto-hoef-instructie':['attachment:old:hoof.jpg','attachment:keep:hoof.jpg'],
+  'foto-hoef-lv':['attachment:sole:hoof.jpg']},__photos:{'slot-sole':'zool'}});
+ const legacy=()=>app.render().find(n=>n.type==='Upload' && n.props.field==='foto-hoef-instructie');
+ assert.equal(legacy().props.section,'fysiek');
+ assert.equal(legacy().props.max,0);
+ legacy().props.onChange(['attachment:keep:hoof.jpg']);
+ assert.deepEqual(legacy().props.value,['attachment:keep:hoof.jpg']);
+ assert.deepEqual(app.writes,[['fysiek','foto-hoef-instructie',['attachment:keep:hoof.jpg']]]);
+ assert.deepEqual(app.state.answers.fysiek['foto-hoef-lv'],['attachment:sole:hoof.jpg']);
+ assert.deepEqual(app.state.answers.__photos,{'slot-sole':'zool'});
+ legacy().props.onChange([]);
+ assert.deepEqual(app.state.answers.fysiek['foto-hoef-instructie'],[]);
+ assert.equal(legacy(),undefined);
 });
 
 test('body views are question seven, require all four, and preserve their original answer namespaces', () => {

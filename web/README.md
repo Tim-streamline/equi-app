@@ -49,6 +49,14 @@ If serving `dist/` with another web server, serve real files first and fall back
 
 Synced database edits can queue while an open app is offline and upload after reconnection. A fresh page load requires an online session check, including when opened from a home-screen shortcut. Remote media is not cached for offline use. Browser push uses the Push API and a notification-only service worker; other existing feature behavior follows the Expo app.
 
+## Mandatory refreshes
+
+Production builds stamp `index.html` with an immutable build ID and publish the same ID at `/web-version.json`. Deploy both files and the hashed assets together. The shipped Nginx configuration and preview server serve the version file with `Cache-Control: no-store`; other hosting must do the same and revalidate HTML. The app checks on startup, every minute while visible, and when a tab regains focus or connectivity. Development without a build marker skips these checks.
+
+When a different build is detected, the web app requires **Bewaren en vernieuwen** before continuing. The current forms/providers stay mounted behind an inert screen. Unfinished file selection/assignment and an active intake submission defer the screen until the operation finishes; a notice explains what still needs attention. Before reloading, the intake save queue drains and current edited answers are persisted again, retrying earlier local save failures. A failure keeps the page open with a retry option. The refresh does not clear IndexedDB, session storage, the PowerSync database or its upload queue, and does not require uploads to reach the server. The same tab/account reopens its database, and stored photo bytes remain available for upload retries.
+
+This must be deployed **before** an incompatible schema change. Tabs running a release from before this mechanism cannot detect it retroactively. Polling is not a server-side compatibility guarantee: keep incompatible schema migrations disabled until the old clients are retired or server/sync version enforcement is deployed. Native update behaviour is unchanged.
+
 ## Web icons
 
 `public/` contains browser favicons (ICO and 16/32px PNG), the Apple touch icon, Android/desktop manifest icons, a maskable icon, and the Windows tile icon. All use the existing native EquiApp logo from `../expo-app/assets/images/icon.png`. The maskable version adds space around the logo so platform cropping preserves the lettering. `public/index.html` is the Expo SPA template that links these assets; `site.webmanifest` supplies the home-screen name and icons. The deployment package includes these files. Home-screen shortcuts still require an online page load.

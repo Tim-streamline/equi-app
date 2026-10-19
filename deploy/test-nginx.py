@@ -107,6 +107,7 @@ class NginxTest(unittest.TestCase):
             'public/storage/image.jpg': 'media', 'public/storage/attack.php': 'private code',
             'public/.env': 'SECRET', 'public/.well-known/acme-challenge/token': 'challenge',
             'web-dist/index.html': '<html>customer SPA</html>',
+            'web-dist/web-version.json': '{"buildId":"release-two"}',
             'web-dist/_expo/static/js/web/app.js': 'customer asset',
             'web-dist/powersync/worker/worker.js': 'sync worker',
             'web-dist/powersync/sqlite.wasm': 'wasm',
@@ -166,6 +167,12 @@ class NginxTest(unittest.TestCase):
 
     def test_acme_is_available_over_http(self):
         self.assertEqual(self.request('/.well-known/acme-challenge/token', secure=False)[::2], (200, 'challenge'))
+
+    def test_web_release_marker_is_not_cached(self):
+        status, headers, body = self.request('/web-version.json')
+        self.assertEqual(status, 200)
+        self.assertEqual(headers['Cache-Control'], 'no-store')
+        self.assertEqual(json.loads(body), {'buildId': 'release-two'})
 
     def test_renamed_site_aliases_preserve_api_and_redirects(self):
         path = '/api/auth/forgot-password'

@@ -11,6 +11,7 @@ import { attachmentStorage, saveAttachment } from '@/lib/intake/attachments/stor
 import { onAttachmentsChanged } from '@/lib/intake/attachments/events';
 import type { LocalAttachment } from '@/lib/intake/attachments/types';
 import { useIntake } from '@/lib/intake/store';
+import { registerRefreshProtection, refreshProtectionChanged } from '@/lib/refresh-safety';
 
 function fileName(reference: string) {
   try { return decodeURIComponent(reference.split(':').slice(2).join(':')) || 'Bijlage'; } catch { return 'Bijlage'; }
@@ -95,6 +96,13 @@ export function AttachmentField({ value, onChange, section, field, photo, max, r
   const busyRef = useRef(false);
   const [error, setError] = useState('');
   const [pending, setPending] = useState<{ assets: PickedAsset[]; assignments: string[]; revision: number } | null>(null);
+  const pendingRef = useRef(pending);
+  pendingRef.current = pending;
+  useEffect(() => registerRefreshProtection({
+    reason: () => busyRef.current ? 'Rond het kiezen of opslaan van je bestand eerst af.'
+      : pendingRef.current ? 'Wijs je gekozen foto’s toe en sla ze op, of annuleer de selectie.' : null,
+  }), []);
+  useEffect(() => { refreshProtectionChanged(); }, [busy, pending]);
   const checkSession = (revision: number) => {
     if (readOnlyRef.current || !mounted.current || revision !== accountSession.revision) throw new Error('Je sessie is gewijzigd.');
   };

@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { Image, Pressable, Text, View } from 'react-native';
 import { IntakeTextInput } from './IntakeScrollView';
 import { PhotoInstructions } from './PhotoInstructions';
-import { AttachmentField, Photo } from './AttachmentField';
+import { AttachmentField } from './AttachmentField';
 import { useIntake } from '@/lib/intake/store';
 import { photoId, photoNaKey, photoNotApplicable, photoReferences, photoSlotReferences, validPhotoYear } from '@/lib/intake/logic';
 import type { Field, FieldValue } from '@/lib/intake/schema';
@@ -121,7 +121,9 @@ function GroupedHoofPhotos({ field, sectionId, design }: { field: Field; section
   const readOnly = !!state.submittedAt || submitting;
   const na = photoNotApplicable(field, state.answers, sectionId);
   const groups = field.photoConfig?.grouped_hooves ?? [];
-  const legacy = photoReferences(state.answers[field.answerSection ?? sectionId]?.[field.photoConfig?.legacy_field ?? '']);
+  const legacyField = field.photoConfig?.legacy_field;
+  const answerSection = field.answerSection ?? sectionId;
+  const legacy = photoReferences(state.answers[answerSection]?.[legacyField ?? '']);
   const latest = useRef<Record<string, string[]>>({});
   for (const group of groups) latest.current[group.field] = photoReferences(state.answers[field.answerSection ?? sectionId]?.[group.field]);
   return <View className="gap-3">
@@ -154,9 +156,10 @@ function GroupedHoofPhotos({ field, sectionId, design }: { field: Field; section
           </View>;
         })}
       </View>)}
-      {!!legacy.length && <View className="gap-2 pt-2">
+      {!!legacyField && !!legacy.length && <View className="gap-2 pt-2">
         <Text className="font-semi text-ink">Eerder toegevoegde extra hoefbeelden</Text>
-        <View className="flex-row flex-wrap gap-3">{legacy.map(ref => <Photo key={ref} reference={ref} />)}</View>
+        <AttachmentField value={legacy} onChange={next => setField(answerSection, legacyField, next)}
+          section={answerSection} field={legacyField} photo max={0} photoDesign={design} />
       </View>}
     </>}
   </View>;

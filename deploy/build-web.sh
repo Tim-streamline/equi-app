@@ -5,6 +5,7 @@ export CI=1 EXPO_NO_TELEMETRY=1
 npm ci --no-audit --no-fund
 npm run build
 test -s dist/index.html
+test -s dist/web-version.json
 test -d dist/_expo/static/js/web
 test -d dist/powersync/worker
 find dist -type f -name '*.wasm' -print -quit | grep -q .

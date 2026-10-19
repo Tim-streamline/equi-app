@@ -1,4 +1,6 @@
 import { waitForIntakeUploads } from './submission';
+import { preserveIntakeForRefresh } from './refresh';
+import { registerRefreshProtection, refreshProtectionChanged } from '../refresh-safety';
 import { accountSession } from '@/lib/account-session';
 import { useGlobalSearchParams } from 'expo-router';
 import { dashboardRequest } from '@/hooks/useHorseDashboard';
@@ -150,6 +152,27 @@ function HorseIntakeProvider({ userId, horseId, selectedId, children }: { userId
       });
     }).catch(() => {});
   }, [enqueue, ensureBooking, powersync]);
+  const refresh = useRef({ state, submitting, ensureBooking });
+  refresh.current = { state, submitting, ensureBooking };
+  useEffect(() => registerRefreshProtection({
+    reason: () => refresh.current.submitting ? 'Je intake wordt verstuurd. Wacht tot dit klaar is.' : null,
+    prepare: async () => {
+      const revision = accountSession.revision;
+      await preserveIntakeForRefresh({
+        drain: async () => {
+          let pending;
+          do { pending = queue.current; await pending; } while (pending !== queue.current);
+        },
+        checkSession: () => {
+          if (!mounted.current || revision !== accountSession.revision) throw new Error('Je sessie is gewijzigd. Probeer opnieuw.');
+        },
+        answersToSave: () => dirty.current && !refresh.current.state.submittedAt && !locked.current ? refresh.current.state.answers : null,
+        ensureBooking: () => refresh.current.ensureBooking(),
+        save: (id, section, field, value) => saveAnswer(powersync, id, section, field, value, newId),
+      });
+    },
+  }), [powersync]);
+  useEffect(() => { refreshProtectionChanged(); }, [submitting]);
   const bookingId = booking?.id ?? null;
   const value = useMemo(() => ({ state, loaded, submitting, setField, resetSection, submit, reset, ensureBooking, trackActivity, horseId, bookingId }), [state, loaded, submitting, setField, resetSection, submit, reset, ensureBooking, trackActivity, horseId, bookingId]);
   return <IntakeContext.Provider value={value}>{children}</IntakeContext.Provider>;
