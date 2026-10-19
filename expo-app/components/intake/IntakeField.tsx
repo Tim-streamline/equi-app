@@ -8,7 +8,7 @@ import { Check, Plus, Trash2 } from 'lucide-react-native';
 
 import { IntakeTextInput as TextInput } from './IntakeScrollView';
 import { Field, FieldValue, RepeaterSub } from '@/lib/intake/schema';
-import { isFieldRequired, isNoneOption } from '@/lib/intake/logic';
+import { isFieldRequired, isNoneOption, photoNotApplicable, photoReferences, photoSlotReferences } from '@/lib/intake/logic';
 import { useIntake } from '@/lib/intake/store';
 import { AttachmentField } from './AttachmentField';
 import { ConfiguredPhotoField, PhotoExample } from './ConfiguredPhotoField';
@@ -47,6 +47,12 @@ export function IntakeField({ field, sectionId, n, noneOptions }: Props) {
   const answerSection = field.answerSection ?? sectionId;
   const value = state.answers[answerSection]?.[field.id];
   const set = (next: FieldValue) => setField(answerSection, field.id, next);
+  const photoDesign = sectionId === 'intake-fotos' && field.type === 'photo';
+  const slots = field.photoConfig?.slots ?? [];
+  const photoCount = slots.length
+    ? slots.reduce((count, slot) => count + photoSlotReferences(field, slot, value, state.answers, sectionId).length, 0)
+    : photoReferences(value).length;
+  const photoLimit = slots.length || field.photoConfig?.max;
 
   if (field.type === 'sectionhead') {
     return (
@@ -63,19 +69,25 @@ export function IntakeField({ field, sectionId, n, noneOptions }: Props) {
   }
 
   return (
-    <View className="mb-5">
+    <View className={photoDesign ? '' : 'mb-5'}>
+      {photoDesign && <View className="mb-3 flex-row items-center justify-between gap-2">
+        <Text className="font-bold text-[11px] tracking-eyebrow text-mint-700">FOTO {String(n).padStart(2, '0')}</Text>
+        <View className="rounded-full bg-canvas-2 px-3 py-1">
+          <Text className="text-[11px] text-ink-70">{photoNotApplicable(field, state.answers, sectionId) ? 'Niet van toepassing' : `${photoCount}${photoLimit ? ` / ${photoLimit}` : ''} foto’s`}</Text>
+        </View>
+      </View>}
       <FieldLabel
-        n={n}
+        n={photoDesign ? 0 : n}
         label={field.label}
         hint={field.hint}
         photo={field.type === 'photo'}
-        required={isFieldRequired(field)}
+        required={!photoDesign && isFieldRequired(field) && !field.photoConfig?.grouped_hooves}
         link={field.link}
       />
-      {field.type === 'photo' && <PhotoInstructions field={field} />}
+      {field.type === 'photo' && !field.photoConfig?.grouped_hooves && !photoDesign && <PhotoInstructions field={field} />}
       {state.submittedAt && !['photo', 'file'].includes(field.type)
         ? <ReadOnlyAnswer field={field} value={value} answers={state.answers[answerSection] ?? {}} />
-        : renderInput(field, value, set, noneOptions, answerSection)}
+        : renderInput(field, value, set, noneOptions, answerSection, photoDesign)}
     </View>
   );
 }
@@ -101,6 +113,7 @@ function renderInput(
   set: (v: FieldValue) => void,
   noneOptions: readonly string[],
   sectionId: string,
+  photoDesign = false,
 ) {
   switch (field.type) {
     case 'text':
@@ -170,7 +183,7 @@ function renderInput(
         />
       );
     case 'photo':
-      return <ConfiguredPhotoField field={field} sectionId={sectionId} value={value} onChange={set} />;
+      return <ConfiguredPhotoField field={field} sectionId={sectionId} value={value} onChange={set} design={photoDesign} />;
     case 'file':
       return <AttachmentField value={asArray(value)} onChange={set} section={sectionId} field={field.id} photo={false} />;
     case 'repeater':

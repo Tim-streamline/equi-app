@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import test from 'node:test';
 import ts from 'typescript';
+import { RefreshSafety } from '../lib/refresh-safety-core.ts';
 
 const flatten = node => Array.isArray(node) ? node.flatMap(flatten) : node && typeof node === 'object' ? [node, ...flatten(node.props?.children)] : [];
 const text = node => Array.isArray(node) ? node.map(text).join(' ') : node && typeof node === 'object' ? text(node.props?.children) : String(node ?? '');
@@ -10,6 +11,7 @@ const tick = () => new Promise(resolve => setImmediate(resolve));
 
 function fixture({ assets = [asset('a.jpg'), asset('b.jpg')], max, slots, initial = [], save, pick } = {}) {
   const hooks = []; let hook = 0, value = initial;
+  const effects = [], refreshSafety = new RefreshSafety();
   const saved = [], published = [], options = [], assigned = [], session = { revision: 0 };
   const intake = { state: { submittedAt: null }, submitting: false, horseId: 'horse', ensureBooking: async () => 'booking' };
   const jsx = (type, props) => ({ type, props });
@@ -17,7 +19,12 @@ function fixture({ assets = [asset('a.jpg'), asset('b.jpg')], max, slots, initia
     react: {
       useRef: initial => { const i = hook++; return hooks[i] ??= { current: initial }; },
       useState: initial => { const i = hook++; if (!(i in hooks)) hooks[i] = initial; return [hooks[i], next => { hooks[i] = typeof next === 'function' ? next(hooks[i]) : next; }]; },
-      useEffect: () => {},
+      useEffect: (effect, deps) => {
+        const i = hook++, previous = hooks[i];
+        if (!previous || !deps || deps.some((value, index) => value !== previous.deps?.[index])) effects.push(() => {
+          previous?.cleanup?.(); hooks[i] = { deps, cleanup: effect() };
+        });
+      },
     },
     'react/jsx-runtime': { jsx, jsxs: jsx },
     'react-native': { ...Object.fromEntries(['View', 'Text', 'Pressable', 'Image', 'ActivityIndicator'].map(x => [x, x])), Platform: { OS: 'web' } },
@@ -28,6 +35,7 @@ function fixture({ assets = [asset('a.jpg'), asset('b.jpg')], max, slots, initia
     '@/lib/account-session': { accountSession: session },
     '@/lib/intake/attachments/storage': { saveAttachment: async record => { if (save) await save(record); saved.push(record); } },
     '@/lib/intake/attachments/events': {}, '@/lib/intake/store': { useIntake: () => intake },
+    '@/lib/refresh-safety': { registerRefreshProtection: refreshSafety.register, refreshProtectionChanged: refreshSafety.changed },
   };
   const exports = {};
   const code = ts.transpileModule(readFileSync(new URL('../components/intake/AttachmentField.tsx', import.meta.url), 'utf8'), {
@@ -35,10 +43,34 @@ function fixture({ assets = [asset('a.jpg'), asset('b.jpg')], max, slots, initia
   }).outputText;
   new Function('require', 'exports', code)(name => { assert.ok(name in modules, name); return modules[name]; }, exports);
   const props = { photo: true, max, slots, section: 'fysiek', field: 'photos', onSlotAdded: (ref, id) => assigned.push([ref, id]) };
-  const draw = () => { hook = 0; return flatten(exports.AttachmentField({ ...props, value, onChange: next => { value = next; published.push([...next]); } })); };
+  const draw = () => {
+    hook = 0;
+    const tree = flatten(exports.AttachmentField({ ...props, value, onChange: next => { value = next; published.push([...next]); } }));
+    for (const effect of effects.splice(0)) effect();
+    return tree;
+  };
   const button = label => draw().find(n => n.type === 'Pressable' && (label ? text(n) === label : n.props.accessibilityRole === 'button'));
-  return { draw, button, options, saved, published, assigned, props, session, intake, value: () => value };
+  return { draw, button, options, saved, published, assigned, props, session, intake, refreshSafety, value: () => value };
 }
+
+test('mandatory refresh waits for picker selection, view assignment and durable photo saving', async () => {
+  let finishPicker, finishSave;
+  const app = fixture({ slots: [{ id: 'left', label: 'Links', field: 'left' }],
+    pick: () => new Promise(resolve => { finishPicker = resolve; }),
+    save: () => new Promise(resolve => { finishSave = resolve; }),
+  });
+  app.button().props.onPress();
+  await assert.rejects(app.refreshSafety.prepare(), /kiezen of opslaan/);
+  finishPicker({ canceled: false, assets: [asset('hoof.jpg')] }); await tick(); app.draw();
+  await assert.rejects(app.refreshSafety.prepare(), /Wijs je gekozen/);
+  app.draw().find(n => n.props?.accessibilityRole === 'radio').props.onPress();
+  app.button('Foto’s opslaan').props.onPress(); await tick();
+  await assert.rejects(app.refreshSafety.prepare(), /kiezen of opslaan/);
+  finishSave(); await tick(); app.draw();
+  await app.refreshSafety.prepare();
+  assert.equal(app.saved.length, 1);
+  assert.equal(app.assigned.length, 1);
+});
 
 test('one library selection durably saves all photos before publishing each reference', async () => {
   const app = fixture();
@@ -131,6 +163,24 @@ test('submission during selection prevents saving and submitted intakes have no 
   assert.equal(app.button(), undefined);
   app.intake.submitting = false; app.intake.state.submittedAt = '2026-10-16T12:00:00Z';
   assert.equal(app.button(), undefined);
+});
+
+test('existing-only photos allow deletion in drafts and lock during or after submission', () => {
+  const refs = ['attachment:old:old.jpg', 'attachment:keep:keep.jpg'];
+  const app = fixture({ initial: refs, max: 0 });
+  const removals = () => app.draw().filter(n => n.props?.accessibilityLabel === 'Bijlage verwijderen');
+  assert.equal(app.button().props.disabled, true);
+  assert.equal(removals().length, 2);
+  removals()[0].props.onPress();
+  assert.deepEqual(app.value(), [refs[1]]);
+  assert.deepEqual(app.published, [[refs[1]]]);
+  app.intake.submitting = true;
+  assert.equal(removals().length, 0);
+  app.intake.submitting = false;
+  app.intake.state.submittedAt = '2026-10-19T12:00:00Z';
+  assert.equal(removals().length, 0);
+  assert.equal(app.button(), undefined);
+  assert.deepEqual(app.value(), [refs[1]]);
 });
 
 test('view batches reject browser overflow and cancellation saves nothing', async () => {

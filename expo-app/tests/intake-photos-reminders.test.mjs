@@ -18,7 +18,7 @@ const flatten = node => Array.isArray(node) ? node.flatMap(flatten) : node && ty
 
 test('Intake fotos is the first regular section and moved questions retain their saved answer identifiers', () => {
  assert.equal(photos.title, 'Foto’s voor je intake'); assert.equal(photos.id, 'intake-fotos'); assert.equal(photos.nr, 0);
- assert.equal(photos.fields.filter(f => f.type === 'photo').length, 16);
+ assert.equal(photos.fields.filter(f => f.type === 'photo').length, 12);
  assert.equal(INTAKE_SCHEMA.slice(1).flatMap(s => s.fields).some(f => f.type === 'photo'), false);
  assert.equal(photos.fields.find(f => f.id === 'foto-hoeven').answerSection, 'fysiek');
  const answers = { fysiek: { 'foto-hoeven': ['attachment:old:hoef.jpg'] } };

@@ -72,6 +72,7 @@ test('offline blood-test selection shows size restrictions only on validation fa
     '@/lib/account-session': { accountSession: { revision: 0 } },
     '@/lib/intake/attachments/storage': { saveAttachment: async (record, asset) => { uploads++; assert.ok(asset.file); assert.equal(record.userId, 'owner'); } },
     '@/lib/intake/attachments/events': {},
+    '@/lib/refresh-safety': { registerRefreshProtection: () => () => {}, refreshProtectionChanged: () => {} },
     '@/lib/intake/store': { useIntake: () => ({ state: {submittedAt: null}, submitting: false, ensureBooking: async () => 'fixture-booking', horseId: 'fixture-horse' }) },
   });
   const draw = () => { hook = 0; return AttachmentField({ value, onChange: next => { value = next; }, section: 'klacht', field: 'bloedonderzoek', photo: false }); };
@@ -172,6 +173,7 @@ test('offline hoof photo selection retains all eight front and side photos and a
     '@/lib/account-session': { accountSession: { revision: 0 } },
     '@/lib/intake/attachments/storage': { saveAttachment: async (record, asset) => { uploads++; assert.ok(asset.file); assert.equal(record.userId, 'owner'); } },
     '@/lib/intake/attachments/events': {},
+    '@/lib/refresh-safety': { registerRefreshProtection: () => () => {}, refreshProtectionChanged: () => {} },
     '@/lib/intake/store': { useIntake: () => ({ state: {submittedAt: null}, submitting: false, ensureBooking: async () => 'fixture-booking', horseId: 'fixture-horse' }) },
   });
   const draw = () => { hook = 0; return AttachmentField({ value, onChange: next => { value = next; }, section: 'fysiek', field: 'foto-hoeven', photo: true }); };

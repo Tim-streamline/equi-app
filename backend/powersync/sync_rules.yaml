@@ -100,11 +100,16 @@ streams:
                 ))
     # One shared content payload per item. The client chooses an item, but the
     # server independently checks the replicated access projection for its JWT user.
+    # Scope each grant lookup to that item so parameter results grow linearly.
     library_content:
         query: |
             SELECT * FROM library_contents
             WHERE auth.parameter('subscribed') = 1 AND id = subscription.parameter('item_id')
-              AND id IN (SELECT item_id FROM library_item_access WHERE user_id = auth.user_id())
+              AND id IN (
+                  SELECT item_id FROM library_item_access
+                  WHERE user_id = auth.user_id()
+                    AND item_id = subscription.parameter('item_id')
+              )
 
     horse_private:
         auto_subscribe: true

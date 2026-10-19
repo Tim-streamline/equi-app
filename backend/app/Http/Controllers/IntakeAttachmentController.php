@@ -28,7 +28,8 @@ class IntakeAttachmentController extends Controller
         // Grouped photo slots keep their original upload namespaces, including
         // uploads queued by older/offline clients before the questions merged.
         $field = $fields->firstWhere('key', $data['field']) ?? $fields->first(fn ($field) => $field->type === 'photo'
-            && in_array($data['field'], array_column($field->photo_config['slots'] ?? [], 'answer_field'), true));
+            && (in_array($data['field'], array_column($field->photo_config['slots'] ?? [], 'answer_field'), true)
+                || $data['field'] === ($field->photo_config['legacy_field'] ?? null)));
         abort_unless($field, 404);
         if ($field->type === 'photo') {
             $request->validate(['file' => ['image']]);

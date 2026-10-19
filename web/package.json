@@ -6,7 +6,7 @@
   "scripts": {
     "start": "node scripts/serve.mjs --dev",
     "dev": "node scripts/serve.mjs --dev",
-    "build": "expo export --platform web --source-maps && node scripts/upload-source-maps.mjs",
+    "build": "expo export --platform web --source-maps && node scripts/write-release.mjs && node scripts/upload-source-maps.mjs",
     "preview": "node scripts/serve.mjs",
     "typecheck": "tsc --noEmit",
     "test": "node --test --test-isolation=none tests/*.test.mjs",

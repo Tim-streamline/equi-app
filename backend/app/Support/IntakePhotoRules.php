@@ -51,7 +51,11 @@ class IntakePhotoRules
     public function slotReferences(IntakeField $field, array $slot, mixed $value, array $answers): array
     {
         if (isset($slot['answer_field'])) {
-            return $this->references($slot['answer_field'] === $field->key ? $value : ($answers[$field->answer_section_key ?? $field->section->key][$slot['answer_field']] ?? null));
+            $refs = $this->references($slot['answer_field'] === $field->key ? $value : ($answers[$field->answer_section_key ?? $field->section->key][$slot['answer_field']] ?? null));
+
+            return isset($slot['answer_slot'])
+                ? array_values(array_filter($refs, fn ($ref) => ($answers['__photos']['slot-'.explode(':', $ref)[1]] ?? null) === $slot['answer_slot']))
+                : $refs;
         }
 
         return array_values(array_filter($this->references($value), fn ($ref) => ($answers['__photos']['slot-'.explode(':', $ref)[1]] ?? null) === $slot['id']));
@@ -62,6 +66,9 @@ class IntakePhotoRules
         $refs = $this->references($value);
         foreach ($field->photo_config['slots'] ?? [] as $slot) {
             $refs = array_merge($refs, $this->slotReferences($field, $slot, $value, $answers));
+        }
+        if ($legacy = $field->photo_config['legacy_field'] ?? null) {
+            $refs = array_merge($refs, $this->references($answers[$field->answer_section_key ?? $field->section->key][$legacy] ?? null));
         }
 
         return array_values(array_unique($refs));

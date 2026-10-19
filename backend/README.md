@@ -1,5 +1,39 @@
 <p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
 
+## Synchronize the intake questionnaire
+
+`database/data/intake-questionnaire-local.json` is a definition-only export of the local database from 2026-10-20 (13 sections, 394 fields, including inactive legacy definitions). It includes answer choices, conditional logic, ordering and photo settings, but **no customer answers or files**. It deliberately captures the database rather than the seeder, which may differ from CMS edits.
+
+After deploying this code and applying the intake schema migrations through the normal deployment process, run these commands from the backend/release directory on the destination:
+
+```sh
+# Preview only: no database writes or backup files.
+php artisan intakes:sync-questionnaire
+
+# Apply in one transaction, back up definitions first, and verify the result.
+php artisan intakes:sync-questionnaire --apply
+
+# Verify that the next preview reports zero changes.
+php artisan intakes:sync-questionnaire
+```
+
+The command matches the questionnaire by slug, sections by key, and fields by their unique key across that questionnaire. It updates existing rows in place, preserving IDs and creation dates. Moved fields retain their original answer namespace through `answer_section_key`. New definitions are inserted; target-only definitions are archived, never deleted. Other questionnaires are untouched. Therefore the imported definitions and active form match the source, while extra historical rows may remain inactive for preservation.
+
+It refuses missing schema columns, incomplete snapshots, duplicate/ambiguous field keys, answer-namespace changes and field-type changes. It never guesses how to convert saved values or rename question keys. It does not execute migrations, seed the database, rewrite responses, move attachments, or clear any sync queue. PostgreSQL configuration writes are serialized; a write/verification failure rolls back the entire import.
+
+Saved answers and photo metadata remain unchanged, including old choices no longer offered. Retired questions can disappear from the active form/review while their responses remain in the database. New photo requirements (such as year or view assignment) can require users to complete metadata for existing uploads. The preview reports changed settings and counts of saved answers on changed questions without printing those answers. Compatibility with already-open/offline clients still needs the normal web release rollout; this command does not force clients to refresh.
+
+Before a nonempty apply, a private, timestamped JSON definition backup is created under `storage/app/private/intake-questionnaire-backups/`. It also records the original definition IDs for audit. No customer responses are included because they are never modified. Keep the deployment database backup as well. A previous definition backup can be previewed with `--file=/absolute/path/to/backup.json` and applied with `--apply`; the same namespace/type safeguards apply to rollback. Do not bypass a refusal—prepare an explicit mapping/migration if needed.
+
+To capture later local CMS changes, export to a **new** file, review it, and supply it to the destination command with `--file`:
+
+```sh
+./vendor/bin/sail artisan intakes:export-questionnaire database/data/intake-questionnaire-next.json
+php artisan intakes:sync-questionnaire --file=database/data/intake-questionnaire-next.json
+```
+
+Export never overwrites an existing file. `--slug` selects a different existing questionnaire; the importer only changes the matching destination slug and refuses to create a new top-level questionnaire implicitly. Do not run the questionnaire seeder after synchronization, as it applies the separate seed definition.
+
 <p align="center">
 <a href="https://github.com/laravel/framework/actions"><img src="https://github.com/laravel/framework/workflows/tests/badge.svg" alt="Build Status"></a>
 <a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/dt/laravel/framework" alt="Total Downloads"></a>

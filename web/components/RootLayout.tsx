@@ -14,6 +14,7 @@ import { loginDestination } from '../db/login-destination';
 import { IntakeProvider } from '@/lib/intake/store';
 import { IntakeSchemaProvider } from '@/lib/intake/schema-provider';
 import { LibraryContentSync } from '@/components/library/LibraryContentSync';
+import { MandatoryRefresh } from './MandatoryRefresh';
 
 export default function RootLayout() {
   const [loaded, error] = useFonts({ SourceSans3_400Regular, SourceSans3_500Medium, SourceSans3_600SemiBold, SourceSans3_700Bold, SourceSans3_400Regular_Italic, SourceSans3_600SemiBold_Italic });
@@ -21,11 +22,11 @@ export default function RootLayout() {
   return <ErrorBoundary><GestureHandlerRootView style={{ flex: 1 }}>
     <SafeAreaProvider>
       <View style={{ flex: 1, width: '100%', maxWidth: 1100, alignSelf: 'center', backgroundColor: '#FBF8F3' }}>
-        <DbProvider><SubscriptionGate><IntakeSchemaProvider><IntakeProvider>
+        <MandatoryRefresh><DbProvider><SubscriptionGate><IntakeSchemaProvider><IntakeProvider>
           <LibraryContentSync />
           <BrowserPushLifecycle />
           <Navigation />
-        </IntakeProvider></IntakeSchemaProvider></SubscriptionGate></DbProvider>
+        </IntakeProvider></IntakeSchemaProvider></SubscriptionGate></DbProvider></MandatoryRefresh>
       </View>
     </SafeAreaProvider>
   </GestureHandlerRootView></ErrorBoundary>;

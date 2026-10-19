@@ -13,6 +13,7 @@ import { LaravelConnector } from './connector';
 import { refreshSubscriptionConnection } from '@/db/refresh-subscription';
 import { databaseName } from './database-name';
 import { loginDestination } from './login-destination';
+import { registerRefreshProtection } from '../../expo-app/lib/refresh-safety.web';
 
 type SyncStatus = 'idle' | 'connecting' | 'syncing' | 'connected' | 'error';
 type DbContextValue = {
@@ -37,6 +38,12 @@ export function DbProvider({ children }: { children: ReactNode }) {
   const channel = useRef<BroadcastChannel | null>(null);
   const mounted = useRef(true);
   const [attempt, setAttempt] = useState(0);
+  const refreshSelection = useRef({ userId, selectedHorseId });
+  refreshSelection.current = { userId, selectedHorseId };
+  useEffect(() => registerRefreshProtection({ prepare: async () => {
+    const selection = refreshSelection.current;
+    if (selection.userId) sessionStorage.setItem('equi-refresh-selection', JSON.stringify(selection));
+  } }), []);
 
   const open = async (session: LoginResponse | null, clearPrevious = true) => {
     setDatabase(null);
@@ -66,7 +73,13 @@ export function DbProvider({ children }: { children: ReactNode }) {
         if (active.current?.db === db && id) setSyncStatus(mapStatus(status));
       } });
       active.current = { db, userId: id, unsubscribe };
-      setUserId(id); selectHorse(null); setSyncStatus(id ? 'connecting' : 'idle');
+      let restoredHorse: string | null = null;
+      try {
+        const saved = JSON.parse(sessionStorage.getItem('equi-refresh-selection') ?? 'null');
+        if (saved?.userId === id && typeof saved.selectedHorseId === 'string') restoredHorse = saved.selectedHorseId;
+        sessionStorage.removeItem('equi-refresh-selection');
+      } catch { /* A missing refresh selection uses the ordinary default horse. */ }
+      setUserId(id); selectHorse(restoredHorse); setSyncStatus(id ? 'connecting' : 'idle');
       setDatabase(db);
       if (id) void db.connect(new LaravelConnector(id)).catch((cause) => {
         captureException(cause, { tags: { operation: 'database.connect' } });

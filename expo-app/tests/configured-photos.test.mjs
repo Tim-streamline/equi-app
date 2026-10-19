@@ -10,7 +10,7 @@ function load(file, modules) {
 }
 const modules = {};
 for (const name of ['schema', 'config', 'logic']) modules[`./${name}`] = load(`../lib/intake/${name}.ts`, modules);
-const {photoAnswered, missingRequired, answeredCount, visibleFields, requiredProgress} = modules['./logic'];
+const {photoAnswered, missingRequired, answeredCount, visibleFields, requiredProgress, groupedPhotoFields} = modules['./logic'];
 const section = modules['./schema'].INTAKE_SCHEMA[0];
 const field = id => section.fields.find(f => f.id === id);
 
@@ -19,8 +19,8 @@ test('all photo categories are visible before later intake answers; old catch-al
  assert.ok(visible.some(f => f.id === 'hoefbevangenheid-rontgen-upload'));
  assert.ok(visible.some(f => f.id === 'giftige-planten-foto'));
  assert.ok(!visible.some(f => f.id === 'foto-hoef-instructie'));
- assert.ok(visibleFields(section, {}, {fysiek: {'foto-hoef-instructie': ['attachment:old:file.jpg']}}).some(f => f.id === 'foto-hoef-instructie'));
- assert.equal(section.fields.filter(f => f.id.startsWith('foto-hoef-') && f.photoConfig?.slots).reduce((n,f)=>n+f.photoConfig.slots.length,0),12);
+ assert.ok(!visibleFields(section, {}, {fysiek: {'foto-hoef-instructie': ['attachment:old:file.jpg']}}).some(f => f.id === 'foto-hoef-instructie'));
+ assert.equal(field('sec-hoef-upload').photoConfig.slots.length,12);
 });
 test('saved not-applicable choices complete questions without images and can be reversed without losing images', () => {
  const f = field('foto-weide'), s = {id: 'photos', fields: [{...f, optional: false}]};
@@ -59,10 +59,10 @@ const flatten = node => Array.isArray(node) ? node.flatMap(flatten) : node && ty
 function ui(f, initial) {
  const state={answers:structuredClone(initial)}, writes=[];
  const jsx=(type,props)=>typeof type==='function'?type(props):({type,props});
- const ref={current:null};
  const {ConfiguredPhotoField}=load('../components/intake/ConfiguredPhotoField.tsx',{
-  react:{useRef:()=>ref},'react/jsx-runtime':{jsx,jsxs:jsx},'react-native':{View:'View',Text:'Text',Pressable:'Pressable',Image:'Image'},
-  './IntakeScrollView':{IntakeTextInput:'Input'}, './AttachmentField':{AttachmentField:'Upload'},
+  react:{useRef:initial=>({current:initial}),useState:()=>[undefined,()=>{}],useEffect:()=>{}},'react/jsx-runtime':{jsx,jsxs:jsx},'react-native':{View:'View',Text:'Text',Pressable:'Pressable',Image:'Image'},
+  './IntakeScrollView':{IntakeTextInput:'Input'}, './AttachmentField':{AttachmentField:'Upload',Photo:'Photo'},
+  './PhotoInstructions':{PhotoInstructions:'PhotoInstructions'},
   '@/lib/intake/logic':modules['./logic'],'@/db/auth':{getApiBaseUrl:()=> 'https://example.test'},
   '@/lib/intake/store':{useIntake:()=>({state,setField:(s,k,v)=>{(state.answers[s]??={})[k]=v;writes.push([s,k,v]);}})},
  });
@@ -103,6 +103,60 @@ test('older hoof uploads can be assigned a view without uploading a replacement'
  assert.deepEqual(first.props.value,['attachment:old:hoof.jpg']);
 });
 
+test('four hooves count as question eleven and require twelve views or one not-applicable choice',()=>{
+ const visible=visibleFields(section,{},{});
+ assert.equal(visible[10].id,'sec-hoef-upload');
+ assert.equal(visible[11].id,'hoefbevangenheid-rontgen-upload');
+ assert.ok(!visible.some(f=>['foto-hoef-lv','foto-hoef-rv','foto-hoef-la','foto-hoef-ra'].includes(f.id)));
+ const group=groupedPhotoFields(section.fields).find(f=>f.id==='sec-hoef-upload');
+ assert.equal(group.photoConfig.grouped_hooves.length,4);
+ assert.equal(group.photoConfig.slots.length,12);
+ const answers={fysiek:{},__photos:{}};
+ assert.equal(photoAnswered(group,undefined,answers,'intake-fotos'),false);
+ for(const [index,slot] of group.photoConfig.slots.entries()) {
+  const ref=`attachment:hoof-${index}:photo.jpg`;
+  (answers.fysiek[slot.answer_field]??=[]).push(ref);
+  answers.__photos[`slot-hoof-${index}`]=slot.answer_slot;
+  assert.equal(photoAnswered(group,undefined,answers,'intake-fotos'),index===11);
+ }
+ answers.__photos['extra-hoeven-na']='yes';
+ answers.fysiek={};
+ assert.equal(photoAnswered(group,undefined,answers,'intake-fotos'),true);
+ assert.ok(!missingRequired(section,{},answers).some(f=>f.id==='sec-hoef-upload'));
+});
+
+test('grouped hoof controls show one not-applicable choice and save in the original hoof namespace',()=>{
+ const f=groupedPhotoFields(section.fields).find(f=>f.id==='sec-hoef-upload');
+ const app=ui(f,{fysiek:{}});
+ const shown=app.render();
+ assert.equal(shown.filter(n=>n.props?.accessibilityRole==='checkbox').length,1);
+ const uploads=shown.filter(n=>n.type==='Upload');
+ assert.equal(uploads.length,12);
+ assert.ok(uploads.every(upload=>upload.props.max===1 && !upload.props.slots));
+ uploads[0].props.onChange(['attachment:hoof-0:hoof.jpg']);
+ assert.deepEqual(app.state.answers.fysiek['foto-hoef-lv'],['attachment:hoof-0:hoof.jpg']);
+ assert.equal(app.state.answers.__photos['slot-hoof-0'],'zool');
+ app.render().find(n=>n.props?.accessibilityRole==='checkbox').props.onPress();
+ assert.equal(app.render().filter(n=>n.type==='Upload').length,0);
+});
+
+test('legacy hoof photos can be removed from their original answer without changing named views',()=>{
+ const f=field('sec-hoef-upload');
+ const app=ui(f,{fysiek:{'foto-hoef-instructie':['attachment:old:hoof.jpg','attachment:keep:hoof.jpg'],
+  'foto-hoef-lv':['attachment:sole:hoof.jpg']},__photos:{'slot-sole':'zool'}});
+ const legacy=()=>app.render().find(n=>n.type==='Upload' && n.props.field==='foto-hoef-instructie');
+ assert.equal(legacy().props.section,'fysiek');
+ assert.equal(legacy().props.max,0);
+ legacy().props.onChange(['attachment:keep:hoof.jpg']);
+ assert.deepEqual(legacy().props.value,['attachment:keep:hoof.jpg']);
+ assert.deepEqual(app.writes,[['fysiek','foto-hoef-instructie',['attachment:keep:hoof.jpg']]]);
+ assert.deepEqual(app.state.answers.fysiek['foto-hoef-lv'],['attachment:sole:hoof.jpg']);
+ assert.deepEqual(app.state.answers.__photos,{'slot-sole':'zool'});
+ legacy().props.onChange([]);
+ assert.deepEqual(app.state.answers.fysiek['foto-hoef-instructie'],[]);
+ assert.equal(legacy(),undefined);
+});
+
 test('body views are question seven, require all four, and preserve their original answer namespaces', () => {
  const f=field('foto-zijaanzicht-links'), answers={fysiek:{}};
  const visible=visibleFields(section,{},answers);
@@ -140,21 +194,11 @@ test('captions are optional, independently saved per image, and fully configured
  assert.equal(app.render().find(n=>n.type==='Upload').props.renderMetadata,undefined);
 });
 
-test('batch assignments preserve configured body answer fields and hoof view metadata', () => {
+test('configured views expose only their fixed upload fields', () => {
  for (const id of ['foto-zijaanzicht-links', 'foto-hoeven']) {
   const f=field(id), app=ui(f,{fysiek:{}});
-  let batch=app.render().find(n=>n.type==='Upload' && n.props.slots);
-  assert.deepEqual(batch.props.slots.map(s=>s.id),f.photoConfig.slots.map(s=>s.id));
-  for (const slot of f.photoConfig.slots) {
-   batch=app.render().find(n=>n.type==='Upload' && n.props.slots);
-   batch.props.onSlotAdded(`attachment:${slot.id}:horse.jpg`,slot.id);
-  }
-  batch=app.render().find(n=>n.type==='Upload' && n.props.slots);
-  assert.deepEqual(batch.props.slots,[]);
-  assert.equal(photoAnswered(f,app.state.answers.fysiek[f.id],app.state.answers,'fysiek'),true);
-  for (const slot of f.photoConfig.slots) {
-   if (slot.answer_field) assert.deepEqual(app.state.answers.fysiek[slot.answer_field],[`attachment:${slot.id}:horse.jpg`]);
-   else assert.equal(app.state.answers.__photos[`slot-${slot.id}`],slot.id);
-  }
+  const uploads=app.render().filter(n=>n.type==='Upload');
+  assert.equal(uploads.length,f.photoConfig.slots.length);
+  assert.ok(uploads.every(upload=>!upload.props.slots && upload.props.max===1));
  }
 });
