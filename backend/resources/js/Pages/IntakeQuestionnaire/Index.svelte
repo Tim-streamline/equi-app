@@ -224,7 +224,6 @@
                                 <TableCell>
                                     <div class="flex flex-wrap gap-1">
                                         {#if field.optional}<Badge variant="outline">optioneel</Badge>{/if}
-                                        {#if field.required}<Badge variant="outline">required</Badge>{/if}
                                         {#if field.show_if}<Badge>conditioneel</Badge>{/if}
                                         {#if field.flag_if}<Badge variant="warning">signaal</Badge>{/if}
                                         {#if field.critical_if}<Badge variant="destructive">kritiek</Badge>{/if}
@@ -279,8 +278,7 @@
                 <Field label="Placeholder" error={$fieldForm.errors.placeholder}><Input bind:value={$fieldForm.placeholder} /></Field>
             </div>
             <div class="flex flex-wrap gap-5 rounded-lg border p-3 text-sm">
-                <label class="flex items-center gap-2"><input type="checkbox" bind:checked={$fieldForm.required} /> Required-markering</label>
-                <label class="flex items-center gap-2"><input type="checkbox" bind:checked={$fieldForm.optional} /> Uitzondering: optioneel</label>
+                <label class="flex items-center gap-2"><input type="checkbox" bind:checked={$fieldForm.optional} /> Optioneel</label>
                 <label class="flex items-center gap-2"><input type="checkbox" bind:checked={$fieldForm.tall} /> Hoog tekstveld</label>
                 <label class="flex items-center gap-2"><input type="checkbox" bind:checked={$fieldForm.active} /> Actief</label>
             </div>
