@@ -4,7 +4,7 @@ import { formatIntakeDate } from '@/lib/intake/submission';
 // <IntakeField/>. The sticky CTA jumps to the next not-yet-completed
 // section (or the submit screen on the last one).
 
-import { useEffect, useRef, useMemo } from 'react';
+import { useEffect, useRef, useMemo, useState } from 'react';
 import { View, Text, ScrollView } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -21,6 +21,8 @@ import { useIntake } from '@/lib/intake/store';
 export default function IntakeSectionScreen() {
   const { id, field: requestedField } = useLocalSearchParams<{ id: string; field?: string }>();
   const scroll = useRef<ScrollView>(null);
+  const fieldPositions = useRef<Record<string, number>>({});
+  const [highlightedField, setHighlightedField] = useState<string | null>(requestedField ?? null);
   const insets = useSafeAreaInsets();
   const { schema, noneOptions } = useIntakeSchema();
   const section = id ? schema.find((candidate) => candidate.id === id) : undefined;
@@ -37,6 +39,17 @@ export default function IntakeSectionScreen() {
     () => (section ? visibleFieldsForRender(section, answers, state.answers, noneOptions) : []),
     [section, answers, state.answers, noneOptions],
   );
+  useEffect(() => {
+    if (!requestedField) return;
+    setHighlightedField(requestedField);
+    const y = fieldPositions.current[requestedField];
+    if (y !== undefined) scroll.current?.scrollTo({ y: Math.max(0, y - 12), animated: false });
+  }, [id, requestedField]);
+  useEffect(() => {
+    if (!highlightedField) return;
+    const timer = setTimeout(() => setHighlightedField(null), 3000);
+    return () => clearTimeout(timer);
+  }, [highlightedField]);
 
   if (!section) {
     return (
@@ -148,7 +161,13 @@ export default function IntakeSectionScreen() {
             {visible.map((f) => {
               if (f.type !== 'sectionhead') fieldCounter += 1;
               return (
-                <View key={f.id} className={photoSection && f.type === 'photo' ? 'mb-5 rounded-[24px] bg-white p-5 shadow-sm' : ''} onTouchStart={() => trackActivity(section.id, f.id)} onLayout={event => { if (requestedField === f.id) scroll.current?.scrollTo({ y: event.nativeEvent.layout.y, animated: false }); }}>
+                <View key={f.id}
+                  className={`${photoSection && f.type === 'photo' ? 'mb-5 rounded-[24px] bg-white p-5 shadow-sm' : ''} ${highlightedField === f.id ? 'rounded-2xl border-2 border-[#D49E36] bg-[#FFF8E9] p-3' : ''}`}
+                  onTouchStart={() => trackActivity(section.id, f.id)}
+                  onLayout={event => {
+                    fieldPositions.current[f.id] = event.nativeEvent.layout.y;
+                    if (requestedField === f.id) scroll.current?.scrollTo({ y: Math.max(0, event.nativeEvent.layout.y - 12), animated: false });
+                  }}>
                 <IntakeField
                   field={f}
                   sectionId={section.id}

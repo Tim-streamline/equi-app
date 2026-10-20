@@ -1,4 +1,5 @@
 import { Button } from '@/components/ui/Button';
+import { MissingQuestionsModal } from '@/components/intake/MissingQuestionsModal';
 import { formatIntakeDate } from '@/lib/intake/submission';
 import { isPhotoSection } from '@/lib/intake/logic';
 // Section overview "hub" — shows progress, auto-save state, and the intake
@@ -20,6 +21,7 @@ import {
   answersForSection,
   intakeProgress,
   isSectionComplete,
+  missingRequired,
   nextSectionId,
 } from '@/lib/intake/logic';
 import { formatSavedAgo, useIntake } from '@/lib/intake/store';
@@ -30,12 +32,21 @@ export default function IntakeOverview() {
   const rootNavigation = useNavigation('/');
   const { state, loaded, submit, submitting } = useIntake();
   const [submitError, setSubmitError] = useState('');
+  const [showMissing, setShowMissing] = useState(false);
+  const { schema, disclaimerShort, noneOptions } = useIntakeSchema();
+  const missingBySection = schema.map(section => ({
+    section,
+    fields: missingRequired(section, answersForSection(section, state.answers), state.answers, noneOptions),
+  })).filter(item => item.fields.length > 0);
   const onSubmit = async () => {
     setSubmitError('');
+    if (missingBySection.length > 0) {
+      setShowMissing(true);
+      return;
+    }
     try { await submit(); router.replace('/intake/sent'); }
     catch (error) { setSubmitError(error instanceof Error ? error.message : 'Intake niet verstuurd. Probeer opnieuw.'); }
   };
-  const { schema, disclaimerShort, noneOptions } = useIntakeSchema();
   const { done, total, pct } = intakeProgress(state.answers, schema, noneOptions);
   const upcomingId = nextSectionId(state.answers, schema, noneOptions);
 
@@ -144,12 +155,17 @@ export default function IntakeOverview() {
           {!state.submittedAt && (
             <View className="mx-4 mt-3">
               <Button title={submitting ? 'Synchroniseren en versturen…' : 'Intake versturen'}
-                disabled={!loaded || total === 0 || done !== total || submitting} onPress={onSubmit} />
+                disabled={!loaded || total === 0 || submitting} onPress={onSubmit} />
               {!!submitError && <Text accessibilityRole="alert" className="mt-2 text-danger">{submitError}</Text>}
               <Text className="mt-2 text-sm text-ink-70">Na het versturen kun je je intake nog inzien, maar niet meer aanpassen.</Text>
             </View>
           )}
         </ScrollView>
+        <MissingQuestionsModal visible={showMissing} sections={missingBySection} onClose={() => setShowMissing(false)}
+          onSelect={(section, field) => {
+            setShowMissing(false);
+            router.push({ pathname: '/intake/section/[id]', params: { id: section.id, field: field.id } } as any);
+          }} />
       </SafeAreaView>
     </View>
   );

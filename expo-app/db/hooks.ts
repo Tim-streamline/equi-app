@@ -307,7 +307,7 @@ export function useScanIngredients(scanId: string) {
 
 // ---------------------------------------------------------------- library
 export function useLibraryItems() {
-  return sorted(useCamelQuery(`SELECT * FROM library_items WHERE published_at IS NOT NULL AND datetime(published_at) <= datetime('now')`));
+  return sorted(useCamelQuery(`SELECT * FROM library_items WHERE published_at IS NOT NULL AND datetime(published_at) <= datetime('now') ORDER BY "order", id`));
 }
 export function useLibraryFeatured() {
   const rows = useCamelQuery(`SELECT * FROM library_items WHERE is_featured = 1 AND published_at IS NOT NULL AND datetime(published_at) <= datetime('now') LIMIT 1`);

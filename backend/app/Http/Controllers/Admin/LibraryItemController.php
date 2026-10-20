@@ -41,7 +41,7 @@ class LibraryItemController extends Controller
                 };
             })
             ->with('author:id,name')
-            ->orderByDesc('is_featured')->orderBy('order')
+            ->orderBy('order')->orderBy('id')
             ->paginate(20)
             ->withQueryString()
             ->through(fn (LibraryItem $i) => [
@@ -53,6 +53,7 @@ class LibraryItemController extends Controller
                 'credit_cost' => $i->credit_cost,
                 'is_plus' => $i->is_plus,
                 'is_featured' => $i->is_featured,
+                'order' => $i->order,
                 'published' => (bool) $i->published_at,
                 'published_at' => $i->published_at,
             ]);
@@ -111,6 +112,54 @@ class LibraryItemController extends Controller
         $this->persist($library, $data, $request);
 
         return redirect()->route('admin.library.index')->with('success', 'Library item updated.');
+    }
+
+    public function updateOrder(Request $request, LibraryItem $library): RedirectResponse
+    {
+        $data = $request->validate(['order' => ['required', 'integer', 'min:0', 'max:4294967295']]);
+        DB::transaction(function () use ($library, $data): void {
+            $item = LibraryItem::whereKey($library->id)->lockForUpdate()->firstOrFail();
+            $before = $item->only('order');
+            $item->update(['order' => $data['order']]);
+            AuditLogger::updated($item, $before);
+        });
+
+        return back()->with('success', 'Volgorde opgeslagen.');
+    }
+
+    public function move(Request $request, LibraryItem $library): RedirectResponse
+    {
+        $data = $request->validate([
+            'neighbor_id' => ['required', 'uuid', Rule::exists('library_items', 'id'), Rule::notIn([$library->id])],
+            'direction' => ['required', Rule::in(['up', 'down'])],
+        ]);
+
+        DB::transaction(function () use ($library, $data): void {
+            $items = LibraryItem::query()->orderBy('order')->orderBy('id')->lockForUpdate()->get()->all();
+            $ids = array_map(fn (LibraryItem $item) => $item->id, $items);
+            $from = array_search($library->id, $ids, true);
+            $neighbor = array_search($data['neighbor_id'], $ids, true);
+            if ($from === false || $neighbor === false
+                || ($data['direction'] === 'up' ? $neighbor >= $from : $neighbor <= $from)) {
+                throw ValidationException::withMessages(['order' => 'De volgorde is gewijzigd. Vernieuw de pagina en probeer opnieuw.']);
+            }
+
+            $moved = array_splice($items, $from, 1)[0];
+            $neighbor = array_search($data['neighbor_id'], array_map(fn (LibraryItem $item) => $item->id, $items), true);
+            array_splice($items, $neighbor + ($data['direction'] === 'down' ? 1 : 0), 0, [$moved]);
+
+            foreach ($items as $position => $item) {
+                $order = ($position + 1) * 10;
+                if ((int) $item->order === $order) {
+                    continue;
+                }
+                $before = $item->only('order');
+                $item->update(['order' => $order]);
+                AuditLogger::updated($item, $before);
+            }
+        });
+
+        return back()->with('success', 'Item verplaatst.');
     }
 
     public function unpublish(LibraryItem $library): RedirectResponse

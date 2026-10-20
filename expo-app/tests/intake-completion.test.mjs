@@ -15,22 +15,51 @@ const flatten=node=>Array.isArray(node)?node.flatMap(flatten):node&&typeof node=
 const text=node=>Array.isArray(node)?node.map(text).join(''):node&&typeof node==='object'?text(node.props?.children):node??'';
 function overview(answers,submittedAt=null) {
  const s={id:'test',nr:0,title:'Test',fields:[{id:'required',type:'text'},{id:'optional',type:'text',optional:true}]};
- let submissions=0;
+ let submissions=0; const routes=[]; const states=[]; let cursor=0;
  const modules={
-  react:{useEffect(){},useState:x=>[x,()=>{}]}, 'react/jsx-runtime':{jsx,jsxs:jsx},
+  react:{useEffect(){},useState:initial=>{const index=cursor++;if(!(index in states))states[index]=initial;return [states[index],next=>{states[index]=typeof next==='function'?next(states[index]):next;}];}}, 'react/jsx-runtime':{jsx,jsxs:jsx},
   'react-native':{Text:'Text',View:'View',Pressable:'Pressable',ScrollView:'ScrollView'},
   'react-native-safe-area-context':{SafeAreaView:'SafeAreaView'}, 'lucide-react-native':{},
-  'expo-router':{router:{replace(){}},useNavigation:()=>({canGoBack:()=>false})},
+  'expo-router':{router:{replace(){},push:route=>routes.push(route)},useNavigation:()=>({canGoBack:()=>false})},
   '@/components/ui/Button':{Button:'Button'}, '@/components/ui/IconButton':{IconButton:'IconButton'},
+  '@/components/intake/MissingQuestionsModal':{MissingQuestionsModal:'MissingQuestionsModal'},
   '@/lib/intake/submission':{formatIntakeDate},'@/lib/intake/logic':logic,
   '@/lib/intake/store':{formatSavedAgo:()=>null,useIntake:()=>({state:{answers,submittedAt},loaded:true,submitting:false,submit:async()=>{submissions++;}})},
   '@/lib/intake/schema-provider':{useIntakeSchema:()=>({schema:[s],noneOptions:[],disclaimerShort:''})},
  };
- return {nodes:flatten(load('../app/intake/overview.tsx',modules).default()),submissions:()=>submissions};
+ const screen=load('../app/intake/overview.tsx',modules).default;
+ const render=()=>{cursor=0;return flatten(screen());};
+ return {nodes:render(),render,submissions:()=>submissions,routes};
 }
-test('submit is visible but disabled for missing required answers; optional answers do not block',async()=>{
- assert.equal(overview({}).nodes.find(n=>n.type==='Button').props.disabled,true);
- const complete=overview({test:{required:'Done'}}); const button=complete.nodes.find(n=>n.type==='Button');
+test('submit attempt opens missing questions grouped by section and links to the question',async()=>{
+ const result=overview({});
+ assert.equal(result.nodes.some(n=>n.props?.title==='Ga naar eerste ontbrekende vraag'),false);
+ await result.nodes.find(n=>n.props?.title==='Intake versturen').props.onPress();
+ const modal=result.render().find(n=>n.type==='MissingQuestionsModal');
+ assert.equal(modal.props.visible,true);
+ assert.deepEqual(modal.props.sections.map(item=>[item.section.id,item.fields.map(field=>field.id)]),[['test',['required']]]);
+ assert.equal(result.submissions(),0);
+ modal.props.onSelect(modal.props.sections[0].section,modal.props.sections[0].fields[0]);
+ assert.deepEqual(result.routes,[{pathname:'/intake/section/[id]',params:{id:'test',field:'required'}}]);
+});
+test('missing-question popup follows intake section order',()=>{
+ const {MissingQuestionsModal}=load('../components/intake/MissingQuestionsModal.tsx',{
+  'react/jsx-runtime':{jsx,jsxs:jsx},
+  'react-native':{Modal:'Modal',Pressable:'Pressable',ScrollView:'ScrollView',Text:'Text',View:'View'},
+  'lucide-react-native':{ChevronRight:'ChevronRight',X:'X'},
+  '@/components/ui/Button':{Button:'Button'},
+ });
+ const sections=[{section:{id:'later',nr:4,title:'Later'},fields:[{id:'later-question',label:'Later vraag'}]},
+  {section:{id:'earlier',nr:1,title:'Eerder'},fields:[{id:'earlier-question',label:'Eerdere vraag'}]}];
+ const labels=flatten(MissingQuestionsModal({visible:true,sections,onClose(){},onSelect(){}}))
+  .filter(node=>node.type==='Text').map(text);
+ assert.ok(labels.indexOf('Sectie 2 · Eerder · 1')<labels.indexOf('Sectie 5 · Later · 1'));
+ assert.ok(labels.indexOf('Eerdere vraag')<labels.indexOf('Later vraag'));
+ assert.equal(sections[0].section.id,'later');
+});
+test('submit stays available and optional answers do not block it',async()=>{
+ assert.equal(overview({}).nodes.find(n=>n.type==='Button'&&n.props.title==='Intake versturen').props.disabled,false);
+ const complete=overview({test:{required:'Done'}}); const button=complete.nodes.find(n=>n.type==='Button'&&n.props.title==='Intake versturen');
  assert.equal(button.props.title,'Intake versturen');assert.equal(button.props.disabled,false);
  await button.props.onPress();assert.equal(complete.submissions(),1);
 });
@@ -53,7 +82,7 @@ test('photo presentation and copy are data-driven and retain the required titles
  assert.equal(schema.INTAKE_SCHEMA.find(s=>s.id==='fysiek').title,'Lichamelijke observaties');
  assert.equal(photos.presentation.intro_style,'card');
  const field=photos.fields.find(f=>f.id==='foto-hooi');
- const render=f=>load('../components/intake/PhotoInstructions.tsx',{'react/jsx-runtime':{jsx,jsxs:jsx},'react-native':{Text:'Text',View:'View'}}).PhotoInstructions({field:f});
+ const render=f=>load('../components/intake/PhotoInstructions.tsx',{react:{useState:value=>[value,()=>{}]},'react/jsx-runtime':{jsx,jsxs:jsx},'react-native':{Text:'Text',View:'View',Pressable:'Pressable'},'lucide-react-native':{}}).PhotoInstructions({field:f});
  assert.match(text(render(field)),/Zo maak je de foto/);
  assert.match(text(render({...field,photoConfig:{instructions:'Admin text',instruction_label:'Admin heading'}})),/Admin headingAdmin text/);
  assert.equal(render({...field,photoConfig:{}}),null);

@@ -67,7 +67,7 @@ export type AgeConfig = {
   date_field: string;
   date_label: string;
   toggle_label: string;
-  calculated_hint: string;
+  calculated_hint?: string;
   estimate_label: string;
 };
 

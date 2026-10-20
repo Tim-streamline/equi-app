@@ -97,6 +97,48 @@ class LibraryDiscoveryTest extends TestCase
             ->assertInertia(fn (Assert $page) => $page->has('items.data', 0));
         $this->get('/admin/library')->assertInertia(fn (Assert $page) => $page->has('items.data', 3));
     }
+    public function test_editor_can_reorder_items_from_the_list_without_changing_search_results(): void
+    {
+        $this->admin();
+        $first = $this->item('Hoefbevangenheid 1/2', ['order' => 20]);
+        $second = $this->item('Hoefbevangenheid 2/2', ['order' => 10, 'is_featured' => true]);
+        $url = '/admin/library?q=Hoefbevangenheid';
+        $this->get($url)->assertInertia(fn (Assert $page) => $page
+            ->has('items.data', 2)
+            ->where('items.data.0.id', $second->id)->where('items.data.0.order', 10)
+            ->where('items.data.1.id', $first->id)->where('items.data.1.order', 20));
+
+        $this->from($url)->patch('/admin/library/'.$first->id.'/order', ['order' => 5])
+            ->assertRedirect($url)->assertSessionHasNoErrors();
+        $this->assertSame(5, $first->fresh()->order);
+        $this->assertSame('Hoefbevangenheid 1/2', $first->fresh()->title);
+        $this->get($url)->assertInertia(fn (Assert $page) => $page
+            ->has('items.data', 2)
+            ->where('items.data.0.id', $first->id)->where('items.data.0.order', 5)
+            ->where('items.data.1.id', $second->id));
+
+        $this->patch('/admin/library/'.$first->id.'/order', ['order' => -1])->assertSessionHasErrors('order');
+        $this->assertSame(5, $first->fresh()->order);
+    }
+    public function test_arrow_move_reorders_filtered_items_even_when_positions_are_equal(): void
+    {
+        $this->admin();
+        $a = $this->item('Hoefbevangenheid 1/2', ['order' => 0]);
+        $b = $this->item('Hoefbevangenheid 2/2', ['order' => 0]);
+        $this->item('Ander onderwerp', ['order' => 0]);
+        [$before, $moved] = collect([$a, $b])->sortBy('id')->values()->all();
+        $url = '/admin/library?q=Hoefbevangenheid';
+        $this->from($url)->patch('/admin/library/'.$moved->id.'/move', [
+            'neighbor_id' => $before->id, 'direction' => 'up',
+        ])->assertRedirect($url)->assertSessionHasNoErrors();
+
+        $this->get($url)->assertInertia(fn (Assert $page) => $page
+            ->has('items.data', 2)
+            ->where('items.data.0.id', $moved->id)
+            ->where('items.data.1.id', $before->id));
+        $this->assertLessThan($before->fresh()->order, $moved->fresh()->order);
+        $this->assertDatabaseCount('library_items', 3);
+    }
     public function test_access_metadata_preserves_plus_and_existing_credit_unlocks(): void
     {
         $user = $this->customer(); $item = $this->item('Paid', ['credit_cost' => 2, 'is_plus' => true]);

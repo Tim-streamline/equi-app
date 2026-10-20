@@ -45,6 +45,7 @@ test('offline age control uses configured keys, reveals date on request, saves b
  date().props.onChangeText('2020-01-01'); draw();
  assert.equal(state.answers.custom.years,ageFromBirthdate('2020-01-01'));
  assert.equal(state.answers.custom.born,'2020-01-01');
+ assert.ok(!draw().some(n=>n.type==='Text' && n.props.children===config.calculated_hint));
  expanded=false; // Remount/reload from persisted answers still reveals the saved date.
  assert.equal(date().props.value,'2020-01-01');
  assert.equal(draw().find(n=>n.type==='Input').props.editable,false);

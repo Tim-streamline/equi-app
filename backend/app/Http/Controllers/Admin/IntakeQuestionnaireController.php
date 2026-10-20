@@ -222,7 +222,7 @@ class IntakeQuestionnaireController extends Controller
                 'age.date_field' => ['required', 'string', 'max:64', 'regex:/^[a-z0-9][a-z0-9_-]*$/'],
                 'age.date_label' => ['required', 'string', 'max:255'],
                 'age.toggle_label' => ['required', 'string', 'max:255'],
-                'age.calculated_hint' => ['required', 'string', 'max:255'],
+                'age.calculated_hint' => ['nullable', 'string', 'max:255'],
                 'age.estimate_label' => ['required', 'string', 'max:255'],
             ]);
             if ($validator->fails()) {

@@ -24,19 +24,20 @@ function setup() {
     'lucide-react-native': {},
     '@/components/ui/IconButton': { IconButton: 'IconButton' },
     '@/components/ui/Button': { Button: 'Button' },
+    '@/components/intake/MissingQuestionsModal': { MissingQuestionsModal: 'MissingQuestionsModal' },
     '@/components/intake/IntakeScrollView': { IntakeScrollView: 'IntakeScrollView' },
     '@/components/intake/IntakeField': { IntakeField: 'IntakeField' },
     '@/lib/intake/schema-provider': { useIntakeSchema: () => ({ schema: [section] }) },
     '@/lib/intake/submission': {formatIntakeDate: () => '16 oktober 2026'},
     '@/lib/intake/store': { useIntake: () => ({ state: { answers: {} }, trackActivity() {} }), formatSavedAgo: () => null },
     '@/lib/intake/logic': { intakeProgress: () => ({done: 0, total: 1, pct: 0}), nextSectionId: () => 'photos',
-      answersForSection: () => ({}), answeredCount: () => ({ answered: 0, total: 0 }), isSectionComplete: () => false, isPhotoSection: () => false },
+      answersForSection: () => ({}), answeredCount: () => ({ answered: 0, total: 0 }), isSectionComplete: () => false, isPhotoSection: () => false, visibleFieldsForRender: () => [], missingRequired: () => [] },
     'expo-router': { useLocalSearchParams: () => ({ id: 'photos' }), router: {
       replace: path => events.push(['replace', path]), dismissTo: path => events.push(['dismissTo', path]),
       back: () => assert.fail('must not walk the nested intake history'),
     } },
   };
-  return { events, modules };
+  return { events, modules, section };
 }
 for (const previous of ['home', 'protocol', null]) test(`overview exits the intake stack with ${previous ?? 'no'} prior app screen`, () => {
   const { events, modules } = setup();

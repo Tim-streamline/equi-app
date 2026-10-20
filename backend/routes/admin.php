@@ -100,6 +100,8 @@ Route::middleware('auth:admin')->group(function () {
         Route::delete('library/media/{medium}', [MediaAssetController::class, 'destroy'])->name('library.media.destroy');
         Route::get('library/attachments/{attachment}', [LibraryAttachmentController::class, 'admin'])->whereUuid('attachment')->name('library.attachments.show');
         Route::post('library/{library}/unpublish', [LibraryItemController::class, 'unpublish'])->whereUuid('library')->name('library.unpublish');
+        Route::patch('library/{library}/order', [LibraryItemController::class, 'updateOrder'])->whereUuid('library')->name('library.order');
+        Route::patch('library/{library}/move', [LibraryItemController::class, 'move'])->whereUuid('library')->name('library.move');
         Route::resource('library', LibraryItemController::class)->except('show');
         Route::resource('library-filter-groups', LibraryFilterGroupController::class)->only(['store', 'update']);
         Route::resource('library-categories', LibraryCategoryController::class)->only(['index', 'store', 'update', 'destroy']);
