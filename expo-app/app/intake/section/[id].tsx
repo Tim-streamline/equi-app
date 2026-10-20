@@ -4,7 +4,7 @@ import { formatIntakeDate } from '@/lib/intake/submission';
 // <IntakeField/>. The sticky CTA jumps to the next not-yet-completed
 // section (or the submit screen on the last one).
 
-import { useEffect, useRef, useMemo, useState } from 'react';
+import { useCallback, useEffect, useRef, useMemo, useState } from 'react';
 import { View, Text, ScrollView } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -22,6 +22,11 @@ export default function IntakeSectionScreen() {
   const { id, field: requestedField } = useLocalSearchParams<{ id: string; field?: string }>();
   const scroll = useRef<ScrollView>(null);
   const fieldPositions = useRef<Record<string, number>>({});
+  const scrollRequest = useRef({ section: id, field: requestedField, completed: false });
+  if (scrollRequest.current.section !== id || scrollRequest.current.field !== requestedField) {
+    if (scrollRequest.current.section !== id) fieldPositions.current = {};
+    scrollRequest.current = { section: id, field: requestedField, completed: false };
+  }
   const [highlightedField, setHighlightedField] = useState<string | null>(requestedField ?? null);
   const insets = useSafeAreaInsets();
   const { schema, noneOptions } = useIntakeSchema();
@@ -39,12 +44,19 @@ export default function IntakeSectionScreen() {
     () => (section ? visibleFieldsForRender(section, answers, state.answers, noneOptions) : []),
     [section, answers, state.answers, noneOptions],
   );
-  useEffect(() => {
-    if (!requestedField) return;
-    setHighlightedField(requestedField);
+  const scrollToRequestedField = useCallback(() => {
+    if (!requestedField || scrollRequest.current.completed || !scroll.current) return;
     const y = fieldPositions.current[requestedField];
-    if (y !== undefined) scroll.current?.scrollTo({ y: Math.max(0, y - 12), animated: false });
-  }, [id, requestedField]);
+    if (y === undefined) return;
+    // Both the opening effect and layout events can arrive first. Consume the
+    // request before scrolling so later layouts cannot pull the user back.
+    scrollRequest.current.completed = true;
+    scroll.current.scrollTo({ y: Math.max(0, y - 12), animated: false });
+  }, [requestedField]);
+  useEffect(() => {
+    setHighlightedField(requestedField ?? null);
+    scrollToRequestedField();
+  }, [id, requestedField, scrollToRequestedField]);
   useEffect(() => {
     if (!highlightedField) return;
     const timer = setTimeout(() => setHighlightedField(null), 3000);
@@ -166,7 +178,7 @@ export default function IntakeSectionScreen() {
                   onTouchStart={() => trackActivity(section.id, f.id)}
                   onLayout={event => {
                     fieldPositions.current[f.id] = event.nativeEvent.layout.y;
-                    if (requestedField === f.id) scroll.current?.scrollTo({ y: Math.max(0, event.nativeEvent.layout.y - 12), animated: false });
+                    if (requestedField === f.id) scrollToRequestedField();
                   }}>
                 <IntakeField
                   field={f}
