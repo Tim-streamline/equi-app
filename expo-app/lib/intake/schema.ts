@@ -1599,7 +1599,8 @@ export const INTAKE_SCHEMA: Section[] = [
       {
         "id": "vacc-laatst",
         "label": "Wanneer is je paard voor het laatst gevaccineerd?",
-        "type": "date",
+        "type": "text",
+        "hint": "Maand en jaartal is voldoende indien je de exacte datum niet weet. Indien niet bekend, vul dan \"onbekend\" in.",
         "required": true
       },
       {

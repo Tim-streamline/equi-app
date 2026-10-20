@@ -28,14 +28,19 @@ export function buildIntakeSchema(sectionRows: Row[], fieldRows: Row[]): Section
   for (const row of fieldRows) {
     if (!bool(row.active ?? 1)) continue;
     const sectionId = String(row.section_id ?? '');
+    // Older questionnaire databases still describe this free-form answer as a date.
+    // Keep the saved key, but accept approximate dates and "onbekend" until the migration runs.
+    const legacyVaccinationDate = row.key === 'vacc-laatst' && row.type === 'date';
     const field: Field = {
       id: String(row.key),
       ...(row.answer_section_key ? { answerSection: String(row.answer_section_key) } : {}),
       label: String(row.label),
       photoConfig: json<Field['photoConfig']>(row.photo_config),
       ageConfig: json<Field['ageConfig']>(row.age_config),
-      type: String(row.type) as Field['type'],
-      hint: row.hint == null ? undefined : String(row.hint),
+      type: legacyVaccinationDate ? 'text' : String(row.type) as Field['type'],
+      hint: legacyVaccinationDate
+        ? 'Maand en jaartal is voldoende indien je de exacte datum niet weet. Indien niet bekend, vul dan "onbekend" in.'
+        : row.hint == null ? undefined : String(row.hint),
       required: bool(row.required),
       optional: bool(row.optional),
       unit: row.unit == null ? undefined : String(row.unit),
