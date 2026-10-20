@@ -8460,8 +8460,8 @@
                     "order": 5,
                     "answer_section_key": null,
                     "label": "Wanneer is je paard voor het laatst gevaccineerd?",
-                    "type": "date",
-                    "hint": null,
+                    "type": "text",
+                    "hint": "Maand en jaartal is voldoende indien je de exacte datum niet weet. Indien niet bekend, vul dan \"onbekend\" in.",
                     "required": true,
                     "optional": false,
                     "unit": null,
@@ -8722,7 +8722,7 @@
             "fields": [
                 {
                     "key": "aantal-verhuizingen",
-                    "order": 15,
+                    "order": 16,
                     "answer_section_key": null,
                     "label": "Hoe vaak is jouw paard verhuisd sinds hij/zij bij jou is?",
                     "type": "radio",
@@ -8753,7 +8753,7 @@
                 },
                 {
                     "key": "bij-jou-hoelang",
-                    "order": 14,
+                    "order": 15,
                     "answer_section_key": null,
                     "label": "Hoe lang is jouw paard al bij jou (in weken/maanden/jaren)?",
                     "type": "text",
@@ -8780,7 +8780,7 @@
                 },
                 {
                     "key": "conditie",
-                    "order": 18,
+                    "order": 19,
                     "answer_section_key": null,
                     "label": "Hoe zou je de conditie van je paard classificeren?",
                     "type": "radio",
@@ -8820,7 +8820,7 @@
                 },
                 {
                     "key": "conditie-veranderd",
-                    "order": 19,
+                    "order": 20,
                     "answer_section_key": null,
                     "label": "Is de lichaamsconditie van je paard de afgelopen jaren veranderd?",
                     "type": "textarea",
@@ -8882,7 +8882,7 @@
                 },
                 {
                     "key": "eerdere-eigenaar",
-                    "order": 12,
+                    "order": 13,
                     "answer_section_key": null,
                     "label": "Heeft je paard vóór jou al een andere eigenaar gehad?",
                     "type": "radio",
@@ -8912,7 +8912,7 @@
                 },
                 {
                     "key": "eerste-eigenaar",
-                    "order": 13,
+                    "order": 14,
                     "answer_section_key": null,
                     "label": "Ben je de eerste eigenaar?",
                     "type": "radio",
@@ -9075,8 +9075,39 @@
                     "active": true
                 },
                 {
+                    "key": "gewicht-methode-wanneer",
+                    "order": 9,
+                    "answer_section_key": "paard",
+                    "label": "Wanneer is het gewicht bepaald?",
+                    "type": "text",
+                    "hint": null,
+                    "required": true,
+                    "optional": false,
+                    "unit": null,
+                    "step": null,
+                    "tall": false,
+                    "lines": null,
+                    "placeholder": "Bijv. mei 2026",
+                    "link": null,
+                    "options": null,
+                    "show_if": {
+                        "paard.gewicht-methode": [
+                            "gewogen op weegbrug",
+                            "gemeten met gewichts-lint",
+                            "rapport dierenarts"
+                        ]
+                    },
+                    "flag_if": null,
+                    "critical_if": null,
+                    "protocol_if": null,
+                    "repeater_sub": null,
+                    "photo_config": null,
+                    "age_config": null,
+                    "active": true
+                },
+                {
                     "key": "gezondheid-eigen-woorden",
-                    "order": 20,
+                    "order": 21,
                     "answer_section_key": null,
                     "label": "Hoe gaat het volgens jou op dit moment in het algemeen met je paard?",
                     "type": "textarea",
@@ -9157,7 +9188,7 @@
                 },
                 {
                     "key": "paard-leuk",
-                    "order": 21,
+                    "order": 22,
                     "answer_section_key": null,
                     "label": "Vertel iets over wat je paard heel erg leuk vindt om te doen.",
                     "type": "textarea",
@@ -9207,7 +9238,7 @@
                 },
                 {
                     "key": "sinds-bezit",
-                    "order": 11,
+                    "order": 12,
                     "answer_section_key": null,
                     "label": "Sinds wanneer is je paard bij jou?",
                     "type": "text",
@@ -9232,7 +9263,7 @@
                 },
                 {
                     "key": "stokmaat",
-                    "order": 9,
+                    "order": 10,
                     "answer_section_key": null,
                     "label": "Stokmaat",
                     "type": "number",
@@ -9257,7 +9288,7 @@
                 },
                 {
                     "key": "stokmaat-methode",
-                    "order": 10,
+                    "order": 11,
                     "answer_section_key": null,
                     "label": "Geschat of gemeten?",
                     "type": "radio",
@@ -9285,7 +9316,7 @@
                 },
                 {
                     "key": "verhuizingen-redenen",
-                    "order": 16,
+                    "order": 17,
                     "answer_section_key": null,
                     "label": "Wat waren de belangrijkste redenen voor deze verhuizingen?",
                     "type": "multi",
@@ -9327,7 +9358,7 @@
                 },
                 {
                     "key": "verhuizingen-redenen-anders",
-                    "order": 17,
+                    "order": 18,
                     "answer_section_key": null,
                     "label": "Anders, namelijk",
                     "type": "text",

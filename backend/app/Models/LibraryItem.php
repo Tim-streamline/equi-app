@@ -32,6 +32,8 @@ class LibraryItem extends Model
 {
     use HasUuids;
 
+    public const MAX_ORDER = 2147483647;
+
     protected $attributes = ['thumbnail_mode' => 'auto'];
 
     protected function casts(): array

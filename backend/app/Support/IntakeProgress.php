@@ -37,6 +37,11 @@ class IntakeProgress
                 }
                 $total++;
                 $answered = ! $review->empty($value);
+                if ($field->type === 'text') {
+                    $answered = $field->lines && is_array($value)
+                        ? count(array_filter($value, fn ($line) => is_string($line) && trim($line) !== '')) > 0
+                        : is_string($value) && trim($value) !== '';
+                }
                 if ($field->type === 'number' && $field->age_config) {
                     $date = $answers[$field->answer_section_key ?? $section->key][$field->age_config['date_field'] ?? ''] ?? null;
                     $answered = app(IntakeAge::class)->answered($value, $date);

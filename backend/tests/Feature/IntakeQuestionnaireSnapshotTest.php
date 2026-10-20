@@ -207,7 +207,7 @@ class IntakeQuestionnaireSnapshotTest extends TestCase
         $result = $this->snapshots->sync($source, true, $this->directory);
         $this->assertNotEmpty($result['changes']);
         $this->assertSame($this->snapshots::json($source), $this->snapshots::json($this->snapshots->export()));
-        $this->assertDatabaseCount('intake_fields', 394);
+        $this->assertDatabaseCount('intake_fields', 395);
         $this->assertEmpty($this->snapshots->sync($source, true, $this->directory)['changes']);
     }
 

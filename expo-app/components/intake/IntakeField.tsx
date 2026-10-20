@@ -46,7 +46,9 @@ export function IntakeField({ field, sectionId, n, noneOptions }: Props) {
   const { state, setField } = useIntake();
   const answerSection = field.answerSection ?? sectionId;
   const value = state.answers[answerSection]?.[field.id];
-  const set = (next: FieldValue) => setField(answerSection, field.id, next);
+  const set = (next: FieldValue) => {
+    setField(answerSection, field.id, next);
+  };
   const photoDesign = sectionId === 'intake-fotos' && field.type === 'photo';
   const slots = field.photoConfig?.slots ?? [];
   const photoCount = slots.length

@@ -23,7 +23,7 @@ const metroPort = Number(process.env.METRO_PORT ?? 8082);
 const metro = new URL(`http://127.0.0.1:${metroPort}`);
 const dist = path.join(root, 'dist');
 if (!dev && !existsSync(path.join(dist, 'index.html'))) throw new Error('Run npm run build before npm run preview.');
-const child = dev ? spawn(process.execPath, ['node_modules/expo/bin/cli', 'start', '--web', '--port', String(metroPort)], { cwd: root, env: { ...process.env, BROWSER: 'none' }, stdio: 'inherit' }) : null;
+const child = dev ? spawn(process.execPath, ['node_modules/expo/bin/cli', 'start', '--web', '--port', String(metroPort), '--max-workers', '1'], { cwd: root, env: { ...process.env, BROWSER: 'none' }, stdio: 'inherit' }) : null;
 
 function upstreamUrl(target, requestPath) {
   const url = new URL(target);

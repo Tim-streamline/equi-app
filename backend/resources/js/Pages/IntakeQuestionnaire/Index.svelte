@@ -224,7 +224,6 @@
                                 <TableCell>
                                     <div class="flex flex-wrap gap-1">
                                         {#if field.optional}<Badge variant="outline">optioneel</Badge>{/if}
-                                        {#if field.required}<Badge variant="outline">required</Badge>{/if}
                                         {#if field.show_if}<Badge>conditioneel</Badge>{/if}
                                         {#if field.flag_if}<Badge variant="warning">signaal</Badge>{/if}
                                         {#if field.critical_if}<Badge variant="destructive">kritiek</Badge>{/if}
@@ -279,14 +278,13 @@
                 <Field label="Placeholder" error={$fieldForm.errors.placeholder}><Input bind:value={$fieldForm.placeholder} /></Field>
             </div>
             <div class="flex flex-wrap gap-5 rounded-lg border p-3 text-sm">
-                <label class="flex items-center gap-2"><input type="checkbox" bind:checked={$fieldForm.required} /> Required-markering</label>
-                <label class="flex items-center gap-2"><input type="checkbox" bind:checked={$fieldForm.optional} /> Uitzondering: optioneel</label>
+                <label class="flex items-center gap-2"><input type="checkbox" bind:checked={$fieldForm.optional} /> Optioneel</label>
                 <label class="flex items-center gap-2"><input type="checkbox" bind:checked={$fieldForm.tall} /> Hoog tekstveld</label>
                 <label class="flex items-center gap-2"><input type="checkbox" bind:checked={$fieldForm.active} /> Actief</label>
             </div>
 
             <div class="grid gap-4 md:grid-cols-2">
-                <div class="md:col-span-2"><Field label="Leeftijd-instellingen (JSON)" error={$fieldForm.errors.age_config_json} hint="Type number: date_field is de opslagsleutel van de geboortedatum. date_label, toggle_label, calculated_hint en estimate_label bepalen de teksten."><Textarea rows="6" bind:value={$fieldForm.age_config_json} /></Field></div>
+                <div class="md:col-span-2"><Field label="Leeftijd-instellingen (JSON)" error={$fieldForm.errors.age_config_json} hint="Type number: date_field is de opslagsleutel van de geboortedatum. date_label, toggle_label en estimate_label bepalen de teksten. calculated_hint is een verouderd optioneel veld en wordt niet meer getoond."><Textarea rows="6" bind:value={$fieldForm.age_config_json} /></Field></div>
                 <div class="md:col-span-2"><Field label="Foto-instellingen (JSON)" error={$fieldForm.errors.photo_config_json} hint="instruction_label en instructions: bewerkbaar instructiekopje en fotoinstructies; de Helptekst bevat de uitleg waarom. max: maximum aantal foto’s; year_required: jaartal verplicht per foto; allow_na: Niet van toepassing toestaan; slots: afzonderlijke aanzichten met id en label; optioneel answer_field bewaart een bestaande antwoordsleutel binnen dezelfde antwoordsectie. caption: toelichting per foto met label en placeholder (verwijder caption om te verbergen). example_url en example_caption: voorbeeldafbeelding; example_after: tekst onder het voorbeeld. na_key verbindt een gedeelde keuze; existing_only toont alleen eerder opgeslagen foto’s."><Textarea rows="8" bind:value={$fieldForm.photo_config_json} placeholder={'{"max":10,"year_required":true,"allow_na":false}'} /></Field></div>
                 <Field label="Antwoordopties (JSON-array)" error={$fieldForm.errors.options_json}><Textarea rows="5" bind:value={$fieldForm.options_json} placeholder='["Ja", "Nee"]' /></Field>
                 <Field label="Zichtbaarheidsregel showIf (JSON-object)" error={$fieldForm.errors.show_if_json}><Textarea rows="5" bind:value={$fieldForm.show_if_json} placeholder={'{"paard.geslacht":"merrie"}'} /></Field>

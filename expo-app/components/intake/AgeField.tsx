@@ -32,7 +32,6 @@ export function AgeField({ field, sectionId }: { field: Field; sectionId: string
       <TextInput accessibilityLabel={config.date_label} value={dateText} placeholder="dd-mm-jjjj" keyboardType="numbers-and-punctuation"
         onChangeText={text => setField(sectionId, config.date_field, text || undefined)}
         className="rounded-xl border border-ink-8 bg-white px-4 py-3.5 font-sans text-[15px] text-ink" />
-      {calculated !== undefined && <Text className="text-[13px] text-ink-70">{config.calculated_hint}</Text>}
       {dateText !== '' && calculated === undefined && <Text accessibilityRole="alert" className="text-red-700">Vul een geldige geboortedatum in die niet in de toekomst ligt.</Text>}
       <Pressable accessibilityRole="button" onPress={() => { setField(sectionId, config.date_field, undefined); setExpanded(false); }}>
         <Text className="py-2 text-mint-700 underline">{config.estimate_label}</Text>

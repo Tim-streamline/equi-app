@@ -561,6 +561,21 @@
           ]
         },
         {
+          "id": "gewicht-methode-wanneer",
+          "answerSection": "paard",
+          "label": "Wanneer is het gewicht bepaald?",
+          "type": "text",
+          "required": true,
+          "placeholder": "Bijv. mei 2026",
+          "showIf": {
+            "paard.gewicht-methode": [
+              "gewogen op weegbrug",
+              "gemeten met gewichts-lint",
+              "rapport dierenarts"
+            ]
+          }
+        },
+        {
           "id": "stokmaat",
           "label": "Stokmaat",
           "type": "number",
@@ -1590,7 +1605,8 @@
         {
           "id": "vacc-laatst",
           "label": "Wanneer is je paard voor het laatst gevaccineerd?",
-          "type": "date",
+          "type": "text",
+          "hint": "Maand en jaartal is voldoende indien je de exacte datum niet weet. Indien niet bekend, vul dan \"onbekend\" in.",
           "required": true
         },
         {

@@ -8,15 +8,17 @@
     import { Link, router } from '@inertiajs/svelte';
     import { Card, CardContent, Button, Input, Select, Badge, Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '$lib/components/ui';
     import { formatDate } from '$lib/utils.js';
-    import { Plus, Search, FileText, Star, Trash2 } from '@lucide/svelte';
+    import { Plus, Search, FileText, Star, Trash2, ArrowUp, ArrowDown } from '@lucide/svelte';
 
-    let { items, filters, counts, categories } = $props();
+    let { items, filters, counts, categories, orderNeighbors = { previous: null, next: null } } = $props();
     let q = $state(filters.q ?? '');
     let format = $state(filters.format ?? '');
     let gate = $state(filters.gate ?? '');
     let selectedCategories = $state(filters.category_ids ?? []);
     let categorySearch = $state('');
     let moreOpen = $state(false);
+    let savingOrderId = $state(null);
+    let orderErrors = $state({});
     let categoryBar;
     let slots = $state(6);
     const pinned = $derived(categories.filter(c => c.is_quick_filter));
@@ -46,6 +48,34 @@
     }
     function remove(item) {
         if (confirm(`Delete "${item.title}"?`)) router.delete(`/admin/library/${item.id}`);
+    }
+    function saveOrder(event, item) {
+        event.preventDefault();
+        const order = Number(new FormData(event.currentTarget).get('order'));
+        if (order === Number(item.order)) return;
+        savingOrderId = item.id;
+        orderErrors = { ...orderErrors, [item.id]: '' };
+        router.patch(`/admin/library/${item.id}/order`, { order }, {
+            preserveScroll: true,
+            onError: (errors) => { orderErrors = { ...orderErrors, [item.id]: errors.order ?? 'Opslaan is niet gelukt.' }; },
+            onFinish: () => { savingOrderId = null; },
+        });
+    }
+    function neighborId(index, direction) {
+        return direction === 'up'
+            ? items.data[index - 1]?.id ?? orderNeighbors.previous
+            : items.data[index + 1]?.id ?? orderNeighbors.next;
+    }
+    function move(item, index, direction) {
+        const neighbor = neighborId(index, direction);
+        if (!neighbor || savingOrderId !== null) return;
+        savingOrderId = item.id;
+        orderErrors = { ...orderErrors, [item.id]: '' };
+        router.patch(`/admin/library/${item.id}/move`, { neighbor_id: neighbor, direction }, {
+            preserveScroll: true,
+            onError: (errors) => { orderErrors = { ...orderErrors, [item.id]: errors.order ?? 'Verplaatsen is niet gelukt.' }; },
+            onFinish: () => { savingOrderId = null; },
+        });
     }
 </script>
 
@@ -115,34 +145,47 @@
                     </div>
                 {/if}
             </div>
+            <p class="mb-3 text-sm text-muted-foreground">Een lager getal verschijnt eerder. Met de pijlen verplaats je een item binnen de gefilterde resultaten, ook naar de vorige of volgende pagina.</p>
             <Table>
                 <TableHeader>
                     <TableRow>
                         <TableHead>Title</TableHead>
                         <TableHead>Format</TableHead>
-                        <TableHead>Author</TableHead>
                         <TableHead>Flags</TableHead>
+                        <TableHead>Author</TableHead>
+                        <TableHead>Volgorde</TableHead>
                         <TableHead>Published</TableHead>
                         <TableHead></TableHead>
                     </TableRow>
                 </TableHeader>
                 <TableBody>
-                    {#each items.data as i (i.id)}
+                    {#each items.data as i, index (i.id)}
                         <TableRow>
                             <TableCell><Link href={`/admin/library/${i.id}/edit`} class="flex items-center gap-3 font-medium hover:text-primary"><LibraryThumbnail src={i.hero_image_url} format={i.format} class="w-20 shrink-0" />{i.title}</Link></TableCell>
                             <TableCell><Badge variant="secondary">{i.format}</Badge></TableCell>
-                            <TableCell class="text-muted-foreground">{i.author ?? '—'}</TableCell>
                             <TableCell>
                                 <div class="flex gap-1">
                                     {#if i.is_featured}<Badge>featured</Badge>{/if}
                                     {#if i.is_plus}<Badge variant="warning">Inbegrepen bij abonnement</Badge>{:else if i.credit_cost > 0}<Badge variant="warning">{i.credit_cost} credits</Badge>{/if}
                                 </div>
                             </TableCell>
+                            <TableCell class="text-muted-foreground">{i.author ?? '—'}</TableCell>
+                            <TableCell>
+                                <div class="flex items-center gap-1">
+                                    <form onsubmit={(event) => saveOrder(event, i)} class="flex items-center gap-1">
+                                        <Input type="number" name="order" min="0" max="2147483647" step="1" required value={i.order ?? 0} aria-label={`Volgorde van ${i.title}`} class="w-20" />
+                                        <Button type="submit" size="sm" variant="outline" disabled={savingOrderId !== null}>Opslaan</Button>
+                                    </form>
+                                    <Button type="button" size="icon" variant="ghost" aria-label={`${i.title} omhoog`} title="Omhoog" disabled={!neighborId(index, 'up') || savingOrderId !== null} onclick={() => move(i, index, 'up')}><ArrowUp class="size-4" /></Button>
+                                    <Button type="button" size="icon" variant="ghost" aria-label={`${i.title} omlaag`} title="Omlaag" disabled={!neighborId(index, 'down') || savingOrderId !== null} onclick={() => move(i, index, 'down')}><ArrowDown class="size-4" /></Button>
+                                </div>
+                                {#if orderErrors[i.id]}<p role="alert" class="mt-1 text-xs text-destructive">{orderErrors[i.id]}</p>{/if}
+                            </TableCell>
                             <TableCell>{#if i.published}<span class="text-muted-foreground">{formatDate(i.published_at)}</span>{:else}<Badge variant="muted">draft</Badge>{/if}</TableCell>
                             <TableCell><Button size="sm" variant="ghost" onclick={() => remove(i)}><Trash2 class="size-4 text-destructive" /></Button></TableCell>
                         </TableRow>
                     {:else}
-                        <TableRow><TableCell colspan="6" class="py-8 text-center text-muted-foreground">No items.</TableCell></TableRow>
+                        <TableRow><TableCell colspan="7" class="py-8 text-center text-muted-foreground">No items.</TableCell></TableRow>
                     {/each}
                 </TableBody>
             </Table>

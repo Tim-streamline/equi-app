@@ -17,7 +17,7 @@
     let saving = null;
     let root;
     const allRows = $derived(review.sections.flatMap(s => s.rows));
-    const summary = $derived(['ras', 'leeftijd', 'geboortedatum', 'geslacht', 'gewicht', 'gewicht-methode', 'stokmaat', 'stokmaat-methode', 'conditie'].map(key => allRows.find(r => r.section === 'paard' && r.key === key)).filter(Boolean));
+    const summary = $derived(['ras', 'leeftijd', 'geboortedatum', 'geslacht', 'gewicht', 'gewicht-methode', 'gewicht-methode-wanneer', 'stokmaat', 'stokmaat-methode', 'conditie'].map(key => allRows.find(r => r.section === 'paard' && r.key === key)).filter(Boolean));
     const portrait = $derived(allRows.find(r => r.section === 'fysiek' && r.key === 'foto-zijaanzicht-links')?.attachments?.[0]);
     const matching = (row) => filter === 'all' || (row.type !== 'sectionhead' && (filter === 'flags' ? row.flagged : filter === 'protocol' ? row.protocol.length > 0 : row.empty));
     const sections = $derived(review.sections.map(s => ({ ...s, rows: s.rows.filter(matching) })).filter(s => s.rows.length));

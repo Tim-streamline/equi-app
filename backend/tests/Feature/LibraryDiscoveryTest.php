@@ -97,6 +97,125 @@ class LibraryDiscoveryTest extends TestCase
             ->assertInertia(fn (Assert $page) => $page->has('items.data', 0));
         $this->get('/admin/library')->assertInertia(fn (Assert $page) => $page->has('items.data', 3));
     }
+    public function test_editor_can_reorder_items_from_the_list_without_changing_search_results(): void
+    {
+        $this->admin();
+        $first = $this->item('Hoefbevangenheid 1/2', ['order' => 20]);
+        $second = $this->item('Hoefbevangenheid 2/2', ['order' => 10, 'is_featured' => true]);
+        $url = '/admin/library?q=Hoefbevangenheid';
+        $this->get($url)->assertInertia(fn (Assert $page) => $page
+            ->has('items.data', 2)
+            ->where('items.data.0.id', $second->id)->where('items.data.0.order', 10)
+            ->where('items.data.1.id', $first->id)->where('items.data.1.order', 20));
+
+        $this->from($url)->patch('/admin/library/'.$first->id.'/order', ['order' => 5])
+            ->assertRedirect($url)->assertSessionHasNoErrors();
+        $this->assertSame(5, $first->fresh()->order);
+        $this->assertSame('Hoefbevangenheid 1/2', $first->fresh()->title);
+        $this->get($url)->assertInertia(fn (Assert $page) => $page
+            ->has('items.data', 2)
+            ->where('items.data.0.id', $first->id)->where('items.data.0.order', 5)
+            ->where('items.data.1.id', $second->id));
+
+        $this->patch('/admin/library/'.$first->id.'/order', ['order' => -1])->assertSessionHasErrors('order');
+        $this->assertSame(5, $first->fresh()->order);
+    }
+    public function test_arrow_move_reorders_filtered_items_even_when_positions_are_equal(): void
+    {
+        $this->admin();
+        $a = $this->item('Hoefbevangenheid 1/2', ['order' => 0]);
+        $b = $this->item('Hoefbevangenheid 2/2', ['order' => 0]);
+        $this->item('Ander onderwerp', ['order' => 0]);
+        [$before, $moved] = collect([$a, $b])->sortBy('id')->values()->all();
+        $url = '/admin/library?q=Hoefbevangenheid';
+        $this->from($url)->patch('/admin/library/'.$moved->id.'/move', [
+            'neighbor_id' => $before->id, 'direction' => 'up',
+        ])->assertRedirect($url)->assertSessionHasNoErrors();
+
+        $this->get($url)->assertInertia(fn (Assert $page) => $page
+            ->has('items.data', 2)
+            ->where('items.data.0.id', $moved->id)
+            ->where('items.data.1.id', $before->id));
+        $this->assertLessThan($before->fresh()->order, $moved->fresh()->order);
+        $this->assertDatabaseCount('library_items', 3);
+    }
+    public function test_arrow_moves_cross_pages_using_neighbors_from_the_full_filtered_results(): void
+    {
+        $this->admin();
+        $category = LibraryCategory::create(['label' => 'Boundary test', 'slug' => 'boundary-test']);
+        $items = [];
+        for ($position = 1; $position <= 21; $position++) {
+            $item = $this->item('Boundary lesson '.$position, [
+                'id' => sprintf('00000000-0000-4000-8000-%012d', $position * 10),
+                'order' => 0, 'is_plus' => true,
+            ]);
+            $item->categories()->attach($category);
+            $items[] = $item;
+        }
+        // These sit between rows 20 and 21 globally, but each fails a filter.
+        foreach ([
+            ['title' => 'Unrelated lesson'],
+            ['format' => 'video'],
+            ['is_plus' => false],
+            [],
+        ] as $offset => $attributes) {
+            $excluded = $this->item('Boundary excluded '.$offset, $attributes + [
+                'id' => sprintf('00000000-0000-4000-8000-%012d', 201 + $offset),
+                'order' => 0, 'is_plus' => true,
+            ]);
+            if ($offset !== 3) $excluded->categories()->attach($category);
+        }
+        $url = '/admin/library?'.http_build_query([
+            'q' => 'Boundary', 'format' => 'article', 'gate' => 'plus', 'category_ids' => [$category->id],
+        ]);
+        $pageTwo = $url.'&page=2';
+        $this->get($url)->assertInertia(fn (Assert $page) => $page
+            ->where('items.total', 21)->has('items.data', 20)
+            ->where('items.data.19.id', $items[19]->id)
+            ->where('orderNeighbors.previous', null)->where('orderNeighbors.next', $items[20]->id));
+        $this->get($pageTwo)->assertInertia(fn (Assert $page) => $page
+            ->has('items.data', 1)->where('items.data.0.id', $items[20]->id)
+            ->where('orderNeighbors.previous', $items[19]->id)->where('orderNeighbors.next', null));
+
+        $this->from($url)->patch('/admin/library/'.$items[19]->id.'/move', [
+            'neighbor_id' => $items[20]->id, 'direction' => 'down',
+        ])->assertRedirect($url)->assertSessionHasNoErrors();
+        $this->get($url)->assertInertia(fn (Assert $page) => $page
+            ->where('items.data.19.id', $items[20]->id)->where('orderNeighbors.next', $items[19]->id));
+        $this->get($pageTwo)->assertInertia(fn (Assert $page) => $page
+            ->where('items.data.0.id', $items[19]->id)->where('orderNeighbors.previous', $items[20]->id));
+
+        $this->from($pageTwo)->patch('/admin/library/'.$items[19]->id.'/move', [
+            'neighbor_id' => $items[20]->id, 'direction' => 'up',
+        ])->assertRedirect($pageTwo)->assertSessionHasNoErrors();
+        $this->get($pageTwo)->assertInertia(fn (Assert $page) => $page
+            ->where('items.data.0.id', $items[20]->id)->where('orderNeighbors.previous', $items[19]->id)
+            ->where('orderNeighbors.next', null));
+        $this->get('/admin/library?q=NoMatchingLesson')->assertInertia(fn (Assert $page) => $page
+            ->has('items.data', 0)->where('orderNeighbors.previous', null)->where('orderNeighbors.next', null));
+    }
+    public function test_order_values_are_limited_to_the_postgresql_integer_range(): void
+    {
+        $this->admin();
+        $item = $this->item('Order boundary', ['order' => 10]);
+        $url = '/admin/library/'.$item->id;
+        foreach ([-1, 2147483648, 4294967295] as $invalid) {
+            $this->patch($url.'/order', ['order' => $invalid])->assertSessionHasErrors('order');
+            $this->put($url, ['title' => $item->title, 'format' => 'article', 'order' => $invalid])
+                ->assertSessionHasErrors('order');
+            $this->post('/admin/library', ['title' => 'Invalid order', 'format' => 'article', 'order' => $invalid])
+                ->assertSessionHasErrors('order');
+            $this->assertSame(10, $item->fresh()->order);
+            $this->assertDatabaseCount('library_items', 1);
+        }
+        foreach ([0, 2147483647] as $valid) {
+            $this->patch($url.'/order', ['order' => $valid])->assertSessionHasNoErrors();
+            $this->assertSame($valid, $item->fresh()->order);
+            $this->put($url, ['title' => $item->title, 'format' => 'article', 'order' => $valid])
+                ->assertSessionHasNoErrors();
+            $this->assertSame($valid, $item->fresh()->order);
+        }
+    }
     public function test_access_metadata_preserves_plus_and_existing_credit_unlocks(): void
     {
         $user = $this->customer(); $item = $this->item('Paid', ['credit_cost' => 2, 'is_plus' => true]);

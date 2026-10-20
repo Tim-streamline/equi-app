@@ -1,6 +1,7 @@
 // Final review screen: lists each section with an edit shortcut and submits
 // the intake. Automatic attention points remain part of the internal review.
 
+import { useState } from 'react';
 import { View, Text, ScrollView, Pressable, Alert } from 'react-native';
 import { router } from 'expo-router';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -8,6 +9,7 @@ import { ChevronLeft, Check, Send, AlertTriangle } from 'lucide-react-native';
 
 import { Button } from '@/components/ui/Button';
 import { IconButton } from '@/components/ui/IconButton';
+import { MissingQuestionsModal } from '@/components/intake/MissingQuestionsModal';
 import { useIntakeSchema } from '@/lib/intake/schema-provider';
 import {
   hasCriticalAnswers,
@@ -22,31 +24,17 @@ export default function IntakeSubmit() {
   const { state, submit, submitting } = useIntake();
   const { schema, noneOptions } = useIntakeSchema();
   const critical = hasCriticalAnswers(state.answers, schema);
+  const [showMissing, setShowMissing] = useState(false);
 
-  // Per section, the still-missing required questions (by their visible label),
-  // so we can both list them inline and surface them in the "you can't send
-  // yet" notification when someone taps VERSTUREN too early.
   const missingBySection = schema.map((s) => {
     const a = answersForSection(s, state.answers);
     const fields = missingRequired(s, a, state.answers, noneOptions);
-    return { section: s, fields, incomplete: fields.length > 0 };
-  }).filter((m) => m.incomplete);
+    return { section: s, fields };
+  }).filter((item) => item.fields.length > 0);
 
   const onSubmit = async () => {
     if (missingBySection.length > 0) {
-      // "Pushmelding": tell the customer exactly which question in which
-      // subscreen still needs an answer before the form can be sent.
-      const lines = missingBySection
-        .map((m) => {
-          const labels = m.fields.map((f) => `• ${f.label}`).join('\n');
-          return `${m.section.nr}. ${m.section.title}\n${labels || '• Nog niet ingevuld'}`;
-        })
-        .join('\n\n');
-      Alert.alert(
-        'Nog niet compleet',
-        `Vul eerst de volgende vragen in voordat je verstuurt:\n\n${lines}`,
-        [{ text: 'Oké' }],
-      );
+      setShowMissing(true);
       return;
     }
     try {
@@ -89,35 +77,6 @@ export default function IntakeSubmit() {
                 Een of meer antwoorden vragen extra aandacht. Geen probleem, ik kijk er bij
                 ontvangst persoonlijk naar voor we starten.
               </Text>
-            </View>
-          )}
-
-          {missingBySection.length > 0 && (
-            <View className="mb-4 rounded-2xl bg-[#F4D6CF] p-3.5">
-              <Text className="mb-1.5 text-[13px] leading-[18px] text-[#5A2418]">
-                <Text className="font-bold">
-                  Nog {missingBySection.length} sectie(s) onvolledig ·{' '}
-                </Text>
-                Vul onderstaande vragen in voordat je verstuurt:
-              </Text>
-              {missingBySection.map((m) => (
-                <View key={m.section.id} className="mt-1.5">
-                  <Text className="font-bold text-[12px] text-[#5A2418]">
-                    {m.section.nr}. {m.section.title}
-                  </Text>
-                  {m.fields.length > 0 ? (
-                    m.fields.map((f) => (
-                      <Text key={f.id} className="text-[12px] leading-[17px] text-[#5A2418]">
-                        • {f.label}
-                      </Text>
-                    ))
-                  ) : (
-                    <Text className="text-[12px] leading-[17px] text-[#5A2418]">
-                      • Nog niet ingevuld
-                    </Text>
-                  )}
-                </View>
-              ))}
             </View>
           )}
 
@@ -183,12 +142,17 @@ export default function IntakeSubmit() {
         >
           <Button
             title={submitting ? "Synchroniseren en versturen…" : "Intake versturen"}
-            disabled={missingBySection.length > 0 || submitting || !!state.submittedAt}
+            disabled={submitting || !!state.submittedAt}
             variant="primary"
             onPress={onSubmit}
             leading={<Send size={18} color="#fff" />}
           />
         </View>
+        <MissingQuestionsModal visible={showMissing} sections={missingBySection} onClose={() => setShowMissing(false)}
+          onSelect={(section, field) => {
+            setShowMissing(false);
+            router.push({ pathname: '/intake/section/[id]', params: { id: section.id, field: field.id } } as any);
+          }} />
       </SafeAreaView>
     </View>
   );

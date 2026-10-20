@@ -167,7 +167,7 @@
                     {:else}
                         <Field label="Duration label" error={$form.errors.duration_label}><Input bind:value={$form.duration_label} placeholder="8 min" /></Field>
                     {/if}
-                    <Field label="Order"><Input type="number" bind:value={$form.order} /></Field>
+                    <Field label="Volgorde" hint="Een lager getal verschijnt eerder in de bibliotheek." error={$form.errors.order}><Input type="number" min="0" max="2147483647" step="1" bind:value={$form.order} /></Field>
                     <label class="flex items-center gap-2 text-sm"><input type="checkbox" bind:checked={$form.is_featured} class="size-4 rounded border-input" /> Featured</label>
                     <label class="flex items-center gap-2 text-sm"><input type="checkbox" bind:checked={$form.is_plus} class="size-4 rounded border-input" /> Inbegrepen bij abonnement</label>
                     {#if $form.is_plus}

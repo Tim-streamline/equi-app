@@ -122,6 +122,11 @@ class IntakeFeedAgeTest extends TestCase
         $this->assertSame($config, $field->fresh()->age_config);
         $this->put($url, $data)->assertSessionHasNoErrors();
         $this->assertSame($config, $field->fresh()->age_config);
+        $withoutHint = $config;
+        unset($withoutHint['calculated_hint']);
+        $this->put($url, $data + ['age_config_json' => json_encode($withoutHint)])->assertSessionHasNoErrors();
+        $this->assertSame($withoutHint, $field->fresh()->age_config);
+        $this->put($url, $data + ['age_config_json' => json_encode($withoutHint + ['calculated_hint' => ''])])->assertSessionHasNoErrors();
         foreach (['"bad"', '{}', json_encode(array_replace($config, ['date_field' => 'leeftijd'])), json_encode(array_replace($config, ['date_field' => 'other']))] as $invalid) {
             $this->put($url, $data + ['age_config_json' => $invalid])->assertSessionHasErrors('age_config_json');
         }

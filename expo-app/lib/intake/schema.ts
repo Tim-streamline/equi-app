@@ -67,7 +67,7 @@ export type AgeConfig = {
   date_field: string;
   date_label: string;
   toggle_label: string;
-  calculated_hint: string;
+  calculated_hint?: string;
   estimate_label: string;
 };
 
@@ -696,6 +696,15 @@ export const INTAKE_SCHEMA: Section[] = [
           'gemeten met gewichts-lint',
           'rapport dierenarts',
         ],
+      },
+      {
+        id: 'gewicht-methode-wanneer',
+        answerSection: 'paard',
+        label: 'Wanneer is het gewicht bepaald?',
+        type: 'text',
+        required: true,
+        placeholder: 'Bijv. mei 2026',
+        showIf: { 'paard.gewicht-methode': ['gewogen op weegbrug', 'gemeten met gewichts-lint', 'rapport dierenarts'] },
       },
       {
         id: 'stokmaat',
@@ -1599,7 +1608,8 @@ export const INTAKE_SCHEMA: Section[] = [
       {
         "id": "vacc-laatst",
         "label": "Wanneer is je paard voor het laatst gevaccineerd?",
-        "type": "date",
+        "type": "text",
+        "hint": "Maand en jaartal is voldoende indien je de exacte datum niet weet. Indien niet bekend, vul dan \"onbekend\" in.",
         "required": true
       },
       {

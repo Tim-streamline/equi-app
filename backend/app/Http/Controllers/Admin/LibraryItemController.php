@@ -9,6 +9,7 @@ use App\Models\LibraryItem;
 use App\Models\MediaAsset;
 use App\Models\Therapist;
 use App\Support\AuditLogger;
+use App\Support\LibrarySyncLock;
 use App\Support\LibraryThumbnail;
 use App\Support\LibraryVideoDuration;
 use Illuminate\Http\RedirectResponse;
@@ -27,7 +28,7 @@ class LibraryItemController extends Controller
     {
         $request->validate(['category_ids' => ['sometimes', 'array'], 'category_ids.*' => ['uuid', 'exists:library_categories,id']]);
         $categoryIds = $request->input('category_ids', []);
-        $items = LibraryItem::query()
+        $query = LibraryItem::query()
             ->when($categoryIds, fn ($query) => $query->whereHas('categories', fn ($categories) => $categories->whereIn('library_categories.id', $categoryIds)))
             ->when($request->string('q')->toString(), fn ($query, $q) => $query->where('title', 'ilike', "%{$q}%"))
             ->when($request->string('format')->toString(), fn ($query, $f) => $query->where('format', $f))
@@ -39,26 +40,39 @@ class LibraryItemController extends Controller
                     'draft' => $query->whereNull('published_at'),
                     default => null,
                 };
-            })
+            });
+        $items = (clone $query)
             ->with('author:id,name')
-            ->orderByDesc('is_featured')->orderBy('order')
+            ->orderBy('order')->orderBy('id')
             ->paginate(20)
-            ->withQueryString()
-            ->through(fn (LibraryItem $i) => [
-                'id' => $i->id,
-                'title' => $i->title,
-                'hero_image_url' => $i->hero_image_url,
-                'format' => $i->format,
-                'author' => $i->author?->name,
-                'credit_cost' => $i->credit_cost,
-                'is_plus' => $i->is_plus,
-                'is_featured' => $i->is_featured,
-                'published' => (bool) $i->published_at,
-                'published_at' => $i->published_at,
-            ]);
+            ->withQueryString();
+        $orderNeighbors = ['previous' => null, 'next' => null];
+        if ($first = $items->getCollection()->first()) {
+            $last = $items->getCollection()->last();
+            $orderNeighbors['previous'] = (clone $query)
+                ->whereRowValues(['order', 'id'], '<', [$first->order, $first->id])
+                ->orderByDesc('order')->orderByDesc('id')->value('id');
+            $orderNeighbors['next'] = (clone $query)
+                ->whereRowValues(['order', 'id'], '>', [$last->order, $last->id])
+                ->orderBy('order')->orderBy('id')->value('id');
+        }
+        $items->through(fn (LibraryItem $i) => [
+            'id' => $i->id,
+            'title' => $i->title,
+            'hero_image_url' => $i->hero_image_url,
+            'format' => $i->format,
+            'author' => $i->author?->name,
+            'credit_cost' => $i->credit_cost,
+            'is_plus' => $i->is_plus,
+            'is_featured' => $i->is_featured,
+            'order' => $i->order,
+            'published' => (bool) $i->published_at,
+            'published_at' => $i->published_at,
+        ]);
 
         return Inertia::render('Library/Index', [
             'items' => $items,
+            'orderNeighbors' => $orderNeighbors,
             'filters' => $request->only('q', 'format', 'gate', 'category_ids'),
             'categories' => LibraryCategory::withCount('items')->orderByDesc('is_quick_filter')->orderByRaw('CASE WHEN is_quick_filter THEN "order" ELSE 2147483647 END')->orderByDesc('items_count')->orderBy('label')->get(),
             'counts' => [
@@ -113,9 +127,60 @@ class LibraryItemController extends Controller
         return redirect()->route('admin.library.index')->with('success', 'Library item updated.');
     }
 
+    public function updateOrder(Request $request, LibraryItem $library): RedirectResponse
+    {
+        $data = $request->validate(['order' => ['required', 'integer', 'min:0', 'max:'.LibraryItem::MAX_ORDER]]);
+        DB::transaction(function () use ($library, $data): void {
+            LibrarySyncLock::acquire();
+            $item = LibraryItem::whereKey($library->id)->lockForUpdate()->firstOrFail();
+            $before = $item->only('order');
+            $item->update(['order' => $data['order']]);
+            AuditLogger::updated($item, $before);
+        });
+
+        return back()->with('success', 'Volgorde opgeslagen.');
+    }
+
+    public function move(Request $request, LibraryItem $library): RedirectResponse
+    {
+        $data = $request->validate([
+            'neighbor_id' => ['required', 'uuid', Rule::exists('library_items', 'id'), Rule::notIn([$library->id])],
+            'direction' => ['required', Rule::in(['up', 'down'])],
+        ]);
+
+        DB::transaction(function () use ($library, $data): void {
+            LibrarySyncLock::acquire();
+            $items = LibraryItem::query()->orderBy('order')->orderBy('id')->lockForUpdate()->get()->all();
+            $ids = array_map(fn (LibraryItem $item) => $item->id, $items);
+            $from = array_search($library->id, $ids, true);
+            $neighbor = array_search($data['neighbor_id'], $ids, true);
+            if ($from === false || $neighbor === false
+                || ($data['direction'] === 'up' ? $neighbor >= $from : $neighbor <= $from)) {
+                throw ValidationException::withMessages(['order' => 'De volgorde is gewijzigd. Vernieuw de pagina en probeer opnieuw.']);
+            }
+
+            $moved = array_splice($items, $from, 1)[0];
+            $neighbor = array_search($data['neighbor_id'], array_map(fn (LibraryItem $item) => $item->id, $items), true);
+            array_splice($items, $neighbor + ($data['direction'] === 'down' ? 1 : 0), 0, [$moved]);
+
+            foreach ($items as $position => $item) {
+                $order = ($position + 1) * 10;
+                if ((int) $item->order === $order) {
+                    continue;
+                }
+                $before = $item->only('order');
+                $item->update(['order' => $order]);
+                AuditLogger::updated($item, $before);
+            }
+        });
+
+        return back()->with('success', 'Item verplaatst.');
+    }
+
     public function unpublish(LibraryItem $library): RedirectResponse
     {
         DB::transaction(function () use ($library) {
+            LibrarySyncLock::acquire();
             $item = LibraryItem::whereKey($library->id)->lockForUpdate()->firstOrFail();
             if ($item->published_at === null) {
                 return;
@@ -148,6 +213,7 @@ class LibraryItemController extends Controller
         $removedPaths = [];
         try {
             DB::transaction(function () use ($item, $data, $request, $attachments, &$createdPaths, &$removedPaths) {
+                LibrarySyncLock::acquire();
                 $new = ! $item->exists;
                 if (! $new) {
                     $item = LibraryItem::whereKey($item->id)->lockForUpdate()->firstOrFail();
@@ -236,7 +302,7 @@ class LibraryItemController extends Controller
             'credit_cost' => ['sometimes', 'integer', 'min:0', 'max:10000'],
             'is_plus' => ['boolean'],
             'is_featured' => ['boolean'],
-            'order' => ['nullable', 'integer', 'min:0'],
+            'order' => ['nullable', 'integer', 'min:0', 'max:'.LibraryItem::MAX_ORDER],
         ], [
             'author_therapist_id.exists' => 'Deze author is gearchiveerd of niet beschikbaar. Kies een actieve author.',
             'duration_minutes.numeric' => 'Vul een geldig positief getal in voor de videoduur.',

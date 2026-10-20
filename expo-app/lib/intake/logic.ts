@@ -92,8 +92,8 @@ export function isFieldAnswered(field: Field, value: unknown, allAnswers?: Intak
   if (isEmpty(value)) return false;
   // A multi-box text field (`lines`) stores a string array; it counts as
   // answered only when at least one of the boxes holds real text.
-  if (field.type === 'text' && field.lines) {
-    if (!Array.isArray(value)) return typeof value === 'string' && value.trim() !== '';
+  if (field.type === 'text') {
+    if (!field.lines || !Array.isArray(value)) return typeof value === 'string' && value.trim() !== '';
     return value.some((v) => typeof v === 'string' && v.trim() !== '');
   }
   if (field.type === 'radio') {
@@ -259,7 +259,8 @@ export function missingRequired(
 ): Field[] {
   if (allAnswers) answers = answersForSection(section, allAnswers);
   return visibleFields(section, answers, allAnswers, noneOptions).filter(
-    (f) => needsAnswer(f, answers[f.id]) && !isFieldAnswered(f, answers[f.id], allAnswers, section.id),
+    (f) => needsAnswer(f, answers[f.id])
+      && !isFieldAnswered(f, answers[f.id], allAnswers ?? { [f.answerSection ?? section.id]: answers }, section.id),
   );
 }
 
@@ -275,7 +276,7 @@ export function answeredCount(
 } {
   if (allAnswers) answers = answersForSection(section, allAnswers);
   const renderable = visibleFields(section, answers, allAnswers, noneOptions);
-  const answered = renderable.filter((f) => isFieldAnswered(f, answers[f.id], allAnswers, section.id)).length;
+  const answered = renderable.filter((f) => isFieldAnswered(f, answers[f.id], allAnswers ?? { [f.answerSection ?? section.id]: answers }, section.id)).length;
   return { answered, total: renderable.length };
 }
 
