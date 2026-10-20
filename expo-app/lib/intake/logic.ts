@@ -62,12 +62,6 @@ export function isFieldRequired(field: Field): boolean {
   return true;
 }
 
-function weightMethodRequiresDate(field: Field, value: unknown, sectionId: string): boolean {
-  return (field.answerSection ?? sectionId) === 'paard' && field.id === 'gewicht-methode'
-    && field.type === 'radio' && typeof value === 'string' && (field.options ?? []).includes(value)
-    && ['gewogen op weegbrug', 'gemeten met gewichts-lint', 'rapport dierenarts'].includes(value);
-}
-
 /** Strict calendar parsing, accepting legacy ISO and Dutch dates. No invented dates. */
 export function ageFromBirthdate(value: unknown, today = new Date()): number | undefined {
   if (typeof value !== 'string') return undefined;
@@ -98,15 +92,11 @@ export function isFieldAnswered(field: Field, value: unknown, allAnswers?: Intak
   if (isEmpty(value)) return false;
   // A multi-box text field (`lines`) stores a string array; it counts as
   // answered only when at least one of the boxes holds real text.
-  if (field.type === 'text' && field.lines) {
-    if (!Array.isArray(value)) return typeof value === 'string' && value.trim() !== '';
+  if (field.type === 'text') {
+    if (!field.lines || !Array.isArray(value)) return typeof value === 'string' && value.trim() !== '';
     return value.some((v) => typeof v === 'string' && v.trim() !== '');
   }
   if (field.type === 'radio') {
-    if (weightMethodRequiresDate(field, value, sectionId)) {
-      const date = allAnswers?.[field.answerSection ?? sectionId]?.['gewicht-methode-wanneer'];
-      return typeof date === 'string' && date.trim() !== '';
-    }
     return (field.options ?? []).includes(String(value));
   }
   if (field.type === 'multi') {
@@ -176,10 +166,9 @@ export function photoAnswered(field: Field, value: unknown, answers: IntakeAnswe
 export function validPhotoYear(value: unknown): boolean {
   return typeof value === 'string' && /^\d{4}$/.test(value) && Number(value) >= 1000 && Number(value) <= new Date().getFullYear();
 }
-export function needsAnswer(field: Field, value: unknown, sectionId = ''): boolean {
+export function needsAnswer(field: Field, value: unknown): boolean {
   // Historical images are optional, but each supplied image needs its year.
-  return isFieldRequired(field) || weightMethodRequiresDate(field, value, sectionId)
-    || !!(field.type === 'photo' && field.photoConfig?.year_required && photoReferences(value).length);
+  return isFieldRequired(field) || !!(field.type === 'photo' && field.photoConfig?.year_required && photoReferences(value).length);
 }
 
 /** Count of selected options that are not a "none / not-applicable" sentinel. */
@@ -270,10 +259,9 @@ export function missingRequired(
 ): Field[] {
   if (allAnswers) answers = answersForSection(section, allAnswers);
   return visibleFields(section, answers, allAnswers, noneOptions).filter(
-    (f) => needsAnswer(f, answers[f.id], section.id)
+    (f) => needsAnswer(f, answers[f.id])
       && !isFieldAnswered(f, answers[f.id], allAnswers ?? { [f.answerSection ?? section.id]: answers }, section.id),
-  ).map(f => weightMethodRequiresDate(f, answers[f.id], section.id)
-    ? { ...f, label: 'Wanneer is het gewicht bepaald?' } : f);
+  );
 }
 
 /** Count of visible (non-sectionhead) fields that are genuinely answered. */
@@ -401,7 +389,7 @@ export function countFlags(
 /** Reminder thresholds count applicable mandatory questions, never rounded section percentages. */
 export function requiredProgress(answers: IntakeAnswers, schema: Section[] = INTAKE_SCHEMA, noneOptions = INTAKE_NONE_OPTIONS) {
   const required = schema.flatMap(section => visibleFields(section, answersForSection(section, answers), answers, noneOptions)
-    .filter(field => needsAnswer(field, answersForSection(section, answers)[field.id], section.id)).map(field => ({ section, field })));
+    .filter(field => needsAnswer(field, answersForSection(section, answers)[field.id])).map(field => ({ section, field })));
   const missing = required.filter(({ section, field }) => !isFieldAnswered(field, answersForSection(section, answers)[field.id], answers, section.id));
   return { total: required.length, answered: required.length - missing.length, missing,
     stage: required.length > 0 && missing.length === 0 ? 'ready' : required.length > 0 && (required.length - missing.length) / required.length >= .9 ? 'almost' : 'continue' };

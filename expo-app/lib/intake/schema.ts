@@ -698,6 +698,15 @@ export const INTAKE_SCHEMA: Section[] = [
         ],
       },
       {
+        id: 'gewicht-methode-wanneer',
+        answerSection: 'paard',
+        label: 'Wanneer is het gewicht bepaald?',
+        type: 'text',
+        required: true,
+        placeholder: 'Bijv. mei 2026',
+        showIf: { 'paard.gewicht-methode': ['gewogen op weegbrug', 'gemeten met gewichts-lint', 'rapport dierenarts'] },
+      },
+      {
         id: 'stokmaat',
         label: 'Stokmaat',
         type: 'number',

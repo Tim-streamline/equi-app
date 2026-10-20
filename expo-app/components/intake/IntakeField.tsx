@@ -32,13 +32,6 @@ function asText(value: FieldValue): string | undefined {
   return undefined;
 }
 
-const WEIGHT_METHOD_DATE_FIELD = 'gewicht-methode-wanneer';
-const WEIGHT_METHODS_WITH_DATE = new Set([
-  'gewogen op weegbrug',
-  'gemeten met gewichts-lint',
-  'rapport dierenarts',
-]);
-
 type Props = {
   field: Field;
   /** Section id used to scope the answer mutation. */
@@ -55,9 +48,6 @@ export function IntakeField({ field, sectionId, n, noneOptions }: Props) {
   const value = state.answers[answerSection]?.[field.id];
   const set = (next: FieldValue) => {
     setField(answerSection, field.id, next);
-    if (field.id === 'gewicht-methode' && next !== value) {
-      setField(answerSection, WEIGHT_METHOD_DATE_FIELD, undefined);
-    }
   };
   const photoDesign = sectionId === 'intake-fotos' && field.type === 'photo';
   const slots = field.photoConfig?.slots ?? [];
@@ -99,22 +89,7 @@ export function IntakeField({ field, sectionId, n, noneOptions }: Props) {
       {field.type === 'photo' && !field.photoConfig?.grouped_hooves && !photoDesign && <PhotoInstructions field={field} />}
       {state.submittedAt && !['photo', 'file'].includes(field.type)
         ? <ReadOnlyAnswer field={field} value={value} answers={state.answers[answerSection] ?? {}} />
-        : <>
-          {renderInput(field, value, set, noneOptions, answerSection, photoDesign)}
-          {answerSection === 'paard' && field.id === 'gewicht-methode' && WEIGHT_METHODS_WITH_DATE.has(asText(value) ?? '') && (
-            <View className="mt-3 ml-8 max-w-[280px]">
-              <Text className="mb-1.5 text-[13px] font-semi text-ink">Wanneer was dit? *</Text>
-              <TextInput
-                accessibilityLabel="Wanneer is het gewicht bepaald?"
-                value={asText(state.answers[answerSection]?.[WEIGHT_METHOD_DATE_FIELD]) ?? ''}
-                onChangeText={text => setField(answerSection, WEIGHT_METHOD_DATE_FIELD, text || undefined)}
-                placeholder="Bijv. mei 2026"
-                placeholderTextColor="rgba(27,42,42,0.4)"
-                className="rounded-xl border border-ink-8 bg-white px-4 py-3 font-sans text-[15px] text-ink"
-              />
-            </View>
-          )}
-        </>}
+        : renderInput(field, value, set, noneOptions, answerSection, photoDesign)}
     </View>
   );
 }
@@ -131,10 +106,6 @@ function ReadOnlyAnswer({ field, value, answers }: { field: Field; value: FieldV
   if (field.unit && text) text += ` ${field.unit}`;
   const birthDate = field.ageConfig && answers[field.ageConfig.date_field];
   if (birthDate) text += `${text ? '\n' : ''}${field.ageConfig!.date_label}: ${birthDate}`;
-  const measuredAt = answers[WEIGHT_METHOD_DATE_FIELD];
-  if (field.id === 'gewicht-methode' && WEIGHT_METHODS_WITH_DATE.has(String(value)) && measuredAt) {
-    text += `\nWanneer: ${measuredAt}`;
-  }
   return <Text selectable className="rounded-xl bg-white p-3 text-[16px] leading-[23px] text-ink">{text || 'Niet ingevuld'}</Text>;
 }
 

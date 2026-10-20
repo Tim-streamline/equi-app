@@ -6,7 +6,7 @@ use Illuminate\Support\Facades\DB;
 
 class LibrarySyncLock
 {
-    /** Call inside a transaction, before locking library source rows. */
+    /** Call inside a transaction, after any account lock and before library-item row locks. */
     public static function acquire(): void
     {
         // Match lock_library_access_sources() in database/sql/library-sync.sql.

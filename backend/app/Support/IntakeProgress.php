@@ -32,25 +32,22 @@ class IntakeProgress
                 if (($field->photo_config['existing_only'] ?? false) && ! $photos->references($value)) {
                     continue;
                 }
-                $requiresWeightDate = ($field->answer_section_key ?? $section->key) === 'paard'
-                    && $field->key === 'gewicht-methode' && $field->type === 'radio'
-                    && in_array($value, $field->options ?? [], true)
-                    && in_array($value, ['gewogen op weegbrug', 'gemeten met gewichts-lint', 'rapport dierenarts'], true);
-                if ($field->optional && ! $requiresWeightDate && ! ($field->type === 'photo' && ($field->photo_config['year_required'] ?? false) && $photos->references($value))) {
+                if ($field->optional && ! ($field->type === 'photo' && ($field->photo_config['year_required'] ?? false) && $photos->references($value))) {
                     continue;
                 }
                 $total++;
                 $answered = ! $review->empty($value);
+                if ($field->type === 'text') {
+                    $answered = $field->lines && is_array($value)
+                        ? count(array_filter($value, fn ($line) => is_string($line) && trim($line) !== '')) > 0
+                        : is_string($value) && trim($value) !== '';
+                }
                 if ($field->type === 'number' && $field->age_config) {
                     $date = $answers[$field->answer_section_key ?? $section->key][$field->age_config['date_field'] ?? ''] ?? null;
                     $answered = app(IntakeAge::class)->answered($value, $date);
                 }
                 if ($field->type === 'radio') {
                     $answered = is_scalar($value) && in_array((string) $value, $field->options ?? [], true);
-                    if ($requiresWeightDate) {
-                        $date = $answers[$field->answer_section_key ?? $section->key]['gewicht-methode-wanneer'] ?? null;
-                        $answered = is_string($date) && trim($date) !== '';
-                    }
                 }
                 if ($field->type === 'multi') {
                     $answered = is_array($value) && count(array_intersect(array_filter($value, 'is_string'), $field->options ?? [])) > 0;

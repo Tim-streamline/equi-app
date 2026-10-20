@@ -119,6 +119,7 @@ class IntakeCompletionTest extends TestCase
         $section = IntakeQuestionnaire::where('slug', 'protocol-intake')->first()->sections()->first();
         $field = $section->fields()->create(['key' => 'gewicht-methode', 'label' => 'Hoe is dit gewicht bepaald?',
             'type' => 'radio', 'options' => ['geschat op zicht', ...array_column(self::measuredMethods(), 0)], 'active' => true]);
+        (require database_path('migrations/2026_10_20_000002_add_weight_measurement_date_question.php'))->up();
         $b->answers()->create(['section_id' => 'paard', 'field_id' => 'naam', 'value' => '"Nova"']);
         $methodAnswer = $b->answers()->create(['section_id' => 'paard', 'field_id' => 'gewicht-methode', 'value' => json_encode($method)]);
         $date = $b->answers()->create(['section_id' => 'paard', 'field_id' => 'gewicht-methode-wanneer', 'value' => 'null']);
@@ -126,9 +127,9 @@ class IntakeCompletionTest extends TestCase
         foreach ([null, '', " \n ", 42, [], ['date' => 'mei 2026']] as $invalid) {
             $date->update(['value' => json_encode($invalid)]);
             $progress = app(IntakeProgress::class)->forBooking($b->fresh());
-            $this->assertSame(2, $progress['total']);
-            $this->assertSame(1, $progress['answered']);
-            $this->assertSame([['section' => 'paard', 'field' => 'gewicht-methode']], $progress['missing']);
+            $this->assertSame(3, $progress['total']);
+            $this->assertSame(2, $progress['answered']);
+            $this->assertSame([['section' => 'paard', 'field' => 'gewicht-methode-wanneer']], $progress['missing']);
             $this->postJson('/api/intakes/'.$b->id.'/submit')->assertUnprocessable();
             $this->postJson('/api/sync/upload', ['operations' => [$op]])->assertUnprocessable();
             $this->assertNull($b->fresh()->completed_at);

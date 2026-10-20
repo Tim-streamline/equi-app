@@ -25,31 +25,52 @@ const modules = {
   '@/lib/intake/store': { useIntake: () => ({ state, setField }) },
 };
 new Function('require', 'exports', compiled)(name => { assert.ok(name in modules, name); return modules[name]; }, exports);
-const field = { id: 'gewicht-methode', label: 'Hoe is dit gewicht bepaald?', type: 'radio', options: ['geschat op zicht', 'gewogen op weegbrug', 'gemeten met gewichts-lint', 'rapport dierenarts'] };
-const render = () => flatten(exports.IntakeField({ field, sectionId: 'paard', n: 7, noneOptions: [] }));
+const schemaExports = {};
+const schemaCode = ts.transpileModule(readFileSync(new URL('../lib/intake/schema.ts', import.meta.url), 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS } }).outputText;
+new Function('exports', schemaCode)(schemaExports);
+const section = schemaExports.INTAKE_SCHEMA.find(s => s.id === 'paard');
+const methodField = section.fields.find(f => f.id === 'gewicht-methode');
+const dateField = section.fields.find(f => f.id === 'gewicht-methode-wanneer');
+const render = (field, sectionId = 'paard', n = 8) => flatten(exports.IntakeField({ field, sectionId, n, noneOptions: [] }));
 
-test('weight date input opens for measured methods, persists its value, and stays within question 7', () => {
-  const option = label => render().find(node => node.type === 'Pressable' && text(node).includes(label));
-  assert.equal(render().some(node => node.props?.accessibilityLabel === 'Wanneer is het gewicht bepaald?'), false);
-  for (const method of field.options.slice(1)) {
-    option(method).props.onPress();
-    assert.equal(state.answers.paard['gewicht-methode-wanneer'], undefined);
-    const input = render().find(node => node.props?.accessibilityLabel === 'Wanneer is het gewicht bepaald?');
-    assert.ok(input, method);
-    input.props.onChangeText('mei 2026');
-    assert.equal(state.answers.paard['gewicht-methode-wanneer'], 'mei 2026');
-    assert.equal(render().find(node => node.props?.accessibilityLabel === 'Wanneer is het gewicht bepaald?').props.value, 'mei 2026');
-  }
-  option('geschat op zicht').props.onPress();
-  assert.equal(render().some(node => node.props?.accessibilityLabel === 'Wanneer is het gewicht bepaald?'), false);
-  assert.equal(state.answers.paard['gewicht-methode-wanneer'], undefined);
-  assert.equal(render().filter(node => node.type === 'FieldLabel').length, 1);
+test('the measurement date is a normal required question using the existing saved key', () => {
+  assert.equal(section.fields.indexOf(dateField), section.fields.indexOf(methodField) + 1);
+  assert.equal(dateField.type, 'text');
+  assert.equal(dateField.answerSection, 'paard');
+  assert.deepEqual(dateField.showIf, { 'paard.gewicht-methode': methodField.options.slice(1) });
+  setField('paard', 'gewicht-methode', 'rapport dierenarts');
+  setField('paard', 'gewicht-methode-wanneer', 'mei 2026');
+  assert.equal(render(methodField).some(node => node.type === 'Input'), false);
+  const nodes = render(dateField);
+  assert.equal(nodes.find(node => node.type === 'FieldLabel').props.label, 'Wanneer is het gewicht bepaald?');
+  assert.equal(nodes.find(node => node.type === 'FieldLabel').props.n, 8);
+  assert.equal(nodes.find(node => node.type === 'FieldLabel').props.required, true);
+  const input = nodes.find(node => node.type === 'Input');
+  assert.equal(input.props.value, 'mei 2026');
+  assert.equal(input.props.placeholder, 'Bijv. mei 2026');
+  input.props.onChangeText('juni 2026');
+  assert.equal(state.answers.paard['gewicht-methode-wanneer'], 'juni 2026');
 });
 
-test('saved weight date is shown with the selected method in read-only intake', () => {
+test('changing the method preserves the saved date, including when the question moves', () => {
+  setField('paard', 'gewicht-methode-wanneer', 'mei 2026');
+  for (const method of methodField.options) {
+    render(methodField).find(node => node.type === 'Pressable' && text(node).includes(method)).props.onPress();
+    assert.equal(state.answers.paard['gewicht-methode-wanneer'], 'mei 2026');
+  }
+  const moved = render(dateField, 'gezondheid').find(node => node.type === 'Input');
+  assert.equal(moved.props.value, 'mei 2026');
+  moved.props.onChangeText('juni 2026');
+  assert.equal(state.answers.paard['gewicht-methode-wanneer'], 'juni 2026');
+  assert.equal(state.answers.gezondheid, undefined);
+});
+
+test('submitted intakes display saved dates as their own read-only answer', () => {
   setField('paard', 'gewicht-methode', 'rapport dierenarts');
   setField('paard', 'gewicht-methode-wanneer', 'mei 2026');
   state.submittedAt = '2026-10-20';
-  assert.match(render().map(text).join(' '), /rapport dierenarts\nWanneer: mei 2026/);
+  assert.match(render(dateField, 'gezondheid').map(text).join(' '), /mei 2026/);
+  assert.doesNotMatch(render(methodField).map(text).join(' '), /mei 2026/);
+  assert.equal(render(dateField).some(node => node.type === 'Input'), false);
   state.submittedAt = null;
 });

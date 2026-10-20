@@ -76,9 +76,10 @@ class LibraryController extends Controller
         $user = $this->user($request);
         $request->validate(['credits' => ['required', 'integer', 'min:0']]);
         DB::transaction(function () use ($request, $user, $library, $discovery) {
-            LibrarySyncLock::acquire();
             // Serialize spends and duplicate requests for this account, even before a balance row exists.
             User::whereKey($user->id)->lockForUpdate()->firstOrFail();
+            // Subscription writers lock the user first; library writers lock the advisory key before items.
+            LibrarySyncLock::acquire();
             $item = LibraryItem::whereKey($library->id)->lockForUpdate()->firstOrFail();
             $this->published($item);
             $access = $discovery->access($user);

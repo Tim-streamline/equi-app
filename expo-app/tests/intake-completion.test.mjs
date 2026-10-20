@@ -31,24 +31,41 @@ function overview(answers,submittedAt=null,s={id:'test',nr:0,title:'Test',fields
  return {nodes:render(),render,submissions:()=>submissions,routes};
 }
 const weightField=schema.INTAKE_SCHEMA.find(s=>s.id==='paard').fields.find(f=>f.id==='gewicht-methode');
-const weightSection={id:'paard',nr:1,title:'Paard',fields:[weightField]};
+const dateField=schema.INTAKE_SCHEMA.find(s=>s.id==='paard').fields.find(f=>f.id==='gewicht-methode-wanneer');
+const weightSection={id:'paard',nr:1,title:'Paard',fields:[weightField,dateField]};
+test('synced questionnaire definitions and the app fallback use the same date question',()=>{
+ const snapshot=JSON.parse(readFileSync(new URL('../../backend/database/data/intake-questionnaire-local.json',import.meta.url),'utf8'));
+ const backendSection=snapshot.sections.find(s=>s.key==='paard');
+ const synced=config.buildIntakeSchema([{...backendSection,id:'synced-paard'}],backendSection.fields.map(f=>({...f,section_id:'synced-paard'})))[0];
+ const syncedDate=synced.fields.find(f=>f.id===dateField.id);
+ for(const key of ['id','type','label','answerSection','placeholder','showIf','required']) assert.deepEqual(syncedDate[key],dateField[key],key);
+ const answers={paard:{'gewicht-methode':'rapport dierenarts','gewicht-methode-wanneer':'mei 2026'}};
+ assert.equal(logic.missingRequired(synced,{},answers).some(f=>f.id===dateField.id),false);
+ delete answers.paard['gewicht-methode-wanneer'];
+ assert.equal(logic.missingRequired(synced,{},answers).some(f=>f.id===dateField.id),true);
+});
+test('ordinary text validation rejects malformed values and still supports multiple text boxes',()=>{
+ for(const value of [null,'','  ',42,{},[],['text']]) assert.equal(logic.isFieldAnswered({id:'other',type:'text'},value),false);
+ assert.equal(logic.isFieldAnswered({id:'other',type:'text'},'mei 2026'),true);
+ assert.equal(logic.isFieldAnswered({id:'other',type:'text',lines:2},['','text']),true);
+ assert.equal(logic.isFieldAnswered({id:'other',type:'text',lines:2},['','  ']),false);
+});
 for(const method of ['gewogen op weegbrug','gemeten met gewichts-lint','rapport dierenarts']) {
  test(`${method}: missing dates block completion and progress`,()=>{
   for(const date of [undefined,null,'',' \n ',42,{},[]]) {
    const values={'gewicht-methode':method,'gewicht-methode-wanneer':date};
    const answers={paard:values};
    assert.equal(logic.isSectionComplete(weightSection,values,answers),false);
-   assert.equal(logic.isSectionComplete(weightSection,values),false);
-   assert.deepEqual(logic.answeredCount(weightSection,values),{answered:0,total:1});
+   assert.deepEqual(logic.answeredCount(weightSection,values,answers),{answered:1,total:2});
    assert.equal(logic.requiredProgress(answers,[weightSection]).stage,'continue');
-   assert.equal(logic.missingRequired(weightSection,values)[0].label,'Wanneer is het gewicht bepaald?');
+   assert.equal(logic.missingRequired(weightSection,values,answers)[0].label,'Wanneer is het gewicht bepaald?');
   }
   const values={'gewicht-methode':method,'gewicht-methode-wanneer':'mei 2026'};
-  assert.equal(logic.isSectionComplete(weightSection,values),true);
+  assert.equal(logic.isSectionComplete(weightSection,values,{paard:values}),true);
   assert.equal(logic.requiredProgress({paard:values},[weightSection]).stage,'ready');
  });
  for(const screen of ['overview','submit']) {
-  test(`${screen}: missing ${method} date is listed and links to the inline question`,async()=>{
+  test(`${screen}: missing ${method} date is listed and links directly to the date question`,async()=>{
    const result=overview({paard:{'gewicht-methode':method}},null,weightSection,screen);
    await result.nodes.find(n=>n.props?.title==='Intake versturen').props.onPress();
    const modal=result.render().find(n=>n.type==='MissingQuestionsModal');
@@ -57,7 +74,7 @@ for(const method of ['gewogen op weegbrug','gemeten met gewichts-lint','rapport 
    const {section,fields}=modal.props.sections[0];
    assert.equal(fields[0].label,'Wanneer is het gewicht bepaald?');
    modal.props.onSelect(section,fields[0]);
-   assert.deepEqual(result.routes,[{pathname:'/intake/section/[id]',params:{id:'paard',field:'gewicht-methode'}}]);
+   assert.deepEqual(result.routes,[{pathname:'/intake/section/[id]',params:{id:'paard',field:'gewicht-methode-wanneer'}}]);
    const complete=overview({paard:{'gewicht-methode':method,'gewicht-methode-wanneer':'mei 2026'}},null,weightSection,screen);
    await complete.nodes.find(n=>n.props?.title==='Intake versturen').props.onPress();
    assert.equal(complete.submissions(),1);
@@ -65,16 +82,17 @@ for(const method of ['gewogen op weegbrug','gemeten met gewichts-lint','rapport 
  }
 }
 test('estimated weights need no date, and moved weight questions retain the stored date namespace',()=>{
- const estimated={'gewicht-methode':'geschat op zicht'};
- assert.equal(logic.isSectionComplete(weightSection,estimated),true);
+ const estimated={'gewicht-methode':'geschat op zicht','gewicht-methode-wanneer':'mei 2026'};
+ assert.equal(logic.isSectionComplete(weightSection,estimated,{paard:estimated}),true);
+ assert.deepEqual(logic.visibleFields(weightSection,estimated,{paard:estimated}).map(f=>f.id),['gewicht-methode']);
+ assert.equal(logic.requiredProgress({paard:estimated},[weightSection]).total,1);
  assert.equal(logic.missingRequired(weightSection,{})[0].label,weightField.label);
- const moved={...weightSection,id:'moved',fields:[{...weightField,answerSection:'paard'}]};
+ const moved={...weightSection,id:'moved',fields:[{...weightField,answerSection:'paard'},dateField]};
  assert.equal(logic.isSectionComplete(moved,{}, {paard:{'gewicht-methode':'rapport dierenarts'}}),false);
  assert.equal(logic.isSectionComplete(moved,{}, {paard:{'gewicht-methode':'rapport dierenarts','gewicht-methode-wanneer':'mei 2026'}}),true);
- assert.equal(logic.isSectionComplete({...weightSection,id:'other'},{'gewicht-methode':'rapport dierenarts'}),true);
- const optional={...weightSection,fields:[{...weightField,optional:true}]};
+ const optional={...weightSection,fields:[{...weightField,optional:true},dateField]};
  assert.equal(logic.isSectionComplete(optional,{}),true);
- assert.equal(logic.isSectionComplete(optional,{'gewicht-methode':'rapport dierenarts'}),false);
+ assert.equal(logic.isSectionComplete(optional,{}, {paard:{'gewicht-methode':'rapport dierenarts'}}),false);
 });
 test('submit attempt opens missing questions grouped by section and links to the question',async()=>{
  const result=overview({});

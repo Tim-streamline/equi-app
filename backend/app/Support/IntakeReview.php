@@ -64,14 +64,6 @@ class IntakeReview
                         .($date ? "\n".($field->age_config['date_label'] ?? '').': '.$date : '');
                     $row['empty'] = $this->empty($row['value']);
                 }
-                if ($section->key === 'paard' && $field->key === 'gewicht-methode'
-                    && in_array($value, ['gewogen op weegbrug', 'gemeten met gewichts-lint', 'rapport dierenarts'], true)) {
-                    $measuredAt = $answers[$answerSection]['gewicht-methode-wanneer'] ?? null;
-                    if (is_string($measuredAt) && trim($measuredAt) !== '') {
-                        $row['type'] = 'text';
-                        $row['value'] = $value."\nWanneer: ".trim($measuredAt);
-                    }
-                }
                 if (in_array($field->type, ['photo', 'file'])) {
                     $references = $field->type === 'photo' ? $photos->fieldReferences($field, $value, $answers) : (is_array($value) ? $value : []);
                     foreach ($references as $reference) {
