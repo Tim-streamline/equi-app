@@ -7,10 +7,12 @@ use App\Models\Horse;
 use App\Models\IntakeBooking;
 use App\Models\IntakeQuestionnaire;
 use App\Models\User;
+use App\Support\IntakeProgress;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
+use PHPUnit\Framework\Attributes\DataProvider;
 use Tests\TestCase;
 
 class IntakeCompletionTest extends TestCase
@@ -99,5 +101,53 @@ class IntakeCompletionTest extends TestCase
         $answer = ['op' => 'PUT', 'type' => 'intake_answers', 'id' => (string) Str::uuid(), 'data' => ['response_id' => $b->id, 'section_id' => 'paard', 'field_id' => 'naam', 'value' => '"Nova"']];
         $this->postJson('/api/sync/upload', ['operations' => [$answer, $op]])->assertOk();
         $this->assertTrue($b->fresh()->completed_at->equalTo(now()->startOfSecond()));
+    }
+
+    public static function measuredMethods(): array
+    {
+        return [
+            ['gewogen op weegbrug'],
+            ['gemeten met gewichts-lint'],
+            ['rapport dierenarts'],
+        ];
+    }
+
+    #[DataProvider('measuredMethods')]
+    public function test_measured_weight_requires_a_date_for_progress_and_both_submission_paths(string $method): void
+    {
+        $b = $this->fixture();
+        $section = IntakeQuestionnaire::where('slug', 'protocol-intake')->first()->sections()->first();
+        $field = $section->fields()->create(['key' => 'gewicht-methode', 'label' => 'Hoe is dit gewicht bepaald?',
+            'type' => 'radio', 'options' => ['geschat op zicht', ...array_column(self::measuredMethods(), 0)], 'active' => true]);
+        $b->answers()->create(['section_id' => 'paard', 'field_id' => 'naam', 'value' => '"Nova"']);
+        $methodAnswer = $b->answers()->create(['section_id' => 'paard', 'field_id' => 'gewicht-methode', 'value' => json_encode($method)]);
+        $date = $b->answers()->create(['section_id' => 'paard', 'field_id' => 'gewicht-methode-wanneer', 'value' => 'null']);
+        $op = ['op' => 'PATCH', 'type' => 'intake_bookings', 'id' => $b->id, 'data' => ['intake_status' => 'submitted']];
+        foreach ([null, '', " \n ", 42, [], ['date' => 'mei 2026']] as $invalid) {
+            $date->update(['value' => json_encode($invalid)]);
+            $progress = app(IntakeProgress::class)->forBooking($b->fresh());
+            $this->assertSame(2, $progress['total']);
+            $this->assertSame(1, $progress['answered']);
+            $this->assertSame([['section' => 'paard', 'field' => 'gewicht-methode']], $progress['missing']);
+            $this->postJson('/api/intakes/'.$b->id.'/submit')->assertUnprocessable();
+            $this->postJson('/api/sync/upload', ['operations' => [$op]])->assertUnprocessable();
+            $this->assertNull($b->fresh()->completed_at);
+        }
+        // A selected measured method still needs its date if the method question becomes optional.
+        $field->update(['optional' => true]);
+        $this->assertCount(1, app(IntakeProgress::class)->forBooking($b->fresh())['missing']);
+        $methodAnswer->update(['value' => '"geschat op zicht"']);
+        $this->assertSame([], app(IntakeProgress::class)->forBooking($b->fresh())['missing']);
+        $methodAnswer->update(['value' => json_encode($method)]);
+        $field->update(['optional' => false]);
+        $date->update(['value' => '"mei 2026"']);
+        $this->assertSame('ready', app(IntakeProgress::class)->forBooking($b->fresh())['stage']);
+        $this->postJson('/api/sync/upload', ['operations' => [$op]])->assertOk();
+        $stamp = $b->fresh()->completed_at;
+        $this->assertNotNull($stamp);
+        // Previously completed intakes remain idempotent even if a historical date is missing.
+        $date->delete();
+        $this->postJson('/api/intakes/'.$b->id.'/submit')->assertOk();
+        $this->assertTrue($b->fresh()->completed_at->equalTo($stamp));
     }
 }

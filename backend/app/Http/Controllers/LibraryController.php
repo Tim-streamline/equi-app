@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\LibraryItem;
 use App\Models\User;
 use App\Support\LibraryDiscovery;
+use App\Support\LibrarySyncLock;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
@@ -75,6 +76,7 @@ class LibraryController extends Controller
         $user = $this->user($request);
         $request->validate(['credits' => ['required', 'integer', 'min:0']]);
         DB::transaction(function () use ($request, $user, $library, $discovery) {
+            LibrarySyncLock::acquire();
             // Serialize spends and duplicate requests for this account, even before a balance row exists.
             User::whereKey($user->id)->lockForUpdate()->firstOrFail();
             $item = LibraryItem::whereKey($library->id)->lockForUpdate()->firstOrFail();

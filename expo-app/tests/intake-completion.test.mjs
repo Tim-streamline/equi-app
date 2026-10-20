@@ -13,13 +13,12 @@ const logic=load('../lib/intake/logic.ts',{'./schema':schema,'./config':config})
 const jsx=(type,props)=>({type,props});
 const flatten=node=>Array.isArray(node)?node.flatMap(flatten):node&&typeof node==='object'?[node,...flatten(node.props?.children)]:[];
 const text=node=>Array.isArray(node)?node.map(text).join(''):node&&typeof node==='object'?text(node.props?.children):node??'';
-function overview(answers,submittedAt=null) {
- const s={id:'test',nr:0,title:'Test',fields:[{id:'required',type:'text'},{id:'optional',type:'text',optional:true}]};
+function overview(answers,submittedAt=null,s={id:'test',nr:0,title:'Test',fields:[{id:'required',type:'text'},{id:'optional',type:'text',optional:true}]},screenName='overview') {
  let submissions=0; const routes=[]; const states=[]; let cursor=0;
  const modules={
   react:{useEffect(){},useState:initial=>{const index=cursor++;if(!(index in states))states[index]=initial;return [states[index],next=>{states[index]=typeof next==='function'?next(states[index]):next;}];}}, 'react/jsx-runtime':{jsx,jsxs:jsx},
   'react-native':{Text:'Text',View:'View',Pressable:'Pressable',ScrollView:'ScrollView'},
-  'react-native-safe-area-context':{SafeAreaView:'SafeAreaView'}, 'lucide-react-native':{},
+  'react-native-safe-area-context':{SafeAreaView:'SafeAreaView',useSafeAreaInsets:()=>({bottom:0})}, 'lucide-react-native':{},
   'expo-router':{router:{replace(){},push:route=>routes.push(route)},useNavigation:()=>({canGoBack:()=>false})},
   '@/components/ui/Button':{Button:'Button'}, '@/components/ui/IconButton':{IconButton:'IconButton'},
   '@/components/intake/MissingQuestionsModal':{MissingQuestionsModal:'MissingQuestionsModal'},
@@ -27,10 +26,56 @@ function overview(answers,submittedAt=null) {
   '@/lib/intake/store':{formatSavedAgo:()=>null,useIntake:()=>({state:{answers,submittedAt},loaded:true,submitting:false,submit:async()=>{submissions++;}})},
   '@/lib/intake/schema-provider':{useIntakeSchema:()=>({schema:[s],noneOptions:[],disclaimerShort:''})},
  };
- const screen=load('../app/intake/overview.tsx',modules).default;
+ const screen=load(`../app/intake/${screenName}.tsx`,modules).default;
  const render=()=>{cursor=0;return flatten(screen());};
  return {nodes:render(),render,submissions:()=>submissions,routes};
 }
+const weightField=schema.INTAKE_SCHEMA.find(s=>s.id==='paard').fields.find(f=>f.id==='gewicht-methode');
+const weightSection={id:'paard',nr:1,title:'Paard',fields:[weightField]};
+for(const method of ['gewogen op weegbrug','gemeten met gewichts-lint','rapport dierenarts']) {
+ test(`${method}: missing dates block completion and progress`,()=>{
+  for(const date of [undefined,null,'',' \n ',42,{},[]]) {
+   const values={'gewicht-methode':method,'gewicht-methode-wanneer':date};
+   const answers={paard:values};
+   assert.equal(logic.isSectionComplete(weightSection,values,answers),false);
+   assert.equal(logic.isSectionComplete(weightSection,values),false);
+   assert.deepEqual(logic.answeredCount(weightSection,values),{answered:0,total:1});
+   assert.equal(logic.requiredProgress(answers,[weightSection]).stage,'continue');
+   assert.equal(logic.missingRequired(weightSection,values)[0].label,'Wanneer is het gewicht bepaald?');
+  }
+  const values={'gewicht-methode':method,'gewicht-methode-wanneer':'mei 2026'};
+  assert.equal(logic.isSectionComplete(weightSection,values),true);
+  assert.equal(logic.requiredProgress({paard:values},[weightSection]).stage,'ready');
+ });
+ for(const screen of ['overview','submit']) {
+  test(`${screen}: missing ${method} date is listed and links to the inline question`,async()=>{
+   const result=overview({paard:{'gewicht-methode':method}},null,weightSection,screen);
+   await result.nodes.find(n=>n.props?.title==='Intake versturen').props.onPress();
+   const modal=result.render().find(n=>n.type==='MissingQuestionsModal');
+   assert.equal(result.submissions(),0);
+   assert.equal(modal.props.visible,true);
+   const {section,fields}=modal.props.sections[0];
+   assert.equal(fields[0].label,'Wanneer is het gewicht bepaald?');
+   modal.props.onSelect(section,fields[0]);
+   assert.deepEqual(result.routes,[{pathname:'/intake/section/[id]',params:{id:'paard',field:'gewicht-methode'}}]);
+   const complete=overview({paard:{'gewicht-methode':method,'gewicht-methode-wanneer':'mei 2026'}},null,weightSection,screen);
+   await complete.nodes.find(n=>n.props?.title==='Intake versturen').props.onPress();
+   assert.equal(complete.submissions(),1);
+  });
+ }
+}
+test('estimated weights need no date, and moved weight questions retain the stored date namespace',()=>{
+ const estimated={'gewicht-methode':'geschat op zicht'};
+ assert.equal(logic.isSectionComplete(weightSection,estimated),true);
+ assert.equal(logic.missingRequired(weightSection,{})[0].label,weightField.label);
+ const moved={...weightSection,id:'moved',fields:[{...weightField,answerSection:'paard'}]};
+ assert.equal(logic.isSectionComplete(moved,{}, {paard:{'gewicht-methode':'rapport dierenarts'}}),false);
+ assert.equal(logic.isSectionComplete(moved,{}, {paard:{'gewicht-methode':'rapport dierenarts','gewicht-methode-wanneer':'mei 2026'}}),true);
+ assert.equal(logic.isSectionComplete({...weightSection,id:'other'},{'gewicht-methode':'rapport dierenarts'}),true);
+ const optional={...weightSection,fields:[{...weightField,optional:true}]};
+ assert.equal(logic.isSectionComplete(optional,{}),true);
+ assert.equal(logic.isSectionComplete(optional,{'gewicht-methode':'rapport dierenarts'}),false);
+});
 test('submit attempt opens missing questions grouped by section and links to the question',async()=>{
  const result=overview({});
  assert.equal(result.nodes.some(n=>n.props?.title==='Ga naar eerste ontbrekende vraag'),false);

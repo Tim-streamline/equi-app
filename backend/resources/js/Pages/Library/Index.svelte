@@ -10,7 +10,7 @@
     import { formatDate } from '$lib/utils.js';
     import { Plus, Search, FileText, Star, Trash2, ArrowUp, ArrowDown } from '@lucide/svelte';
 
-    let { items, filters, counts, categories } = $props();
+    let { items, filters, counts, categories, orderNeighbors = { previous: null, next: null } } = $props();
     let q = $state(filters.q ?? '');
     let format = $state(filters.format ?? '');
     let gate = $state(filters.gate ?? '');
@@ -61,11 +61,17 @@
             onFinish: () => { savingOrderId = null; },
         });
     }
-    function move(item, neighbor, direction) {
+    function neighborId(index, direction) {
+        return direction === 'up'
+            ? items.data[index - 1]?.id ?? orderNeighbors.previous
+            : items.data[index + 1]?.id ?? orderNeighbors.next;
+    }
+    function move(item, index, direction) {
+        const neighbor = neighborId(index, direction);
         if (!neighbor || savingOrderId !== null) return;
         savingOrderId = item.id;
         orderErrors = { ...orderErrors, [item.id]: '' };
-        router.patch(`/admin/library/${item.id}/move`, { neighbor_id: neighbor.id, direction }, {
+        router.patch(`/admin/library/${item.id}/move`, { neighbor_id: neighbor, direction }, {
             preserveScroll: true,
             onError: (errors) => { orderErrors = { ...orderErrors, [item.id]: errors.order ?? 'Verplaatsen is niet gelukt.' }; },
             onFinish: () => { savingOrderId = null; },
@@ -139,7 +145,7 @@
                     </div>
                 {/if}
             </div>
-            <p class="mb-3 text-sm text-muted-foreground">Een lager getal verschijnt eerder. Met de pijlen verplaats je een item binnen de getoonde resultaten.</p>
+            <p class="mb-3 text-sm text-muted-foreground">Een lager getal verschijnt eerder. Met de pijlen verplaats je een item binnen de gefilterde resultaten, ook naar de vorige of volgende pagina.</p>
             <Table>
                 <TableHeader>
                     <TableRow>
@@ -167,11 +173,11 @@
                             <TableCell>
                                 <div class="flex items-center gap-1">
                                     <form onsubmit={(event) => saveOrder(event, i)} class="flex items-center gap-1">
-                                        <Input type="number" name="order" min="0" max="4294967295" step="1" required value={i.order ?? 0} aria-label={`Volgorde van ${i.title}`} class="w-20" />
+                                        <Input type="number" name="order" min="0" max="2147483647" step="1" required value={i.order ?? 0} aria-label={`Volgorde van ${i.title}`} class="w-20" />
                                         <Button type="submit" size="sm" variant="outline" disabled={savingOrderId !== null}>Opslaan</Button>
                                     </form>
-                                    <Button type="button" size="icon" variant="ghost" aria-label={`${i.title} omhoog`} title="Omhoog" disabled={index === 0 || savingOrderId !== null} onclick={() => move(i, items.data[index - 1], 'up')}><ArrowUp class="size-4" /></Button>
-                                    <Button type="button" size="icon" variant="ghost" aria-label={`${i.title} omlaag`} title="Omlaag" disabled={index === items.data.length - 1 || savingOrderId !== null} onclick={() => move(i, items.data[index + 1], 'down')}><ArrowDown class="size-4" /></Button>
+                                    <Button type="button" size="icon" variant="ghost" aria-label={`${i.title} omhoog`} title="Omhoog" disabled={!neighborId(index, 'up') || savingOrderId !== null} onclick={() => move(i, index, 'up')}><ArrowUp class="size-4" /></Button>
+                                    <Button type="button" size="icon" variant="ghost" aria-label={`${i.title} omlaag`} title="Omlaag" disabled={!neighborId(index, 'down') || savingOrderId !== null} onclick={() => move(i, index, 'down')}><ArrowDown class="size-4" /></Button>
                                 </div>
                                 {#if orderErrors[i.id]}<p role="alert" class="mt-1 text-xs text-destructive">{orderErrors[i.id]}</p>{/if}
                             </TableCell>

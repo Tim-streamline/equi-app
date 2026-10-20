@@ -103,7 +103,7 @@ export function IntakeField({ field, sectionId, n, noneOptions }: Props) {
           {renderInput(field, value, set, noneOptions, answerSection, photoDesign)}
           {answerSection === 'paard' && field.id === 'gewicht-methode' && WEIGHT_METHODS_WITH_DATE.has(asText(value) ?? '') && (
             <View className="mt-3 ml-8 max-w-[280px]">
-              <Text className="mb-1.5 text-[13px] font-semi text-ink">Wanneer was dit?</Text>
+              <Text className="mb-1.5 text-[13px] font-semi text-ink">Wanneer was dit? *</Text>
               <TextInput
                 accessibilityLabel="Wanneer is het gewicht bepaald?"
                 value={asText(state.answers[answerSection]?.[WEIGHT_METHOD_DATE_FIELD]) ?? ''}
