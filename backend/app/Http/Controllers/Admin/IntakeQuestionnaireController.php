@@ -7,6 +7,7 @@ use App\Models\IntakeField;
 use App\Models\IntakeQuestionnaire;
 use App\Models\IntakeSection;
 use App\Support\AuditLogger;
+use App\Support\IntakeSignalPreparation;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -24,6 +25,7 @@ class IntakeQuestionnaireController extends Controller
         'textarea',
         'number',
         'date',
+        'month_year',
         'radio',
         'multi',
         'photo',
@@ -184,6 +186,7 @@ class IntakeQuestionnaireController extends Controller
             'order' => ['required', 'integer', 'min:0', 'max:10000'],
             'active' => ['required', 'boolean'],
             'photo_config_json' => ['nullable', 'string', 'max:20000'],
+            'date_config_json' => ['nullable', 'string', 'max:20000'],
             'age_config_json' => ['nullable', 'string', 'max:20000'],
             'link_json' => ['nullable', 'string', 'max:20000'],
             'options_json' => ['nullable', 'string', 'max:50000'],
@@ -191,22 +194,33 @@ class IntakeQuestionnaireController extends Controller
             'flag_if_json' => ['nullable', 'string', 'max:50000'],
             'critical_if_json' => ['nullable', 'string', 'max:50000'],
             'protocol_if_json' => ['nullable', 'string', 'max:50000'],
+            'signal_config_json' => ['nullable', 'string', 'max:50000'],
             'repeater_sub_json' => ['nullable', 'string', 'max:50000'],
         ]);
 
         foreach ([
             'photo_config_json' => 'photo_config',
             'age_config_json' => 'age_config',
+            'date_config_json' => 'date_config',
             'link_json' => 'link',
             'options_json' => 'options',
             'show_if_json' => 'show_if',
             'flag_if_json' => 'flag_if',
             'critical_if_json' => 'critical_if',
             'protocol_if_json' => 'protocol_if',
+            'signal_config_json' => 'signal_config',
             'repeater_sub_json' => 'repeater_sub',
         ] as $input => $column) {
             $data[$column] = $this->decodeJson($request->input($input), $input);
             unset($data[$input]);
+        }
+
+        if (! $request->exists('date_config_json')) $data['date_config'] = $field?->date_config;
+        try {
+            app(\App\Support\IntakeDates::class)->validateConfig($data['date_config']);
+            foreach (is_array($data['repeater_sub'] ?? null) ? $data['repeater_sub'] : [] as $sub) app(\App\Support\IntakeDates::class)->validateConfig(is_array($sub) ? ($sub['dateConfig'] ?? null) : null);
+        } catch (ValidationException $e) {
+            throw ValidationException::withMessages(['date_config_json' => implode(' ', $e->validator->errors()->all())]);
         }
 
         // Older admin forms may omit photo settings; ordinary copy edits must retain them.
@@ -215,6 +229,17 @@ class IntakeQuestionnaireController extends Controller
         }
         if (! $request->exists('age_config_json')) {
             $data['age_config'] = $field?->age_config;
+        }
+        if (! $request->exists('signal_config_json')) {
+            $data['signal_config'] = $field?->signal_config;
+        }
+        try {
+            app(IntakeSignalPreparation::class)->validateConfig($data['signal_config']);
+        } catch (ValidationException $exception) {
+            throw ValidationException::withMessages(['signal_config_json' => implode(' ', $exception->validator->errors()->all())]);
+        }
+        if ($data['signal_config'] !== null && ! in_array($data['type'], ['text', 'textarea'], true)) {
+            throw ValidationException::withMessages(['signal_config_json' => 'Signaalvoorbereiding is alleen beschikbaar voor open tekstvragen.']);
         }
         if ($data['age_config'] !== null) {
             $validator = Validator::make(['age' => $data['age_config']], [

@@ -20,11 +20,15 @@ class IntakeReview
             $answers[$answer->section_id][$answer->field_id] = json_last_error() === JSON_ERROR_NONE ? $decoded : $answer->value;
         }
         $none = $questionnaire?->none_options ?? ['geen'];
+        $laminitisHorse = $booking->horse()->firstOrFail();
+        $laminitisBlocked = app(LaminitisSafety::class)->blocked($laminitisHorse);
+        $answers['medisch']['_laminitis_recovery_required'] = $laminitisBlocked ? 'Ja' : 'Nee';
         $sections = [];
         $photos = app(IntakePhotoRules::class);
         $usedMetadata = [];
         $safety = [];
         $triggers = [];
+        $signalInputs = [];
         $attachments = IntakeAttachment::where('booking_id', $booking->id)->get()->keyBy('id');
         foreach ($questionnaire?->sections ?? [] as $section) {
             $rows = [];
@@ -38,10 +42,23 @@ class IntakeReview
                     continue;
                 }
                 $answerSection = $field->answer_section_key ?? $section->key;
+                $repeaterNa = $field->type === 'repeater' && ($field->options ?? [])
+                    && ($answers[$answerSection]['na:'.$field->key] ?? null) === 'yes';
+                if ($repeaterNa) {
+                    $value = null;
+                }
                 $critical = $this->matches($value, $field->critical_if);
+                if ($field->key === 'hoefbevangenheid' && ! $laminitisBlocked && ! empty($laminitisHorse->laminitis_safety['released_at'])) {
+                    $critical = false;
+                }
                 $flag = $critical || $this->flagged($value, $field->flag_if, $none);
                 $hits = [];
-                foreach ($field->protocol_if ?? [] as $option => $text) {
+                $signalInput = app(IntakeSignalPreparation::class)->input($field, $value, $answerSection);
+                if ($signalInput) {
+                    $signalInputs[] = $signalInput;
+                }
+                // Owner suspicions remain review information, never automatic protocol diagnoses.
+                foreach ($field->signal_config ? [] : ($field->protocol_if ?? []) as $option => $text) {
                     if (($option === 'veiligheid' && $critical) || ($option === 'non-empty' && ! $this->empty($value))
                         || (! in_array($option, ['veiligheid', 'non-empty'], true) && $this->matches($value, $option))) {
                         $hits[] = $text;
@@ -55,7 +72,26 @@ class IntakeReview
                     'flagged' => $flag, 'critical' => $critical, 'protocol' => $hits,
                     'flagged_options' => array_values(array_filter(is_array($value) ? $value : [], fn ($v) => is_scalar($v) && ($this->matches($v, $field->critical_if) || $this->flagged($v, $field->flag_if, $none)))),
                     'attachments' => [],
+                    'owner_reported' => (bool) $field->signal_config,
                 ];
+                if ($field->type === 'month_year') {
+                    $row['structured_value'] = app(IntakeDates::class)->normalize($value, $field->date_config ?? []);
+                    $row['value'] = app(IntakeDates::class)->format($value);
+                }
+                if ($field->type === 'repeater' && is_array($value)) {
+                    $row['structured_value'] = $value;
+                    $row['value'] = array_map(function ($entry) use ($field) {
+                        if (! is_array($entry)) return $entry;
+                        foreach ($field->repeater_sub ?? [] as $sub) {
+                            if (($sub['type'] ?? '') === 'month_year' && isset($entry[$sub['id']])) $entry[$sub['id']] = app(IntakeDates::class)->format($entry[$sub['id']]);
+                        }
+                        return $entry;
+                    }, $value);
+                }
+                if ($repeaterNa) {
+                    $row['not_applicable'] = true;
+                    $row['empty'] = false;
+                }
                 if ($field->type === 'number' && $field->age_config) {
                     $date = $answers[$answerSection][$field->age_config['date_field'] ?? ''] ?? null;
                     $age = app(IntakeAge::class)->fromDate($date) ?? $value;
@@ -145,8 +181,11 @@ class IntakeReview
         return ['sections' => $sections, 'safety' => $safety, 'triggers' => $triggers, 'answers' => $answers,
             'counts' => ['all' => count($questions), 'flags' => count(array_filter($questions, fn ($r) => $r['flagged'])),
                 'protocol' => count($triggers), 'empty' => count(array_filter($questions, fn ($r) => $r['empty']))],
-            'blocked' => count(array_filter($safety, fn ($r) => $r['critical'])) > 0,
+            'blocked' => $laminitisBlocked || count(array_filter($safety, fn ($r) => $r['critical'])) > 0,
+            'laminitis' => ['blocked' => $laminitisBlocked, 'state' => $laminitisHorse->laminitis_safety,
+                'message' => $laminitisBlocked ? app(LaminitisSafety::class)->message($laminitisHorse) : null],
             'accepted' => array_values(array_intersect($booking->accepted_triggers ?? [], array_column($triggers, 'id'))),
+            'owner_reported_inputs' => $signalInputs,
             'notes' => $booking->review_notes ?? '', 'updated_at' => $booking->review_updated_at?->toISOString()];
     }
 

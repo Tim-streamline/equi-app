@@ -14,6 +14,7 @@ import { Button } from '@/components/ui/Button';
 import { IconButton } from '@/components/ui/IconButton';
 import { IntakeScrollView } from '@/components/intake/IntakeScrollView';
 import { IntakeField } from '@/components/intake/IntakeField';
+import { LaminitisSafetyNotice } from '@/components/intake/LaminitisSafetyNotice';
 import { useIntakeSchema } from '@/lib/intake/schema-provider';
 import { visibleFieldsForRender, answeredCount, answersForSection, isPhotoSection, isSectionComplete } from '@/lib/intake/logic';
 import { useIntake } from '@/lib/intake/store';
@@ -180,12 +181,14 @@ export default function IntakeSectionScreen() {
                     fieldPositions.current[f.id] = event.nativeEvent.layout.y;
                     if (requestedField === f.id) scrollToRequestedField();
                   }}>
-                <IntakeField
+                {!(state.submittedAt && ['hoefbevangenheid-acute-fase-voorbij', 'hoefbevangenheid-stabiel'].includes(f.id)) && <IntakeField
                   field={f}
                   sectionId={section.id}
                   n={fieldCounter}
                   noneOptions={noneOptions}
-                /></View>
+                />}
+                {f.id === 'hoefbevangenheid-stabiel' && <LaminitisSafetyNotice popup recovery />}
+                </View>
               );
             })}
         </IntakeScrollView>

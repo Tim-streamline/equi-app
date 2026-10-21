@@ -1,0 +1,20 @@
+[
+  {"raw":"juli 2026","expected":{"version":1,"precision":"month","year":2026,"month":7},"valid":true},
+  {"raw":"2026-04-30","expected":{"version":1,"precision":"day","year":2026,"month":4,"day":30},"valid":true},
+  {"raw":"30-04-2026","expected":{"version":1,"precision":"day","year":2026,"month":4,"day":30},"valid":true},
+  {"raw":"2025","expected":{"version":1,"precision":"year","year":2025},"valid":true},
+  {"raw":"onbekend","expected":{"version":1,"precision":"unknown"},"valid":true},
+  {"raw":"voorjaar 2024","expected":{"version":1,"precision":"legacy","text":"voorjaar 2024"},"valid":true},
+  {"raw":"ongeveer twee jaar geleden","expected":{"version":1,"precision":"legacy","text":"ongeveer twee jaar geleden"},"valid":true},
+  {"raw":{"version":1,"precision":"month","year":2026,"month":13},"valid":false},
+  {"raw":{"version":1,"precision":"month","year":20,"month":9},"valid":false},
+  {"raw":{"version":1,"precision":"month","year":2027,"month":1},"valid":false},
+  {"raw":{"version":1,"precision":"month","year":2027,"month":1},"config":{"allow_future":true},"valid":true},
+  {"raw":{"version":1,"precision":"month","year":2026},"valid":false},
+  {"raw":{"version":1,"precision":"year","year":2025},"config":{"allow_year_only":false},"valid":false},
+  {"raw":{"version":1,"precision":"range","start":{"version":1,"precision":"month","year":2025,"month":3},"end":{"version":1,"precision":"month","year":2025,"month":7}},"config":{"mode":"range"},"valid":true},
+  {"raw":{"version":1,"precision":"range","start":{"version":1,"precision":"month","year":2025,"month":7},"end":{"version":1,"precision":"month","year":2025,"month":3}},"config":{"mode":"range"},"valid":false},
+  {"raw":{"version":1,"precision":"range","start":{"version":1,"precision":"month","year":2025,"month":7},"ongoing":true},"config":{"mode":"range"},"valid":true},
+  {"raw":"2024 tot 2025","config":{"mode":"range"},"expected":{"version":1,"precision":"legacy","text":"2024 tot 2025"},"valid":true},
+  {"raw":{"version":1,"precision":"unknown"},"config":{"mode":"range"},"valid":true}
+]

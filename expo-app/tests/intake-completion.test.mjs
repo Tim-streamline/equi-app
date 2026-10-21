@@ -1,3 +1,4 @@
+import * as intakeDates from '../lib/intake/dates.ts';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
@@ -5,7 +6,7 @@ import ts from 'typescript';
 import { waitForIntakeUploads, formatIntakeDate } from '../lib/intake/submission.ts';
 const load = (file, modules={}) => {
  const exports={}; const js=ts.transpileModule(readFileSync(new URL(file,import.meta.url),'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,jsx:ts.JsxEmit.ReactJSX}}).outputText;
- new Function('require','exports',js)(key=>{assert.ok(key in modules,key);return modules[key];},exports);return exports;
+ new Function('require','exports',js)(key=>{if (key === './dates' || key === '@/lib/intake/dates') return intakeDates; if (key === './MonthYearField') return { MonthYearField: 'MonthYearField' }; assert.ok(key in modules,key);return modules[key];},exports);return exports;
 };
 const schema=load('../lib/intake/schema.ts');
 const config=load('../lib/intake/config.ts');
@@ -20,7 +21,8 @@ function overview(answers,submittedAt=null,s={id:'test',nr:0,title:'Test',fields
   'react-native':{Text:'Text',View:'View',Pressable:'Pressable',ScrollView:'ScrollView'},
   'react-native-safe-area-context':{SafeAreaView:'SafeAreaView',useSafeAreaInsets:()=>({bottom:0})}, 'lucide-react-native':{},
   'expo-router':{router:{replace(){},push:route=>routes.push(route)},useNavigation:()=>({canGoBack:()=>false})},
-  '@/components/ui/Button':{Button:'Button'}, '@/components/ui/IconButton':{IconButton:'IconButton'},
+  '@/components/intake/LaminitisSafetyNotice': { LaminitisSafetyNotice: 'LaminitisSafetyNotice' },
+    '@/components/ui/Button':{Button:'Button'}, '@/components/ui/IconButton':{IconButton:'IconButton'},
   '@/components/intake/MissingQuestionsModal':{MissingQuestionsModal:'MissingQuestionsModal'},
   '@/lib/intake/submission':{formatIntakeDate},'@/lib/intake/logic':logic,
   '@/lib/intake/store':{formatSavedAgo:()=>null,useIntake:()=>({state:{answers,submittedAt},loaded:true,submitting:false,submit:async()=>{submissions++;}})},

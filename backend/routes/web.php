@@ -61,6 +61,7 @@ Route::middleware(AuthenticatePowerSyncJwt::class)->group(function () {
     Route::get('/api/plus/access', [PlusUpgradeController::class, 'state']);
     Route::post('/api/plus/start', [PlusUpgradeController::class, 'start']);
     Route::post('/api/intakes/{id}/submit', [\App\Http\Controllers\IntakeSubmissionController::class, 'store'])->whereUuid('id');
+    Route::post('/api/intakes/{id}/laminitis-recovery', [\App\Http\Controllers\IntakeSubmissionController::class, 'recovery'])->whereUuid('id');
     Route::post('/api/intakes/{id}/attachments', [IntakeAttachmentController::class, 'store'])->whereUuid('id')->middleware('throttle:60,1');
     Route::get('/api/intake-media/{attachment}', [IntakeAttachmentController::class, 'show'])->whereUuid('attachment');
     Route::get('/api/notifications/web-push', [WebPushController::class, 'config']);

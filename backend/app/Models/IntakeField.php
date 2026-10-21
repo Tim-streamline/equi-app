@@ -12,6 +12,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
     'answer_section_key',
     'photo_config',
     'age_config',
+    'date_config',
     'key',
     'order',
     'label',
@@ -30,6 +31,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
     'flag_if',
     'critical_if',
     'protocol_if',
+    'signal_config',
     'repeater_sub',
     'active',
 ])]
@@ -42,6 +44,7 @@ class IntakeField extends Model
         return [
             'photo_config' => 'array',
             'age_config' => 'array',
+            'date_config' => 'array',
             'order' => 'integer',
             'required' => 'boolean',
             'optional' => 'boolean',
@@ -54,6 +57,7 @@ class IntakeField extends Model
             'flag_if' => 'array',
             'critical_if' => 'array',
             'protocol_if' => 'array',
+            'signal_config' => 'array',
             'repeater_sub' => 'array',
             'active' => 'boolean',
         ];

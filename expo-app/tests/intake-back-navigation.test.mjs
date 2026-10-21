@@ -1,3 +1,4 @@
+import * as intakeDates from '../lib/intake/dates.ts';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import test from 'node:test';
@@ -10,7 +11,7 @@ function screen(file, modules) {
   const js = ts.transpileModule(readFileSync(new URL(file, import.meta.url), 'utf8'), {
     compilerOptions: { module: ts.ModuleKind.CommonJS, jsx: ts.JsxEmit.ReactJSX },
   }).outputText;
-  new Function('require', 'exports', js)(name => { assert.ok(name in modules, name); return modules[name]; }, exports);
+  new Function('require', 'exports', js)(name => { if (name === './dates' || name === '@/lib/intake/dates') return intakeDates; if (name === './MonthYearField') return { MonthYearField: 'MonthYearField' }; assert.ok(name in modules, name); return modules[name]; }, exports);
   return exports.default;
 }
 function setup() {
@@ -23,6 +24,7 @@ function setup() {
     'react-native-safe-area-context': { SafeAreaView: 'SafeAreaView', useSafeAreaInsets: () => ({ bottom: 0 }) },
     'lucide-react-native': {},
     '@/components/ui/IconButton': { IconButton: 'IconButton' },
+    '@/components/intake/LaminitisSafetyNotice': { LaminitisSafetyNotice: 'LaminitisSafetyNotice' },
     '@/components/ui/Button': { Button: 'Button' },
     '@/components/intake/MissingQuestionsModal': { MissingQuestionsModal: 'MissingQuestionsModal' },
     '@/components/intake/IntakeScrollView': { IntakeScrollView: 'IntakeScrollView' },
@@ -114,11 +116,11 @@ function questionScreen() {
     },
     flushEffects() { const pending = effects; effects = []; pending.forEach(fn => fn()); },
     layout(field, y) {
-      nodes.find(node => node.props.onLayout && node.props.children.props.field.id === field)
+      nodes.find(node => node.props.onLayout && flatten(node.props.children).some(child => child.type === 'IntakeField' && child.props.field.id === field))
         .props.onLayout({ nativeEvent: { layout: { y } } });
     },
     highlighted(field) {
-      return nodes.some(node => node.props.onLayout && node.props.children.props.field.id === field
+      return nodes.some(node => node.props.onLayout && flatten(node.props.children).some(child => child.type === 'IntakeField' && child.props.field.id === field)
         && node.props.className.includes('border-2'));
     },
   };

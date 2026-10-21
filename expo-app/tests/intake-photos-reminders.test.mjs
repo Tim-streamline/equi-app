@@ -1,3 +1,4 @@
+import * as intakeDates from '../lib/intake/dates.ts';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import test from 'node:test';
@@ -6,10 +7,10 @@ const modules = {};
 function load(path, dependencies) {
  const exports = {};
  const code = ts.transpileModule(readFileSync(new URL(path, import.meta.url), 'utf8'), {compilerOptions: {module: ts.ModuleKind.CommonJS, jsx: ts.JsxEmit.ReactJSX}}).outputText;
- new Function('require', 'exports', code)(key => { assert.ok(key in dependencies, key); return dependencies[key]; }, exports);
+ new Function('require', 'exports', code)(key => { if (key === './dates' || key === '@/lib/intake/dates') return intakeDates; if (key === './MonthYearField') return { MonthYearField: 'MonthYearField' }; assert.ok(key in dependencies, key); return dependencies[key]; }, exports);
  return exports;
 }
-for (const name of ['schema', 'config', 'logic']) modules[`./${name}`] = load(`../lib/intake/${name}.ts`, modules);
+for (const name of ['dates', 'schema', 'config', 'logic']) modules[`./${name}`] = load(`../lib/intake/${name}.ts`, modules);
 const { INTAKE_SCHEMA } = modules['./schema'];
 const { answersForSection, missingRequired, requiredProgress, isSectionComplete, showField } = modules['./logic'];
 const photos = INTAKE_SCHEMA[0];
@@ -39,12 +40,13 @@ test('the regular section renderer displays newly configured photo questions in 
   const field = {id: 'new-photo', type: 'photo', label: 'CMS photo'};
   const section = {id, nr: 0, fields: [field]};
   const dependencies = {
-   react: {useEffect() {}, useMemo: fn => fn(), useRef: () => ({current: null})},
+   react: {useEffect() {}, useMemo: fn => fn(), useRef: value => ({current: value}), useCallback: fn => fn(), useState: value => [value, () => {}]},
    'react/jsx-runtime': {jsx, jsxs: jsx}, 'react-native': {View: 'View', Text: 'Text', ScrollView: 'ScrollView'},
    'expo-router': {router: {}, useLocalSearchParams: () => ({id})},
    'react-native-safe-area-context': {SafeAreaView: 'SafeAreaView', useSafeAreaInsets: () => ({bottom: 0})},
    'lucide-react-native': {ChevronLeft: 'ChevronLeft', X: 'X'},
-   '@/components/ui/Button': {Button: 'Button'}, '@/components/ui/IconButton': {IconButton: 'IconButton'},
+   '@/components/intake/LaminitisSafetyNotice': { LaminitisSafetyNotice: 'LaminitisSafetyNotice' },
+    '@/components/ui/Button': {Button: 'Button'}, '@/components/ui/IconButton': {IconButton: 'IconButton'},
    '@/components/intake/IntakeScrollView': {IntakeScrollView: 'Scroll'}, '@/components/intake/IntakeField': {IntakeField: 'Field'},
    '@/lib/intake/schema-provider': {useIntakeSchema: () => ({schema: [section], noneOptions: []})},
    '@/lib/intake/logic': modules['./logic'], '@/lib/intake/submission': {formatIntakeDate: () => '16 oktober 2026'},

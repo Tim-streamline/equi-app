@@ -40,7 +40,8 @@ class HorseDashboard
         $tokens = fn ($text) => array_values(array_unique(array_filter(preg_split('/[^\p{L}]+/u', mb_strtolower($text)), fn ($word) => mb_strlen($word) >= 4)));
         $phaseTokens = $tokens($phaseText);
         $profileTokens = $tokens($profileText);
-        $ranked = $items->reject(fn ($item) => $horse ? $discovery->canRead($item, $access) : in_array($item->id, $unlocked, true))->map(function ($item) use ($tokens, $phaseTokens, $profileTokens, $itemData, $phaseText) {
+        $unreadable = $items->reject(fn ($item) => $horse ? $discovery->canRead($item, $access) : in_array($item->id, $unlocked, true));
+        $ranked = app(LibraryHomeSeries::class)->filter($unreadable)->map(function ($item) use ($tokens, $phaseTokens, $profileTokens, $itemData, $phaseText) {
             $words = $tokens($item->title.' '.$item->description.' '.$item->categories->pluck('label')->join(' '));
             $phaseMatch = count(array_intersect($phaseTokens, $words)) > 0;
 

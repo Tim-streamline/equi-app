@@ -269,6 +269,36 @@ class HorseDashboardTest extends TestCase
         $this->getJson($url)->assertJsonCount(0, 'recommendations');
     }
 
+    public function test_home_recommends_the_first_locked_part_of_each_series(): void
+    {
+        $create = fn (string $title, ?string $series, ?int $part) => LibraryItem::create([
+            'title' => $title, 'slug' => Str::slug($title), 'format' => 'video',
+            'credit_cost' => 1, 'published_at' => now()->subDay(),
+            'series_name' => $series, 'series_part' => $part,
+        ]);
+        $artrose1 = $create('Wat is artrose 1/3', 'Artrose', 1);
+        $artrose2 = $create('Artrose herkennen en onderzoeken 2/3', 'Artrose', 2);
+        $artrose3 = $create('Omgaan met artrose klachten 3/3', 'Artrose', 3);
+        $pezen1 = $create('Zwakke pezen 1/2', 'Pezen', 1);
+        $pezen2 = $create('Peesherstel 2/2', 'Pezen', 2);
+        $standalone = $create('Hoefzorg', null, null);
+        $legacy1 = $create('Voeding 1/2', null, null);
+        $legacy2 = $create('Voeding vervolg 2/2', null, null);
+        $legacyNamed2 = $create('Voeding deel 2', null, null);
+        $url = '/api/horses/'.$this->horse->id.'/dashboard';
+
+        $initial = array_column($this->getJson($url)->assertOk()->json('recommendations'), 'id');
+        $this->assertEqualsCanonicalizing([$artrose1->id, $pezen1->id, $standalone->id, $legacy1->id], $initial);
+        foreach ([$artrose2, $artrose3, $pezen2, $legacy2, $legacyNamed2] as $later) {
+            $this->assertNotContains($later->id, $initial);
+        }
+
+        DB::table('library_unlocks')->insert(['user_id' => $this->owner->id, 'item_id' => $artrose1->id]);
+        $afterUnlock = array_column($this->getJson($url)->assertOk()->json('recommendations'), 'id');
+        $this->assertEqualsCanonicalizing([$artrose2->id, $pezen1->id, $standalone->id, $legacy1->id], $afterUnlock);
+        $this->assertNotContains($artrose3->id, $afterUnlock);
+    }
+
     public function test_backend_calculates_progress_next_phase_and_calendar_from_dates(): void
     {
         $this->getJson('/api/horses/'.$this->horse->id.'/dashboard?timezone=Europe/Amsterdam')

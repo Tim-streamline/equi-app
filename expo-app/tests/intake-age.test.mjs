@@ -1,10 +1,11 @@
+import * as intakeDates from '../lib/intake/dates.ts';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import test from 'node:test';
 import ts from 'typescript';
 function load(file, modules = {}) {
   const exports = {};
-  new Function('require', 'exports', ts.transpileModule(readFileSync(new URL(file, import.meta.url), 'utf8'), { compilerOptions: {module: ts.ModuleKind.CommonJS, jsx: ts.JsxEmit.ReactJSX} }).outputText)(name => {assert.ok(name in modules, name);return modules[name];}, exports);
+  new Function('require', 'exports', ts.transpileModule(readFileSync(new URL(file, import.meta.url), 'utf8'), { compilerOptions: {module: ts.ModuleKind.CommonJS, jsx: ts.JsxEmit.ReactJSX} }).outputText)(name => {if (name === './dates' || name === '@/lib/intake/dates') return intakeDates; if (name === './MonthYearField') return { MonthYearField: 'MonthYearField' }; assert.ok(name in modules, name);return modules[name];}, exports);
   return exports;
 }
 const schema = load('../lib/intake/schema.ts');

@@ -27,6 +27,8 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
     'is_plus',
     'is_featured',
     'order',
+    'series_name',
+    'series_part',
 ])]
 class LibraryItem extends Model
 {
@@ -44,6 +46,7 @@ class LibraryItem extends Model
             'duration_sec' => 'integer',
             'is_plus' => 'boolean',
             'is_featured' => 'boolean',
+            'series_part' => 'integer',
         ];
     }
 

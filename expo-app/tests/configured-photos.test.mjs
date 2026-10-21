@@ -1,3 +1,4 @@
+import * as intakeDates from '../lib/intake/dates.ts';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import test from 'node:test';
@@ -5,11 +6,11 @@ import ts from 'typescript';
 function load(file, modules) {
   const exports = {};
   const js = ts.transpileModule(readFileSync(new URL(file, import.meta.url), 'utf8'), {compilerOptions: {module: ts.ModuleKind.CommonJS, jsx: ts.JsxEmit.ReactJSX}}).outputText;
-  new Function('require', 'exports', js)(key => { assert.ok(key in modules, key); return modules[key]; }, exports);
+  new Function('require', 'exports', js)(key => { if (key === './dates' || key === '@/lib/intake/dates') return intakeDates; if (key === './MonthYearField') return { MonthYearField: 'MonthYearField' }; assert.ok(key in modules, key); return modules[key]; }, exports);
   return exports;
 }
 const modules = {};
-for (const name of ['schema', 'config', 'logic']) modules[`./${name}`] = load(`../lib/intake/${name}.ts`, modules);
+for (const name of ['dates', 'schema', 'config', 'logic']) modules[`./${name}`] = load(`../lib/intake/${name}.ts`, modules);
 const {photoAnswered, missingRequired, answeredCount, visibleFields, requiredProgress, groupedPhotoFields} = modules['./logic'];
 const section = modules['./schema'].INTAKE_SCHEMA[0];
 const field = id => section.fields.find(f => f.id === id);

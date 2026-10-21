@@ -20,7 +20,7 @@ class IntakeQuestionnaireSnapshot
 
     public const SECTION = ['key', 'order', 'title', 'intro', 'presentation', 'minutes', 'icon', 'subtitle', 'active'];
 
-    public const FIELD = ['key', 'order', 'answer_section_key', 'label', 'type', 'hint', 'required', 'optional', 'unit', 'step', 'tall', 'lines', 'placeholder', 'link', 'options', 'show_if', 'flag_if', 'critical_if', 'protocol_if', 'repeater_sub', 'photo_config', 'age_config', 'active'];
+    public const FIELD = ['key', 'order', 'answer_section_key', 'label', 'type', 'hint', 'required', 'optional', 'unit', 'step', 'tall', 'lines', 'placeholder', 'link', 'options', 'show_if', 'flag_if', 'critical_if', 'protocol_if', 'repeater_sub', 'photo_config', 'age_config', 'signal_config', 'date_config', 'active'];
 
     public function assertSchema(): void
     {
@@ -74,7 +74,7 @@ class IntakeQuestionnaireSnapshot
             'sections.*.fields.*.key' => ['required', 'string', 'max:64', 'regex:/^[a-z0-9][a-z0-9_-]*$/', 'distinct:strict'],
             'sections.*.fields.*.answer_section_key' => ['nullable', 'string', 'max:64', 'regex:/^[a-z0-9][a-z0-9_-]*$/'],
             'sections.*.fields.*.label' => ['required', 'string', 'max:255'],
-            'sections.*.fields.*.type' => ['required', 'in:text,textarea,number,date,radio,multi,photo,file,repeater,sectionhead'],
+            'sections.*.fields.*.type' => ['required', 'in:text,textarea,number,date,month_year,radio,multi,photo,file,repeater,sectionhead'],
             'sections.*.fields.*.order' => ['required', 'integer', 'min:0'],
             'sections.*.fields.*.active' => ['required', 'boolean'],
             'sections.*.fields.*.required' => ['required', 'boolean'],
@@ -86,7 +86,14 @@ class IntakeQuestionnaireSnapshot
         foreach ($data['sections'] as $section) {
             $this->requireColumns($section, self::SECTION);
             foreach ($section['fields'] as $field) {
-                $this->requireColumns($field, self::FIELD);
+                // Older snapshots may omit this new optional setting; preserve it on import.
+                $this->requireColumns($field, array_diff(self::FIELD, ['signal_config', 'date_config']));
+                app(IntakeSignalPreparation::class)->validateConfig($field['signal_config'] ?? null);
+                app(IntakeDates::class)->validateConfig($field['date_config'] ?? null);
+                foreach ($field['repeater_sub'] ?? [] as $sub) app(IntakeDates::class)->validateConfig($sub['dateConfig'] ?? null);
+                if (($field['signal_config'] ?? null) !== null && ! in_array($field['type'], ['text', 'textarea'], true)) {
+                    throw new RuntimeException('Signal preparation requires a text field.');
+                }
                 $fields++;
             }
         }

@@ -1,3 +1,4 @@
+import * as intakeDates from '../lib/intake/dates.ts';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
@@ -6,17 +7,17 @@ import ts from 'typescript';
 const load = (file, modules = {}) => {
   const exports = {};
   const js = ts.transpileModule(readFileSync(new URL(file, import.meta.url), 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS } }).outputText;
-  new Function('require', 'exports', js)(name => { assert.ok(name in modules, name); return modules[name]; }, exports);
+  new Function('require', 'exports', js)(name => { if (name === './dates' || name === '@/lib/intake/dates') return intakeDates; if (name === './MonthYearField') return { MonthYearField: 'MonthYearField' }; assert.ok(name in modules, name); return modules[name]; }, exports);
   return exports;
 };
 
-test('last vaccination accepts a short answer while retaining the saved answer key', () => {
+test('last vaccination uses structured month/year while retaining the saved answer key', () => {
   const schema = load('../lib/intake/schema.ts');
   const config = load('../lib/intake/config.ts');
   const logic = load('../lib/intake/logic.ts', { './schema': schema, './config': config });
   const question = schema.INTAKE_SCHEMA.find(section => section.id === 'medisch').fields.find(field => field.id === 'vacc-laatst');
-  const hint = 'Maand en jaartal is voldoende indien je de exacte datum niet weet. Indien niet bekend, vul dan "onbekend" in.';
-  assert.equal(question.type, 'text');
+  const hint = 'Vul de maand en het jaar in. Een schatting is goed.';
+  assert.equal(question.type, 'month_year');
   assert.equal(question.hint, hint);
   assert.equal(logic.isFieldAnswered(question, '2026-04-30'), true);
   assert.equal(logic.isFieldAnswered(question, 'april 2026'), true);
@@ -28,7 +29,7 @@ test('last vaccination accepts a short answer while retaining the saved answer k
   const seeded = seed.sections.find(section => section.id === 'medisch').fields.find(field => field.id === 'vacc-laatst');
   const synced = snapshot.sections.find(section => section.key === 'medisch').fields.find(field => field.key === 'vacc-laatst');
   for (const field of [seeded, synced]) {
-    assert.equal(field.type, 'text');
+    assert.equal(field.type, 'month_year');
     assert.equal(field.hint, hint);
   }
   const legacy = config.buildIntakeSchema(
@@ -36,6 +37,6 @@ test('last vaccination accepts a short answer while retaining the saved answer k
     [{ section_id: 'section-id', key: 'vacc-laatst', label: question.label, type: 'date', hint: null }],
   )[0].fields[0];
   assert.equal(legacy.id, 'vacc-laatst');
-  assert.equal(legacy.type, 'text');
-  assert.equal(legacy.hint, hint);
+  assert.equal(legacy.type, 'date');
+  assert.equal(legacy.hint, undefined);
 });

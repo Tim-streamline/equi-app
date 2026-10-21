@@ -202,12 +202,31 @@ class IntakeQuestionnaireSnapshotTest extends TestCase
     public function test_creates_missing_sections_and_fields_and_matches_full_local_snapshot_idempotently(): void
     {
         $source = json_decode(file_get_contents(database_path('data/intake-questionnaire-local.json')), true);
+        $existingKeys = IntakeField::pluck('key')->all();
+        $signalConfig = IntakeField::where('key', 'ir-vermoeden-toelichting')->sole()->signal_config;
         // Only delete definitions in this isolated test database to exercise creation.
         IntakeSection::where('key', 'intake-fotos')->sole()->delete();
         $result = $this->snapshots->sync($source, true, $this->directory);
         $this->assertNotEmpty($result['changes']);
-        $this->assertSame($this->snapshots::json($source), $this->snapshots::json($this->snapshots->export()));
-        $this->assertDatabaseCount('intake_fields', 395);
+        $actual = $this->snapshots->export();
+        $this->assertSame($source['questionnaire'], $actual['questionnaire']);
+        $actualSections = collect($actual['sections'])->keyBy('key');
+        $wantedKeys = [];
+        foreach ($source['sections'] as $section) {
+            $this->assertEquals(\Illuminate\Support\Arr::except($section, ['fields']),
+                \Illuminate\Support\Arr::except($actualSections[$section['key']], ['fields']));
+            $actualFields = collect($actualSections[$section['key']]['fields'])->keyBy('key');
+            foreach ($section['fields'] as $field) {
+                $wantedKeys[] = $field['key'];
+                // An old snapshot omits new optional settings; importing it must preserve them.
+                $this->assertEquals($field, \Illuminate\Support\Arr::only($actualFields[$field['key']], array_keys($field)), $field['key']);
+            }
+        }
+        $this->assertDatabaseCount('intake_fields', count(array_unique([...$existingKeys, ...$wantedKeys])));
+        foreach (array_diff($existingKeys, $wantedKeys) as $key) {
+            $this->assertFalse(IntakeField::where('key', $key)->sole()->active);
+        }
+        $this->assertSame($signalConfig, IntakeField::where('key', 'ir-vermoeden-toelichting')->sole()->signal_config);
         $this->assertEmpty($this->snapshots->sync($source, true, $this->directory)['changes']);
     }
 

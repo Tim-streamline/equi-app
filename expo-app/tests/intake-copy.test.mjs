@@ -1,3 +1,4 @@
+import * as intakeDates from '../lib/intake/dates.ts';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import test from 'node:test';
@@ -8,11 +9,11 @@ function load(file, modules) {
     compilerOptions: { jsx: ts.JsxEmit.ReactJSX, module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 },
   }).outputText;
   const exports = {};
-  new Function('require', 'exports', code)(name => { assert.ok(name in modules, name); return modules[name]; }, exports);
+  new Function('require', 'exports', code)(name => { if (name === './dates' || name === '@/lib/intake/dates') return intakeDates; if (name === './MonthYearField') return { MonthYearField: 'MonthYearField' }; assert.ok(name in modules, name); return modules[name]; }, exports);
   return exports;
 }
 const intake = {};
-for (const name of ['schema', 'config', 'logic']) intake[`./${name}`] = load(`../lib/intake/${name}.ts`, intake);
+for (const name of ['dates', 'schema', 'config', 'logic']) intake[`./${name}`] = load(`../lib/intake/${name}.ts`, intake);
 const { INTAKE_SCHEMA: schema, INTAKE_NONE_OPTIONS: noneOptions } = intake['./schema'];
 
 test('every intake section uses the save-and-return label and returns to the existing overview', () => {
@@ -20,17 +21,19 @@ test('every intake section uses the save-and-return label and returns to the exi
   const paths = [];
   const jsx = (type, props) => ({ type, props });
   const modules = {
-    'react/jsx-runtime': { jsx, jsxs: jsx }, react: { useEffect: () => {}, useRef: () => ({ current: null }), useMemo: fn => fn() },
+    'react/jsx-runtime': { jsx, jsxs: jsx }, react: { useEffect: () => {}, useRef: value => ({ current: value }), useMemo: fn => fn(), useCallback: fn => fn(), useState: value => [value, () => {}] },
     'react-native': { View: 'View', Text: 'Text', ScrollView: 'ScrollView', KeyboardAvoidingView: 'KeyboardAvoidingView', Platform: { OS: 'android' } },
     'expo-router': { router: { dismissTo: path => paths.push(path) }, useLocalSearchParams: () => ({ id }) },
     'react-native-safe-area-context': { SafeAreaView: 'SafeAreaView', useSafeAreaInsets: () => ({ bottom: 0 }) },
     'lucide-react-native': { ChevronLeft: 'ChevronLeft', X: 'X' },
+    '@/components/intake/LaminitisSafetyNotice': { LaminitisSafetyNotice: 'LaminitisSafetyNotice' },
     '@/components/ui/Button': { Button: 'Button' }, '@/components/ui/IconButton': { IconButton: 'IconButton' },
     '@/components/intake/IntakeScrollView': { IntakeScrollView: 'IntakeScrollView' },
     '@/components/intake/IntakeField': { IntakeField: 'IntakeField' },
     '@/lib/intake/schema': intake['./schema'],
     '@/lib/intake/schema-provider': { useIntakeSchema: () => ({ schema, noneOptions }) },
     '@/lib/intake/logic': intake['./logic'], '@/lib/intake/store': { useIntake: () => ({ state: { answers: {} } }) },
+    '@/lib/intake/submission': { formatIntakeDate: () => '16 oktober 2026' },
   };
   const { default: Section } = load('../app/intake/section/[id].tsx', modules);
   const flatten = node => Array.isArray(node) ? node.flatMap(flatten) : node && typeof node === 'object' ? [node, ...flatten(node.props?.children), ...flatten(node.props?.footer)] : [];

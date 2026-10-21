@@ -79,6 +79,8 @@
         attachments: (item?.attachments ?? []).map(file => ({ id: file.id, title: file.title, name: file.name, file: null })),
         is_featured: item?.is_featured ?? false,
         order: item?.order ?? 0,
+        series_name: item?.series_name ?? '',
+        series_part: item?.series_part ?? null,
         category_ids: item?.categories?.map((c) => c.id) ?? [],
         featured_suggestion_ids: item?.featured_suggestion_ids ?? [],
     });
@@ -100,6 +102,8 @@
         e.preventDefault();
         if (thumbnailBusy || mediaBusy || $form.processing || $publication.processing) return;
         $form.transform((data) => ({ ...data, _method: isNew ? 'post' : 'put', duration_minutes: data.duration_minutes ?? null,
+            series_name: data.series_name?.trim() || null,
+            series_part: data.series_part ?? null,
             credit_cost: data.is_plus ? 0 : data.credit_cost,
             attachments: data.attachments.map(({ id, title, file }) => ({ id, title, file })),
         }));
@@ -168,6 +172,8 @@
                         <Field label="Duration label" error={$form.errors.duration_label}><Input bind:value={$form.duration_label} placeholder="8 min" /></Field>
                     {/if}
                     <Field label="Volgorde" hint="Een lager getal verschijnt eerder in de bibliotheek." error={$form.errors.order}><Input type="number" min="0" max="2147483647" step="1" bind:value={$form.order} /></Field>
+                    <Field label="Reeksnaam" hint="Gebruik bij alle delen exact dezelfde naam. Dit bepaalt welke delen samen op de homepage verschijnen." error={$form.errors.series_name}><Input bind:value={$form.series_name} placeholder="Bijv. Artrose" /></Field>
+                    <Field label="Deelnummer" hint="De homepage toont het eerste nog niet ontgrendelde deel van deze reeks." error={$form.errors.series_part}><Input type="number" min="1" max="999" step="1" bind:value={$form.series_part} placeholder="1" /></Field>
                     <label class="flex items-center gap-2 text-sm"><input type="checkbox" bind:checked={$form.is_featured} class="size-4 rounded border-input" /> Featured</label>
                     <label class="flex items-center gap-2 text-sm"><input type="checkbox" bind:checked={$form.is_plus} class="size-4 rounded border-input" /> Inbegrepen bij abonnement</label>
                     {#if $form.is_plus}

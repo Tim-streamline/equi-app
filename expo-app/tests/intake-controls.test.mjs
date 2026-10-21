@@ -1,3 +1,4 @@
+import * as intakeDates from '../lib/intake/dates.ts';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import test from 'node:test';
@@ -7,13 +8,13 @@ const runtime = { jsx, jsxs: jsx };
 function load(path, modules) {
   const exports = {};
   const code = ts.transpileModule(readFileSync(new URL(path, import.meta.url), 'utf8'), { compilerOptions: { jsx: ts.JsxEmit.ReactJSX, module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 } }).outputText;
-  new Function('require', 'exports', code)(name => { assert.ok(name in modules, name); return modules[name]; }, exports);
+  new Function('require', 'exports', code)(name => { if (name === './dates' || name === '@/lib/intake/dates') return intakeDates; if (name === './MonthYearField') return { MonthYearField: 'MonthYearField' }; assert.ok(name in modules, name); return modules[name]; }, exports);
   return exports;
 }
 const native = Object.fromEntries(['View', 'Text', 'Pressable', 'Image', 'ActivityIndicator', 'ScrollView', 'KeyboardAvoidingView'].map(name => [name, name]));
 const icons = Object.fromEntries(['Check', 'Camera', 'Plus', 'FileText', 'Trash2'].map(name => [name, name]));
 const pure = {};
-for (const name of ['schema', 'config', 'logic']) pure[`./${name}`] = load(`../lib/intake/${name}.ts`, pure);
+for (const name of ['dates', 'schema', 'config', 'logic']) pure[`./${name}`] = load(`../lib/intake/${name}.ts`, pure);
 const fields = pure['./schema'].INTAKE_SCHEMA;
 const field = (s, f) => fields.find(x => x.id === s).fields.find(x => x.id === f);
 function render(node) {
@@ -45,7 +46,7 @@ test('field renderer supports multiple medicines, other names, condition introdu
   flatten(draw('medisch', 'medicatie-ooit-details')).find(n => n.type === 'TextInput').props.onChangeText('Ander medicijn');
   add().props.onPress();
   assert.deepEqual(state.answers.medisch['medicatie-ooit-details'], [{ naam: 'Ander medicijn' }, {}]);
-  assert.equal(flatten(draw('medisch', 'medicatie-ooit-details')).filter(n => n.type === 'TextInput').length, 12);
+  assert.equal(flatten(draw('medisch', 'medicatie-ooit-details')).filter(n => n.type === 'TextInput').length, 10);
   assert.ok(text(draw('medisch', 'sec-aandoening')).includes(field('medisch', 'sec-aandoening').hint));
   state.answers.geschiedenis = { 'medische-gebeurtenissen': [{}] };
   const tree = draw('geschiedenis', 'medische-gebeurtenissen');
@@ -53,6 +54,32 @@ test('field renderer supports multiple medicines, other names, condition introdu
   assert.ok(text(tree).includes('Zo ja, welk onderzoek en wat kwam daaruit?'));
   flatten(tree).find(n => n.type === 'Pressable' && text(n).includes('Verbeterd, maar nog aanwezig')).props.onPress();
   assert.equal(state.answers.geschiedenis['medische-gebeurtenissen'][0].verdwenen, 'Verbeterd, maar nog aanwezig');
+  const events = field('geschiedenis', 'medische-gebeurtenissen');
+  const na = () => flatten(draw('geschiedenis', events.id)).find(n => n.props.accessibilityRole === 'checkbox');
+  const history = fields.find(s => s.id === 'geschiedenis');
+  const beforeNa = pure['./logic'].answeredCount(history, state.answers.geschiedenis, state.answers);
+  assert.equal(pure['./logic'].countFlags(state.answers), 1);
+  assert.equal(na().props.accessibilityState.checked, false);
+  na().props.onPress();
+  assert.equal(na().props.accessibilityState.checked, true);
+  assert.equal(pure['./logic'].isFieldAnswered(events, state.answers.geschiedenis[events.id], state.answers, 'geschiedenis'), true);
+  assert.equal(pure['./logic'].answeredCount(history, state.answers.geschiedenis, state.answers).answered, beforeNa.answered);
+  assert.equal(pure['./logic'].countFlags(state.answers), 0);
+  assert.ok(!text(draw('geschiedenis', events.id)).includes('Eerste toevoegen'));
+  assert.deepEqual(state.answers.geschiedenis[events.id], [{ verdwenen: 'Verbeterd, maar nog aanwezig' }]);
+  na().props.onPress();
+  assert.equal(na().props.accessibilityState.checked, false);
+  assert.ok(text(draw('geschiedenis', events.id)).includes('Nog één toevoegen'));
+  state.answers.geschiedenis[events.id] = [];
+  assert.equal(pure['./logic'].isFieldAnswered(events, [], state.answers, 'geschiedenis'), false);
+  assert.equal(pure['./logic'].answeredCount(history, state.answers.geschiedenis, state.answers).answered, beforeNa.answered - 1);
+  na().props.onPress();
+  assert.equal(pure['./logic'].answeredCount(history, state.answers.geschiedenis, state.answers).answered, beforeNa.answered);
+  assert.ok(!pure['./logic'].missingRequired(history, state.answers.geschiedenis, state.answers).some(f => f.id === events.id));
+  const kpuDate = flatten(draw('medisch', 'kpu-onderzoek-datum')).find(n => n.type === 'MonthYearField');
+  assert.equal(kpuDate.props.config.mode, 'single');
+  kpuDate.props.onChange({ version: 1, precision: 'month', month: 4, year: 2025 });
+  assert.deepEqual(state.answers.medisch['kpu-onderzoek-datum'], { version: 1, precision: 'month', month: 4, year: 2025 });
   state.answers.klacht = { acuut: ['Koorts / verhoging'] };
   flatten(draw('klacht', 'acuut')).find(n => n.type === 'Pressable' && text(n).includes('Geen van bovenstaande')).props.onPress();
   assert.deepEqual(state.answers.klacht.acuut, ['Geen van bovenstaande']);
@@ -128,6 +155,11 @@ test('supplement repeaters support add/remove and every new none option clears o
     press('gedrag', id, option);
     assert.deepEqual(state.answers.gedrag[id], [option]);
   }
+  press('medisch', 'ems-diagnose-basis', 'Beoordeling door een dierenarts');
+  press('medisch', 'ems-diagnose-basis', 'Weet ik niet');
+  assert.deepEqual(state.answers.medisch['ems-diagnose-basis'], ['Weet ik niet']);
+  press('medisch', 'ems-diagnose-basis', 'Eerdere of terugkerende hoefbevangenheid');
+  assert.deepEqual(state.answers.medisch['ems-diagnose-basis'], ['Eerdere of terugkerende hoefbevangenheid']);
 });
 
 

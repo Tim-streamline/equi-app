@@ -37,6 +37,7 @@ const therapists = new Table({
 });
 
 const horses = new Table({
+  laminitis_safety: column.text,
   owner_id: column.text,
   name: column.text,
   breed: column.text,
@@ -551,6 +552,7 @@ const intake_sections = new Table({
 }, { indexes: { byQuestionnaire: ['questionnaire_id'] } });
 
 const intake_fields = new Table({
+  date_config: column.text,
   section_id: column.text,
   answer_section_key: column.text,
   photo_config: column.text,
@@ -573,6 +575,7 @@ const intake_fields = new Table({
   flag_if: column.text,
   critical_if: column.text,
   protocol_if: column.text,
+  signal_config: column.text,
   repeater_sub: column.text,
   active: column.integer,
   created_at: column.text,

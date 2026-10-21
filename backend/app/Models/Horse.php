@@ -29,6 +29,7 @@ class Horse extends Model
     protected function casts(): array
     {
         return [
+            'laminitis_safety' => 'array',
             'age' => 'integer',
             'weight_kg' => 'integer',
             'archived_at' => 'datetime',

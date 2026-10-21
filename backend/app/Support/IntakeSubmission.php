@@ -16,6 +16,7 @@ class IntakeSubmission
             return $booking;
         }
         abort_if($booking->status === 'cancelled', 409, 'Deze intake is geannuleerd.');
+        app(LaminitisSafety::class)->assertAllowed(\App\Models\Horse::lockForUpdate()->findOrFail($booking->horse_id));
         $booking->load('answers');
         $progress = app(IntakeProgress::class)->forBooking($booking);
         if (! IntakeQuestionnaire::where('slug', 'protocol-intake')->where('active', true)->exists() || $progress['missing']) {

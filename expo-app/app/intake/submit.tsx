@@ -10,6 +10,7 @@ import { ChevronLeft, Check, Send, AlertTriangle } from 'lucide-react-native';
 import { Button } from '@/components/ui/Button';
 import { IconButton } from '@/components/ui/IconButton';
 import { MissingQuestionsModal } from '@/components/intake/MissingQuestionsModal';
+import { LaminitisSafetyNotice } from '@/components/intake/LaminitisSafetyNotice';
 import { useIntakeSchema } from '@/lib/intake/schema-provider';
 import {
   hasCriticalAnswers,
@@ -21,7 +22,7 @@ import { useIntake } from '@/lib/intake/store';
 
 export default function IntakeSubmit() {
   const insets = useSafeAreaInsets();
-  const { state, submit, submitting } = useIntake();
+  const { state, submit, submitting, laminitisBlocked } = useIntake();
   const { schema, noneOptions } = useIntakeSchema();
   const critical = hasCriticalAnswers(state.answers, schema);
   const [showMissing, setShowMissing] = useState(false);
@@ -140,9 +141,10 @@ export default function IntakeSubmit() {
             paddingBottom: insets.bottom + 16,
           }}
         >
+          <LaminitisSafetyNotice />
           <Button
             title={submitting ? "Synchroniseren en versturen…" : "Intake versturen"}
-            disabled={submitting || !!state.submittedAt}
+            disabled={submitting || !!state.submittedAt || laminitisBlocked}
             variant="primary"
             onPress={onSubmit}
             leading={<Send size={18} color="#fff" />}
