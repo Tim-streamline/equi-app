@@ -32,7 +32,7 @@ export default function IntakeSectionScreen() {
   const insets = useSafeAreaInsets();
   const { schema, noneOptions } = useIntakeSchema();
   const section = id ? schema.find((candidate) => candidate.id === id) : undefined;
-  const { state, trackActivity } = useIntake();
+  const { state, trackActivity, safetyConfig } = useIntake();
   useEffect(() => { if (id) trackActivity(id); }, [id, trackActivity]);
   const answers = useMemo(
     () => section ? answersForSection(section, state.answers) : {},
@@ -181,13 +181,13 @@ export default function IntakeSectionScreen() {
                     fieldPositions.current[f.id] = event.nativeEvent.layout.y;
                     if (requestedField === f.id) scrollToRequestedField();
                   }}>
-                {!(state.submittedAt && ['hoefbevangenheid-acute-fase-voorbij', 'hoefbevangenheid-stabiel'].includes(f.id)) && <IntakeField
+                {!(section.id === safetyConfig?.section && Object.keys(safetyConfig.recovery.require).includes(f.id)) && <IntakeField
                   field={f}
                   sectionId={section.id}
                   n={fieldCounter}
                   noneOptions={noneOptions}
                 />}
-                {f.id === 'hoefbevangenheid-stabiel' && <LaminitisSafetyNotice popup recovery />}
+                {section.id === safetyConfig?.section && f.id === safetyConfig.recovery.after && <LaminitisSafetyNotice popup recovery />}
                 </View>
               );
             })}

@@ -54,6 +54,7 @@ class IntakeQuestionnaireController extends Controller
             'disclaimer_short' => ['nullable', 'string', 'max:10000'],
             'disclaimer_long' => ['nullable', 'string', 'max:30000'],
             'none_options_json' => ['required', 'string', 'max:20000'],
+            'safety_config_json' => ['sometimes', 'nullable', 'string', 'max:50000'],
         ]);
         $data['none_options'] = $this->decodeJson($data['none_options_json'], 'none_options_json');
         unset($data['none_options_json']);
@@ -63,6 +64,12 @@ class IntakeQuestionnaireController extends Controller
             throw ValidationException::withMessages([
                 'none_options_json' => 'Vul een JSON-array met antwoordteksten in.',
             ]);
+        }
+        if ($request->exists('safety_config_json')) {
+            $data['safety_config'] = $this->decodeJson($request->input('safety_config_json'), 'safety_config_json');
+            try { app(\App\Support\IntakeSafetySettings::class)->validate($data['safety_config']); }
+            catch (ValidationException $e) { throw ValidationException::withMessages(['safety_config_json' => implode(' ', $e->validator->errors()->all())]); }
+            unset($data['safety_config_json']);
         }
         $before = $intakeQuestionnaire->only(array_keys($data));
         $intakeQuestionnaire->update($data);
@@ -190,6 +197,7 @@ class IntakeQuestionnaireController extends Controller
             'age_config_json' => ['nullable', 'string', 'max:20000'],
             'link_json' => ['nullable', 'string', 'max:20000'],
             'options_json' => ['nullable', 'string', 'max:50000'],
+            'answer_aliases_json' => ['sometimes', 'nullable', 'string', 'max:50000'],
             'show_if_json' => ['nullable', 'string', 'max:50000'],
             'flag_if_json' => ['nullable', 'string', 'max:50000'],
             'critical_if_json' => ['nullable', 'string', 'max:50000'],
@@ -204,6 +212,7 @@ class IntakeQuestionnaireController extends Controller
             'date_config_json' => 'date_config',
             'link_json' => 'link',
             'options_json' => 'options',
+            'answer_aliases_json' => 'answer_aliases',
             'show_if_json' => 'show_if',
             'flag_if_json' => 'flag_if',
             'critical_if_json' => 'critical_if',
@@ -215,6 +224,9 @@ class IntakeQuestionnaireController extends Controller
             unset($data[$input]);
         }
 
+        if (! $request->exists('answer_aliases_json')) $data['answer_aliases'] = $field?->answer_aliases;
+        try { app(\App\Support\IntakeSafetySettings::class)->validateAliases($data['answer_aliases']); }
+        catch (ValidationException $e) { throw ValidationException::withMessages(['answer_aliases_json' => implode(' ', $e->validator->errors()->all())]); }
         if (! $request->exists('date_config_json')) $data['date_config'] = $field?->date_config;
         try {
             app(\App\Support\IntakeDates::class)->validateConfig($data['date_config']);

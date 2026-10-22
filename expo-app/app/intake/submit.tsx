@@ -22,7 +22,7 @@ import { useIntake } from '@/lib/intake/store';
 
 export default function IntakeSubmit() {
   const insets = useSafeAreaInsets();
-  const { state, submit, submitting, laminitisBlocked } = useIntake();
+  const { state, submit, submitting, laminitisBlocked, safetyConfig } = useIntake();
   const { schema, noneOptions } = useIntakeSchema();
   const critical = hasCriticalAnswers(state.answers, schema);
   const [showMissing, setShowMissing] = useState(false);
@@ -144,7 +144,7 @@ export default function IntakeSubmit() {
           <LaminitisSafetyNotice />
           <Button
             title={submitting ? "Synchroniseren en versturen…" : "Intake versturen"}
-            disabled={submitting || !!state.submittedAt || laminitisBlocked}
+            disabled={submitting || !!state.submittedAt || (laminitisBlocked && (!safetyConfig || safetyConfig.actions.includes('submit')))}
             variant="primary"
             onPress={onSubmit}
             leading={<Send size={18} color="#fff" />}

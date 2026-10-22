@@ -22,7 +22,7 @@ class IntakeReview
         $none = $questionnaire?->none_options ?? ['geen'];
         $laminitisHorse = $booking->horse()->firstOrFail();
         $laminitisBlocked = app(LaminitisSafety::class)->blocked($laminitisHorse);
-        $answers['medisch']['_laminitis_recovery_required'] = $laminitisBlocked ? 'Ja' : 'Nee';
+        $answers = app(LaminitisSafety::class)->withState($answers, $laminitisHorse);
         $sections = [];
         $photos = app(IntakePhotoRules::class);
         $usedMetadata = [];
@@ -48,7 +48,7 @@ class IntakeReview
                     $value = null;
                 }
                 $critical = $this->matches($value, $field->critical_if);
-                if ($field->key === 'hoefbevangenheid' && ! $laminitisBlocked && ! empty($laminitisHorse->laminitis_safety['released_at'])) {
+                if (! $laminitisBlocked && app(LaminitisSafety::class)->releasedCritical($laminitisHorse, $answerSection, $field->key)) {
                     $critical = false;
                 }
                 $flag = $critical || $this->flagged($value, $field->flag_if, $none);
@@ -195,7 +195,9 @@ class IntakeReview
         foreach ($section->fields as $field) {
             $source = $answers[$field->answer_section_key ?? $section->key] ?? [];
             if (array_key_exists($field->key, $source)) {
-                $values[$field->key] = $source[$field->key];
+                $value = $source[$field->key];
+                $alias = fn ($v) => is_string($v) ? ($field->answer_aliases[$v] ?? $v) : $v;
+                $values[$field->key] = is_array($value) ? array_map($alias, $value) : $alias($value);
             }
         }
 

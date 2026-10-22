@@ -22,7 +22,7 @@ const modules = {
   './ConfiguredPhotoField': { ConfiguredPhotoField: 'ConfiguredPhotoField', PhotoExample: 'PhotoExample' },
   './FieldLabel': { FieldLabel: 'FieldLabel' },
   './AgeField': { AgeField: 'AgeField' },
-  '@/lib/intake/logic': { isFieldRequired: () => true, isNoneOption: () => false, repeaterNotApplicable: () => false, repeaterNaKey: () => '', photoNotApplicable: () => false, photoReferences: () => [], photoSlotReferences: () => [] },
+  '@/lib/intake/logic': { normalizeAnswer: (_field, value) => value, isFieldRequired: () => true, isNoneOption: () => false, repeaterNotApplicable: () => false, repeaterNaKey: () => '', photoNotApplicable: () => false, photoReferences: () => [], photoSlotReferences: () => [] },
   '@/lib/intake/store': { useIntake: () => ({ state, setField }) },
 };
 new Function('require', 'exports', compiled)(name => { if (name === './dates' || name === '@/lib/intake/dates') return intakeDates; if (name === './MonthYearField') return { MonthYearField: 'MonthYearField' }; assert.ok(name in modules, name); return modules[name]; }, exports);

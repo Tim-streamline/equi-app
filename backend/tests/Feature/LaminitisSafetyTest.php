@@ -19,6 +19,9 @@ use Tests\TestCase;
 class LaminitisSafetyTest extends TestCase
 {
     use RefreshDatabase;
+    private const ACUTE = ['nu acuut', 'Ja, mijn paard is momenteel hoefbevangen'];
+    private const PAST = ['in verleden gehad', 'Ja, mijn paard is in het verleden hoefbevangen geweest'];
+    private const RECOVERY = ['hoefbevangenheid-acute-fase-voorbij', 'hoefbevangenheid-stabiel'];
 
     private function booking(): IntakeBooking
     {
@@ -42,7 +45,7 @@ class LaminitisSafetyTest extends TestCase
     public function test_acute_hold_survives_answer_changes_deletion_and_another_intake(): void
     {
         $booking = $this->booking();
-        $this->answer($booking, 'hoefbevangenheid', LaminitisSafety::ACUTE[1]);
+        $this->answer($booking, 'hoefbevangenheid', self::ACUTE[1]);
         $episode = $booking->horse->fresh()->laminitis_safety['episode_id'];
         $this->answer($booking, 'hoefbevangenheid', 'Nee, voor zover bekend niet');
         $booking->answers()->delete();
@@ -51,7 +54,7 @@ class LaminitisSafetyTest extends TestCase
         $this->assertTrue($safety->blocked($other->horse));
         $this->assertSame($episode, $other->horse->laminitis_safety['episode_id']);
         $missing = app(IntakeProgress::class)->forBooking($other)['missing'];
-        $this->assertContains(['section' => 'medisch', 'field' => LaminitisSafety::RECOVERY[0]], $missing);
+        $this->assertContains(['section' => 'medisch', 'field' => self::RECOVERY[0]], $missing);
     }
 
     public function test_save_is_allowed_but_submission_and_protocol_activation_are_blocked(): void
@@ -70,14 +73,14 @@ class LaminitisSafetyTest extends TestCase
     public function test_release_requires_two_yes_answers_and_the_current_episode(): void
     {
         $booking = $this->booking();
-        $this->answer($booking, 'hoefbevangenheid', LaminitisSafety::ACUTE[1]);
+        $this->answer($booking, 'hoefbevangenheid', self::ACUTE[1]);
         $episode = $booking->horse->fresh()->laminitis_safety['episode_id'];
         $safety = app(LaminitisSafety::class);
-        $this->answer($booking, LaminitisSafety::RECOVERY[0], 'Ja');
+        $this->answer($booking, self::RECOVERY[0], 'Ja');
         $this->rejected(fn () => $safety->release($booking, $episode, $booking->user_id));
-        $this->answer($booking, LaminitisSafety::RECOVERY[1], 'Nee');
+        $this->answer($booking, self::RECOVERY[1], 'Nee');
         $this->rejected(fn () => $safety->release($booking, $episode, $booking->user_id));
-        $this->answer($booking, LaminitisSafety::RECOVERY[1], 'Ja');
+        $this->answer($booking, self::RECOVERY[1], 'Ja');
         $this->assertTrue($safety->blocked($booking->horse->fresh()));
         $state = $safety->release($booking, $episode, $booking->user_id);
         $this->assertSame('owner_reported_veterinary_confirmation', $state['release_source']);
@@ -91,12 +94,12 @@ class LaminitisSafetyTest extends TestCase
     {
         $booking = $this->booking();
         $safety = app(LaminitisSafety::class);
-        $this->answer($booking, 'hoefbevangenheid', LaminitisSafety::ACUTE[1]);
+        $this->answer($booking, 'hoefbevangenheid', self::ACUTE[1]);
         $old = $booking->horse->fresh()->laminitis_safety['episode_id'];
-        foreach (LaminitisSafety::RECOVERY as $key) $this->answer($booking, $key, 'Ja');
+        foreach (self::RECOVERY as $key) $this->answer($booking, $key, 'Ja');
         $safety->release($booking, $old, $booking->user_id);
-        $this->answer($booking, 'hoefbevangenheid', LaminitisSafety::PAST[1]);
-        $this->answer($booking, 'hoefbevangenheid', LaminitisSafety::ACUTE[1]);
+        $this->answer($booking, 'hoefbevangenheid', self::PAST[1]);
+        $this->answer($booking, 'hoefbevangenheid', self::ACUTE[1]);
         $this->rejected(fn () => $safety->release($booking, $old, $booking->user_id));
         $this->assertTrue($safety->blocked($booking->horse->fresh()));
         $this->assertCount(1, $booking->horse->fresh()->laminitis_safety['history']);
@@ -108,12 +111,12 @@ class LaminitisSafetyTest extends TestCase
         $safety = app(LaminitisSafety::class);
         $this->answer($booking, 'hoefbevangenheid', 'Mijn paard heeft een verhoogd risico op hoefbevangenheid');
         $this->assertFalse($safety->blocked($booking->horse->fresh()));
-        $this->answer($booking, 'hoefbevangenheid', LaminitisSafety::PAST[1]);
+        $this->answer($booking, 'hoefbevangenheid', self::PAST[1]);
         $this->answer($booking, 'hoefbevangenheid-hersteld', 'Ja');
         $this->assertFalse($safety->blocked($booking->horse->fresh()));
         $this->answer($booking, 'hoefbevangenheid-hersteld', 'Weet ik niet');
         $episode = $booking->horse->fresh()->laminitis_safety['episode_id'];
-        foreach (LaminitisSafety::RECOVERY as $key) $this->answer($booking, $key, 'Ja');
+        foreach (self::RECOVERY as $key) $this->answer($booking, $key, 'Ja');
         $this->rejected(fn () => $safety->release($booking, $episode, $booking->user_id));
         $this->answer($booking, 'hoefbevangenheid-hersteld', 'Ja');
         $this->assertTrue($safety->blocked($booking->horse->fresh()));
@@ -129,7 +132,7 @@ class LaminitisSafetyTest extends TestCase
         $booking->forceFill(['submitted_at' => now(), 'completed_at' => now()])->save();
         $safety = app(LaminitisSafety::class);
         $state = $safety->release($booking, $booking->horse->fresh()->laminitis_safety['episode_id'], $booking->user_id,
-            array_fill_keys(LaminitisSafety::RECOVERY, 'Ja'));
+            array_fill_keys(self::RECOVERY, 'Ja'));
         $this->assertNotEmpty($state['released_at']);
         $this->assertSame($before, $booking->answers()->pluck('value', 'id')->all());
     }
@@ -137,12 +140,15 @@ class LaminitisSafetyTest extends TestCase
     public function test_admin_configured_acute_answer_is_detected_and_old_confirmations_are_not_automatic_release(): void
     {
         $booking = $this->booking();
-        IntakeField::where('key', 'hoefbevangenheid')->update(['critical_if' => json_encode(['Momenteel acuut'])]);
+        $q = \App\Models\IntakeQuestionnaire::firstOrFail();
+        $config = $q->safety_config;
+        $config['triggers'][0]['when']['hoefbevangenheid'] = ['Momenteel acuut'];
+        $q->update(['safety_config' => $config]);
         $this->answer($booking, 'hoefbevangenheid', 'Momenteel acuut');
         $state = $booking->horse->fresh()->laminitis_safety;
         $this->assertSame('acute', $state['kind']);
         $this->assertSame($booking->user_id, $state['reported_by']);
-        foreach (LaminitisSafety::RECOVERY as $key) $this->answer($booking, $key, 'Ja');
+        foreach (self::RECOVERY as $key) $this->answer($booking, $key, 'Ja');
         $this->assertTrue(app(LaminitisSafety::class)->blocked($booking->horse->fresh()));
     }
 }

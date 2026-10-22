@@ -29,6 +29,7 @@ export function buildIntakeSchema(sectionRows: Row[], fieldRows: Row[]): Section
     const sectionId = String(row.section_id ?? '');
     const field: Field = {
       id: String(row.key),
+      answerAliases: json<Field['answerAliases']>(row.answer_aliases),
       ...(row.answer_section_key ? { answerSection: String(row.answer_section_key) } : {}),
       label: String(row.label),
       photoConfig: json<Field['photoConfig']>(row.photo_config),
@@ -63,6 +64,7 @@ export function buildIntakeSchema(sectionRows: Row[], fieldRows: Row[]): Section
     .sort((a, b) => Number(a.order ?? 0) - Number(b.order ?? 0))
     .map((row) => ({
       id: String(row.key),
+      answerAliases: json<Field['answerAliases']>(row.answer_aliases),
       nr: Number(row.order ?? 0),
       title: String(row.title),
       intro: row.intro == null ? '' : String(row.intro),

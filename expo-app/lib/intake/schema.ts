@@ -20,6 +20,92 @@
 // supported by the renderer.
 
 import type { DateAnswer, DateConfig } from './dates';
+import type { SafetyConfig } from './laminitis';
+export const INTAKE_SAFETY_CONFIG: SafetyConfig = {
+  "version": 1,
+  "section": "medisch",
+  "marker_field": "_laminitis_hold",
+  "state_field": "_laminitis_recovery_required",
+  "state_value": "Ja",
+  "clear_value": "Nee",
+  "actions": [
+    "submit",
+    "preview",
+    "protocol"
+  ],
+  "triggers": [
+    {
+      "id": "acute",
+      "when": {
+        "hoefbevangenheid": [
+          "nu acuut",
+          "Ja, mijn paard is momenteel hoefbevangen"
+        ]
+      },
+      "renew": true,
+      "notice": "hoefbevangenheid-waarschuwing",
+      "popup": true,
+      "critical_fields": [
+        "hoefbevangenheid"
+      ],
+      "block_while_matching": false
+    },
+    {
+      "id": "unresolved",
+      "when": {
+        "hoefbevangenheid": [
+          "in verleden gehad",
+          "Ja, mijn paard is in het verleden hoefbevangen geweest"
+        ],
+        "hoefbevangenheid-hersteld": [
+          "Nee",
+          "Weet ik niet"
+        ]
+      },
+      "renew": false,
+      "notice": "hoefbevangenheid-aanhoudend",
+      "popup": false,
+      "critical_fields": [],
+      "block_while_matching": true
+    }
+  ],
+  "recovery": {
+    "require": {
+      "hoefbevangenheid-acute-fase-voorbij": [
+        "Ja"
+      ],
+      "hoefbevangenheid-stabiel": [
+        "Ja"
+      ]
+    },
+    "conditional": [
+      {
+        "when": {
+          "hoefbevangenheid": [
+            "in verleden gehad",
+            "Ja, mijn paard is in het verleden hoefbevangen geweest"
+          ]
+        },
+        "require": {
+          "hoefbevangenheid-hersteld": [
+            "Ja"
+          ]
+        }
+      }
+    ],
+    "intro": "hoefbevangenheid-herstel-uitleg",
+    "after": "hoefbevangenheid-stabiel"
+  },
+  "messages": {
+    "blocked": "Je antwoorden blijven opgeslagen. Intake versturen en Plus-protocol opstellen zijn geblokkeerd totdat de herstelstatus is bevestigd.",
+    "confirm": "Herstelstatus bevestigen",
+    "update": "Herstelstatus bijwerken",
+    "acknowledge": "Begrepen, verder invullen",
+    "pending": "De melding wordt gesynchroniseerd. Bevestigen is beschikbaar zodra je online bent en de melding is opgeslagen."
+  },
+  "release_source": "owner_reported_veterinary_confirmation"
+};
+
 export type RepeaterRow = Record<string, string | DateAnswer>;
 
 export type FieldType =
@@ -79,6 +165,7 @@ export type AgeConfig = {
 };
 
 export type Field = {
+  answerAliases?: Record<string, string>;
   signalConfig?: { condition: string; signals: Record<string, string> };
   dateConfig?: DateConfig;
   ageConfig?: AgeConfig;
@@ -1686,6 +1773,7 @@ export const INTAKE_SCHEMA: Section[] = [
       },
       {
         id: 'ontworming-methode',
+        answerAliases: { 'Op vaste momenten / standaard schema': 'Op vaste momenten, volgens een standaardschema', 'Combinatie van beide': 'Een combinatie van beide' },
         label: 'Hoe wordt bepaald óf en wanneer je paard ontworming nodig heeft?',
         type: 'radio',
         required: true,

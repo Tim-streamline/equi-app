@@ -1,4 +1,5 @@
 <script>
+    import { untrack } from 'svelte';
     import AdminLayout from '../../Layouts/AdminLayout.svelte';
     import PageHeader from '$lib/components/PageHeader.svelte';
     import Modal from '$lib/components/Modal.svelte';
@@ -22,6 +23,7 @@
         disclaimer_short: questionnaire.disclaimer_short ?? '',
         disclaimer_long: questionnaire.disclaimer_long ?? '',
         none_options_json: JSON.stringify(questionnaire.none_options ?? [], null, 2),
+        safety_config_json: JSON.stringify(untrack(() => questionnaire.safety_config ?? null), null, 2),
     });
     const sectionForm = useForm({
         questionnaire_id: questionnaire.id,
@@ -53,6 +55,7 @@
             order: selectedSection?.fields?.length ?? 0,
             active: true,
             options_json: '',
+            answer_aliases_json: '',
             show_if_json: '',
             flag_if_json: '',
             critical_if_json: '',
@@ -131,6 +134,7 @@
             order: field.order,
             active: field.active,
             options_json: json(field.options),
+            answer_aliases_json: json(field.answer_aliases),
             show_if_json: json(field.show_if),
             flag_if_json: json(field.flag_if),
             critical_if_json: json(field.critical_if),
@@ -188,6 +192,7 @@
                 <Field label="Exclusieve ‘geen / niet van toepassing’-antwoorden (JSON-array)" hint="Bij een meerkeuzevraag wist zo'n antwoord alle andere selecties en telt het niet als inhoudelijk signaal." error={$questionnaireForm.errors.none_options_json}>
                     <Textarea rows="5" bind:value={$questionnaireForm.none_options_json} placeholder={'["geen", "niet van toepassing"]'} />
                 </Field>
+                <Field label="Veiligheidsregels (JSON)" hint="Trigger- en herstelvoorwaarden, meldingvelden en geblokkeerde acties. Bestaande meldingen behouden hun oorspronkelijke regels." error={$questionnaireForm.errors.safety_config_json}><Textarea rows="12" bind:value={$questionnaireForm.safety_config_json} /></Field>
                 <div class="flex justify-end"><Button type="submit" disabled={$questionnaireForm.processing}><Save class="size-4" /> Opslaan</Button></div>
             </form>
         </CardContent>
@@ -292,6 +297,7 @@
                 <div class="md:col-span-2"><Field label="Leeftijd-instellingen (JSON)" error={$fieldForm.errors.age_config_json} hint="Type number: date_field is de opslagsleutel van de geboortedatum. date_label, toggle_label en estimate_label bepalen de teksten. calculated_hint is een verouderd optioneel veld en wordt niet meer getoond."><Textarea rows="6" bind:value={$fieldForm.age_config_json} /></Field></div>
                 <div class="md:col-span-2"><Field label="Foto-instellingen (JSON)" error={$fieldForm.errors.photo_config_json} hint="instruction_label en instructions: bewerkbaar instructiekopje en fotoinstructies; de Helptekst bevat de uitleg waarom. max: maximum aantal foto’s; year_required: jaartal verplicht per foto; allow_na: Niet van toepassing toestaan; slots: afzonderlijke aanzichten met id en label; optioneel answer_field bewaart een bestaande antwoordsleutel binnen dezelfde antwoordsectie. caption: toelichting per foto met label en placeholder (verwijder caption om te verbergen). example_url en example_caption: voorbeeldafbeelding; example_after: tekst onder het voorbeeld. na_key verbindt een gedeelde keuze; existing_only toont alleen eerder opgeslagen foto’s."><Textarea rows="8" bind:value={$fieldForm.photo_config_json} placeholder={'{"max":10,"year_required":true,"allow_na":false}'} /></Field></div>
                 <Field label="Antwoordopties (JSON-array)" hint="Ook voor een getalvraag met ‘Weet ik niet’, of een herhaalvraag met ‘Niet van toepassing’." error={$fieldForm.errors.options_json}><Textarea rows="5" bind:value={$fieldForm.options_json} placeholder='["Ja", "Nee"]' /></Field>
+                <Field label="Oude antwoordwaarden (JSON)" hint="Koppel een oude opgeslagen waarde aan een huidige optie. Opgeslagen antwoorden blijven ongewijzigd." error={$fieldForm.errors.answer_aliases_json}><Textarea rows="4" bind:value={$fieldForm.answer_aliases_json} /></Field>
                 <Field label="Eigenaarssignalen voorbereiden (JSON)" hint="Alleen open tekst. condition is de context; signals bevat bewerkbare signaalcodes en omschrijvingen. De bron blijft altijd eigenaar-gerapporteerd en niet bevestigd. Dit activeert geen AI-aanroep of protocoladvies." error={$fieldForm.errors.signal_config_json}><Textarea rows="5" bind:value={$fieldForm.signal_config_json} placeholder={'{"condition":"IR","signals":{"vetkam":"Een vetkam genoemd door de eigenaar"}}'} /></Field>
                 <Field label="Zichtbaarheidsregel showIf (JSON-object)" error={$fieldForm.errors.show_if_json}><Textarea rows="5" bind:value={$fieldForm.show_if_json} placeholder={'{"paard.geslacht":"merrie"}'} /></Field>
                 <Field label="Signaleringsregel flagIf (JSON)" error={$fieldForm.errors.flag_if_json}><Textarea rows="4" bind:value={$fieldForm.flag_if_json} placeholder='["Ja"] of "non-empty"' /></Field>

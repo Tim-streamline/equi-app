@@ -15,11 +15,11 @@ Existing acute answers receive a hold during migration, including submitted inta
 
 The client saves an opaque pending-event marker before the acute answer so the
 hold is visible offline and survives restarting. The server independently records
-its own episode UUID. The marker does not grant release permission. Acute values
-come from the main field's `critical_if`; the past route is derived from the
-recovered field's `show_if`, with legacy aliases retained for older clients.
+its own episode UUID. The marker does not grant release permission. Trigger values, recovery conditions and notice placement now come from
+`intake_questionnaires.safety_config`. Existing configured values and legacy aliases
+are carried over by migration. See [configurable safety settings](intake-safety-settings.md).
 
-Recovery requires both explicit Yes answers and a separate confirmation request
+Recovery requires the configured confirmation answers and a separate confirmation request
 with the current server episode UUID. Stale confirmation requests cannot release
 a newer episode. The release records an owner declaration of veterinary stability,
 not an independently verified veterinary statement. A prior not-recovered/unknown

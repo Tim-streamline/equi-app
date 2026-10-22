@@ -14,7 +14,7 @@ class IntakeProgress
         foreach ($booking->answers as $answer) {
             $answers[$answer->section_id][$answer->field_id] = json_decode($answer->value ?? 'null', true);
         }
-        $answers['medisch']['_laminitis_recovery_required'] = app(LaminitisSafety::class)->blocked($booking->horse()->firstOrFail()) ? 'Ja' : 'Nee';
+        $answers = app(LaminitisSafety::class)->withState($answers, $booking->horse()->firstOrFail());
         $questionnaire = IntakeQuestionnaire::where('slug', 'protocol-intake')->where('active', true)
             ->with(['sections' => fn ($q) => $q->where('active', true), 'sections.fields' => fn ($q) => $q->where('active', true)])->first();
         $missing = [];

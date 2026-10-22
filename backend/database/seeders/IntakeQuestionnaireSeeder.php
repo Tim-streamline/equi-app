@@ -24,6 +24,7 @@ class IntakeQuestionnaireSeeder extends Seeder
                     'disclaimer_short' => $payload['disclaimer_short'],
                     'disclaimer_long' => $payload['disclaimer_long'],
                     'none_options' => $payload['none_options'],
+                    'safety_config' => $payload['safety_config'] ?? null,
                     'active' => true,
                 ],
             );
@@ -68,6 +69,7 @@ class IntakeQuestionnaireSeeder extends Seeder
                             'placeholder' => $fieldData['placeholder'] ?? null,
                             'link' => $fieldData['link'] ?? null,
                             'options' => $fieldData['options'] ?? null,
+                            'answer_aliases' => $fieldData['answerAliases'] ?? null,
                             'show_if' => $fieldData['showIf'] ?? null,
                             'flag_if' => $fieldData['flagIf'] ?? null,
                             'critical_if' => $fieldData['criticalIf'] ?? null,

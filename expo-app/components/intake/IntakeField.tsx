@@ -11,7 +11,7 @@ import { Field, FieldValue, RepeaterSub, RepeaterRow } from '@/lib/intake/schema
 import { formatDate } from '@/lib/intake/dates';
 import type { DateAnswer } from '@/lib/intake/dates';
 import { MonthYearField } from './MonthYearField';
-import { isFieldRequired, isNoneOption, repeaterNotApplicable, repeaterNaKey, photoNotApplicable, photoReferences, photoSlotReferences } from '@/lib/intake/logic';
+import { normalizeAnswer, isFieldRequired, isNoneOption, repeaterNotApplicable, repeaterNaKey, photoNotApplicable, photoReferences, photoSlotReferences } from '@/lib/intake/logic';
 import { useIntake } from '@/lib/intake/store';
 import { AttachmentField } from './AttachmentField';
 import { ConfiguredPhotoField, PhotoExample } from './ConfiguredPhotoField';
@@ -48,7 +48,7 @@ type Props = {
 export function IntakeField({ field, sectionId, n, noneOptions }: Props) {
   const { state, setField } = useIntake();
   const answerSection = field.answerSection ?? sectionId;
-  const value = state.answers[answerSection]?.[field.id];
+  const value = normalizeAnswer(field, state.answers[answerSection]?.[field.id]);
   const repeaterNa = repeaterNotApplicable(field, state.answers, sectionId);
   const set = (next: FieldValue) => {
     setField(answerSection, field.id, next);

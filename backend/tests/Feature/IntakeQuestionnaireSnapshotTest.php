@@ -33,8 +33,6 @@ class IntakeQuestionnaireSnapshotTest extends TestCase
     {
         parent::setUp();
         $this->seed(IntakeQuestionnaireSeeder::class);
-        // Both actual databases still have this heading; the code seeder is newer.
-        IntakeField::where('key', 'sec-hoef-upload')->update(['type' => 'sectionhead']);
         $this->snapshots = app(IntakeQuestionnaireSnapshot::class);
         $this->directory = storage_path('framework/testing/intake-snapshot-'.Str::uuid());
         File::makeDirectory($this->directory, 0700, true);

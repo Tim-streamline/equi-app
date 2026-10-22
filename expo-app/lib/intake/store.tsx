@@ -12,7 +12,7 @@ import { FieldValue, IntakeAnswers } from './schema';
 import { bookingQuery, openOrCreateIntake, saveAnswer } from './persistence';
 import { useDb } from '@/db/provider';
 import { useCurrentUserId, useCurrentHorseId } from '@/db/hooks';
-import { laminitisHold, acuteChoices, RECOVERY_FIELDS, type LaminitisState } from './laminitis';
+import { laminitisHold, changedTrigger, recoveryRequirements, safetyMarkers, type SafetyConfig, type LaminitisState } from './laminitis';
 import { useIntakeSchema } from './schema-provider';
 
 export type IntakeState = { answers: IntakeAnswers; submittedAt: string | null; savedAt: string | null };
@@ -24,7 +24,7 @@ type Ctx = {
   submit: () => Promise<void>; reset: () => void;
   trackActivity: (section: string, field?: string) => void;
   ensureBooking: () => Promise<string>; horseId: string; bookingId: string | null;
-  laminitisBlocked: boolean; laminitisSafety: LaminitisState | null;
+  laminitisBlocked: boolean; laminitisSafety: LaminitisState | null; safetyConfig: SafetyConfig | null;
   confirmLaminitisRecovery: (declarations?: Record<string, string>) => Promise<void>;
 };
 const IntakeContext = createContext<Ctx | null>(null);
@@ -47,14 +47,15 @@ function IntakeSelection({ userId, horseId, children }: { userId: string; horseI
 }
 function HorseIntakeProvider({ userId, horseId, selectedId, children }: { userId: string; horseId: string; selectedId: string | null; children: ReactNode }) {
   const { powersync } = useDb();
-  const { schema: questionnaireSchema } = useIntakeSchema();
+  const { safetyConfig: questionnaireSafety } = useIntakeSchema();
   const { data: safetyRows } = useQuery<{ laminitis_safety: string | null }>('SELECT laminitis_safety FROM horses WHERE id = ?', [horseId]);
   const syncedSafety = useMemo<LaminitisState | null>(() => { try { return JSON.parse(safetyRows?.[0]?.laminitis_safety ?? 'null'); } catch { return null; } }, [safetyRows]);
   const [confirmedSafety, setConfirmedSafety] = useState<LaminitisState | null>(null);
   useEffect(() => {
-    if (confirmedSafety?.released_at && syncedSafety?.episode_id === confirmedSafety.episode_id && syncedSafety.released_at === confirmedSafety.released_at) setConfirmedSafety(null);
+    if (confirmedSafety?.released_at && syncedSafety?.episode_id === confirmedSafety.episode_id && syncedSafety?.released_at === confirmedSafety.released_at) setConfirmedSafety(null);
   }, [syncedSafety, confirmedSafety]);
   const laminitisSafety = confirmedSafety?.episode_id === syncedSafety?.episode_id ? confirmedSafety : syncedSafety;
+  const safetyConfig = laminitisSafety?.configuration ?? questionnaireSafety;
   const [state, setState] = useState<IntakeState>(EMPTY);
   const liveAnswers = useRef<IntakeAnswers>(state.answers);
   liveAnswers.current = state.answers;
@@ -112,40 +113,52 @@ function HorseIntakeProvider({ userId, horseId, selectedId, children }: { userId
     if (liveAnswers.current[section]?.[field] === value) return;
     liveAnswers.current = { ...liveAnswers.current, [section]: { ...liveAnswers.current[section], [field]: value } };
     dirty.current = true;
-    const startsHold = section === 'medisch' && ((field === 'hoefbevangenheid' && acuteChoices(questionnaireSchema).includes(String(value)))
-      || (field === 'hoefbevangenheid-hersteld' && ['Nee', 'Weet ik niet'].includes(String(value))));
-    const marker = startsHold ? newId() : null;
-    if (startsHold) setConfirmedSafety(null);
-    if (section === 'medisch' && RECOVERY_FIELDS.includes(field) && value !== 'Ja') setConfirmedSafety(null);
-    setState(prev => ({ ...prev, answers: { ...prev.answers, [section]: { ...prev.answers[section],
-      ...(marker ? { _laminitis_hold: marker, ...Object.fromEntries(RECOVERY_FIELDS.map(key => [key, undefined])) } : {}), [field]: value } } }));
+    const trigger = changedTrigger(questionnaireSafety, liveAnswers.current, section, field)
+      ?? changedTrigger(safetyConfig, liveAnswers.current, section, field);
+    const triggerConfig = changedTrigger(questionnaireSafety, liveAnswers.current, section, field) ? questionnaireSafety : safetyConfig;
+    const marker = trigger ? newId() : null;
+    if (marker) setConfirmedSafety(null);
+    const requirements = safetyConfig ? recoveryRequirements(safetyConfig, liveAnswers.current, laminitisSafety) : {};
+    if (section === safetyConfig?.section && requirements[field] && !requirements[field].includes(String(value))) setConfirmedSafety(null);
+    const resetFields = triggerConfig ? Object.keys(triggerConfig.recovery.require) : [];
+    const nextAnswers = { ...liveAnswers.current, [section]: { ...liveAnswers.current[section],
+      ...(marker && triggerConfig ? { [triggerConfig.marker_field]: marker, ...Object.fromEntries(resetFields.map(key => [key, undefined])) } : {}), [field]: value } };
+    liveAnswers.current = nextAnswers;
+    setState(prev => ({ ...prev, answers: nextAnswers }));
     void enqueue(async () => {
       const id = await ensureBooking();
-      if (marker) {
-        await saveAnswer(powersync, id, section, '_laminitis_hold', marker, newId);
-        for (const key of RECOVERY_FIELDS) await saveAnswer(powersync, id, section, key, undefined, newId);
+      if (marker && triggerConfig) {
+        await saveAnswer(powersync, id, section, triggerConfig.marker_field, marker, newId);
+        for (const key of resetFields) await saveAnswer(powersync, id, section, key, undefined, newId);
       }
       await saveAnswer(powersync, id, section, field, value, newId);
       setState(prev => ({ ...prev, savedAt: new Date().toISOString() }));
     }).catch(() => {});
-  }, [enqueue, ensureBooking, powersync, questionnaireSchema]);
-  const laminitisBlocked = laminitisHold(state.answers, laminitisSafety, questionnaireSchema);
+  }, [enqueue, ensureBooking, powersync, questionnaireSafety, safetyConfig, laminitisSafety]);
+  const laminitisBlocked = laminitisHold(state.answers, laminitisSafety, questionnaireSafety);
   const confirmLaminitisRecovery = useCallback(async (declarations?: Record<string, string>) => {
-    if (!laminitisSafety?.episode_id) throw new Error('Je acute melding wordt nog gesynchroniseerd. Probeer het zo opnieuw.');
+    if (!laminitisSafety?.episode_id) throw new Error(safetyConfig?.messages.pending ?? 'De veiligheidsmelding wordt nog gesynchroniseerd.');
     await queue.current;
     await waitForIntakeUploads(powersync, () => { if (!mounted.current) throw new Error('Je sessie is gewijzigd.'); });
     const id = await ensureBooking();
     const result = await dashboardRequest(`/api/intakes/${id}/laminitis-recovery`, { episode_id: laminitisSafety.episode_id, ...(declarations ? { declarations } : {}) });
     setConfirmedSafety(result.safety);
-  }, [laminitisSafety, powersync, ensureBooking]);
+  }, [laminitisSafety, safetyConfig, powersync, ensureBooking]);
   const resetSection = useCallback<Ctx['resetSection']>(section => {
     if (locked.current) return;
     dirty.current = true;
-    setState(prev => { const answers = { ...prev.answers }; delete answers[section]; return { ...prev, answers }; });
-    void enqueue(async () => { const id = await ensureBooking(); await powersync.execute('DELETE FROM intake_answers WHERE response_id = ? AND section_id = ?', [id,section]); }).catch(() => {});
-  }, [enqueue, ensureBooking, powersync]);
+    const retained = safetyMarkers(liveAnswers.current, [questionnaireSafety, safetyConfig])[section] ?? {};
+    const keys = Object.keys(retained);
+    const answers = { ...liveAnswers.current, [section]: retained };
+    liveAnswers.current = answers;
+    setState(prev => ({ ...prev, answers }));
+    void enqueue(async () => {
+      const id = await ensureBooking();
+      await powersync.execute(`DELETE FROM intake_answers WHERE response_id = ? AND section_id = ?${keys.length ? ` AND field_id NOT IN (${keys.map(() => '?').join(',')})` : ''}`, [id, section, ...keys]);
+    }).catch(() => {});
+  }, [enqueue, ensureBooking, powersync, questionnaireSafety, safetyConfig]);
   const submit = useCallback(async () => {
-    if (laminitisBlocked) throw new Error('Werk eerst de herstelstatus bij voordat je de intake verstuurt.');
+    if (laminitisBlocked && (!safetyConfig || safetyConfig.actions.includes('submit'))) throw new Error(safetyConfig?.messages.blocked ?? 'Er staat een veiligheidsblokkade open.');
     if (state.submittedAt) return;
     if (locked.current) throw new Error('Je intake wordt al verstuurd.');
     locked.current = true;
@@ -175,19 +188,23 @@ function HorseIntakeProvider({ userId, horseId, selectedId, children }: { userId
     } finally {
       if (mounted.current) setSubmitting(false);
     }
-  }, [ensureBooking, powersync, state.answers, state.submittedAt, completedAt, laminitisBlocked]);
+  }, [ensureBooking, powersync, state.answers, state.submittedAt, completedAt, laminitisBlocked, safetyConfig]);
   const reset = useCallback(() => {
     if (locked.current) return;
     dirty.current = true;
-    setState(EMPTY);
+    const retained = safetyMarkers(liveAnswers.current, [questionnaireSafety, safetyConfig]);
+    liveAnswers.current = retained;
+    setState({ ...EMPTY, answers: retained });
     void enqueue(async () => {
       const id = await ensureBooking();
       await powersync.writeTransaction(async tx => {
-        await tx.execute('DELETE FROM intake_answers WHERE response_id = ?', [id]);
+        const markers = Object.entries(retained).flatMap(([section, values]) => Object.keys(values).map(field => [section, field]));
+        const except = markers.length ? ` AND NOT (${markers.map(() => '(section_id = ? AND field_id = ?)').join(' OR ')})` : '';
+        await tx.execute(`DELETE FROM intake_answers WHERE response_id = ?${except}`, [id, ...markers.flat()]);
         await tx.execute("UPDATE intake_bookings SET intake_status = 'draft', submitted_at = NULL, updated_at = ? WHERE id = ?", [new Date().toISOString(), id]);
       });
     }).catch(() => {});
-  }, [enqueue, ensureBooking, powersync]);
+  }, [enqueue, ensureBooking, powersync, questionnaireSafety, safetyConfig]);
   const refresh = useRef({ state, submitting, ensureBooking });
   refresh.current = { state, submitting, ensureBooking };
   useEffect(() => registerRefreshProtection({
@@ -210,8 +227,8 @@ function HorseIntakeProvider({ userId, horseId, selectedId, children }: { userId
   }), [powersync]);
   useEffect(() => { refreshProtectionChanged(); }, [submitting]);
   const bookingId = booking?.id ?? null;
-  const displayedState = useMemo(() => laminitisBlocked ? ({ ...state, answers: { ...state.answers, medisch: { ...state.answers.medisch, _laminitis_recovery_required: 'Ja' } } }) : state, [state, laminitisBlocked]);
-  const value = useMemo(() => ({ state: displayedState, loaded, submitting, setField, resetSection, submit, reset, ensureBooking, trackActivity, horseId, bookingId, laminitisBlocked, laminitisSafety, confirmLaminitisRecovery }), [displayedState, loaded, submitting, setField, resetSection, submit, reset, ensureBooking, trackActivity, horseId, bookingId, laminitisBlocked, laminitisSafety, confirmLaminitisRecovery]);
+  const displayedState = useMemo(() => safetyConfig ? ({ ...state, answers: { ...state.answers, [safetyConfig.section]: { ...state.answers[safetyConfig.section], [safetyConfig.state_field]: laminitisBlocked ? safetyConfig.state_value : safetyConfig.clear_value } } }) : state, [state, laminitisBlocked, safetyConfig]);
+  const value = useMemo(() => ({ state: displayedState, loaded, submitting, setField, resetSection, submit, reset, ensureBooking, trackActivity, horseId, bookingId, laminitisBlocked, laminitisSafety, safetyConfig, confirmLaminitisRecovery }), [displayedState, loaded, submitting, setField, resetSection, submit, reset, ensureBooking, trackActivity, horseId, bookingId, laminitisBlocked, laminitisSafety, safetyConfig, confirmLaminitisRecovery]);
   return <IntakeContext.Provider value={value}>{children}</IntakeContext.Provider>;
 }
 export function useIntake(): Ctx { const context = useContext(IntakeContext); if (!context) throw new Error('useIntake must be inside IntakeProvider'); return context; }

@@ -31,7 +31,7 @@ type Status = 'done' | 'active' | 'todo';
 
 export default function IntakeOverview() {
   const rootNavigation = useNavigation('/');
-  const { state, loaded, submit, submitting, laminitisBlocked } = useIntake();
+  const { state, loaded, submit, submitting, laminitisBlocked, safetyConfig } = useIntake();
   const [submitError, setSubmitError] = useState('');
   const [showMissing, setShowMissing] = useState(false);
   const { schema, disclaimerShort, noneOptions } = useIntakeSchema();
@@ -158,7 +158,7 @@ export default function IntakeOverview() {
             <View className="mx-4 mt-3">
               <LaminitisSafetyNotice />
               <Button title={submitting ? 'Synchroniseren en versturen…' : 'Intake versturen'}
-                disabled={!loaded || total === 0 || submitting || !!laminitisBlocked} onPress={onSubmit} />
+                disabled={!loaded || total === 0 || submitting || (!!laminitisBlocked && (!safetyConfig || safetyConfig.actions.includes('submit')))} onPress={onSubmit} />
               {!!submitError && <Text accessibilityRole="alert" className="mt-2 text-danger">{submitError}</Text>}
               <Text className="mt-2 text-sm text-ink-70">Na het versturen kun je je intake nog inzien, maar niet meer aanpassen.</Text>
             </View>

@@ -4,6 +4,7 @@
 
 import {
   Field,
+  FieldValue,
   IntakeAnswers,
   INTAKE_NONE_OPTIONS,
   INTAKE_SCHEMA,
@@ -19,14 +20,7 @@ export function answersForSection(section: Section, answers: IntakeAnswers): Sec
   const result = { ...(answers[section.id] ?? {}) };
   for (const field of section.fields) {
     const source = answers[field.answerSection ?? section.id];
-    if (source && Object.prototype.hasOwnProperty.call(source, field.id)) result[field.id] = source[field.id];
-  }
-  if (section.id === 'medisch') {
-    if (result['ontworming-methode'] === 'Op vaste momenten / standaard schema') {
-      result['ontworming-methode'] = 'Op vaste momenten, volgens een standaardschema';
-    } else if (result['ontworming-methode'] === 'Combinatie van beide') {
-      result['ontworming-methode'] = 'Een combinatie van beide';
-    }
+    if (source && Object.prototype.hasOwnProperty.call(source, field.id)) result[field.id] = normalizeAnswer(field, source[field.id]);
   }
   return result;
 }
@@ -425,4 +419,10 @@ export function requiredProgress(answers: IntakeAnswers, schema: Section[] = INT
 export function isPhotoSection(section: Section): boolean {
   const questions = section.fields.filter(field => field.type !== 'sectionhead');
   return questions.length > 0 && questions.every(field => field.type === 'photo');
+}
+
+/** Read-only compatibility projection; original saved values remain intact. */
+export function normalizeAnswer(field: Field, value: FieldValue): FieldValue {
+  const alias = (v: unknown) => typeof v === 'string' ? field.answerAliases?.[v] ?? v : v;
+  return (Array.isArray(value) ? value.map(alias) : alias(value)) as FieldValue;
 }

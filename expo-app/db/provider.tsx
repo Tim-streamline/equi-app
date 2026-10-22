@@ -16,16 +16,14 @@ import {
 } from 'react';
 import { ActivityIndicator, View } from 'react-native';
 import {
-  PowerSyncDatabase,
   type AbstractPowerSyncDatabase,
   type SyncStatus as PsSyncStatus,
 } from '@powersync/react-native';
 import { PowerSyncContext } from '@powersync/react';
-import { OPSqliteOpenFactory } from '@powersync/op-sqlite';
 
 import { accountSession } from '@/lib/account-session';
 import { captureException } from '@/lib/error-tracking';
-import { AppSchema } from './powersync-schema';
+import { getNativeDatabase, connectNativeDatabase } from './native-runtime';
 import { LaravelConnector } from './connector';
 import { refreshSubscriptionConnection } from './refresh-subscription';
 import {
@@ -86,13 +84,7 @@ export function DbProvider({ children }: { children: ReactNode }) {
     let unregister: (() => void) | undefined;
     (async () => {
       try {
-        const factory = new OPSqliteOpenFactory({ dbFilename: 'equinova.db' });
-        const ps = new PowerSyncDatabase({
-          schema: AppSchema,
-          database: factory,
-          logger: console as any,
-        });
-        await ps.init();
+        const ps = await getNativeDatabase();
         if (cancelled) return;
 
         // Drive syncStatus from the real connection lifecycle (reconnects,
@@ -131,7 +123,7 @@ export function DbProvider({ children }: { children: ReactNode }) {
     connectedRef.current = true;
     setSyncStatus('connecting');
     try {
-      await ps.connect(new LaravelConnector());
+      await connectNativeDatabase(ps);
       // Seed from the current snapshot; statusChanged drives it from here on.
       setSyncStatus(mapStatus(ps.currentStatus));
     } catch (err) {
@@ -178,13 +170,14 @@ export function DbProvider({ children }: { children: ReactNode }) {
 
   const logout = useCallback(() => accountSession.transition(async () => {
     if (!powersync) return;
-    setIsLoggedIn(false);
     try {
       const { dashboardRequest, deviceTimezone } = await import('@/hooks/useHorseDashboard');
       await dashboardRequest('/api/notifications/push-token', { token: null, timezone: deviceTimezone() });
     } catch (error) {
       if (__DEV__) console.warn('[notifications] Could not unregister this device during logout.', error);
     }
+    // Keep stream subscribers mounted until disconnect completes. Unmounting
+    // first changes subscriptions and can start a competing stream restart.
     setSyncStatus('idle');
     connectedRef.current = false;
     try {

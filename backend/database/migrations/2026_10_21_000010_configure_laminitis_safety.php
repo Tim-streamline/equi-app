@@ -36,12 +36,12 @@ return new class extends Migration
                 $value = json_decode($answer->value ?? 'null', true);
                 $unresolved = DB::table('intake_answers')->where('response_id', $answer->response_id)->where('section_id', 'medisch')
                     ->where('field_id', 'hoefbevangenheid-hersteld')->value('value');
-                if (! in_array($value, App\Support\LaminitisSafety::ACUTE, true) && ! (in_array($value, App\Support\LaminitisSafety::PAST, true) && in_array(json_decode($unresolved ?? 'null'), ['Nee', 'Weet ik niet'], true))) {
+                if (! in_array($value, ['nu acuut', 'Ja, mijn paard is momenteel hoefbevangen'], true) && ! (in_array($value, ['in verleden gehad', 'Ja, mijn paard is in het verleden hoefbevangen geweest'], true) && in_array(json_decode($unresolved ?? 'null'), ['Nee', 'Weet ik niet'], true))) {
                     continue;
                 }
                 $horseId = DB::table('intake_bookings')->where('id', $answer->response_id)->value('horse_id');
                 DB::table('horses')->where('id', $horseId)->whereNull('laminitis_safety')->update(['laminitis_safety' => json_encode([
-                    'episode_id' => (string) Illuminate\Support\Str::uuid(), 'kind' => in_array($value, App\Support\LaminitisSafety::ACUTE, true) ? 'acute' : 'unresolved',
+                    'episode_id' => (string) Illuminate\Support\Str::uuid(), 'kind' => in_array($value, ['nu acuut', 'Ja, mijn paard is momenteel hoefbevangen'], true) ? 'acute' : 'unresolved',
                     'reported_at' => $answer->updated_at, 'booking_id' => $answer->response_id, 'source' => 'owner_reported', 'history' => [],
                 ])]);
             }

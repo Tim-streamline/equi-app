@@ -13,8 +13,8 @@ class IntakeSubmissionController extends Controller
     public function recovery(Request $request, string $id)
     {
         $data = $request->validate(['episode_id' => ['required', 'uuid'],
-            'declarations' => ['sometimes', 'array:hoefbevangenheid-acute-fase-voorbij,hoefbevangenheid-stabiel,hoefbevangenheid-hersteld'],
-            'declarations.*' => ['in:Ja,Nee,Weet ik niet']]);
+            'declarations' => ['sometimes', 'array', 'max:50'],
+            'declarations.*' => ['string', 'max:255']]);
         $booking = IntakeBooking::findOrFail($id);
         $userId = $request->attributes->get('powersync_user_id');
         app(ProtocolAccess::class)->authorizeBooking($userId, $booking->horse_id, $id);

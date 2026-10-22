@@ -217,7 +217,7 @@ class IntakeRefinementsTest extends TestCase
 
         $migration = require database_path('migrations/2026_10_21_000007_configure_ir_research_and_optional_answers.php');
         $migration->up();
-        $this->assertSame('date', $medical->fields()->where('key', 'ir-onderzoek-wanneer-welk')->firstOrFail()->type);
+        $this->assertSame('month_year', $medical->fields()->where('key', 'ir-onderzoek-wanneer-welk')->firstOrFail()->type);
         $this->assertFalse($medical->fields()->where('key', 'ir-attest')->firstOrFail()->optional);
         $this->assertSame('multi', $medical->fields()->where('key', 'ir-onderzoeken')->firstOrFail()->type);
         $this->assertContains('weet ik niet', $questionnaire->fresh()->none_options);
