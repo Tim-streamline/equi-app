@@ -84,3 +84,39 @@ test('reset preserves only pending safety markers, including markers from pinned
  assert.deepEqual(safety.safetyMarkers(answers,[custom,previous]),{'custom-safety':{_event:'new'},'previous-section':{_previous:'older'}});
  assert.equal(answers['custom-safety'].condition,'urgent');
 });
+
+test('submitted intake A stays released after a later intake B replaces the horse marker', () => {
+ const answers = Object.freeze({ 'custom-safety': Object.freeze({ condition:'urgent', _event:'report-a' }) });
+ const before = JSON.stringify(answers);
+ const releasedA = {episode_id:'episode-a',client_marker:'report-a',released_at:'yesterday',configuration:custom};
+ const activeB = {episode_id:'episode-b',client_marker:'report-b',configuration:custom};
+ const releasedB = {...activeB,released_at:'today'};
+ assert.equal(safety.laminitisHold(answers,releasedA,custom,true),false);
+ assert.equal(safety.laminitisHold(answers,activeB,custom,true),true,'a new active horse episode still blocks historical views');
+ assert.equal(safety.laminitisHold(answers,releasedB,custom,true),false);
+ assert.equal(safety.laminitisHold(answers,releasedB,custom,false),true,'an editable intake with a different marker remains pending');
+ assert.equal(JSON.stringify(answers),before,'historical answers and markers must not be rewritten');
+});
+
+test('submitted unresolved answers stop blocking after recovery through separate declarations', () => {
+ const answers = Object.freeze({ 'custom-safety': Object.freeze({ condition:'previous', recovered:'not yet', _event:'report-a' }) });
+ const before = JSON.stringify(answers);
+ const episode = {episode_id:'episode-a',client_marker:'report-a',kind:'ongoing',configuration:custom};
+ const released = {...episode,released_at:'today',confirmations:{resolved:'confirmed',stable:'approved',recovered:'recovered'}};
+ assert.equal(safety.laminitisHold(answers,episode,custom,true),true);
+ assert.equal(safety.laminitisHold(answers,released,custom,true),false);
+ assert.equal(safety.laminitisHold(answers,released,custom,false),true,'editable unresolved answers must still block');
+ assert.equal(JSON.stringify(answers),before,'recovery declarations must leave the submitted report intact');
+});
+
+test('pending reports fail closed before a server release is known', () => {
+ const answers = {'custom-safety':{condition:'urgent',_event:'offline-new'}};
+ for (const submitted of [false,true]) {
+  assert.equal(safety.laminitisHold(answers,null,custom,submitted),true);
+  assert.equal(safety.laminitisHold(answers,{episode_id:'active',client_marker:'offline-new'},custom,submitted),true);
+ }
+ const released = {episode_id:'old',client_marker:'old',released_at:'today',configuration:custom};
+ assert.equal(safety.laminitisHold(answers,released,custom,false),true);
+ assert.equal(safety.laminitisHold({'custom-safety':{condition:'none',_event:'offline-new'}},released,custom,false),true,'changing the answer must not discard a pending report');
+ assert.equal(safety.laminitisHold(answers,released,null,false),true,'pinned settings must still recognize pending reports');
+});

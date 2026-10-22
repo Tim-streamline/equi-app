@@ -23,8 +23,12 @@ export function recoveryRequirements(config: SafetyConfig, answers: IntakeAnswer
 export function changedTrigger(config: SafetyConfig | null, answers: IntakeAnswers, section: string, field: string) {
   return config?.section === section ? config.triggers.find(t => field in t.when && matches(t.when, answers[section] ?? {})) : undefined;
 }
-export function laminitisHold(answers: IntakeAnswers, safety: LaminitisState | null, config: SafetyConfig | null) {
+export function laminitisHold(answers: IntakeAnswers, safety: LaminitisState | null, config: SafetyConfig | null, submitted = false) {
   if (safety?.episode_id && !safety.released_at) return true;
+  // Submitted answers are immutable reports, not pending edits. Recovery is
+  // recorded separately, and later intakes can replace the horse's marker.
+  // Only a confirmed server release overrides those historical answers.
+  if (submitted && safety?.episode_id && safety.released_at) return false;
   for (const rule of [config, safety?.configuration].filter((c): c is SafetyConfig => !!c)) {
     const values = answers[rule.section] ?? {};
     if (values[rule.marker_field] && values[rule.marker_field] !== safety?.client_marker) return true;

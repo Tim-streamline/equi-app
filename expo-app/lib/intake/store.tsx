@@ -135,7 +135,7 @@ function HorseIntakeProvider({ userId, horseId, selectedId, children }: { userId
       setState(prev => ({ ...prev, savedAt: new Date().toISOString() }));
     }).catch(() => {});
   }, [enqueue, ensureBooking, powersync, questionnaireSafety, safetyConfig, laminitisSafety]);
-  const laminitisBlocked = laminitisHold(state.answers, laminitisSafety, questionnaireSafety);
+  const laminitisBlocked = laminitisHold(state.answers, laminitisSafety, questionnaireSafety, !!(completedAt || state.submittedAt));
   const confirmLaminitisRecovery = useCallback(async (declarations?: Record<string, string>) => {
     if (!laminitisSafety?.episode_id) throw new Error(safetyConfig?.messages.pending ?? 'De veiligheidsmelding wordt nog gesynchroniseerd.');
     await queue.current;
