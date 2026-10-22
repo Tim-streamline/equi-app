@@ -52,6 +52,7 @@ class AdminProtocolAdviceSelectionTest extends TestCase
             'name' => 'Boaz',
             'status' => 'active',
         ]);
+        \App\Models\IntakeBooking::create(['horse_id' => $this->horse->id, 'user_id' => $owner->id, 'submitted_at' => now()]);
         $this->protocolTemplate = ProtocolTemplate::query()->create(['name' => 'Herstel']);
         $this->phaseDefinition = $this->protocolTemplate->phases()->create([
             'order' => 1,
@@ -80,8 +81,11 @@ class AdminProtocolAdviceSelectionTest extends TestCase
 
     public function test_creator_receives_available_advice_for_all_three_tabs(): void
     {
+        $draft = $this->horse->protocols()->sole();
         $this->actingAs($this->admin, 'admin')
             ->get('/admin/protocols/create?horse_id='.$this->horse->id)
+            ->assertRedirect('/admin/protocols/'.$draft->id.'/edit');
+        $this->get('/admin/protocols/'.$draft->id.'/edit')
             ->assertOk()
             ->assertInertia(fn (Assert $page) => $page
                 ->component('Protocols/Edit')

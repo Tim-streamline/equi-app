@@ -18,6 +18,66 @@ class IntakeSyncAuthorizationTest extends TestCase
 
     private string $privateKey = '';
 
+    public function test_stale_offline_removed_choices_are_acknowledged_without_restoring_the_answer(): void
+    {
+        $user = User::factory()->create();
+        $horse = Horse::create(['owner_id' => $user->id, 'name' => 'Nova']);
+        $booking = IntakeBooking::create(['user_id' => $user->id, 'horse_id' => $horse->id]);
+        $q = IntakeQuestionnaire::create(['slug' => 'protocol-intake', 'name' => 'Intake']);
+        $section = $q->sections()->create(['key' => 'paard', 'title' => 'Paard']);
+        $section->fields()->create(['key' => 'choice', 'label' => 'Choice', 'type' => 'radio', 'options' => ['current']]);
+        $id = (string) Str::uuid();
+        $op = ['op' => 'PUT', 'type' => 'intake_answers', 'id' => $id,
+            'data' => ['response_id' => $booking->id, 'section_id' => 'paard', 'field_id' => 'choice', 'value' => '"removed"']];
+        $this->postSyncAs($user, [$op])->assertOk();
+        $this->assertDatabaseMissing('intake_answers', ['id' => $id]);
+        $this->postSyncAs($user, [
+            ['op' => 'PATCH', 'type' => 'intake_answers', 'id' => $id, 'data' => ['value' => '"removed"']],
+            ['op' => 'DELETE', 'type' => 'intake_answers', 'id' => $id],
+        ])->assertOk();
+        $this->assertDatabaseMissing('intake_answers', ['id' => $id]);
+        $op['data']['value'] = '"current"';
+        $this->postSyncAs($user, [$op])->assertOk();
+        $this->assertDatabaseHas('intake_answers', ['id' => $id, 'value' => '"current"']);
+    }
+
+    public function test_sync_preserves_valid_aliases_verbatim_and_discards_obsolete_puts_and_patches(): void
+    {
+        $user = User::factory()->create();
+        $horse = Horse::create(['owner_id' => $user->id, 'name' => 'Aliases']);
+        $booking = IntakeBooking::create(['user_id' => $user->id, 'horse_id' => $horse->id]);
+        $q = IntakeQuestionnaire::create(['slug' => 'protocol-intake', 'name' => 'Intake']);
+        $section = $q->sections()->create(['key' => 'current-section', 'title' => 'Current section']);
+        $cases = [
+            ['radio', 'Combinatie van beide', 'removed'],
+            ['multi', ['current', 'Combinatie van beide'], ['Combinatie van beide', 'removed']],
+            ['number', 'old unknown', 'removed'],
+            ['radio', 'current', 'broken alias'],
+        ];
+        foreach ($cases as $index => [$type, $historical, $obsolete]) {
+            $key = 'alias-'.$index;
+            $section->fields()->create(['key' => $key, 'label' => $key, 'type' => $type, 'answer_section_key' => 'original',
+                'options' => ['Een combinatie van beide', 'current', 'unknown'],
+                'answer_aliases' => ['Combinatie van beide' => 'Een combinatie van beide', 'old unknown' => 'unknown', 'broken alias' => 'removed target']]);
+            $id = (string) Str::uuid();
+            $encoded = json_encode($historical);
+            $op = ['op' => 'PUT', 'type' => 'intake_answers', 'id' => $id,
+                'data' => ['response_id' => $booking->id, 'section_id' => 'original', 'field_id' => $key, 'value' => $encoded]];
+            $this->postSyncAs($user, [$op])->assertOk();
+            $this->assertDatabaseHas('intake_answers', ['id' => $id, 'value' => $encoded]);
+            $this->postSyncAs($user, [['op' => 'PATCH', 'type' => 'intake_answers', 'id' => $id, 'data' => ['value' => $encoded]]])->assertOk();
+            $this->assertDatabaseHas('intake_answers', ['id' => $id, 'value' => $encoded]);
+            $this->postSyncAs($user, [['op' => 'PATCH', 'type' => 'intake_answers', 'id' => $id, 'data' => ['value' => json_encode($obsolete)]]])->assertOk();
+            $this->assertDatabaseMissing('intake_answers', ['id' => $id]);
+            $op['data']['value'] = json_encode($obsolete);
+            $this->postSyncAs($user, [$op])->assertOk();
+            $this->assertDatabaseMissing('intake_answers', ['id' => $id]);
+            $op['data']['value'] = $encoded;
+            $this->postSyncAs($user, [$op])->assertOk();
+            $this->assertDatabaseHas('intake_answers', ['id' => $id, 'value' => $encoded]);
+        }
+    }
+
     public function test_existing_intake_can_sync_answers_and_submit_without_plus_but_cannot_create_another(): void
     {
         $user = User::factory()->create();

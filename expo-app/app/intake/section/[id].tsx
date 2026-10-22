@@ -14,7 +14,6 @@ import { Button } from '@/components/ui/Button';
 import { IconButton } from '@/components/ui/IconButton';
 import { IntakeScrollView } from '@/components/intake/IntakeScrollView';
 import { IntakeField } from '@/components/intake/IntakeField';
-import { LaminitisSafetyNotice } from '@/components/intake/LaminitisSafetyNotice';
 import { useIntakeSchema } from '@/lib/intake/schema-provider';
 import { visibleFieldsForRender, answeredCount, answersForSection, isPhotoSection, isSectionComplete } from '@/lib/intake/logic';
 import { useIntake } from '@/lib/intake/store';
@@ -32,7 +31,7 @@ export default function IntakeSectionScreen() {
   const insets = useSafeAreaInsets();
   const { schema, noneOptions } = useIntakeSchema();
   const section = id ? schema.find((candidate) => candidate.id === id) : undefined;
-  const { state, trackActivity, safetyConfig } = useIntake();
+  const { state, trackActivity } = useIntake();
   useEffect(() => { if (id) trackActivity(id); }, [id, trackActivity]);
   const answers = useMemo(
     () => section ? answersForSection(section, state.answers) : {},
@@ -181,13 +180,12 @@ export default function IntakeSectionScreen() {
                     fieldPositions.current[f.id] = event.nativeEvent.layout.y;
                     if (requestedField === f.id) scrollToRequestedField();
                   }}>
-                {!(section.id === safetyConfig?.section && Object.keys(safetyConfig.recovery.require).includes(f.id)) && <IntakeField
+                <IntakeField
                   field={f}
                   sectionId={section.id}
                   n={fieldCounter}
                   noneOptions={noneOptions}
-                />}
-                {section.id === safetyConfig?.section && f.id === safetyConfig.recovery.after && <LaminitisSafetyNotice popup recovery />}
+                />
                 </View>
               );
             })}

@@ -555,6 +555,7 @@ const intake_sections = new Table({
 const intake_fields = new Table({
   answer_aliases: column.text,
   date_config: column.text,
+  submission_blocks: column.text,
   section_id: column.text,
   answer_section_key: column.text,
   photo_config: column.text,

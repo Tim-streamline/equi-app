@@ -14,18 +14,18 @@ const logic=load('../lib/intake/logic.ts',{'./schema':schema,'./config':config})
 const jsx=(type,props)=>({type,props});
 const flatten=node=>Array.isArray(node)?node.flatMap(flatten):node&&typeof node==='object'?[node,...flatten(node.props?.children)]:[];
 const text=node=>Array.isArray(node)?node.map(text).join(''):node&&typeof node==='object'?text(node.props?.children):node??'';
-function overview(answers,submittedAt=null,s={id:'test',nr:0,title:'Test',fields:[{id:'required',type:'text'},{id:'optional',type:'text',optional:true}]},screenName='overview') {
+function overview(answers,submittedAt=null,s={id:'test',nr:0,title:'Test',fields:[{id:'required',type:'text'},{id:'optional',type:'text',optional:true}]},screenName='overview',blocks=[]) {
  let submissions=0; const routes=[]; const states=[]; let cursor=0;
  const modules={
   react:{useEffect(){},useState:initial=>{const index=cursor++;if(!(index in states))states[index]=initial;return [states[index],next=>{states[index]=typeof next==='function'?next(states[index]):next;}];}}, 'react/jsx-runtime':{jsx,jsxs:jsx},
   'react-native':{Text:'Text',View:'View',Pressable:'Pressable',ScrollView:'ScrollView'},
   'react-native-safe-area-context':{SafeAreaView:'SafeAreaView',useSafeAreaInsets:()=>({bottom:0})}, 'lucide-react-native':{},
   'expo-router':{router:{replace(){},push:route=>routes.push(route)},useNavigation:()=>({canGoBack:()=>false})},
-  '@/components/intake/LaminitisSafetyNotice': { LaminitisSafetyNotice: 'LaminitisSafetyNotice' },
+  '@/components/intake/SubmissionBlockNotice': { SubmissionBlockNotice: 'SubmissionBlockNotice' },
     '@/components/ui/Button':{Button:'Button'}, '@/components/ui/IconButton':{IconButton:'IconButton'},
   '@/components/intake/MissingQuestionsModal':{MissingQuestionsModal:'MissingQuestionsModal'},
   '@/lib/intake/submission':{formatIntakeDate},'@/lib/intake/logic':logic,
-  '@/lib/intake/store':{formatSavedAgo:()=>null,useIntake:()=>({state:{answers,submittedAt},loaded:true,submitting:false,submit:async()=>{submissions++;}})},
+  '@/lib/intake/store':{formatSavedAgo:()=>null,useIntake:()=>({submissionBlocks:blocks,state:{answers,submittedAt},loaded:true,submitting:false,submit:async()=>{submissions++;}})},
   '@/lib/intake/schema-provider':{useIntakeSchema:()=>({schema:[s],noneOptions:[],disclaimerShort:''})},
  };
  const screen=load(`../app/intake/${screenName}.tsx`,modules).default;
@@ -153,4 +153,12 @@ test('photo presentation and copy are data-driven and retain the required titles
  assert.equal(render({...field,photoConfig:{}}),null);
  const result=config.buildIntakeSchema([{id:'s',key:'s',title:'Custom',presentation:JSON.stringify({intro_style:'card',offline_notice:'Custom notice'})}],[]);
  assert.equal(result[0].presentation.offline_notice,'Custom notice');
+});
+
+for (const screen of ['overview','submit']) test(`${screen}: blocking card is above the disabled submit button`,()=>{
+ const result=overview({test:{required:'Done'}},null,undefined,screen,[{message:'Configured message'}]);
+ const card=result.nodes.findIndex(n=>n.type==='SubmissionBlockNotice');
+ const button=result.nodes.findIndex(n=>n.type==='Button'&&n.props.title==='Intake versturen');
+ assert.ok(card>=0&&card<button);
+ assert.equal(result.nodes[button].props.disabled,true);
 });

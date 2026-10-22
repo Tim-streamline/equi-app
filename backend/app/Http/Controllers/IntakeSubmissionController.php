@@ -10,18 +10,6 @@ use Illuminate\Support\Facades\DB;
 
 class IntakeSubmissionController extends Controller
 {
-    public function recovery(Request $request, string $id)
-    {
-        $data = $request->validate(['episode_id' => ['required', 'uuid'],
-            'declarations' => ['sometimes', 'array', 'max:50'],
-            'declarations.*' => ['string', 'max:255']]);
-        $booking = IntakeBooking::findOrFail($id);
-        $userId = $request->attributes->get('powersync_user_id');
-        app(ProtocolAccess::class)->authorizeBooking($userId, $booking->horse_id, $id);
-
-        return response()->json(['safety' => app(\App\Support\LaminitisSafety::class)->release($booking, $data['episode_id'], $userId, $data['declarations'] ?? null)]);
-    }
-
     public function store(Request $request, string $id)
     {
         return DB::transaction(function () use ($request, $id) {

@@ -78,8 +78,9 @@ return new class extends Migration
                             $parts[] = $detail;
                         }
                         if ($parts) {
-                            IntakeAnswer::create(['response_id' => $answer->response_id, 'section_id' => 'medisch',
-                                'field_id' => 'ems-vermoeden-toelichting', 'value' => json_encode(implode("\n", $parts), JSON_THROW_ON_ERROR)]);
+                            // Data backfills must not invoke runtime observers whose schema comes later.
+                            IntakeAnswer::withoutEvents(fn () => IntakeAnswer::create(['response_id' => $answer->response_id, 'section_id' => 'medisch',
+                                'field_id' => 'ems-vermoeden-toelichting', 'value' => json_encode(implode("\n", $parts), JSON_THROW_ON_ERROR)]));
                         }
                     }
                 });
@@ -101,8 +102,8 @@ return new class extends Migration
                         if (! is_array($refs) || ! array_filter($refs, fn ($ref) => is_string($ref) && str_starts_with($ref, 'attachment:'))) {
                             continue;
                         }
-                        IntakeAnswer::firstOrCreate(['response_id' => $answer->response_id, 'section_id' => 'medisch',
-                            'field_id' => 'kpu-uitslag-beschikbaar'], ['value' => json_encode('Ja')]);
+                        IntakeAnswer::withoutEvents(fn () => IntakeAnswer::firstOrCreate(['response_id' => $answer->response_id, 'section_id' => 'medisch',
+                            'field_id' => 'kpu-uitslag-beschikbaar'], ['value' => json_encode('Ja')]));
                     }
                 });
         });

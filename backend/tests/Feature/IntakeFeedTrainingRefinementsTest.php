@@ -67,7 +67,11 @@ class IntakeFeedTrainingRefinementsTest extends TestCase
         $this->assertSame('discipline', $keys[array_search('training-vormen-anders', $keys) + 1]);
         $expected = json_decode(file_get_contents(database_path('data/intake-questionnaire.json')), true);
         $trainingDefinition = collect($expected['sections'])->firstWhere('id', 'gedrag');
-        $this->assertSame(array_column($trainingDefinition['fields'], 'id'), $keys);
+        // This September migration predates the October date question. Check
+        // its own ordering contract, while preserving all later questions.
+        $this->assertEqualsCanonicalizing(array_column($trainingDefinition['fields'], 'id'), $keys);
+        $this->assertSame(['discipline', 'training-veranderd', 'training-veranderd-details'],
+            array_slice($keys, array_search('discipline', $keys), 3));
         $feedKeys = $feed->fields()->where('active', true)->orderBy('order')->pluck('key')->all();
         $this->assertSame('huidige-bijvoeding', $feedKeys[array_search('bijvoeding-nu', $feedKeys) + 1]);
     }

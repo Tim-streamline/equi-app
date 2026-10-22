@@ -198,6 +198,7 @@ class IntakeQuestionnaireController extends Controller
             'link_json' => ['nullable', 'string', 'max:20000'],
             'options_json' => ['nullable', 'string', 'max:50000'],
             'answer_aliases_json' => ['sometimes', 'nullable', 'string', 'max:50000'],
+            'submission_blocks' => ['sometimes', 'nullable', 'array'],
             'show_if_json' => ['nullable', 'string', 'max:50000'],
             'flag_if_json' => ['nullable', 'string', 'max:50000'],
             'critical_if_json' => ['nullable', 'string', 'max:50000'],
@@ -225,6 +226,9 @@ class IntakeQuestionnaireController extends Controller
         }
 
         if (! $request->exists('answer_aliases_json')) $data['answer_aliases'] = $field?->answer_aliases;
+        $data['submission_blocks'] = $request->exists('submission_blocks') ? $request->input('submission_blocks') : $field?->submission_blocks;
+        try { app(\App\Support\IntakeSubmissionBlocks::class)->validate($data['submission_blocks']); }
+        catch (ValidationException $e) { throw ValidationException::withMessages(['submission_blocks' => implode(' ', $e->validator->errors()->all())]); }
         try { app(\App\Support\IntakeSafetySettings::class)->validateAliases($data['answer_aliases']); }
         catch (ValidationException $e) { throw ValidationException::withMessages(['answer_aliases_json' => implode(' ', $e->validator->errors()->all())]); }
         if (! $request->exists('date_config_json')) $data['date_config'] = $field?->date_config;

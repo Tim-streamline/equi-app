@@ -6,15 +6,12 @@ import {
   INTAKE_DISCLAIMER_SHORT,
   INTAKE_NONE_OPTIONS,
   INTAKE_SCHEMA,
-  INTAKE_SAFETY_CONFIG,
   type Section,
 } from './schema';
 import { buildIntakeSchema } from './config';
-import type { SafetyConfig } from './laminitis';
 
 type IntakeSchemaContextValue = {
   schema: Section[];
-  safetyConfig: SafetyConfig | null;
   disclaimerShort: string;
   disclaimerLong: string;
   noneOptions: string[];
@@ -23,7 +20,6 @@ type IntakeSchemaContextValue = {
 
 const IntakeSchemaContext = createContext<IntakeSchemaContextValue>({
   schema: INTAKE_SCHEMA,
-  safetyConfig: INTAKE_SAFETY_CONFIG,
   disclaimerShort: INTAKE_DISCLAIMER_SHORT,
   disclaimerLong: INTAKE_DISCLAIMER_LONG,
   noneOptions: INTAKE_NONE_OPTIONS,
@@ -58,7 +54,6 @@ export function IntakeSchemaProvider({ children }: { children: ReactNode }) {
     if (!questionnaire || configured.length === 0) {
       return {
         schema: INTAKE_SCHEMA,
-        safetyConfig: INTAKE_SAFETY_CONFIG,
         disclaimerShort: INTAKE_DISCLAIMER_SHORT,
         disclaimerLong: INTAKE_DISCLAIMER_LONG,
         noneOptions: INTAKE_NONE_OPTIONS,
@@ -68,7 +63,6 @@ export function IntakeSchemaProvider({ children }: { children: ReactNode }) {
 
     return {
       schema: configured,
-      safetyConfig: questionnaire.safety_config == null ? null : (typeof questionnaire.safety_config === 'string' ? JSON.parse(questionnaire.safety_config) : questionnaire.safety_config) as SafetyConfig,
       disclaimerShort: String(questionnaire.disclaimer_short ?? INTAKE_DISCLAIMER_SHORT),
       disclaimerLong: String(questionnaire.disclaimer_long ?? INTAKE_DISCLAIMER_LONG),
       noneOptions: parseStringArray(questionnaire.none_options) ?? INTAKE_NONE_OPTIONS,

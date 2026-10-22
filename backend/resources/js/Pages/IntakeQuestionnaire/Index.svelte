@@ -1,5 +1,4 @@
 <script>
-    import { untrack } from 'svelte';
     import AdminLayout from '../../Layouts/AdminLayout.svelte';
     import PageHeader from '$lib/components/PageHeader.svelte';
     import Modal from '$lib/components/Modal.svelte';
@@ -23,7 +22,6 @@
         disclaimer_short: questionnaire.disclaimer_short ?? '',
         disclaimer_long: questionnaire.disclaimer_long ?? '',
         none_options_json: JSON.stringify(questionnaire.none_options ?? [], null, 2),
-        safety_config_json: JSON.stringify(untrack(() => questionnaire.safety_config ?? null), null, 2),
     });
     const sectionForm = useForm({
         questionnaire_id: questionnaire.id,
@@ -56,6 +54,7 @@
             active: true,
             options_json: '',
             answer_aliases_json: '',
+            submission_blocks: [],
             show_if_json: '',
             flag_if_json: '',
             critical_if_json: '',
@@ -135,6 +134,7 @@
             active: field.active,
             options_json: json(field.options),
             answer_aliases_json: json(field.answer_aliases),
+            submission_blocks: structuredClone(field.submission_blocks ?? []),
             show_if_json: json(field.show_if),
             flag_if_json: json(field.flag_if),
             critical_if_json: json(field.critical_if),
@@ -192,7 +192,6 @@
                 <Field label="Exclusieve ‘geen / niet van toepassing’-antwoorden (JSON-array)" hint="Bij een meerkeuzevraag wist zo'n antwoord alle andere selecties en telt het niet als inhoudelijk signaal." error={$questionnaireForm.errors.none_options_json}>
                     <Textarea rows="5" bind:value={$questionnaireForm.none_options_json} placeholder={'["geen", "niet van toepassing"]'} />
                 </Field>
-                <Field label="Veiligheidsregels (JSON)" hint="Trigger- en herstelvoorwaarden, meldingvelden en geblokkeerde acties. Bestaande meldingen behouden hun oorspronkelijke regels." error={$questionnaireForm.errors.safety_config_json}><Textarea rows="12" bind:value={$questionnaireForm.safety_config_json} /></Field>
                 <div class="flex justify-end"><Button type="submit" disabled={$questionnaireForm.processing}><Save class="size-4" /> Opslaan</Button></div>
             </form>
         </CardContent>
@@ -291,6 +290,20 @@
                 <label class="flex items-center gap-2"><input type="checkbox" bind:checked={$fieldForm.tall} /> Hoog tekstveld</label>
                 <label class="flex items-center gap-2"><input type="checkbox" bind:checked={$fieldForm.active} /> Actief</label>
             </div>
+
+            <section class="space-y-3 rounded-xl border p-4">
+                <h3 class="font-semibold">Antwoorden die versturen blokkeren</h3>
+                <p class="text-sm">Bij deze antwoorden verschijnt de melding boven de verstuurknop. De klant kan pas versturen zodra geen blokkerend antwoord meer is geselecteerd.</p>
+                {#each $fieldForm.submission_blocks as rule, i}
+                    <div class="space-y-2 rounded-lg border p-3">
+                        <Field label="Blokkerend antwoord"><Input bind:value={rule.answer} placeholder="Exacte antwoordoptie" /></Field>
+                        <Field label="Melding voor de klant"><Textarea rows="3" bind:value={rule.message} /></Field>
+                        <Button type="button" variant="outline" onclick={() => $fieldForm.submission_blocks = $fieldForm.submission_blocks.filter((_, index) => index !== i)}>Blokkade verwijderen</Button>
+                    </div>
+                {/each}
+                {#if $fieldForm.errors.submission_blocks}<p class="text-red-700">{$fieldForm.errors.submission_blocks}</p>{/if}
+                <Button type="button" variant="outline" onclick={() => $fieldForm.submission_blocks = [...$fieldForm.submission_blocks, { answer: '', message: '' }]}>Blokkerend antwoord toevoegen</Button>
+            </section>
 
             <div class="grid gap-4 md:grid-cols-2">
                 <div class="md:col-span-2"><Field label="Maand/jaar-instellingen (JSON)" error={$fieldForm.errors.date_config_json} hint="Type month_year: mode single of range, allow_future, allow_year_only, min_year. month_label, year_label, unknown_label en ongoing_label bepalen de teksten. Ook via dateConfig bij herhaal-subvelden."><Textarea rows="3" bind:value={$fieldForm.date_config_json} placeholder={'{"mode":"single","allow_future":false,"allow_year_only":true}'} /></Field></div>

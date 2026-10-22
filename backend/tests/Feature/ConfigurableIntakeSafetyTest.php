@@ -42,7 +42,9 @@ class ConfigurableIntakeSafetyTest extends TestCase
 
     private function answer(IntakeBooking $booking, string $key, string $value): void
     {
-        $booking->answers()->updateOrCreate(['section_id' => 'custom-safety', 'field_id' => $key], ['value' => json_encode($value)]);
+        $answer = $booking->answers()->updateOrCreate(['section_id' => 'custom-safety', 'field_id' => $key], ['value' => json_encode($value)]);
+        // Reproduce pre-retirement data for the historical migration helpers.
+        app(LaminitisSafety::class)->observe($answer);
     }
 
     private function reject(callable $operation): void
@@ -201,4 +203,213 @@ class ConfigurableIntakeSafetyTest extends TestCase
         $this->assertSame('second', $state['client_marker']);
         $this->assertTrue($safety->blocked($booking->horse->fresh()));
     }
+
+    public function test_acute_then_ongoing_concern_cannot_lose_conditional_recovery_after_reset_or_other_intake(): void
+    {
+        [, $booking, $safety] = $this->setupWorkflow();
+        $this->answer($booking, '_event', 'acute-marker');
+        $this->answer($booking, 'condition', 'urgent');
+        $acute = $booking->horse->fresh()->laminitis_safety['episode_id'];
+        $this->answer($booking, '_event', 'ongoing-marker');
+        $this->answer($booking, 'condition', 'previous');
+        $this->answer($booking, 'recovered', 'uncertain');
+        $reports = $booking->safetyReports()->get();
+        $this->assertCount(2, $reports);
+        $ongoing = $reports->first(fn ($r) => $r->state['kind'] === 'ongoing');
+        $this->assertSame(['recovered'], $ongoing->state['requirements']['recovered']);
+        $booking->answers()->delete();
+        $other = IntakeBooking::create(['user_id' => $booking->user_id, 'horse_id' => $booking->horse_id]);
+        $basic = ['resolved' => 'confirmed', 'stable' => 'approved'];
+        $result = $safety->release($other, $acute, $other->user_id, $basic);
+        $this->assertEmpty($result['released_at'] ?? null, 'Compatibility projection must still block installed clients');
+        $this->assertTrue($safety->blocked($other->horse->fresh()));
+        foreach (['submit', 'preview', 'protocol'] as $action) {
+            $this->reject(fn () => $safety->assertAllowed($other->horse->fresh(), $action));
+        }
+        $this->reject(fn () => $safety->release($other, $ongoing->state['episode_id'], $other->user_id, $basic));
+        $safety->release($other, $ongoing->state['episode_id'], $other->user_id, $basic + ['recovered' => 'recovered']);
+        $this->assertFalse($safety->blocked($other->horse->fresh()));
+        $this->assertSame($booking->id, $ongoing->fresh()->intake_booking_id);
+        $this->assertSame($other->id, $ongoing->fresh()->state['release_booking_id']);
+        $this->assertSame(0, $booking->answers()->count());
+        $this->assertSame(0, $other->answers()->count());
+    }
+
+    public function test_each_intake_retains_its_report_and_releasing_one_cannot_clear_another(): void
+    {
+        [, $a, $safety] = $this->setupWorkflow();
+        $this->answer($a, '_event', 'marker-a');
+        $this->answer($a, 'condition', 'urgent');
+        $episodeA = $a->horse->fresh()->laminitis_safety['episode_id'];
+        $a->forceFill(['submitted_at' => now(), 'completed_at' => now()])->save();
+        $b = IntakeBooking::create(['user_id' => $a->user_id, 'horse_id' => $a->horse_id]);
+        $this->answer($b, '_event', 'marker-b');
+        $this->answer($b, 'condition', 'urgent');
+        $episodeB = $b->safetyReports()->firstOrFail()->state['episode_id'];
+        $before = DB::table('intake_answers')->orderBy('id')->get()->toJson();
+        $confirmed = ['resolved' => 'confirmed', 'stable' => 'approved'];
+        $safety->release($a, $episodeA, $a->user_id, $confirmed);
+        $this->assertTrue($safety->blocked($a->horse->fresh()));
+        $this->assertTrue($safety->releasedCritical($a->horse->fresh(), 'custom-safety', 'condition', $a->id));
+        $this->assertFalse($safety->releasedCritical($a->horse->fresh(), 'custom-safety', 'condition', $b->id));
+        $safety->release($b, $episodeB, $b->user_id, $confirmed);
+        $this->assertFalse($safety->blocked($a->horse->fresh()));
+        $this->assertFalse(app(IntakeReview::class)->forBooking($a->fresh())['blocked']);
+        $this->assertSame($before, DB::table('intake_answers')->orderBy('id')->get()->toJson());
+        $this->assertCount(2, $a->horse->fresh()->laminitis_safety['reports']);
+        // A fresh concern in B still blocks A; an old release cannot clear it.
+        $this->answer($b, 'condition', 'none');
+        $this->answer($b, 'condition', 'urgent');
+        $this->reject(fn () => $safety->release($b, $episodeB, $b->user_id, $confirmed));
+        $safety->release($a, $episodeA, $a->user_id, $confirmed);
+        $this->assertTrue($safety->blocked($a->horse->fresh()));
+    }
+
+    public function test_report_migration_preserves_legacy_holds_releases_answers_and_timestamps_and_repeats_safely(): void
+    {
+        [, $booking, $safety, $config] = $this->setupWorkflow();
+        $this->answer($booking, 'condition', 'none');
+        $legacy = ['episode_id' => fake()->uuid(), 'kind' => 'urgent', 'booking_id' => $booking->id,
+            'configuration' => $config, 'requirements' => $config['recovery']['require'], 'client_marker' => 'original',
+            'history' => [['episode_id' => 'superseded', 'kind' => 'urgent']], 'reported_at' => '2026-09-01'];
+        $booking->horse->forceFill(['laminitis_safety' => $legacy])->save();
+        $releasedHorse = Horse::create(['owner_id' => $booking->user_id, 'name' => 'Released']);
+        $released = array_replace($legacy, ['episode_id' => fake()->uuid(), 'booking_id' => null, 'released_at' => '2026-10-01', 'confirmations' => ['resolved' => 'confirmed', 'stable' => 'approved']]);
+        $releasedHorse->forceFill(['laminitis_safety' => $released])->save();
+        $answers = DB::table('intake_answers')->orderBy('id')->get()->toJson();
+        $bookings = DB::table('intake_bookings')->orderBy('id')->get()->toJson();
+        $attachments = DB::table('intake_attachments')->orderBy('id')->get()->toJson();
+        $timestamps = DB::table('horses')->orderBy('id')->pluck('updated_at', 'id')->all();
+        $migration = require database_path('migrations/2026_10_22_000002_create_intake_safety_reports.php');
+        $migration->up();
+        $report = $booking->safetyReports()->firstOrFail();
+        $this->assertSame($legacy, array_intersect_key($report->state, $legacy));
+        $this->assertSame($released, array_intersect_key($releasedHorse->safetyReports()->firstOrFail()->state, $released));
+        $this->assertTrue($safety->blocked($booking->horse->fresh()));
+        $this->assertFalse($safety->blocked($releasedHorse->fresh()));
+        $projection = $booking->horse->fresh()->laminitis_safety;
+        $migration->up();
+        $this->assertSame($projection, $booking->horse->fresh()->laminitis_safety);
+        $this->assertSame(2, \App\Models\IntakeSafetyReport::count());
+        $this->assertSame($timestamps, DB::table('horses')->orderBy('id')->pluck('updated_at', 'id')->all());
+        $this->assertSame($answers, DB::table('intake_answers')->orderBy('id')->get()->toJson());
+        $this->assertSame($bookings, DB::table('intake_bookings')->orderBy('id')->get()->toJson());
+        $this->assertSame($attachments, DB::table('intake_attachments')->orderBy('id')->get()->toJson());
+        $booking->delete();
+        $this->assertNull($report->fresh()->intake_booking_id);
+        $this->assertSame($booking->id, $report->fresh()->state['booking_id']);
+        $this->assertTrue($safety->blocked($booking->horse->fresh()));
+    }
+
+    public function test_retracting_recovery_reopens_only_the_source_report_and_rejects_stale_confirmation(): void
+    {
+        [, $booking, $safety] = $this->setupWorkflow();
+        $this->answer($booking, 'condition', 'urgent');
+        $episode = $booking->horse->fresh()->laminitis_safety['episode_id'];
+        $safety->release($booking, $episode, $booking->user_id, ['resolved' => 'confirmed', 'stable' => 'approved']);
+        $other = IntakeBooking::create(['user_id' => $booking->user_id, 'horse_id' => $booking->horse_id]);
+        $this->answer($other, 'resolved', 'no');
+        $this->assertFalse($safety->blocked($booking->horse->fresh()));
+        $this->answer($booking, '_event', 'retraction');
+        $this->answer($booking, 'resolved', 'no');
+        $state = $booking->horse->fresh()->laminitis_safety;
+        $this->assertSame('retraction', $state['client_marker']);
+        $this->assertTrue($safety->blocked($booking->horse->fresh()));
+        $this->reject(fn () => $safety->release($booking, $episode, $booking->user_id, ['resolved' => 'confirmed', 'stable' => 'approved']));
+    }
+
+
+    public function test_imported_combined_legacy_hold_keeps_the_added_concern_and_its_recovery_requirement(): void
+    {
+        [, $booking, $safety, $config] = $this->setupWorkflow();
+        // Simulate the old app: the later ongoing answer did not become a report.
+        DB::table('intake_answers')->insert([
+            ['id' => fake()->uuid(), 'response_id' => $booking->id, 'section_id' => 'custom-safety', 'field_id' => 'condition', 'value' => json_encode('previous')],
+            ['id' => fake()->uuid(), 'response_id' => $booking->id, 'section_id' => 'custom-safety', 'field_id' => 'recovered', 'value' => json_encode('uncertain')],
+        ]);
+        $booking->horse->forceFill(['laminitis_safety' => ['episode_id' => fake()->uuid(), 'kind' => 'urgent',
+            'booking_id' => $booking->id, 'configuration' => $config, 'requirements' => $config['recovery']['require']]])->save();
+        $migration = require database_path('migrations/2026_10_22_000002_create_intake_safety_reports.php');
+        $migration->up();
+        $state = $booking->safetyReports()->firstOrFail()->state;
+        $this->assertSame(['urgent', 'ongoing'], $state['covered_triggers']);
+        $this->assertSame(['recovered'], $state['requirements']['recovered']);
+        $this->reject(fn () => $safety->release($booking, $state['episode_id'], $booking->user_id, ['resolved' => 'confirmed', 'stable' => 'approved']));
+        $safety->release($booking, $state['episode_id'], $booking->user_id, ['resolved' => 'confirmed', 'stable' => 'approved', 'recovered' => 'recovered']);
+        $this->assertFalse($safety->blocked($booking->horse->fresh()));
+    }
+
+
+    public function test_declarations_respect_pinned_blocking_rules_and_cannot_borrow_another_intakes_context(): void
+    {
+        [$q, $booking, $safety, $config] = $this->setupWorkflow();
+        $config['triggers'][0]['block_while_matching'] = true;
+        $q->update(['safety_config' => $config]);
+        $this->answer($booking, 'condition', 'urgent');
+        $state = $booking->horse->fresh()->laminitis_safety;
+        $other = IntakeBooking::create(['user_id' => $booking->user_id, 'horse_id' => $booking->horse_id]);
+        $this->answer($other, 'condition', 'none');
+        $this->answer($other, 'resolved', 'confirmed');
+        $this->answer($other, 'stable', 'approved');
+        $declarations = ['resolved' => 'confirmed', 'stable' => 'approved'];
+        $before = DB::table('intake_answers')->orderBy('id')->get()->toJson();
+        $reports = DB::table('intake_safety_reports')->orderBy('id')->get()->toJson();
+        $this->reject(fn () => $safety->release($booking, $state['episode_id'], $booking->user_id, $declarations));
+        $this->reject(fn () => $safety->release($other, $state['episode_id'], $other->user_id, $declarations));
+        $this->reject(fn () => $safety->release($other, $state['episode_id'], $other->user_id));
+        $booking->forceFill(['submitted_at' => now(), 'completed_at' => now()])->save();
+        $this->reject(fn () => $safety->release($booking, $state['episode_id'], $booking->user_id, $declarations));
+        // Editing today's settings cannot weaken an existing report's contract.
+        $config['triggers'][0]['block_while_matching'] = false;
+        $q->update(['safety_config' => $config]);
+        $this->reject(fn () => $safety->release($other, $state['episode_id'], $other->user_id, $declarations));
+        $this->assertTrue($safety->blocked($booking->horse->fresh()));
+        $this->assertSame($before, DB::table('intake_answers')->orderBy('id')->get()->toJson());
+        $this->assertSame($reports, DB::table('intake_safety_reports')->orderBy('id')->get()->toJson());
+    }
+
+    public function test_missing_source_context_cannot_bypass_blocking_but_an_explicit_safe_source_answer_can(): void
+    {
+        [$q, $booking, $safety, $config] = $this->setupWorkflow();
+        $config['triggers'][0]['block_while_matching'] = true;
+        $q->update(['safety_config' => $config]);
+        $this->answer($booking, 'condition', 'urgent');
+        $report = $booking->safetyReports()->firstOrFail();
+        $episode = $report->state['episode_id'];
+        $declarations = ['resolved' => 'confirmed', 'stable' => 'approved'];
+        $booking->answers()->delete();
+        $this->reject(fn () => $safety->release($booking, $episode, $booking->user_id, $declarations));
+        // Even legacy reports without trigger snapshots retain their recorded kind.
+        $state = $report->state;
+        unset($state['trigger_values']);
+        $report->update(['state' => $state]);
+        $this->reject(fn () => $safety->release($booking, $episode, $booking->user_id, $declarations));
+        $this->answer($booking, 'condition', '');
+        $this->reject(fn () => $safety->release($booking, $episode, $booking->user_id, $declarations));
+        $this->answer($booking, 'condition', 'none');
+        $before = $booking->answers()->get()->toJson();
+        $this->reject(fn () => $safety->release($booking, $episode, $booking->user_id, ['resolved' => 'confirmed']));
+        $safety->release($booking, $episode, $booking->user_id, $declarations);
+        $this->assertFalse($safety->blocked($booking->horse->fresh()));
+        $this->assertSame($before, $booking->answers()->get()->toJson());
+    }
+
+    public function test_recovery_declarations_override_only_recovery_fields_and_released_other_concerns_stay_released(): void
+    {
+        [, $booking, $safety] = $this->setupWorkflow();
+        $this->answer($booking, 'condition', 'urgent');
+        $acute = $booking->safetyReports()->firstOrFail();
+        $this->answer($booking, 'condition', 'previous');
+        $this->answer($booking, 'recovered', 'uncertain');
+        $ongoing = $booking->safetyReports()->get()->first(fn ($r) => $r->state['kind'] === 'ongoing');
+        $before = $booking->answers()->orderBy('id')->get()->toJson();
+        $declarations = ['resolved' => 'confirmed', 'stable' => 'approved'];
+        $this->reject(fn () => $safety->release($booking, $ongoing->state['episode_id'], $booking->user_id, $declarations));
+        $safety->release($booking, $ongoing->state['episode_id'], $booking->user_id, $declarations + ['recovered' => 'recovered']);
+        $this->assertTrue($safety->blocked($booking->horse->fresh()));
+        $safety->release($booking, $acute->state['episode_id'], $booking->user_id, $declarations);
+        $this->assertFalse($safety->blocked($booking->horse->fresh()));
+        $this->assertSame($before, $booking->answers()->orderBy('id')->get()->toJson());
+    }
+
 }

@@ -64,6 +64,46 @@ class ProtocolEditorIntakeTest extends TestCase
         $this->actingAs($admin, 'admin');
     }
 
+    public function test_unsubmitted_intake_blocks_protocol_save_preview_and_activation(): void
+    {
+        $this->intake->update(['submitted_at' => null, 'completed_at' => null, 'intake_status' => 'draft']);
+        $id = $this->intake->protocol_id;
+        $before = $this->intake->protocol->getRawOriginal();
+        $this->postJson('/admin/protocols', $this->payload)->assertUnprocessable()->assertJsonValidationErrors('intake');
+        $this->putJson('/admin/protocols/'.$id, $this->payload)->assertUnprocessable()->assertJsonValidationErrors('intake');
+        foreach (['/admin/protocols/preview', '/admin/protocols/'.$id.'/preview'] as $url) {
+            $this->postJson($url, $this->payload)->assertUnprocessable()->assertJsonValidationErrors('intake');
+        }
+        $this->postJson('/admin/protocols/'.$id.'/status', ['status' => 'active'])->assertUnprocessable()->assertJsonValidationErrors('intake');
+        $this->assertSame($before, $this->intake->protocol->fresh()->getRawOriginal());
+        $this->assertDatabaseCount('protocol_phases', 0);
+        $this->intake->protocol->update(['status' => 'archived', 'archived_previous_status' => 'active']);
+        $this->postJson('/admin/protocols/bulk', ['action' => 'restore', 'ids' => [$id]])->assertUnprocessable()->assertJsonValidationErrors('intake');
+        $this->assertSame('archived', $this->intake->protocol->fresh()->status);
+    }
+
+    public function test_another_horse_submitted_intake_cannot_authorize_a_new_protocol(): void
+    {
+        $horse = Horse::create(['name' => 'No intake', 'owner_id' => $this->horse->owner_id]);
+        $payload = array_replace($this->payload, ['horse_id' => $horse->id]);
+        $this->postJson('/admin/protocols', $payload)->assertUnprocessable()->assertJsonValidationErrors('intake');
+        $this->postJson('/admin/protocols/preview', $payload)->assertUnprocessable()->assertJsonValidationErrors('intake');
+        $this->assertSame(0, $horse->protocols()->count());
+    }
+
+    public function test_submitted_intake_can_prepare_a_protocol_after_blocking_rules_change(): void
+    {
+        $q = \App\Models\IntakeQuestionnaire::create(['slug' => 'protocol-intake', 'name' => 'Intake']);
+        $section = $q->sections()->create(['key' => 'paard', 'title' => 'Paard']);
+        $section->fields()->create(['key' => 'condition', 'label' => 'Condition', 'type' => 'radio', 'options' => ['previously accepted'],
+            'submission_blocks' => [['answer' => 'previously accepted', 'message' => 'New rule']]]);
+        $this->intake->answers()->create(['section_id' => 'paard', 'field_id' => 'condition', 'value' => '"previously accepted"']);
+        $this->assertNotEmpty(app(\App\Support\IntakeSubmissionBlocks::class)->forBooking($this->intake));
+        $this->postJson('/admin/protocols/preview', $this->payload)->assertOk();
+        $this->post('/admin/protocols', $this->payload)->assertSessionHasNoErrors();
+        $this->assertSame('active', $this->intake->protocol->fresh()->status);
+    }
+
     public function test_archived_protocol_can_be_edited_without_returning_to_the_customer_dashboard(): void
     {
         $payload = $this->payload;
@@ -240,6 +280,7 @@ class ProtocolEditorIntakeTest extends TestCase
     {
         foreach ([300, 535, 600, 750] as $weight) {
             $horse = Horse::create(['name' => 'Weight '.$weight, 'owner_id' => $this->horse->owner_id, 'weight_kg' => $weight, 'status' => 'active']);
+            IntakeBooking::create(['horse_id' => $horse->id, 'user_id' => $horse->owner_id, 'submitted_at' => now()]);
             $payload = $this->payload;
             $payload['horse_id'] = $horse->id;
             $this->post('/admin/protocols', $payload)->assertSessionHasNoErrors();

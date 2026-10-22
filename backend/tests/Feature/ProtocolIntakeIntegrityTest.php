@@ -112,6 +112,7 @@ class ProtocolIntakeIntegrityTest extends TestCase
         $horse = $this->horse();
         $active = $horse->protocols()->create(['title' => 'Current', 'status' => 'active']);
         $archived = $horse->protocols()->create(['title' => 'Old', 'status' => 'archived', 'archived_previous_status' => 'active']);
+        $archived->intake->update(['submitted_at' => now()]);
         $this->post('/admin/protocols/bulk', ['action' => 'restore', 'ids' => [$archived->id]])->assertSessionHasErrors('status');
         $this->assertSame('active', $active->fresh()->status);
         $this->assertSame('archived', $archived->fresh()->status);

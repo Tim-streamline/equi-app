@@ -21,14 +21,15 @@ class ProtocolPreview
     public function build(array $data, ?Protocol $stored, int $week = 1): array
     {
         $horse = Horse::findOrFail($data['horse_id']);
-        app(LaminitisSafety::class)->assertAllowed($horse, 'preview');
+        $nutrition = app(ProtocolNutrition::class);
+        $source = $stored ?? $nutrition->draftForHorse($horse->id);
+        ($source ?? new Protocol)->assertIntakeSubmitted();
         $template = ProtocolTemplate::with('phases.supplements')->findOrFail($data['protocol_template_id']);
         $stored?->load('phases.supplements', 'analysis', 'voedingAdviezen', 'managementAdviezen', 'bewegingAdviezen');
         $protocol = new Protocol($data);
         $protocol->id = $stored?->id ?? (string) Str::uuid();
         $protocol->setRelation('horse', $horse);
-        $nutrition = app(ProtocolNutrition::class);
-        $answers = $nutrition->answers($stored ?? $nutrition->draftForHorse($horse->id));
+        $answers = $nutrition->answers($source);
         $weight = $nutrition->actualWeight($protocol, $answers);
         $phases = new Collection;
         $previousStart = null;

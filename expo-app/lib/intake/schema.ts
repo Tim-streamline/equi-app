@@ -20,91 +20,6 @@
 // supported by the renderer.
 
 import type { DateAnswer, DateConfig } from './dates';
-import type { SafetyConfig } from './laminitis';
-export const INTAKE_SAFETY_CONFIG: SafetyConfig = {
-  "version": 1,
-  "section": "medisch",
-  "marker_field": "_laminitis_hold",
-  "state_field": "_laminitis_recovery_required",
-  "state_value": "Ja",
-  "clear_value": "Nee",
-  "actions": [
-    "submit",
-    "preview",
-    "protocol"
-  ],
-  "triggers": [
-    {
-      "id": "acute",
-      "when": {
-        "hoefbevangenheid": [
-          "nu acuut",
-          "Ja, mijn paard is momenteel hoefbevangen"
-        ]
-      },
-      "renew": true,
-      "notice": "hoefbevangenheid-waarschuwing",
-      "popup": true,
-      "critical_fields": [
-        "hoefbevangenheid"
-      ],
-      "block_while_matching": false
-    },
-    {
-      "id": "unresolved",
-      "when": {
-        "hoefbevangenheid": [
-          "in verleden gehad",
-          "Ja, mijn paard is in het verleden hoefbevangen geweest"
-        ],
-        "hoefbevangenheid-hersteld": [
-          "Nee",
-          "Weet ik niet"
-        ]
-      },
-      "renew": false,
-      "notice": "hoefbevangenheid-aanhoudend",
-      "popup": false,
-      "critical_fields": [],
-      "block_while_matching": true
-    }
-  ],
-  "recovery": {
-    "require": {
-      "hoefbevangenheid-acute-fase-voorbij": [
-        "Ja"
-      ],
-      "hoefbevangenheid-stabiel": [
-        "Ja"
-      ]
-    },
-    "conditional": [
-      {
-        "when": {
-          "hoefbevangenheid": [
-            "in verleden gehad",
-            "Ja, mijn paard is in het verleden hoefbevangen geweest"
-          ]
-        },
-        "require": {
-          "hoefbevangenheid-hersteld": [
-            "Ja"
-          ]
-        }
-      }
-    ],
-    "intro": "hoefbevangenheid-herstel-uitleg",
-    "after": "hoefbevangenheid-stabiel"
-  },
-  "messages": {
-    "blocked": "Je antwoorden blijven opgeslagen. Intake versturen en Plus-protocol opstellen zijn geblokkeerd totdat de herstelstatus is bevestigd.",
-    "confirm": "Herstelstatus bevestigen",
-    "update": "Herstelstatus bijwerken",
-    "acknowledge": "Begrepen, verder invullen",
-    "pending": "De melding wordt gesynchroniseerd. Bevestigen is beschikbaar zodra je online bent en de melding is opgeslagen."
-  },
-  "release_source": "owner_reported_veterinary_confirmation"
-};
 
 export type RepeaterRow = Record<string, string | DateAnswer>;
 
@@ -166,6 +81,7 @@ export type AgeConfig = {
 
 export type Field = {
   answerAliases?: Record<string, string>;
+  submissionBlocks?: { answer: string; message: string; when?: Record<string, string[]> }[];
   signalConfig?: { condition: string; signals: Record<string, string> };
   dateConfig?: DateConfig;
   ageConfig?: AgeConfig;
@@ -2458,6 +2374,17 @@ export const INTAKE_SCHEMA: Section[] = [
         "criticalIf": [
           "Ja, mijn paard is momenteel hoefbevangen"
         ]
+      ,
+        submissionBlocks: [
+          {
+            "answer": "nu acuut",
+            "message": "Hoefbevangenheid is een spoedeisende aandoening. Neem direct contact op met je dierenarts als dat nog niet is gebeurd. Het persoonlijke Plus-protocol kan pas worden opgesteld wanneer de acute fase voorbij is en je dierenarts aangeeft dat je paard voldoende stabiel is."
+          },
+          {
+            "answer": "Ja, mijn paard is momenteel hoefbevangen",
+            "message": "Hoefbevangenheid is een spoedeisende aandoening. Neem direct contact op met je dierenarts als dat nog niet is gebeurd. Het persoonlijke Plus-protocol kan pas worden opgesteld wanneer de acute fase voorbij is en je dierenarts aangeeft dat je paard voldoende stabiel is."
+          }
+        ]
       },
       {
         "id": "hoefbevangenheid-waarschuwing",
@@ -2546,6 +2473,29 @@ export const INTAKE_SCHEMA: Section[] = [
         "showIf": {
           "hoefbevangenheid": "Ja, mijn paard is in het verleden hoefbevangen geweest"
         }
+      ,
+        submissionBlocks: [
+          {
+            "answer": "Nee",
+            "message": "Aanhoudende klachten moeten eerst veterinair beoordeeld worden voordat een protocol kan worden opgesteld.",
+            "when": {
+              "hoefbevangenheid": [
+                "in verleden gehad",
+                "Ja, mijn paard is in het verleden hoefbevangen geweest"
+              ]
+            }
+          },
+          {
+            "answer": "Weet ik niet",
+            "message": "Aanhoudende klachten moeten eerst veterinair beoordeeld worden voordat een protocol kan worden opgesteld.",
+            "when": {
+              "hoefbevangenheid": [
+                "in verleden gehad",
+                "Ja, mijn paard is in het verleden hoefbevangen geweest"
+              ]
+            }
+          }
+        ]
       },
       {
         "id": "hoefbevangenheid-restklachten",
@@ -2578,39 +2528,6 @@ export const INTAKE_SCHEMA: Section[] = [
         "placeholder": "Beschrijf bijvoorbeeld bekende aandoeningen, eerdere onderzoeken of kenmerken die wijzen op een verhoogd risico.",
         "showIf": {
           "hoefbevangenheid": "Mijn paard heeft een verhoogd risico op hoefbevangenheid"
-        }
-      },
-      {
-        "id": "hoefbevangenheid-herstel-uitleg",
-        "label": "Herstelstatus bijwerken",
-        "type": "sectionhead",
-        "hint": "Je antwoorden worden opgeslagen. Versturen en het opstellen van een Plus-protocol zijn geblokkeerd totdat je beide vragen met Ja beantwoordt en je herstelstatus bevestigt. Hiermee verklaar je als eigenaar wat de dierenarts heeft aangegeven.",
-        "showIf": {
-          "_laminitis_recovery_required": "Ja"
-        }
-      },
-      {
-        "id": "hoefbevangenheid-acute-fase-voorbij",
-        "label": "Is de acute fase inmiddels voorbij?",
-        "type": "radio",
-        "options": [
-          "Ja",
-          "Nee"
-        ],
-        "showIf": {
-          "_laminitis_recovery_required": "Ja"
-        }
-      },
-      {
-        "id": "hoefbevangenheid-stabiel",
-        "label": "Heeft de dierenarts bevestigd dat je paard voldoende stabiel is?",
-        "type": "radio",
-        "options": [
-          "Ja",
-          "Nee"
-        ],
-        "showIf": {
-          "_laminitis_recovery_required": "Ja"
         }
       },
       { id: 'sec-maag', label: 'Maag', type: 'sectionhead' },

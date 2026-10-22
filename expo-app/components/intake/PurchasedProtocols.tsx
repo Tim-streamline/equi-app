@@ -4,7 +4,6 @@ import { Text, View } from 'react-native';
 import { router } from 'expo-router';
 import { useCurrentHorseId, useCurrentUserId, useHorse } from '@/db/hooks';
 import { Button } from '@/components/ui/Button';
-import { LaminitisSafetyNotice } from './LaminitisSafetyNotice';
 
 export function PurchasedProtocols() {
   const horseId = useCurrentHorseId(), userId = useCurrentUserId();
@@ -16,7 +15,6 @@ export function PurchasedProtocols() {
     ORDER BY p.created_at DESC, p.id DESC`, [horseId, userId]);
   if (!data.length) return null;
   return <View className="mb-4 gap-3">
-    <LaminitisSafetyNotice />
     {data.map(protocol => {
       const completedAt = protocol.completed_at ?? protocol.submitted_at;
       return <View key={protocol.id} className="gap-3 rounded-card bg-white p-5">

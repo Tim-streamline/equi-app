@@ -30,6 +30,30 @@ class AdminIntakeQuestionnaireTest extends TestCase
         ]);
     }
 
+    public function test_submission_blocks_are_editable_and_require_a_message(): void
+    {
+        $this->seed(IntakeQuestionnaireSeeder::class);
+        $field = IntakeField::where('key', 'hoefbevangenheid')->firstOrFail();
+        $data = ['section_id' => $field->section_id, 'key' => $field->key, 'label' => $field->label,
+            'type' => 'radio', 'required' => true, 'optional' => false, 'tall' => false, 'active' => true,
+            'order' => $field->order, 'options_json' => json_encode($field->options),
+            'submission_blocks' => [['answer' => $field->options[0], 'message' => 'Neem eerst contact op.']]];
+        $url = '/admin/intake-questionnaire/fields/'.$field->id;
+        $this->actingAs($this->admin, 'admin')->put($url, $data)->assertSessionHasNoErrors();
+        $this->assertSame($data['submission_blocks'], $field->fresh()->submission_blocks);
+        $oldForm = $data;
+        unset($oldForm['submission_blocks']);
+        $this->put($url, $oldForm)->assertSessionHasNoErrors();
+        $this->assertSame($data['submission_blocks'], $field->fresh()->submission_blocks);
+        $invalid = $data;
+        $invalid['submission_blocks'][0]['message'] = '';
+        $this->put($url, $invalid)->assertSessionHasErrors('submission_blocks');
+        $this->assertSame($data['submission_blocks'], $field->fresh()->submission_blocks);
+        $data['submission_blocks'] = [];
+        $this->put($url, $data)->assertSessionHasNoErrors();
+        $this->assertSame([], $field->fresh()->submission_blocks);
+    }
+
     public function test_section_presentation_is_editable_and_validated(): void
     {
         $this->seed(IntakeQuestionnaireSeeder::class);

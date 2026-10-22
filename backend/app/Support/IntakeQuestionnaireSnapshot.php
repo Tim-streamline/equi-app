@@ -20,7 +20,7 @@ class IntakeQuestionnaireSnapshot
 
     public const SECTION = ['key', 'order', 'title', 'intro', 'presentation', 'minutes', 'icon', 'subtitle', 'active'];
 
-    public const FIELD = ['key', 'order', 'answer_section_key', 'label', 'type', 'hint', 'required', 'optional', 'unit', 'step', 'tall', 'lines', 'placeholder', 'link', 'options', 'answer_aliases', 'show_if', 'flag_if', 'critical_if', 'protocol_if', 'repeater_sub', 'photo_config', 'age_config', 'signal_config', 'date_config', 'active'];
+    public const FIELD = ['key', 'order', 'answer_section_key', 'label', 'type', 'hint', 'required', 'optional', 'unit', 'step', 'tall', 'lines', 'placeholder', 'link', 'options', 'answer_aliases', 'submission_blocks', 'show_if', 'flag_if', 'critical_if', 'protocol_if', 'repeater_sub', 'photo_config', 'age_config', 'signal_config', 'date_config', 'active'];
 
     public function assertSchema(): void
     {
@@ -88,8 +88,9 @@ class IntakeQuestionnaireSnapshot
             $this->requireColumns($section, self::SECTION);
             foreach ($section['fields'] as $field) {
                 // Older snapshots may omit this new optional setting; preserve it on import.
-                $this->requireColumns($field, array_diff(self::FIELD, ['signal_config', 'date_config', 'answer_aliases']));
+                $this->requireColumns($field, array_diff(self::FIELD, ['signal_config', 'date_config', 'answer_aliases', 'submission_blocks']));
                 app(IntakeSafetySettings::class)->validateAliases($field['answer_aliases'] ?? null);
+                app(IntakeSubmissionBlocks::class)->validate($field['submission_blocks'] ?? null);
                 app(IntakeSignalPreparation::class)->validateConfig($field['signal_config'] ?? null);
                 app(IntakeDates::class)->validateConfig($field['date_config'] ?? null);
                 foreach ($field['repeater_sub'] ?? [] as $sub) app(IntakeDates::class)->validateConfig($sub['dateConfig'] ?? null);

@@ -90,4 +90,9 @@ class Horse extends Model
     {
         return $this->hasMany(ProtocolSupplementIntake::class);
     }
+
+    public function safetyReports(): HasMany
+    {
+        return $this->hasMany(IntakeSafetyReport::class);
+    }
 }

@@ -20,9 +20,7 @@ class IntakeReview
             $answers[$answer->section_id][$answer->field_id] = json_last_error() === JSON_ERROR_NONE ? $decoded : $answer->value;
         }
         $none = $questionnaire?->none_options ?? ['geen'];
-        $laminitisHorse = $booking->horse()->firstOrFail();
-        $laminitisBlocked = app(LaminitisSafety::class)->blocked($laminitisHorse);
-        $answers = app(LaminitisSafety::class)->withState($answers, $laminitisHorse);
+        $submissionBlocks = app(IntakeSubmissionBlocks::class)->forBooking($booking);
         $sections = [];
         $photos = app(IntakePhotoRules::class);
         $usedMetadata = [];
@@ -48,9 +46,6 @@ class IntakeReview
                     $value = null;
                 }
                 $critical = $this->matches($value, $field->critical_if);
-                if (! $laminitisBlocked && app(LaminitisSafety::class)->releasedCritical($laminitisHorse, $answerSection, $field->key)) {
-                    $critical = false;
-                }
                 $flag = $critical || $this->flagged($value, $field->flag_if, $none);
                 $hits = [];
                 $signalInput = app(IntakeSignalPreparation::class)->input($field, $value, $answerSection);
@@ -181,9 +176,8 @@ class IntakeReview
         return ['sections' => $sections, 'safety' => $safety, 'triggers' => $triggers, 'answers' => $answers,
             'counts' => ['all' => count($questions), 'flags' => count(array_filter($questions, fn ($r) => $r['flagged'])),
                 'protocol' => count($triggers), 'empty' => count(array_filter($questions, fn ($r) => $r['empty']))],
-            'blocked' => $laminitisBlocked || count(array_filter($safety, fn ($r) => $r['critical'])) > 0,
-            'laminitis' => ['blocked' => $laminitisBlocked, 'state' => $laminitisHorse->laminitis_safety,
-                'message' => $laminitisBlocked ? app(LaminitisSafety::class)->message($laminitisHorse) : null],
+            'blocked' => (bool) $submissionBlocks || count(array_filter($safety, fn ($r) => $r['critical'])) > 0,
+            'submission_blocks' => $submissionBlocks,
             'accepted' => array_values(array_intersect($booking->accepted_triggers ?? [], array_column($triggers, 'id'))),
             'owner_reported_inputs' => $signalInputs,
             'notes' => $booking->review_notes ?? '', 'updated_at' => $booking->review_updated_at?->toISOString()];

@@ -70,6 +70,7 @@ class IntakeQuestionnaireSeeder extends Seeder
                             'link' => $fieldData['link'] ?? null,
                             'options' => $fieldData['options'] ?? null,
                             'answer_aliases' => $fieldData['answerAliases'] ?? null,
+                            'submission_blocks' => $fieldData['submissionBlocks'] ?? null,
                             'show_if' => $fieldData['showIf'] ?? null,
                             'flag_if' => $fieldData['flagIf'] ?? null,
                             'critical_if' => $fieldData['criticalIf'] ?? null,

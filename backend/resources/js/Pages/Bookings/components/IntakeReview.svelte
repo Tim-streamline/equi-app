@@ -134,8 +134,7 @@
         <aside class="review-sidebar">
             <section class="surface"><header><ShieldCheck size={20}/><h2>Veiligheidscheck</h2></header>
                 <p class:critical={review.blocked} class="safety-status">{review.blocked ? 'Geblokkeerd' : review.safety.some(r => r.empty) ? 'Nog niet volledig ingevuld' : 'Geen blokkades'}</p>
-                {#if review.laminitis?.blocked}<p class="critical p-3">{review.laminitis.message}</p>{/if}
-                {#if review.laminitis?.state?.released_at}<p>Herstel bevestigd door eigenaar op {new Date(review.laminitis.state.released_at).toLocaleDateString('nl-NL')}. Verklaring over veterinaire bevestiging.</p>{/if}
+                {#each review.submission_blocks ?? [] as block}<p class="critical p-3">{block.message}</p>{/each}
                 {#each review.safety as row}<button class="safety-item" onclick={() => jump(`answer-${row.id}`, true)}><span class:danger={row.critical} class:unknown={row.empty} class="dot"></span><span>{row.label}<small>{row.empty ? 'Niet ingevuld' : Array.isArray(row.value) ? row.value.join(', ') : row.value}</small></span></button>{/each}
                 {#if !review.safety.length}<p>Geen veiligheidsregels voor zichtbare vragen geconfigureerd.</p>{/if}
             </section>

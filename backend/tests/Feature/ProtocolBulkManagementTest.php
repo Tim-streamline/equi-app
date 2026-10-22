@@ -24,7 +24,10 @@ class ProtocolBulkManagementTest extends TestCase
     {
         $horse = Horse::create(['name' => $name, 'owner_id' => User::factory()->create()->id, 'status' => 'active']);
 
-        return Protocol::create(['horse_id' => $horse->id, 'protocol_template_id' => ProtocolTemplate::firstOrCreate(['name' => 'Test template'])->id, 'title' => $name.' protocol', 'status' => $status]);
+        $protocol = Protocol::create(['horse_id' => $horse->id, 'protocol_template_id' => ProtocolTemplate::firstOrCreate(['name' => 'Test template'])->id, 'title' => $name.' protocol', 'status' => $status]);
+        $protocol->intake->update(['submitted_at' => now()]);
+
+        return $protocol;
     }
 
     public function test_only_selected_protocols_are_archived_and_restored_with_their_original_status(): void

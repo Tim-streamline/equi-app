@@ -45,11 +45,6 @@ class Protocol extends Model
             }
             // Serialize competing activations, including restore and direct model writes.
             Horse::whereKey($this->horse_id)->lockForUpdate()->firstOrFail();
-            $onlyStopping = ! $new && in_array($this->status, ['paused', 'archived', 'completed'], true)
-                && ! array_diff(array_keys($this->getDirty()), ['status', 'archived_previous_status', 'updated_at']);
-            if (! $onlyStopping && ($this->protocol_template_id || $this->published_at || $this->status === 'active')) {
-                app(\App\Support\LaminitisSafety::class)->assertAllowed(Horse::findOrFail($this->horse_id));
-            }
             if (($this->status ?? 'active') === 'active' && static::where('horse_id', $this->horse_id)
                 ->where('status', 'active')->when($this->getKey(), fn ($q, $id) => $q->whereKeyNot($id))->exists()) {
                 throw ValidationException::withMessages(['status' => 'Dit paard heeft al een actief protocol. Rond dat eerst af of pauzeer het.']);
@@ -62,6 +57,14 @@ class Protocol extends Model
 
             return $saved;
         });
+    }
+
+    /** Preparing a protocol requires its own submitted intake; answer rules run at submission. */
+    public function assertIntakeSubmitted(): void
+    {
+        if (! $this->exists || ! $this->intake()->whereNotNull('submitted_at')->where('status', '!=', 'cancelled')->exists()) {
+            throw ValidationException::withMessages(['intake' => 'De bijbehorende intake moet eerst worden verstuurd voordat je het protocol kunt opstellen.']);
+        }
     }
 
     public function delete()

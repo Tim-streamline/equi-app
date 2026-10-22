@@ -126,6 +126,13 @@ class SyncController extends Controller
 
                     continue;
                 }
+                if ($op['type'] === 'intake_answers' && $op['op'] !== 'PUT' && ! Models\IntakeAnswer::whereKey($op['id'])->exists()) {
+                    // Cleanup can remove a row while an offline PATCH/DELETE is
+                    // queued. Acknowledge the no-op; never recreate it or stall sync.
+                    $skipped[] = 'intake_answers:removed';
+
+                    continue;
+                }
                 $policy->authorize($userId, $op);
                 if ($op['type'] === 'intake_bookings') {
                     $booking = Models\IntakeBooking::find($op['id']);
@@ -189,6 +196,7 @@ class SyncController extends Controller
                 $historical = $op['type'] === 'protocol_supplement_intakes' ? $this->validateIntake($op, $payload['timezone'] ?? null) : null;
                 $this->applyOp($modelClass, $op);
                 if ($op['type'] === 'intake_answers' && isset($booking)) {
+                    app(\App\Support\IntakeObsoleteAnswers::class)->discardObsoleteAnswer(Models\IntakeAnswer::find($op['id']));
                     $booking->forceFill(['last_activity_at' => now(), 'last_section' => $op['data']['section_id'] ?? $answer?->section_id ?? $booking->last_section,
                         'last_field' => $op['data']['field_id'] ?? $answer?->field_id ?? $booking->last_field])->save();
                 }
