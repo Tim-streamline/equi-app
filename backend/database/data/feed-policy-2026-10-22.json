@@ -1,0 +1,11 @@
+{
+  "principles": "Voorkeur voor natuurlijke, herkenbare en minimaal bewerkte ingrediënten. Suiker en zetmeel uitsluitend als gezamenlijke som beoordelen. Ingrediënten uit de blacklist kritisch beoordelen, met ruimte voor expliciet vastgelegde hoeveelheidsuitzonderingen.",
+  "explanation": "Algemene productbeoordeling volgens de voedingsfilosofie van De Paardentherapeut. Geen persoonlijke geschiktheidsbeoordeling. Analyse vergelijken op productbasis; een onbekende analysebasis niet raden. Alleen selenium totaal is geen bewijs voor toegevoegd selenium. Bevestigd anorganisch selenium geeft geen seleniumgerelateerd scoreplafond. Het strengste bevestigde plafond geldt ook bij handmatige correcties.",
+  "sugar_starch_challenged": 7.0,
+  "sugar_starch_healthy": 10.0,
+  "organic_selenium_cap": 3.0,
+  "unknown_added_selenium_cap": 5.5,
+  "exceptions": [],
+  "knowledge_snapshot": [],
+  "ingredient_revision_ids": []
+}

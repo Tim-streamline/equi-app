@@ -4,9 +4,12 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\Ingredient;
+use App\Models\IngredientRevision;
 use App\Support\AuditLogger;
+use App\Support\FeedCatalog;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -29,8 +32,12 @@ class IngredientController extends Controller
 
     public function store(Request $request): RedirectResponse
     {
-        $ingredient = Ingredient::create($this->validateData($request));
-        AuditLogger::created($ingredient);
+        $data = $this->validateData($request);
+        DB::transaction(function () use ($data) {
+            $ingredient = Ingredient::create($data);
+            FeedCatalog::snapshotLegacyIngredient($ingredient);
+            AuditLogger::created($ingredient);
+        });
 
         return back()->with('success', 'Ingredient added.');
     }
@@ -38,15 +45,26 @@ class IngredientController extends Controller
     public function update(Request $request, Ingredient $ingredient): RedirectResponse
     {
         $data = $this->validateData($request, $ingredient->id);
-        $before = $ingredient->only(array_keys($data));
-        $ingredient->update($data);
-        AuditLogger::updated($ingredient, $before);
+        DB::transaction(function () use ($ingredient, $data) {
+            $ingredient = Ingredient::lockForUpdate()->findOrFail($ingredient->id);
+            abort_unless($ingredient->catalog_status === 'legacy' && in_array(FeedCatalog::latestIngredient($ingredient)?->status, [null, 'legacy'], true), 409, 'Bewerk deze kenniskaart via Voerscanner → Ingrediënten.');
+            $before = $ingredient->only(array_keys($data));
+            $ingredient->update($data);
+            FeedCatalog::snapshotLegacyIngredient($ingredient);
+            AuditLogger::updated($ingredient, $before);
+        });
 
         return back()->with('success', 'Ingredient updated.');
     }
 
     public function destroy(Ingredient $ingredient): RedirectResponse
     {
+        if (IngredientRevision::where('ingredient_id', $ingredient->id)->exists()) {
+            $ingredient->forceFill(['catalog_status' => 'archived'])->save();
+            AuditLogger::log('archived', $ingredient);
+
+            return back()->with('success', 'Ingredient archived; history retained.');
+        }
         AuditLogger::deleted($ingredient);
         $ingredient->delete();
 

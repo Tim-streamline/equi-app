@@ -6,7 +6,7 @@ import { PhotoInstructions } from './PhotoInstructions';
 import { View, Text, Pressable } from 'react-native';
 import { Check, Plus, Trash2 } from 'lucide-react-native';
 
-import { IntakeTextInput as TextInput } from './IntakeScrollView';
+import { IntakeInputFrame, IntakeTextInput as TextInput } from './IntakeScrollView';
 import { Field, FieldValue, RepeaterSub, RepeaterRow } from '@/lib/intake/schema';
 import { formatDate } from '@/lib/intake/dates';
 import type { DateAnswer } from '@/lib/intake/dates';
@@ -247,7 +247,7 @@ function TextInputField({
   keyboard?: 'default' | 'decimal-pad';
 }) {
   return (
-    <View className="flex-row items-center rounded-xl border border-ink-8 bg-white">
+    <IntakeInputFrame className="flex-row items-center rounded-xl border border-ink-8 bg-white">
       <TextInput
         value={value ?? ''}
         onChangeText={onChange}
@@ -260,7 +260,7 @@ function TextInputField({
       {unit && (
         <Text className="pr-4 font-semi text-[13px] text-ink-50">{unit}</Text>
       )}
-    </View>
+    </IntakeInputFrame>
   );
 }
 
@@ -284,7 +284,7 @@ function MultiLineTextField({
   return (
     <View className="gap-2">
       {Array.from({ length: lines }).map((_, i) => (
-        <View key={i} className="flex-row items-center rounded-xl border border-ink-8 bg-white">
+        <IntakeInputFrame key={i} className="flex-row items-center rounded-xl border border-ink-8 bg-white">
           <TextInput
             value={value[i] ?? ''}
             onChangeText={(v) => update(i, v)}
@@ -292,7 +292,7 @@ function MultiLineTextField({
             placeholderTextColor="rgba(27,42,42,0.4)"
             className="flex-1 px-4 py-3.5 font-sans text-[15px] text-ink"
           />
-        </View>
+        </IntakeInputFrame>
       ))}
     </View>
   );
@@ -312,16 +312,16 @@ function TextAreaField({
   placeholder?: string;
 }) {
   return (
-    <TextInput
+    <IntakeInputFrame className="rounded-xl border border-ink-8 bg-white"><TextInput
       multiline
       numberOfLines={lines ?? (tall ? 12 : 4)}
       value={value ?? ''}
       onChangeText={onChange}
       placeholder={placeholder}
       placeholderTextColor="rgba(27,42,42,0.4)"
-      className="rounded-xl border border-ink-8 bg-white px-4 py-3.5 font-sans text-[15px] text-ink"
-      style={{ minHeight: lines ? lines * 24 + 28 : tall ? 288 : 96, ...(lines ? { lineHeight: 24 } : {}), textAlignVertical: 'top' }}
-    />
+      className="px-4 py-3.5 font-sans text-[15px] text-ink"
+      style={{ minHeight: (lines ? lines * 24 + 28 : tall ? 288 : 96) - 2, ...(lines ? { lineHeight: 24 } : {}), textAlignVertical: 'top' }}
+    /></IntakeInputFrame>
   );
 }
 
@@ -562,14 +562,14 @@ function RepeaterField({
                     })}
                   </View>
                 ) : (
-                  <TextInput
+                  <IntakeInputFrame radius={8} className="rounded-lg border border-ink-8 bg-canvas"><TextInput
                     value={typeof row[s.id] === 'string' ? row[s.id] as string : ''}
                     onChangeText={(v) => update(i, s.id, v)}
                     multiline={s.type === 'textarea'}
                     keyboardType={s.type === 'number' ? 'decimal-pad' : 'default'}
                     placeholderTextColor="rgba(27,42,42,0.4)"
-                    className="rounded-lg border border-ink-8 bg-canvas px-3 py-2 font-sans text-[13.5px] text-ink"
-                  />
+                    className="px-3 py-2 font-sans text-[13.5px] text-ink"
+                  /></IntakeInputFrame>
                 )}
               </View>
             ))}

@@ -25,6 +25,10 @@
         <StatCard label="Open reports" value={formatNumber(stats.reports_open)} icon={Flag} accent={stats.reports_open ? 'destructive' : 'muted'} />
     </div>
 
+    <Link href="/admin/feed-scanner/products?review=1" class="mt-4 block rounded-lg border bg-card p-4 text-sm hover:border-primary">
+        <span class="font-semibold">Voerscanner</span> · {stats.feed_review ?? 0} producten wachten op controle →
+    </Link>
+
     <div class="mt-6 grid gap-4 lg:grid-cols-3">
         <Card class="lg:col-span-2">
             <CardHeader><CardTitle>Signups — last 12 weeks</CardTitle></CardHeader>

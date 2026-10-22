@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { Image, Pressable, Text, View } from 'react-native';
-import { IntakeTextInput } from './IntakeScrollView';
+import { IntakeInputFrame, IntakeTextInput } from './IntakeScrollView';
 import { PhotoInstructions } from './PhotoInstructions';
 import { AttachmentField } from './AttachmentField';
 import { useIntake } from '@/lib/intake/store';
@@ -51,8 +51,8 @@ export function ConfiguredPhotoField({ field, sectionId, value, onChange, design
     const key = `year-${photoId(ref)}`, year = String(metadata[key] ?? '');
     return <View className="gap-1">
       <Text className="text-xs text-ink">Jaartal van deze foto *</Text>
-      {readOnly ? <Text className="text-sm text-ink">{year}</Text> : <IntakeTextInput accessibilityLabel="Jaartal van deze foto" keyboardType="number-pad" maxLength={4} value={year}
-        placeholder="Bijv. 2023" onChangeText={text => setField('__photos', key, text)} className="rounded-lg border border-ink-15 px-3 py-2 text-ink" />}
+      {readOnly ? <Text className="text-sm text-ink">{year}</Text> : <IntakeInputFrame radius={8} className="rounded-lg border border-ink-15"><IntakeTextInput accessibilityLabel="Jaartal van deze foto" keyboardType="number-pad" maxLength={4} value={year}
+        placeholder="Bijv. 2023" onChangeText={text => setField('__photos', key, text)} className="px-3 py-2 text-ink" /></IntakeInputFrame>}
       <Text className="text-xs text-ink-50">Een schatting is ook goed.</Text>
       {!validPhotoYear(year) && <Text className="text-xs text-danger">Vul een geldig jaartal in.</Text>}
     </View>;
@@ -61,9 +61,9 @@ export function ConfiguredPhotoField({ field, sectionId, value, onChange, design
     {renderYear?.(ref)}
     {!!config.caption && <View className="gap-1">
       <Text className="text-xs text-ink">{config.caption.label}</Text>
-      {readOnly ? <Text className="text-sm text-ink">{String(metadata[`caption-${photoId(ref)}`] ?? '')}</Text> : <IntakeTextInput accessibilityLabel={config.caption.label} value={String(metadata[`caption-${photoId(ref)}`] ?? '')}
+      {readOnly ? <Text className="text-sm text-ink">{String(metadata[`caption-${photoId(ref)}`] ?? '')}</Text> : <IntakeInputFrame radius={8} className="rounded-lg border border-ink-15"><IntakeTextInput accessibilityLabel={config.caption.label} value={String(metadata[`caption-${photoId(ref)}`] ?? '')}
         placeholder={config.caption.placeholder} onChangeText={text => setField('__photos', `caption-${photoId(ref)}`, text)}
-        className="rounded-lg border border-ink-15 px-3 py-2 text-ink" />}
+        className="px-3 py-2 text-ink" /></IntakeInputFrame>}
     </View>}
   </View> : undefined;
   return <View className="gap-3">
