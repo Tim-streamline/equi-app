@@ -1,4 +1,5 @@
 import * as intakeDates from '../lib/intake/dates.ts';
+import * as repeaterRows from '../lib/intake/repeater.ts';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
@@ -25,7 +26,7 @@ const modules = {
   '@/lib/intake/logic': { normalizeAnswer: (_field, value) => value, isFieldRequired: () => true, isNoneOption: () => false, repeaterNotApplicable: () => false, repeaterNaKey: () => '', photoNotApplicable: () => false, photoReferences: () => [], photoSlotReferences: () => [] },
   '@/lib/intake/store': { useIntake: () => ({ state, setField }) },
 };
-new Function('require', 'exports', compiled)(name => { if (name === './dates' || name === '@/lib/intake/dates') return intakeDates; if (name === './MonthYearField') return { MonthYearField: 'MonthYearField' }; assert.ok(name in modules, name); return modules[name]; }, exports);
+new Function('require', 'exports', compiled)(name => { if (name === '@/lib/intake/repeater') return repeaterRows; if (name === './dates' || name === '@/lib/intake/dates') return intakeDates; if (name === './MonthYearField') return { MonthYearField: 'MonthYearField' }; assert.ok(name in modules, name); return modules[name]; }, exports);
 const schemaExports = {};
 const schemaCode = ts.transpileModule(readFileSync(new URL('../lib/intake/schema.ts', import.meta.url), 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS } }).outputText;
 new Function('exports', schemaCode)(schemaExports);

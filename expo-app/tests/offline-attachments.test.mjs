@@ -1,3 +1,4 @@
+import * as syncOperations from '../lib/intake/sync-operations.ts';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { attachmentIds, flushAttachmentUploads } from '../lib/intake/attachments/upload.ts';
@@ -74,6 +75,7 @@ for (const platform of ['native', 'web']) test(`${platform} connector blocks ans
     getSession: async () => ({ token: 'token', user: { id: 'owner' } }),
   };
   const { LaravelConnector } = load(platform === 'native' ? '../db/connector.ts' : '../../web/db/connector.ts', {
+    '@/lib/intake/sync-operations': syncOperations,
     './auth': auth, '@/lib/account-session': { accountSession: session },
     '@/lib/intake/attachments/sync': { uploadIntakeAttachments: async (ops, owner, token, check) => {
       assert.equal(owner, 'owner'); assert.equal(token, 'token'); assert.equal(ops, operations);

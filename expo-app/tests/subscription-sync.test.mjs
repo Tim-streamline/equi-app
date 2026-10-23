@@ -1,3 +1,4 @@
+import * as syncOperations from '../lib/intake/sync-operations.ts';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
@@ -57,6 +58,7 @@ for (const platform of ['native', 'web']) test(`${platform} activation uses fres
     '@/lib/account-session': { accountSession: app.queue },
     './auth': { loadCredentials: async () => ({ userId: 'owner', email: 'test', password: 'secret' }), getApiBaseUrl: () => 'https://api', login: async () => { mints++; return fresh; } },
   };
+  modules['@/lib/intake/sync-operations'] = syncOperations;
   modules['@/lib/account-session'] = { accountSession: app.queue };
   modules['@/lib/intake/attachments/sync'] = { uploadIntakeAttachments: async () => {} };
   const { LaravelConnector } = load(platform === 'web' ? '../../web/db/connector.ts' : '../db/connector.ts', modules, { window: { location: { origin: 'https://app' } }, console: { log() {}, warn() {} } });

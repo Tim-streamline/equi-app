@@ -10,6 +10,7 @@ import { IntakeTextInput as TextInput } from './IntakeScrollView';
 import { Field, FieldValue, RepeaterSub, RepeaterRow } from '@/lib/intake/schema';
 import { formatDate } from '@/lib/intake/dates';
 import type { DateAnswer } from '@/lib/intake/dates';
+import { createRepeaterRow, withRepeaterRowIds } from '@/lib/intake/repeater';
 import { MonthYearField } from './MonthYearField';
 import { normalizeAnswer, isFieldRequired, isNoneOption, repeaterNotApplicable, repeaterNaKey, photoNotApplicable, photoReferences, photoSlotReferences } from '@/lib/intake/logic';
 import { useIntake } from '@/lib/intake/store';
@@ -505,10 +506,13 @@ function RepeaterField({
   value: RepeaterRow[];
   onChange: (rows: RepeaterRow[]) => void;
 }) {
-  const add = () => onChange([...value, {}]);
-  const remove = (i: number) => onChange(value.filter((_, idx) => idx !== i));
-  const update = (i: number, key: string, v: string | DateAnswer | undefined) => {
-    const next = [...value];
+  const rows = withRepeaterRowIds(value);
+  const add = () => onChange([...rows, createRepeaterRow()]);
+  const remove = (id: string) => onChange(rows.filter(row => row._rowId !== id));
+  const update = (id: string, key: string, v: string | DateAnswer | undefined) => {
+    const next = [...rows];
+    const i = next.findIndex(row => row._rowId === id);
+    if (i < 0) return;
     next[i] = { ...(next[i] ?? {}) };
     if (v === undefined) delete next[i][key]; else next[i][key] = v;
     onChange(next);
@@ -517,16 +521,16 @@ function RepeaterField({
   return (
     <View>
       <View className="gap-3">
-        {value.map((row, i) => (
+        {rows.map((row, i) => (
           <View
-            key={i}
+            key={row._rowId as string}
             className="gap-2 rounded-xl border border-ink-8 bg-white p-3"
           >
             <View className="flex-row items-center justify-between">
               <Text className="font-semi text-[11px] uppercase tracking-eyebrow text-ink-50">
                 #{i + 1}
               </Text>
-              <Pressable onPress={() => remove(i)} hitSlop={8}>
+              <Pressable onPress={() => remove(row._rowId as string)} hitSlop={8}>
                 <Trash2 size={14} color="rgba(27,42,42,0.5)" />
               </Pressable>
             </View>
@@ -538,14 +542,14 @@ function RepeaterField({
                 {s.hint && (
                   <Text className="mb-1.5 text-[11px] leading-[15px] text-ink-50">{s.hint}</Text>
                 )}
-                {s.type === 'month_year' ? <MonthYearField value={row[s.id]} onChange={v => update(i, s.id, v)} config={s.dateConfig} label={`${s.label} #${i + 1}`} /> : s.type === 'radio' && s.options ? (
+                {s.type === 'month_year' ? <MonthYearField value={row[s.id]} onChange={v => update(row._rowId as string, s.id, v)} config={s.dateConfig} label={`${s.label} #${i + 1}`} /> : s.type === 'radio' && s.options ? (
                   <View className="flex-row flex-wrap gap-1.5">
                     {s.options.map((o) => {
                       const active = row[s.id] === o;
                       return (
                         <Pressable
                           key={o}
-                          onPress={() => update(i, s.id, o)}
+                          onPress={() => update(row._rowId as string, s.id, o)}
                           className={`rounded-pill border px-3 py-1.5 ${
                             active ? 'border-mint-500 bg-mint-500' : 'border-ink-8 bg-canvas'
                           }`}
@@ -564,7 +568,7 @@ function RepeaterField({
                 ) : (
                   <TextInput
                     value={typeof row[s.id] === 'string' ? row[s.id] as string : ''}
-                    onChangeText={(v) => update(i, s.id, v)}
+                    onChangeText={(v) => update(row._rowId as string, s.id, v)}
                     multiline={s.type === 'textarea'}
                     keyboardType={s.type === 'number' ? 'decimal-pad' : 'default'}
                     placeholderTextColor="rgba(27,42,42,0.4)"

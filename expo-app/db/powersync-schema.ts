@@ -593,7 +593,10 @@ const intake_answers = new Table({
   value: column.text,
   created_at: column.text,
   updated_at: column.text,
-}, { indexes: { byResponse: ['response_id'] } });
+}, {
+  indexes: { byResponse: ['response_id'] },
+  trackPrevious: { columns: ['response_id', 'section_id', 'field_id'], onlyWhenChanged: false },
+});
 
 export const AppSchema = new Schema({
   users,

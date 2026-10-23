@@ -2,6 +2,7 @@ import type { AbstractPowerSyncDatabase, PowerSyncBackendConnector } from '@powe
 import { getSession } from './auth';
 import { accountSession } from '@/lib/account-session';
 import { uploadIntakeAttachments } from '@/lib/intake/attachments/sync';
+import { prepareSyncOperations } from '@/lib/intake/sync-operations';
 export async function getOrMintToken(signal?: AbortSignal, forceRefresh = false): Promise<string | null> {
   return (await getSession(signal, forceRefresh))?.token ?? null;
 }
@@ -22,9 +23,11 @@ export class LaravelConnector implements PowerSyncBackendConnector {
     const credentials = await this.fetchCredentials();
     if (!credentials) throw new Error('Meld je opnieuw aan.');
     await uploadIntakeAttachments(batch.crud, this.userId, credentials.token, checkSession);
+    const operations = await prepareSyncOperations(database, batch.crud);
+    checkSession();
     const response = await fetch('/api/sync/upload', {
       method: 'POST', headers: { 'Content-Type': 'application/json', Accept: 'application/json', Authorization: `Bearer ${credentials.token}` },
-      body: JSON.stringify({ timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || 'Europe/Amsterdam', operations: batch.crud.map(op => ({ op: op.op, id: op.id, type: op.table, data: op.opData ?? null })) }),
+      body: JSON.stringify({ timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || 'Europe/Amsterdam', operations }),
     });
     if (response.status === 401) await getSession(undefined, true);
     if (!response.ok) throw new Error(`Synchroniseren is niet gelukt (${response.status}).`);

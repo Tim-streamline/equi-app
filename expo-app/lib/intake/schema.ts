@@ -21,6 +21,7 @@
 
 import type { DateAnswer, DateConfig } from './dates';
 
+/** _rowId is stable internal identity, excluded from answer validation/display. */
 export type RepeaterRow = Record<string, string | DateAnswer>;
 
 export type FieldType =

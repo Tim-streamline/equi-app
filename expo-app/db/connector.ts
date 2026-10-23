@@ -13,6 +13,7 @@ import type {
 
 import { accountSession } from '@/lib/account-session';
 import { uploadIntakeAttachments } from '@/lib/intake/attachments/sync';
+import { prepareSyncOperations } from '@/lib/intake/sync-operations';
 
 import {
   clearCredentials,
@@ -96,6 +97,8 @@ export class LaravelConnector implements PowerSyncBackendConnector {
     checkSession();
     if (!credentials) throw new Error('Meld je opnieuw aan.');
     await uploadIntakeAttachments(batch.crud, credentials.userId, token, checkSession);
+    const operations = await prepareSyncOperations(database, batch.crud);
+    checkSession();
 
     const res = await fetch(`${getApiBaseUrl()}/api/sync/upload`, {
       method: 'POST',
@@ -106,12 +109,7 @@ export class LaravelConnector implements PowerSyncBackendConnector {
       },
       body: JSON.stringify({
         timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || 'Europe/Amsterdam',
-        operations: batch.crud.map((op) => ({
-          op: op.op, // PUT | PATCH | DELETE
-          id: op.id,
-          type: op.table,
-          data: op.opData ?? null,
-        })),
+        operations,
       }),
     });
 

@@ -1,4 +1,5 @@
 import * as intakeDates from '../lib/intake/dates.ts';
+import * as repeaterRows from '../lib/intake/repeater.ts';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import test from 'node:test';
@@ -7,7 +8,7 @@ const modules = {};
 function load(path, dependencies) {
  const exports = {};
  const code = ts.transpileModule(readFileSync(new URL(path, import.meta.url), 'utf8'), {compilerOptions: {module: ts.ModuleKind.CommonJS, jsx: ts.JsxEmit.ReactJSX}}).outputText;
- new Function('require', 'exports', code)(key => { if (key === './dates' || key === '@/lib/intake/dates') return intakeDates; if (key === './MonthYearField') return { MonthYearField: 'MonthYearField' }; assert.ok(key in dependencies, key); return dependencies[key]; }, exports);
+ new Function('require', 'exports', code)(key => { if (key === '@/lib/intake/repeater') return repeaterRows; if (key === './dates' || key === '@/lib/intake/dates') return intakeDates; if (key === './MonthYearField') return { MonthYearField: 'MonthYearField' }; assert.ok(key in dependencies, key); return dependencies[key]; }, exports);
  return exports;
 }
 for (const name of ['dates', 'schema', 'config', 'logic']) modules[`./${name}`] = load(`../lib/intake/${name}.ts`, modules);

@@ -126,12 +126,14 @@ class SyncController extends Controller
 
                     continue;
                 }
-                if ($op['type'] === 'intake_answers' && $op['op'] !== 'PUT' && ! Models\IntakeAnswer::whereKey($op['id'])->exists()) {
-                    // Cleanup can remove a row while an offline PATCH/DELETE is
-                    // queued. Acknowledge the no-op; never recreate it or stall sync.
+                $recoverAnswer = $op['type'] === 'intake_answers' && $op['op'] === 'PATCH' && ! Models\IntakeAnswer::whereKey($op['id'])->exists();
+                if ($op['type'] === 'intake_answers' && $op['op'] === 'DELETE' && ! Models\IntakeAnswer::whereKey($op['id'])->exists()) {
                     $skipped[] = 'intake_answers:removed';
 
                     continue;
+                }
+                if ($recoverAnswer) {
+                    $this->validateAnswerRecovery($op);
                 }
                 $policy->authorize($userId, $op);
                 if ($op['type'] === 'intake_bookings') {
@@ -151,6 +153,28 @@ class SyncController extends Controller
 
                         continue;
                     }
+                }
+                // Cleanup uses the same booking lock. Recheck after acquiring it
+                // in case the row disappeared while this request was waiting.
+                $recoverAnswer = $op['type'] === 'intake_answers' && $op['op'] === 'PATCH' && ! Models\IntakeAnswer::whereKey($op['id'])->exists();
+                if ($recoverAnswer) {
+                    $this->validateAnswerRecovery($op);
+                    abort_if($locked->status === 'cancelled', 403, 'Deze intake is geannuleerd.');
+                    $cleanup = app(\App\Support\IntakeObsoleteAnswers::class);
+                    $field = $cleanup->fieldFor($op['data']['section_id'], $op['data']['field_id']);
+                    $value = json_decode($op['data']['value'] ?? 'null', true);
+                    if (! $field || $value === null || $value === '' || $value === [] || $cleanup->obsolete($field, $value)) {
+                        $skipped[] = 'intake_answers:removed';
+
+                        continue;
+                    }
+                    // Another device may already have answered this question with
+                    // a new row ID. Apply the correction under the booking lock.
+                    $replacement = $booking->answers()->where('section_id', $op['data']['section_id'])
+                        ->where('field_id', $op['data']['field_id'])->first();
+                    $op['id'] = $replacement?->id ?? $op['id'];
+                    $op['op'] = 'PUT';
+                    $op['data'] = array_intersect_key($op['data'], array_flip(['response_id', 'section_id', 'field_id', 'value']));
                 }
                 if ($op['type'] === 'intake_bookings') {
                     $data = $op['data'] ?? [];
@@ -220,6 +244,17 @@ class SyncController extends Controller
             'skipped' => count($skipped),
             'user_id' => $userId,
         ]);
+    }
+
+    private function validateAnswerRecovery(array $op): void
+    {
+        // The connector supplies identity without replacing the queued value.
+        // Keep unidentifiable corrections queued instead of acknowledging loss.
+        abort_unless(isset($op['data']['response_id'], $op['data']['section_id'], $op['data']['field_id']),
+            409, 'De intakevraag ontbreekt bij deze wijziging. Werk de app bij en synchroniseer opnieuw.');
+        validator($op, ['id' => ['required', 'uuid'], 'data.response_id' => ['required', 'uuid'],
+            'data.section_id' => ['required', 'string', 'max:64'], 'data.field_id' => ['required', 'string', 'max:64'],
+            'data.value' => ['sometimes', 'nullable', 'json']])->validate();
     }
 
     private function validateIntake(array $op, ?string $timezone): ?array

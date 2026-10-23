@@ -18,13 +18,18 @@ class IntakeObsoleteAnswers
         if (! $answer) {
             return;
         }
-        $field = IntakeField::with('section')->where('key', $answer->field_id)->where('active', true)
-            ->whereHas('section', fn ($q) => $q->where('active', true)->whereHas('questionnaire', fn ($q) => $q->where('slug', 'protocol-intake')))
-            ->get()->first(fn ($f) => ($f->answer_section_key ?? $f->section->key) === $answer->section_id);
+        $field = $this->fieldFor($answer->section_id, $answer->field_id);
         if ($field && $this->obsolete($field, json_decode($answer->value ?? 'null', true))) {
             // A removed option must be answered again using the current questionnaire.
             DB::table('intake_answers')->where('id', $answer->id)->delete();
         }
+    }
+
+    public function fieldFor(string $section, string $key): ?IntakeField
+    {
+        return IntakeField::with('section')->where('key', $key)->where('active', true)
+            ->whereHas('section', fn ($q) => $q->where('active', true)->whereHas('questionnaire', fn ($q) => $q->where('slug', 'protocol-intake')))
+            ->get()->first(fn ($f) => ($f->answer_section_key ?? $f->section->key) === $section);
     }
 
     public function obsolete(IntakeField $field, mixed $value): bool

@@ -1,4 +1,5 @@
 import * as intakeDates from '../lib/intake/dates.ts';
+import * as repeaterRows from '../lib/intake/repeater.ts';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import test from 'node:test';
@@ -8,7 +9,7 @@ const runtime = { jsx, jsxs: jsx };
 function load(path, modules) {
   const exports = {};
   const code = ts.transpileModule(readFileSync(new URL(path, import.meta.url), 'utf8'), { compilerOptions: { jsx: ts.JsxEmit.ReactJSX, module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 } }).outputText;
-  new Function('require', 'exports', code)(name => { if (name === './dates' || name === '@/lib/intake/dates') return intakeDates; if (name === './MonthYearField') return { MonthYearField: 'MonthYearField' }; assert.ok(name in modules, name); return modules[name]; }, exports);
+  new Function('require', 'exports', code)(name => { if (name === '@/lib/intake/repeater') return repeaterRows; if (name === './dates' || name === '@/lib/intake/dates') return intakeDates; if (name === './MonthYearField' && !(name in modules)) return { MonthYearField: 'MonthYearField' }; assert.ok(name in modules, name); return modules[name]; }, exports);
   return exports;
 }
 const native = Object.fromEntries(['View', 'Text', 'Pressable', 'Image', 'ActivityIndicator', 'ScrollView', 'KeyboardAvoidingView'].map(name => [name, name]));
@@ -26,7 +27,74 @@ function render(node) {
   return node;
 }
 const flatten = node => Array.isArray(node) ? node.flatMap(flatten) : node && typeof node === 'object' ? [node, ...flatten(node.props?.children)] : [];
+const answerRows = rows => rows.map(({ _rowId, ...answer }) => answer);
 const text = node => Array.isArray(node) ? node.map(text).join(' ') : node && typeof node === 'object' ? text(node.props?.children) : String(node ?? '');
+
+for (const order of [['month', 'year'], ['year', 'month']]) {
+  test(`clearing the optional medication date ${order.join(' then ')} preserves other answers and restores completion`, () => {
+    const medication = field('medisch', 'medicatie-nu-details');
+    const original = { naam: 'Medication', dosering: 'Daily' };
+    const state = { answers: { medisch: { [medication.id]: [{ ...original, sinds: { version: 1, precision: 'month', month: 7, year: 2025 } }] } } };
+    const monthYear = load('../components/intake/MonthYearField.tsx', {
+      react: { useRef: () => ({ current: undefined }) }, 'react/jsx-runtime': runtime,
+      'react-native': native, 'lucide-react-native': icons,
+      './IntakeScrollView': { IntakeTextInput: 'DateInput' }, './MonthSelect': { MonthSelect: 'MonthSelect' },
+    });
+    const { IntakeField } = load('../components/intake/IntakeField.tsx', {
+      'react/jsx-runtime': runtime, 'react-native': native, 'lucide-react-native': icons,
+      './IntakeScrollView': { IntakeTextInput: 'TextInput' }, './MonthYearField': monthYear,
+      '@/lib/intake/logic': pure['./logic'], '@/lib/intake/store': { useIntake: () => ({ state, setField: (s, f, value) => { state.answers[s][f] = value; } }) },
+      './AgeField': { AgeField: 'AgeField' }, './PhotoInstructions': { PhotoInstructions: () => null },
+      './ConfiguredPhotoField': { ConfiguredPhotoField: 'ConfiguredPhoto', PhotoExample: () => null },
+      './AttachmentField': { AttachmentField: 'AttachmentField' }, './FieldLabel': { FieldLabel: 'FieldLabel' },
+    });
+    const draw = () => flatten(render(IntakeField({ sectionId: 'medisch', field: medication, n: 1 })));
+    const answered = () => pure['./logic'].isFieldAnswered(medication, state.answers.medisch[medication.id]);
+    const clear = part => part === 'month'
+      ? draw().find(n => n.type === 'MonthSelect').props.onChange('')
+      : draw().find(n => n.type === 'DateInput').props.onChangeText('');
+    assert.equal(answered(), true);
+    clear(order[0]);
+    assert.equal(answered(), false, 'a partially entered date still prevents completion');
+    clear(order[1]);
+    assert.deepEqual(answerRows(state.answers.medisch[medication.id]), [original]);
+    assert.equal(answered(), true);
+  });
+}
+
+for (const order of [[0, 1, 2, 3], [3, 2, 1, 0]]) {
+  test(`clearing a supplement period in order ${order.join(', ')} removes only that period`, () => {
+    const supplement = field('voer', 'historie-extra');
+    const original = { merk: 'Brand', product: 'Supplement', hoelang: 'Two months', waarom: 'Nutrition' };
+    const otherRow = { product: 'Other supplement', periode: { version: 1, precision: 'unknown' } };
+    const state = { answers: { voer: { [supplement.id]: [{ ...original, periode: { version: 1, precision: 'range',
+      start: { version: 1, precision: 'month', month: 2, year: 2025 },
+      end: { version: 1, precision: 'month', month: 7, year: 2025 } } }, otherRow] } } };
+    const monthYear = load('../components/intake/MonthYearField.tsx', {
+      react: { useRef: () => ({ current: undefined }) }, 'react/jsx-runtime': runtime,
+      'react-native': native, 'lucide-react-native': icons,
+      './IntakeScrollView': { IntakeTextInput: 'DateInput' }, './MonthSelect': { MonthSelect: 'MonthSelect' },
+    });
+    const { IntakeField } = load('../components/intake/IntakeField.tsx', {
+      'react/jsx-runtime': runtime, 'react-native': native, 'lucide-react-native': icons,
+      './IntakeScrollView': { IntakeTextInput: 'TextInput' }, './MonthYearField': monthYear,
+      '@/lib/intake/logic': pure['./logic'], '@/lib/intake/store': { useIntake: () => ({ state, setField: (s, f, value) => { state.answers[s][f] = value; } }) },
+      './AgeField': { AgeField: 'AgeField' }, './PhotoInstructions': { PhotoInstructions: () => null },
+      './ConfiguredPhotoField': { ConfiguredPhotoField: 'ConfiguredPhoto', PhotoExample: () => null },
+      './AttachmentField': { AttachmentField: 'AttachmentField' }, './FieldLabel': { FieldLabel: 'FieldLabel' },
+    });
+    const draw = () => flatten(render(IntakeField({ sectionId: 'voer', field: supplement, n: 1 })));
+    const answered = () => pure['./logic'].isFieldAnswered(supplement, state.answers.voer[supplement.id]);
+    assert.equal(answered(), true);
+    for (const [step, index] of order.entries()) {
+      const control = draw().filter(n => ['MonthSelect', 'DateInput'].includes(n.type))[index];
+      if (control.type === 'MonthSelect') control.props.onChange(''); else control.props.onChangeText('');
+      if (step < 3) assert.equal(answered(), false, 'partial periods remain invalid');
+    }
+    assert.deepEqual(answerRows(state.answers.voer[supplement.id]), [original, otherRow]);
+    assert.equal(answered(), true);
+  });
+}
 
 test('field renderer supports multiple medicines, other names, condition introduction and event subfields', () => {
   const state = { answers: {} };
@@ -45,7 +113,7 @@ test('field renderer supports multiple medicines, other names, condition introdu
   add().props.onPress();
   flatten(draw('medisch', 'medicatie-ooit-details')).find(n => n.type === 'TextInput').props.onChangeText('Ander medicijn');
   add().props.onPress();
-  assert.deepEqual(state.answers.medisch['medicatie-ooit-details'], [{ naam: 'Ander medicijn' }, {}]);
+  assert.deepEqual(answerRows(state.answers.medisch['medicatie-ooit-details']), [{ naam: 'Ander medicijn' }, {}]);
   assert.equal(flatten(draw('medisch', 'medicatie-ooit-details')).filter(n => n.type === 'TextInput').length, 10);
   assert.ok(text(draw('medisch', 'sec-aandoening')).includes(field('medisch', 'sec-aandoening').hint));
   state.answers.geschiedenis = { 'medische-gebeurtenissen': [{}] };
@@ -66,7 +134,7 @@ test('field renderer supports multiple medicines, other names, condition introdu
   assert.equal(pure['./logic'].answeredCount(history, state.answers.geschiedenis, state.answers).answered, beforeNa.answered);
   assert.equal(pure['./logic'].countFlags(state.answers), 0);
   assert.ok(!text(draw('geschiedenis', events.id)).includes('Eerste toevoegen'));
-  assert.deepEqual(state.answers.geschiedenis[events.id], [{ verdwenen: 'Verbeterd, maar nog aanwezig' }]);
+  assert.deepEqual(answerRows(state.answers.geschiedenis[events.id]), [{ verdwenen: 'Verbeterd, maar nog aanwezig' }]);
   na().props.onPress();
   assert.equal(na().props.accessibilityState.checked, false);
   assert.ok(text(draw('geschiedenis', events.id)).includes('Nog één toevoegen'));
@@ -145,7 +213,7 @@ test('supplement repeaters support add/remove and every new none option clears o
     assert.equal(state.answers.voer[id].length, 2);
     assert.equal(state.answers.voer[id][0].merk, 'Product A');
     flatten(draw('voer', id)).find(n => n.type === 'Pressable' && flatten(n).some(c => c.type === 'Trash2')).props.onPress();
-    assert.deepEqual(state.answers.voer[id], [{}]);
+    assert.deepEqual(answerRows(state.answers.voer[id]), [{}]);
   }
   for (const id of ['typisch-gedrag', 'fysieke-signalen', 'stress-symptomen']) {
     const option = field('gedrag', id).options[0];
