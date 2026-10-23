@@ -7,7 +7,7 @@ use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
-#[Fillable(['slug', 'name', 'disclaimer_short', 'disclaimer_long', 'none_options', 'active'])]
+#[Fillable(['slug', 'name', 'disclaimer_short', 'disclaimer_long', 'none_options', 'safety_config', 'active'])]
 class IntakeQuestionnaire extends Model
 {
     use HasUuids;
@@ -16,6 +16,7 @@ class IntakeQuestionnaire extends Model
     {
         return [
             'none_options' => 'array',
+            'safety_config' => 'array',
             'active' => 'boolean',
         ];
     }

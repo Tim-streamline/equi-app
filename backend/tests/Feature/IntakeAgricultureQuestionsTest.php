@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Models\AdminUser;
 use App\Models\IntakeQuestionnaire;
+use App\Models\IntakeField;
 use Database\Seeders\IntakeQuestionnaireSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Inertia\Testing\AssertableInertia as Assert;
@@ -41,6 +42,7 @@ class IntakeAgricultureQuestionsTest extends TestCase
     public function test_upgrade_appends_only_new_questions_and_preserves_admin_changes_on_rerun(): void
     {
         $this->seed(IntakeQuestionnaireSeeder::class);
+        $seededFieldCount = IntakeField::count();
         $section = IntakeQuestionnaire::query()->where('slug', 'protocol-intake')->firstOrFail()
             ->sections()->where('key', 'huisvesting')->firstOrFail();
         $section->fields()->where(fn ($query) => $query->where('key', 'like', 'landbouw-%')->orWhereIn('key', ['sec-landbouw', 'omgeving-overig']))->delete();
@@ -53,11 +55,13 @@ class IntakeAgricultureQuestionsTest extends TestCase
         $new = $section->fields()->where('key', 'landbouw-nabij')->firstOrFail();
         $this->assertGreaterThan($lastOrder, $new->order);
         $new->update(['label' => 'Aangepaste landbouwvraag']);
+        $fieldIds = IntakeField::orderBy('id')->pluck('id')->all();
         $migration->up();
+        $this->assertSame($fieldIds, IntakeField::orderBy('id')->pluck('id')->all());
 
         $this->assertSame('Eigen tekst van beheerder', $existing->fresh()->label);
         $this->assertFalse($existing->fresh()->active);
         $this->assertSame('Aangepaste landbouwvraag', $new->fresh()->label);
-        $this->assertDatabaseCount('intake_fields', 382);
+        $this->assertDatabaseCount('intake_fields', $seededFieldCount);
     }
 }

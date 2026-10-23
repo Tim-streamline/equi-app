@@ -24,23 +24,20 @@ export function isConfiguredNoneOption(option: string, noneOptions: readonly str
 /** Convert PowerSync's flat SQLite rows into the existing app schema contract. */
 export function buildIntakeSchema(sectionRows: Row[], fieldRows: Row[]): Section[] {
   const fieldsBySection = new Map<string, Field[]>();
-
   for (const row of fieldRows) {
     if (!bool(row.active ?? 1)) continue;
     const sectionId = String(row.section_id ?? '');
-    // Older questionnaire databases still describe this free-form answer as a date.
-    // Keep the saved key, but accept approximate dates and "onbekend" until the migration runs.
-    const legacyVaccinationDate = row.key === 'vacc-laatst' && row.type === 'date';
     const field: Field = {
       id: String(row.key),
+      answerAliases: json<Field['answerAliases']>(row.answer_aliases),
+      submissionBlocks: json<Field['submissionBlocks']>(row.submission_blocks),
       ...(row.answer_section_key ? { answerSection: String(row.answer_section_key) } : {}),
       label: String(row.label),
       photoConfig: json<Field['photoConfig']>(row.photo_config),
       ageConfig: json<Field['ageConfig']>(row.age_config),
-      type: legacyVaccinationDate ? 'text' : String(row.type) as Field['type'],
-      hint: legacyVaccinationDate
-        ? 'Maand en jaartal is voldoende indien je de exacte datum niet weet. Indien niet bekend, vul dan "onbekend" in.'
-        : row.hint == null ? undefined : String(row.hint),
+      dateConfig: json<Field['dateConfig']>(row.date_config),
+      type: String(row.type) as Field['type'],
+      hint: row.hint == null ? undefined : String(row.hint),
       required: bool(row.required),
       optional: bool(row.optional),
       unit: row.unit == null ? undefined : String(row.unit),
@@ -50,6 +47,7 @@ export function buildIntakeSchema(sectionRows: Row[], fieldRows: Row[]): Section
       placeholder: row.placeholder == null ? undefined : String(row.placeholder),
       link: json<Field['link']>(row.link),
       options: json<string[]>(row.options),
+      signalConfig: json<Field['signalConfig']>(row.signal_config),
       showIf: json<Field['showIf']>(row.show_if),
       flagIf: json<Field['flagIf']>(row.flag_if),
       criticalIf: json<Field['criticalIf']>(row.critical_if),
@@ -67,6 +65,7 @@ export function buildIntakeSchema(sectionRows: Row[], fieldRows: Row[]): Section
     .sort((a, b) => Number(a.order ?? 0) - Number(b.order ?? 0))
     .map((row) => ({
       id: String(row.key),
+      answerAliases: json<Field['answerAliases']>(row.answer_aliases),
       nr: Number(row.order ?? 0),
       title: String(row.title),
       intro: row.intro == null ? '' : String(row.intro),

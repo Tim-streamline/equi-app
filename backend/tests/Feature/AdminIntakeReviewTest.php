@@ -121,6 +121,7 @@ class AdminIntakeReviewTest extends TestCase
 
     public function test_offline_attachment_retries_preserve_id_and_file_and_cannot_rebind_it(): void
     {
+        $this->booking->update(['intake_status' => 'draft', 'submitted_at' => null, 'completed_at' => null]);
         Storage::fake('local');
         $this->field('photo', 'photo');
         $this->field('other-photo', 'photo');
@@ -131,9 +132,12 @@ class AdminIntakeReviewTest extends TestCase
         $first = $this->postJson($url, $payload + ['file' => UploadedFile::fake()->image('offline.jpg')])->assertCreated();
         $this->assertSame('attachment:'.$id.':offline.jpg', $first->json('value'));
         $files = Storage::disk('local')->allFiles();
+        $this->booking->update(['intake_status' => 'submitted', 'submitted_at' => now()]);
         $this->postJson($url, $payload + ['file' => UploadedFile::fake()->image('retry.jpg')])
             ->assertOk()->assertJson(['value' => $first->json('value')]);
         $this->assertDatabaseCount('intake_attachments', 1);
+        $this->assertSame($files, Storage::disk('local')->allFiles());
+        $this->postJson($url, array_replace($payload, ['attachment_id' => (string) Str::uuid(), 'file' => UploadedFile::fake()->image('new.jpg')]))->assertStatus(409);
         $this->assertSame($files, Storage::disk('local')->allFiles());
         $this->postJson($url, array_replace($payload, ['field' => 'other-photo', 'file' => UploadedFile::fake()->image('other.jpg')]))->assertForbidden();
         $otherHorse = Horse::create(['owner_id' => $this->booking->user_id, 'name' => 'Other']);
@@ -148,6 +152,7 @@ class AdminIntakeReviewTest extends TestCase
 
     public function test_real_attachment_upload_download_and_owner_isolation(): void
     {
+        $this->booking->update(['intake_status' => 'draft', 'submitted_at' => null, 'completed_at' => null]);
         Storage::fake('local');
         $this->field('photo', 'photo');
         $this->field('document', 'file');
@@ -171,13 +176,16 @@ class AdminIntakeReviewTest extends TestCase
 
     public function test_upload_before_sync_keeps_same_id_and_review_fields_are_admin_only(): void
     {
+        $this->booking->update(['intake_status' => 'draft', 'submitted_at' => null, 'completed_at' => null]);
         Storage::fake('local');
         $this->field('photo', 'photo');
         $this->asApiUser($this->booking->user);
         $id = $this->booking->id; // The purchase created this intake before the client synced it.
-        $this->postJson('/api/intakes/'.$id.'/attachments', ['horse_id' => $this->booking->horse_id, 'section' => 'paard', 'field' => 'photo', 'file' => UploadedFile::fake()->image('horse.jpg')])->assertCreated();
+        $uploaded = $this->postJson('/api/intakes/'.$id.'/attachments', ['horse_id' => $this->booking->horse_id, 'section' => 'paard', 'field' => 'photo', 'file' => UploadedFile::fake()->image('horse.jpg')])->assertCreated();
+        $this->answer('photo', [$uploaded->json('value')]);
         $this->postJson('/api/sync/upload', ['operations' => [['op' => 'PUT', 'type' => 'intake_bookings', 'id' => $id, 'data' => ['user_id' => $this->booking->user_id, 'horse_id' => $this->booking->horse_id, 'intake_status' => 'submitted', 'review_notes' => 'forged', 'accepted_triggers' => ['forged']]]]])->assertOk();
         $this->assertSame(1, IntakeBooking::whereKey($id)->count());
+        $this->assertNotNull($this->booking->fresh()->completed_at);
         $this->assertNull(IntakeBooking::find($id)->review_notes);
         $this->assertSame([], IntakeBooking::find($id)->accepted_triggers);
     }

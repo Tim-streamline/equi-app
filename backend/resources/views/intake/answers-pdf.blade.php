@@ -30,6 +30,7 @@
 <h2>{{ $section['nr'] + 1 }}. {{ $section['title'] }}</h2>
 @foreach ($section['rows'] as $row)
 <h3>{{ $row['label'] }}</h3>
+@if($row['owner_reported'] ?? false)<p class="muted">Vermoeden eigenaar · niet bevestigd</p>@endif
 @if ($row['type'] === 'sectionhead')
 @elseif (!empty($row['not_applicable']))
 <p>Niet van toepassing</p>

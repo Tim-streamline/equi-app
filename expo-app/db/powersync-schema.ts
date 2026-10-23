@@ -37,6 +37,7 @@ const therapists = new Table({
 });
 
 const horses = new Table({
+  laminitis_safety: column.text,
   owner_id: column.text,
   name: column.text,
   breed: column.text,
@@ -525,6 +526,7 @@ const intake_bookings = new Table({
 }, { indexes: { byUser: ['user_id'] } });
 
 const intake_questionnaires = new Table({
+  safety_config: column.text,
   slug: column.text,
   name: column.text,
   disclaimer_short: column.text,
@@ -551,6 +553,9 @@ const intake_sections = new Table({
 }, { indexes: { byQuestionnaire: ['questionnaire_id'] } });
 
 const intake_fields = new Table({
+  answer_aliases: column.text,
+  date_config: column.text,
+  submission_blocks: column.text,
   section_id: column.text,
   answer_section_key: column.text,
   photo_config: column.text,
@@ -573,6 +578,7 @@ const intake_fields = new Table({
   flag_if: column.text,
   critical_if: column.text,
   protocol_if: column.text,
+  signal_config: column.text,
   repeater_sub: column.text,
   active: column.integer,
   created_at: column.text,
@@ -587,7 +593,10 @@ const intake_answers = new Table({
   value: column.text,
   created_at: column.text,
   updated_at: column.text,
-}, { indexes: { byResponse: ['response_id'] } });
+}, {
+  indexes: { byResponse: ['response_id'] },
+  trackPrevious: { columns: ['response_id', 'section_id', 'field_id'], onlyWhenChanged: false },
+});
 
 export const AppSchema = new Schema({
   users,

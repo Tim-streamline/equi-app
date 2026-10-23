@@ -6,9 +6,13 @@ import { PhotoInstructions } from './PhotoInstructions';
 import { View, Text, Pressable } from 'react-native';
 import { Check, Plus, Trash2 } from 'lucide-react-native';
 
-import { IntakeTextInput as TextInput } from './IntakeScrollView';
-import { Field, FieldValue, RepeaterSub } from '@/lib/intake/schema';
-import { isFieldRequired, isNoneOption, photoNotApplicable, photoReferences, photoSlotReferences } from '@/lib/intake/logic';
+import { IntakeInputFrame, IntakeTextInput as TextInput } from './IntakeScrollView';
+import { Field, FieldValue, RepeaterSub, RepeaterRow } from '@/lib/intake/schema';
+import { formatDate } from '@/lib/intake/dates';
+import type { DateAnswer } from '@/lib/intake/dates';
+import { createRepeaterRow, withRepeaterRowIds } from '@/lib/intake/repeater';
+import { MonthYearField } from './MonthYearField';
+import { normalizeAnswer, isFieldRequired, isNoneOption, repeaterNotApplicable, repeaterNaKey, photoNotApplicable, photoReferences, photoSlotReferences } from '@/lib/intake/logic';
 import { useIntake } from '@/lib/intake/store';
 import { AttachmentField } from './AttachmentField';
 import { ConfiguredPhotoField, PhotoExample } from './ConfiguredPhotoField';
@@ -45,7 +49,8 @@ type Props = {
 export function IntakeField({ field, sectionId, n, noneOptions }: Props) {
   const { state, setField } = useIntake();
   const answerSection = field.answerSection ?? sectionId;
-  const value = state.answers[answerSection]?.[field.id];
+  const value = normalizeAnswer(field, state.answers[answerSection]?.[field.id]);
+  const repeaterNa = repeaterNotApplicable(field, state.answers, sectionId);
   const set = (next: FieldValue) => {
     setField(answerSection, field.id, next);
   };
@@ -87,9 +92,23 @@ export function IntakeField({ field, sectionId, n, noneOptions }: Props) {
         link={field.link}
       />
       {field.type === 'photo' && !field.photoConfig?.grouped_hooves && !photoDesign && <PhotoInstructions field={field} />}
+      {field.type === 'repeater' && !!field.options?.length && !state.submittedAt && (
+        <Pressable
+          accessibilityRole="checkbox"
+          accessibilityState={{ checked: repeaterNa }}
+          onPress={() => setField(answerSection, repeaterNaKey(field), repeaterNa ? 'no' : 'yes')}
+          className="mb-3 flex-row items-center gap-3 rounded-xl border border-ink-8 bg-white px-4 py-3"
+        >
+          <View className={`h-5 w-5 items-center justify-center rounded border ${repeaterNa ? 'border-mint-500 bg-mint-500' : 'border-ink-15 bg-white'}`}>
+            {repeaterNa && <Check size={15} color="white" />}
+          </View>
+          <Text className="font-semi text-[14px] text-ink">{field.options?.[0]}</Text>
+        </Pressable>
+      )}
       {state.submittedAt && !['photo', 'file'].includes(field.type)
-        ? <ReadOnlyAnswer field={field} value={value} answers={state.answers[answerSection] ?? {}} />
-        : renderInput(field, value, set, noneOptions, answerSection, photoDesign)}
+        ? repeaterNa ? <Text className="rounded-xl bg-white p-3 text-[16px] text-ink">{field.options?.[0]}</Text>
+          : <ReadOnlyAnswer field={field} value={value} answers={state.answers[answerSection] ?? {}} />
+        : repeaterNa ? null : renderInput(field, value, set, noneOptions, answerSection, photoDesign)}
     </View>
   );
 }
@@ -99,10 +118,10 @@ function ReadOnlyAnswer({ field, value, answers }: { field: Field; value: FieldV
   let text = '';
   if (field.type === 'repeater' && Array.isArray(value)) {
     text = value.map(row => (field.sub ?? []).map(sub => {
-      const entry = row && typeof row === 'object' ? (row as Record<string, string>)[sub.id] : null;
-      return entry ? `${sub.label}: ${entry}` : '';
+      const entry = row && typeof row === 'object' ? (row as RepeaterRow)[sub.id] : null;
+      return entry ? `${sub.label}: ${sub.type === 'month_year' ? formatDate(entry) : entry}` : '';
     }).filter(Boolean).join('\n')).filter(Boolean).join('\n\n');
-  } else text = Array.isArray(value) ? value.join(' · ') : value == null ? '' : String(value);
+  } else text = field.type === 'month_year' ? formatDate(value) : Array.isArray(value) ? value.join(' · ') : value == null ? '' : String(value);
   if (field.unit && text) text += ` ${field.unit}`;
   const birthDate = field.ageConfig && answers[field.ageConfig.date_field];
   if (birthDate) text += `${text ? '\n' : ''}${field.ageConfig!.date_label}: ${birthDate}`;
@@ -143,28 +162,40 @@ function renderInput(
           value={asText(value)}
           onChange={set}
           tall={field.tall}
+          lines={field.lines}
           placeholder={field.placeholder}
         />
       );
     case 'number':
       if (field.ageConfig) return <AgeField field={field} sectionId={sectionId} />;
       return (
-        <TextInputField
-          value={asText(value)}
-          onChange={(v) => set(v === '' ? undefined : Number(v))}
-          unit={field.unit}
-          placeholder={field.placeholder}
-          keyboard="decimal-pad"
-        />
+        <View>
+          <TextInputField
+            value={field.options?.includes(String(value)) ? undefined : asText(value)}
+            onChange={(v) => set(v === '' ? undefined : Number(v))}
+            unit={field.unit}
+            placeholder={field.placeholder}
+            keyboard="decimal-pad"
+          />
+          {(field.options ?? []).map(option => (
+            <Pressable key={option} accessibilityRole="radio" accessibilityState={{ selected: value === option }}
+              onPress={() => set(value === option ? undefined : option)} className="mt-2 flex-row items-center gap-2 py-2">
+              <View className={`h-5 w-5 rounded-full border-2 ${value === option ? 'border-mint-500 bg-mint-500' : 'border-ink-15'}`} />
+              <Text className="text-[14px] text-ink">{option}</Text>
+            </Pressable>
+          ))}
+        </View>
       );
     case 'date':
       return (
         <TextInputField
           value={asText(value)}
           onChange={set}
-          placeholder="dd-mm-jjjj"
+          placeholder={field.placeholder ?? 'dd-mm-jjjj'}
         />
       );
+    case 'month_year':
+      return <MonthYearField value={value} onChange={set} config={field.dateConfig} label={field.label} />;
     case 'radio':
       return (
         <RadioField
@@ -179,9 +210,7 @@ function renderInput(
           options={field.options ?? []}
           value={asArray(value)}
           onChange={set}
-          noneOptions={sectionId === 'gedrag' && field.id === 'gedrag-signalen'
-            ? [...noneOptions, 'geen van bovenstaande', 'weet ik niet']
-            : noneOptions}
+          noneOptions={noneOptions}
         />
       );
     case 'photo':
@@ -194,7 +223,7 @@ function renderInput(
           sub={field.sub ?? []}
           firstAddLabel={sectionId === 'voer' && ['huidig-extra', 'historie-extra'].includes(field.id) ? 'Supplement toevoegen' : undefined}
           addLabel={sectionId === 'medisch' && field.id === 'medicatie-ooit-details' ? 'Medicatie toevoegen' : undefined}
-          value={asArray<Record<string, string>>(value)}
+          value={asArray<RepeaterRow>(value)}
           onChange={(rows) => set(rows)}
         />
       );
@@ -219,7 +248,7 @@ function TextInputField({
   keyboard?: 'default' | 'decimal-pad';
 }) {
   return (
-    <View className="flex-row items-center rounded-xl border border-ink-8 bg-white">
+    <IntakeInputFrame className="flex-row items-center rounded-xl border border-ink-8 bg-white">
       <TextInput
         value={value ?? ''}
         onChangeText={onChange}
@@ -232,7 +261,7 @@ function TextInputField({
       {unit && (
         <Text className="pr-4 font-semi text-[13px] text-ink-50">{unit}</Text>
       )}
-    </View>
+    </IntakeInputFrame>
   );
 }
 
@@ -256,7 +285,7 @@ function MultiLineTextField({
   return (
     <View className="gap-2">
       {Array.from({ length: lines }).map((_, i) => (
-        <View key={i} className="flex-row items-center rounded-xl border border-ink-8 bg-white">
+        <IntakeInputFrame key={i} className="flex-row items-center rounded-xl border border-ink-8 bg-white">
           <TextInput
             value={value[i] ?? ''}
             onChangeText={(v) => update(i, v)}
@@ -264,7 +293,7 @@ function MultiLineTextField({
             placeholderTextColor="rgba(27,42,42,0.4)"
             className="flex-1 px-4 py-3.5 font-sans text-[15px] text-ink"
           />
-        </View>
+        </IntakeInputFrame>
       ))}
     </View>
   );
@@ -274,24 +303,26 @@ function TextAreaField({
   value,
   onChange,
   tall,
+  lines,
   placeholder,
 }: {
   value?: string;
   onChange: (v: string) => void;
   tall?: boolean;
+  lines?: number;
   placeholder?: string;
 }) {
   return (
-    <TextInput
+    <IntakeInputFrame className="rounded-xl border border-ink-8 bg-white"><TextInput
       multiline
-      numberOfLines={tall ? 12 : 4}
+      numberOfLines={lines ?? (tall ? 12 : 4)}
       value={value ?? ''}
       onChangeText={onChange}
       placeholder={placeholder}
       placeholderTextColor="rgba(27,42,42,0.4)"
-      className="rounded-xl border border-ink-8 bg-white px-4 py-3.5 font-sans text-[15px] text-ink"
-      style={{ minHeight: tall ? 288 : 96, textAlignVertical: 'top' }}
-    />
+      className="px-4 py-3.5 font-sans text-[15px] text-ink"
+      style={{ minHeight: (lines ? lines * 24 + 28 : tall ? 288 : 96) - 2, ...(lines ? { lineHeight: 24 } : {}), textAlignVertical: 'top' }}
+    /></IntakeInputFrame>
   );
 }
 
@@ -472,30 +503,34 @@ function RepeaterField({
   firstAddLabel?: string;
   addLabel?: string;
   sub: RepeaterSub[];
-  value: Record<string, string>[];
-  onChange: (rows: Record<string, string>[]) => void;
+  value: RepeaterRow[];
+  onChange: (rows: RepeaterRow[]) => void;
 }) {
-  const add = () => onChange([...value, {}]);
-  const remove = (i: number) => onChange(value.filter((_, idx) => idx !== i));
-  const update = (i: number, key: string, v: string) => {
-    const next = [...value];
-    next[i] = { ...(next[i] ?? {}), [key]: v };
+  const rows = withRepeaterRowIds(value);
+  const add = () => onChange([...rows, createRepeaterRow()]);
+  const remove = (id: string) => onChange(rows.filter(row => row._rowId !== id));
+  const update = (id: string, key: string, v: string | DateAnswer | undefined) => {
+    const next = [...rows];
+    const i = next.findIndex(row => row._rowId === id);
+    if (i < 0) return;
+    next[i] = { ...(next[i] ?? {}) };
+    if (v === undefined) delete next[i][key]; else next[i][key] = v;
     onChange(next);
   };
 
   return (
     <View>
       <View className="gap-3">
-        {value.map((row, i) => (
+        {rows.map((row, i) => (
           <View
-            key={i}
+            key={row._rowId as string}
             className="gap-2 rounded-xl border border-ink-8 bg-white p-3"
           >
             <View className="flex-row items-center justify-between">
               <Text className="font-semi text-[11px] uppercase tracking-eyebrow text-ink-50">
                 #{i + 1}
               </Text>
-              <Pressable onPress={() => remove(i)} hitSlop={8}>
+              <Pressable onPress={() => remove(row._rowId as string)} hitSlop={8}>
                 <Trash2 size={14} color="rgba(27,42,42,0.5)" />
               </Pressable>
             </View>
@@ -507,14 +542,14 @@ function RepeaterField({
                 {s.hint && (
                   <Text className="mb-1.5 text-[11px] leading-[15px] text-ink-50">{s.hint}</Text>
                 )}
-                {s.type === 'radio' && s.options ? (
+                {s.type === 'month_year' ? <MonthYearField value={row[s.id]} onChange={v => update(row._rowId as string, s.id, v)} config={s.dateConfig} label={`${s.label} #${i + 1}`} /> : s.type === 'radio' && s.options ? (
                   <View className="flex-row flex-wrap gap-1.5">
                     {s.options.map((o) => {
                       const active = row[s.id] === o;
                       return (
                         <Pressable
                           key={o}
-                          onPress={() => update(i, s.id, o)}
+                          onPress={() => update(row._rowId as string, s.id, o)}
                           className={`rounded-pill border px-3 py-1.5 ${
                             active ? 'border-mint-500 bg-mint-500' : 'border-ink-8 bg-canvas'
                           }`}
@@ -531,14 +566,14 @@ function RepeaterField({
                     })}
                   </View>
                 ) : (
-                  <TextInput
-                    value={row[s.id] ?? ''}
-                    onChangeText={(v) => update(i, s.id, v)}
+                  <IntakeInputFrame radius={8} className="rounded-lg border border-ink-8 bg-canvas"><TextInput
+                    value={typeof row[s.id] === 'string' ? row[s.id] as string : ''}
+                    onChangeText={(v) => update(row._rowId as string, s.id, v)}
                     multiline={s.type === 'textarea'}
                     keyboardType={s.type === 'number' ? 'decimal-pad' : 'default'}
                     placeholderTextColor="rgba(27,42,42,0.4)"
-                    className="rounded-lg border border-ink-8 bg-canvas px-3 py-2 font-sans text-[13.5px] text-ink"
-                  />
+                    className="px-3 py-2 font-sans text-[13.5px] text-ink"
+                  /></IntakeInputFrame>
                 )}
               </View>
             ))}

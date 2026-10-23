@@ -39,7 +39,7 @@ class IntakePhotosTest extends TestCase
             $booking->answers()->create(['section_id' => $section, 'field_id' => $field, 'value' => json_encode($value)]);
         }
         $review = app(IntakeReview::class)->forBooking($booking);
-        $this->assertSame('Intake fotos', $review['sections'][0]['title']);
+        $this->assertSame('Foto’s voor je intake', $review['sections'][0]['title']);
         $row = collect($review['sections'][0]['rows'])->firstWhere('key', 'foto-historie');
         $this->assertSame($photo->id, $row['attachments'][0]['id']);
         $this->assertSame((string) now()->year, $row['attachments'][0]['year']);

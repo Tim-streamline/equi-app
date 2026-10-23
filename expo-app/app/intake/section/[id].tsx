@@ -185,7 +185,8 @@ export default function IntakeSectionScreen() {
                   sectionId={section.id}
                   n={fieldCounter}
                   noneOptions={noneOptions}
-                /></View>
+                />
+                </View>
               );
             })}
         </IntakeScrollView>

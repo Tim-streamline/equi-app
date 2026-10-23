@@ -12,6 +12,8 @@ import { FieldValue, IntakeAnswers } from './schema';
 import { bookingQuery, openOrCreateIntake, saveAnswer } from './persistence';
 import { useDb } from '@/db/provider';
 import { useCurrentUserId, useCurrentHorseId } from '@/db/hooks';
+import { submissionBlocks as evaluateSubmissionBlocks, type SubmissionBlock } from './submission-blocks';
+import { useIntakeSchema } from './schema-provider';
 
 export type IntakeState = { answers: IntakeAnswers; submittedAt: string | null; savedAt: string | null };
 const EMPTY: IntakeState = { answers: {}, submittedAt: null, savedAt: null };
@@ -22,6 +24,7 @@ type Ctx = {
   submit: () => Promise<void>; reset: () => void;
   trackActivity: (section: string, field?: string) => void;
   ensureBooking: () => Promise<string>; horseId: string; bookingId: string | null;
+  submissionBlocks: SubmissionBlock[];
 };
 const IntakeContext = createContext<Ctx | null>(null);
 const newId = () => typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function' ? crypto.randomUUID() : 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => { const r = Math.random() * 16 | 0; return (c === 'x' ? r : (r & 3) | 8).toString(16); });
@@ -43,7 +46,10 @@ function IntakeSelection({ userId, horseId, children }: { userId: string; horseI
 }
 function HorseIntakeProvider({ userId, horseId, selectedId, children }: { userId: string; horseId: string; selectedId: string | null; children: ReactNode }) {
   const { powersync } = useDb();
+  const { schema, noneOptions } = useIntakeSchema();
   const [state, setState] = useState<IntakeState>(EMPTY);
+  const liveAnswers = useRef<IntakeAnswers>(state.answers);
+  liveAnswers.current = state.answers;
   const dirty = useRef(false);
   const [submitting, setSubmitting] = useState(false);
   const locked = useRef(false);
@@ -56,8 +62,17 @@ function HorseIntakeProvider({ userId, horseId, selectedId, children }: { userId
     'SELECT section_id, field_id, value, updated_at FROM intake_answers WHERE response_id = ?', [booking?.id ?? '']);
   const loaded = !bookingLoading && (!booking || !answersLoading);
   const completedAt = booking?.completed_at ?? booking?.submitted_at ?? null;
+  const previousCompletion = useRef<{ id?: string; at: string | null }>({ at: null });
   if (completedAt || state.submittedAt) locked.current = true;
   useEffect(() => {
+    if (!loaded) return;
+    if (previousCompletion.current.id === booking?.id && previousCompletion.current.at && !completedAt) {
+      // The server reopened this intake after removing obsolete answers.
+      // Discard the old snapshot before accepting fresh answers.
+      locked.current = false;
+      dirty.current = false;
+    }
+    previousCompletion.current = { id: booking?.id, at: completedAt };
     if (completedAt) {
       locked.current = true;
       // Server completion wins over unsynced edits from another device.
@@ -95,21 +110,33 @@ function HorseIntakeProvider({ userId, horseId, selectedId, children }: { userId
   }, []);
   const setField = useCallback<Ctx['setField']>((section, field, value) => {
     if (locked.current) return;
+    if (liveAnswers.current[section]?.[field] === value) return;
+    liveAnswers.current = { ...liveAnswers.current, [section]: { ...liveAnswers.current[section], [field]: value } };
     dirty.current = true;
-    setState(prev => ({ ...prev, answers: { ...prev.answers, [section]: { ...prev.answers[section], [field]: value } } }));
+    const nextAnswers = liveAnswers.current;
+    liveAnswers.current = nextAnswers;
+    setState(prev => ({ ...prev, answers: nextAnswers }));
     void enqueue(async () => {
       const id = await ensureBooking();
       await saveAnswer(powersync, id, section, field, value, newId);
       setState(prev => ({ ...prev, savedAt: new Date().toISOString() }));
     }).catch(() => {});
   }, [enqueue, ensureBooking, powersync]);
+  const submissionBlocks = useMemo(() => evaluateSubmissionBlocks(schema, state.answers, noneOptions), [schema, state.answers, noneOptions]);
   const resetSection = useCallback<Ctx['resetSection']>(section => {
     if (locked.current) return;
     dirty.current = true;
-    setState(prev => { const answers = { ...prev.answers }; delete answers[section]; return { ...prev, answers }; });
-    void enqueue(async () => { const id = await ensureBooking(); await powersync.execute('DELETE FROM intake_answers WHERE response_id = ? AND section_id = ?', [id,section]); }).catch(() => {});
+    const answers = { ...liveAnswers.current, [section]: {} };
+    liveAnswers.current = answers;
+    setState(prev => ({ ...prev, answers }));
+    void enqueue(async () => {
+      const id = await ensureBooking();
+      await powersync.execute('DELETE FROM intake_answers WHERE response_id = ? AND section_id = ?', [id, section]);
+    }).catch(() => {});
   }, [enqueue, ensureBooking, powersync]);
   const submit = useCallback(async () => {
+    const blocks = evaluateSubmissionBlocks(schema, liveAnswers.current, noneOptions);
+    if (blocks.length) throw new Error(blocks.map(block => block.message).join('\n'));
     if (state.submittedAt) return;
     if (locked.current) throw new Error('Je intake wordt al verstuurd.');
     locked.current = true;
@@ -123,7 +150,7 @@ function HorseIntakeProvider({ userId, horseId, selectedId, children }: { userId
       checkSession();
       const id = await ensureBooking();
       // Retry any failed local save before waiting for the upload queue.
-      for (const [section, values] of Object.entries(state.answers)) for (const [field, value] of Object.entries(values)) {
+      for (const [section, values] of Object.entries(liveAnswers.current)) for (const [field, value] of Object.entries(values)) {
         checkSession();
         await saveAnswer(powersync, id, section, field, value, newId);
       }
@@ -139,11 +166,13 @@ function HorseIntakeProvider({ userId, horseId, selectedId, children }: { userId
     } finally {
       if (mounted.current) setSubmitting(false);
     }
-  }, [ensureBooking, powersync, state.answers, state.submittedAt, completedAt]);
+  }, [ensureBooking, powersync, state.answers, state.submittedAt, completedAt, schema, noneOptions]);
   const reset = useCallback(() => {
     if (locked.current) return;
     dirty.current = true;
-    setState(EMPTY);
+    const retained: IntakeAnswers = {};
+    liveAnswers.current = retained;
+    setState({ ...EMPTY, answers: retained });
     void enqueue(async () => {
       const id = await ensureBooking();
       await powersync.writeTransaction(async tx => {
@@ -174,7 +203,7 @@ function HorseIntakeProvider({ userId, horseId, selectedId, children }: { userId
   }), [powersync]);
   useEffect(() => { refreshProtectionChanged(); }, [submitting]);
   const bookingId = booking?.id ?? null;
-  const value = useMemo(() => ({ state, loaded, submitting, setField, resetSection, submit, reset, ensureBooking, trackActivity, horseId, bookingId }), [state, loaded, submitting, setField, resetSection, submit, reset, ensureBooking, trackActivity, horseId, bookingId]);
+  const value = useMemo(() => ({ state, loaded, submitting, setField, resetSection, submit, reset, ensureBooking, trackActivity, horseId, bookingId, submissionBlocks }), [state, loaded, submitting, setField, resetSection, submit, reset, ensureBooking, trackActivity, horseId, bookingId, submissionBlocks]);
   return <IntakeContext.Provider value={value}>{children}</IntakeContext.Provider>;
 }
 export function useIntake(): Ctx { const context = useContext(IntakeContext); if (!context) throw new Error('useIntake must be inside IntakeProvider'); return context; }

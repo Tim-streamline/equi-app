@@ -5,7 +5,9 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\Ingredient;
 use App\Models\Product;
+use App\Models\ProductVersion;
 use App\Support\AuditLogger;
+use App\Support\FeedCatalog;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Arr;
@@ -41,6 +43,7 @@ class ProductController extends Controller
         DB::transaction(function () use ($data) {
             $product = Product::create(Arr::except($data, 'ingredients'));
             $this->syncIngredients($product, $data);
+            FeedCatalog::snapshotLegacyProduct($product);
             AuditLogger::log('created', $product, after: $product->load('ingredients')->toArray());
         });
 
@@ -51,9 +54,12 @@ class ProductController extends Controller
     {
         $data = $this->validateData($request, $product->id);
         DB::transaction(function () use ($product, $data) {
+            $product = Product::lockForUpdate()->findOrFail($product->id);
+            abort_unless($product->catalog_status === 'legacy' && in_array(FeedCatalog::latestProduct($product)?->status, [null, 'legacy'], true), 409, 'Bewerk dit product via Voerscanner → Merken & producten.');
             $before = $product->load('ingredients')->toArray();
             $product->update(Arr::except($data, 'ingredients'));
             $this->syncIngredients($product, $data);
+            FeedCatalog::snapshotLegacyProduct($product);
             AuditLogger::log('updated', $product, $before, $product->load('ingredients')->toArray());
         });
 
@@ -62,6 +68,12 @@ class ProductController extends Controller
 
     public function destroy(Product $product): RedirectResponse
     {
+        if (ProductVersion::where('product_id', $product->id)->exists()) {
+            $product->forceFill(['catalog_status' => 'archived', 'needs_review' => false])->save();
+            AuditLogger::log('archived', $product);
+
+            return back()->with('success', 'Product archived; version history retained.');
+        }
         DB::transaction(function () use ($product) {
             AuditLogger::log('deleted', $product, before: $product->load('ingredients')->toArray());
             $product->delete();

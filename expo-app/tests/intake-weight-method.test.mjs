@@ -1,3 +1,5 @@
+import * as intakeDates from '../lib/intake/dates.ts';
+import * as repeaterRows from '../lib/intake/repeater.ts';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
@@ -21,10 +23,10 @@ const modules = {
   './ConfiguredPhotoField': { ConfiguredPhotoField: 'ConfiguredPhotoField', PhotoExample: 'PhotoExample' },
   './FieldLabel': { FieldLabel: 'FieldLabel' },
   './AgeField': { AgeField: 'AgeField' },
-  '@/lib/intake/logic': { isFieldRequired: () => true, isNoneOption: () => false, photoNotApplicable: () => false, photoReferences: () => [], photoSlotReferences: () => [] },
+  '@/lib/intake/logic': { normalizeAnswer: (_field, value) => value, isFieldRequired: () => true, isNoneOption: () => false, repeaterNotApplicable: () => false, repeaterNaKey: () => '', photoNotApplicable: () => false, photoReferences: () => [], photoSlotReferences: () => [] },
   '@/lib/intake/store': { useIntake: () => ({ state, setField }) },
 };
-new Function('require', 'exports', compiled)(name => { assert.ok(name in modules, name); return modules[name]; }, exports);
+new Function('require', 'exports', compiled)(name => { if (name === '@/lib/intake/repeater') return repeaterRows; if (name === './dates' || name === '@/lib/intake/dates') return intakeDates; if (name === './MonthYearField') return { MonthYearField: 'MonthYearField' }; assert.ok(name in modules, name); return modules[name]; }, exports);
 const schemaExports = {};
 const schemaCode = ts.transpileModule(readFileSync(new URL('../lib/intake/schema.ts', import.meta.url), 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS } }).outputText;
 new Function('exports', schemaCode)(schemaExports);
@@ -35,7 +37,7 @@ const render = (field, sectionId = 'paard', n = 8) => flatten(exports.IntakeFiel
 
 test('the measurement date is a normal required question using the existing saved key', () => {
   assert.equal(section.fields.indexOf(dateField), section.fields.indexOf(methodField) + 1);
-  assert.equal(dateField.type, 'text');
+  assert.equal(dateField.type, 'month_year');
   assert.equal(dateField.answerSection, 'paard');
   assert.deepEqual(dateField.showIf, { 'paard.gewicht-methode': methodField.options.slice(1) });
   setField('paard', 'gewicht-methode', 'rapport dierenarts');
@@ -45,11 +47,11 @@ test('the measurement date is a normal required question using the existing save
   assert.equal(nodes.find(node => node.type === 'FieldLabel').props.label, 'Wanneer is het gewicht bepaald?');
   assert.equal(nodes.find(node => node.type === 'FieldLabel').props.n, 8);
   assert.equal(nodes.find(node => node.type === 'FieldLabel').props.required, true);
-  const input = nodes.find(node => node.type === 'Input');
+  const input = nodes.find(node => node.type === 'MonthYearField');
   assert.equal(input.props.value, 'mei 2026');
-  assert.equal(input.props.placeholder, 'Bijv. mei 2026');
-  input.props.onChangeText('juni 2026');
-  assert.equal(state.answers.paard['gewicht-methode-wanneer'], 'juni 2026');
+  assert.equal(input.props.config.mode, 'single');
+  input.props.onChange({ version: 1, precision: 'month', month: 6, year: 2026 });
+  assert.deepEqual(state.answers.paard['gewicht-methode-wanneer'], { version: 1, precision: 'month', month: 6, year: 2026 });
 });
 
 test('changing the method preserves the saved date, including when the question moves', () => {
@@ -58,10 +60,10 @@ test('changing the method preserves the saved date, including when the question 
     render(methodField).find(node => node.type === 'Pressable' && text(node).includes(method)).props.onPress();
     assert.equal(state.answers.paard['gewicht-methode-wanneer'], 'mei 2026');
   }
-  const moved = render(dateField, 'gezondheid').find(node => node.type === 'Input');
+  const moved = render(dateField, 'gezondheid').find(node => node.type === 'MonthYearField');
   assert.equal(moved.props.value, 'mei 2026');
-  moved.props.onChangeText('juni 2026');
-  assert.equal(state.answers.paard['gewicht-methode-wanneer'], 'juni 2026');
+  moved.props.onChange({ version: 1, precision: 'month', month: 6, year: 2026 });
+  assert.deepEqual(state.answers.paard['gewicht-methode-wanneer'], { version: 1, precision: 'month', month: 6, year: 2026 });
   assert.equal(state.answers.gezondheid, undefined);
 });
 

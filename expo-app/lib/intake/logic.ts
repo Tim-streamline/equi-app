@@ -4,6 +4,7 @@
 
 import {
   Field,
+  FieldValue,
   IntakeAnswers,
   INTAKE_NONE_OPTIONS,
   INTAKE_SCHEMA,
@@ -12,13 +13,14 @@ import {
   Trigger,
 } from './schema';
 import { isConfiguredNoneOption } from './config';
+import { dateAnswered } from './dates';
 
 /** Resolve moved questions without rewriting stored answers or upload references. */
 export function answersForSection(section: Section, answers: IntakeAnswers): SectionAnswers {
   const result = { ...(answers[section.id] ?? {}) };
   for (const field of section.fields) {
     const source = answers[field.answerSection ?? section.id];
-    if (source && Object.prototype.hasOwnProperty.call(source, field.id)) result[field.id] = source[field.id];
+    if (source && Object.prototype.hasOwnProperty.call(source, field.id)) result[field.id] = normalizeAnswer(field, source[field.id]);
   }
   return result;
 }
@@ -83,12 +85,17 @@ export function ageFromBirthdate(value: unknown, today = new Date()): number | u
  * option label that was reworded — which would otherwise count as answered.
  */
 export function isFieldAnswered(field: Field, value: unknown, allAnswers?: IntakeAnswers, sectionId = ''): boolean {
+  if (repeaterNotApplicable(field, allAnswers, sectionId)) return true;
   if (field.type === 'number' && field.ageConfig) {
     const date = allAnswers?.[field.answerSection ?? sectionId]?.[field.ageConfig?.date_field ?? ''];
     if (date !== undefined && date !== null && date !== '') return ageFromBirthdate(date) !== undefined;
     return (typeof value === 'number' || (typeof value === 'string' && /^\d+$/.test(value))) && Number.isInteger(Number(value)) && Number(value) >= 0;
   }
   if (field.type === 'photo') return photoAnswered(field, value, allAnswers, sectionId);
+  if (field.type === 'month_year') return dateAnswered(value, field.dateConfig);
+  if (field.type === 'number' && field.options?.length) {
+    return field.options.includes(String(value)) || (value !== null && value !== undefined && value !== '' && Number.isFinite(Number(value)) && Number(value) >= 0);
+  }
   if (isEmpty(value)) return false;
   // A multi-box text field (`lines`) stores a string array; it counts as
   // answered only when at least one of the boxes holds real text.
@@ -108,16 +115,30 @@ export function isFieldAnswered(field: Field, value: unknown, allAnswers?: Intak
     // An added-but-blank row (e.g. `[{}]`) is non-empty as an array but holds
     // no real answer — require at least one row with a non-empty sub-value.
     if (!Array.isArray(value)) return false;
+    const dateSubs = (field.sub ?? []).filter(sub => sub.type === 'month_year');
+    for (const row of value) {
+      if (!row || typeof row !== 'object') continue;
+      for (const sub of dateSubs) {
+        const v = row[sub.id];
+        if (v !== undefined && v !== null && v !== '' && !dateAnswered(v, sub.dateConfig)) return false;
+      }
+    }
     return value.some(
       (row) =>
         row != null &&
         typeof row === 'object' &&
         Object.entries(row as Record<string, unknown>).some(
-          ([key, v]) => !key.startsWith('_') && typeof v === 'string' && v.trim() !== '',
+          ([key, v]) => !key.startsWith('_') && ((typeof v === 'string' && v.trim() !== '') || (dateSubs.some(sub => sub.id === key) && dateAnswered(v, dateSubs.find(sub => sub.id === key)?.dateConfig))),
         ),
     );
   }
   return true;
+}
+
+export const repeaterNaKey = (field: Field) => `na:${field.id}`;
+export function repeaterNotApplicable(field: Field, answers: IntakeAnswers = {}, sectionId = ''): boolean {
+  return field.type === 'repeater' && !!field.options?.length
+    && answers[field.answerSection ?? sectionId]?.[repeaterNaKey(field)] === 'yes';
 }
 
 /** Photo metadata stays tied to the attachment, including after a section moves. */
@@ -380,7 +401,7 @@ export function countFlags(
   for (const sec of schema) {
     const a = answersForSection(sec, answers);
     for (const f of visibleFields(sec, a, answers, noneOptions)) {
-      if (fieldFlagged(f, a[f.id], noneOptions)) n++;
+      if (!repeaterNotApplicable(f, answers, sec.id) && fieldFlagged(f, a[f.id], noneOptions)) n++;
     }
   }
   return n;
@@ -398,4 +419,10 @@ export function requiredProgress(answers: IntakeAnswers, schema: Section[] = INT
 export function isPhotoSection(section: Section): boolean {
   const questions = section.fields.filter(field => field.type !== 'sectionhead');
   return questions.length > 0 && questions.every(field => field.type === 'photo');
+}
+
+/** Read-only compatibility projection; original saved values remain intact. */
+export function normalizeAnswer(field: Field, value: FieldValue): FieldValue {
+  const alias = (v: unknown) => typeof v === 'string' ? field.answerAliases?.[v] ?? v : v;
+  return (Array.isArray(value) ? value.map(alias) : alias(value)) as FieldValue;
 }

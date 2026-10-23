@@ -61,6 +61,7 @@ function screen() {
     '@/lib/intake/submission': {formatIntakeDate: () => '1 oktober 2026'},
     '@/lib/intake/store': { useIntake: () => intakes[selected] },
   };
+  modules['./LaminitisSafetyNotice'] = { LaminitisSafetyNotice: () => null };
   modules['@/components/intake/PurchasedProtocols'] = load('../components/intake/PurchasedProtocols.tsx', modules);
   const home = load('../app/(tabs)/(pager)/home.tsx', modules);
   const render = () => flatten(home.default());

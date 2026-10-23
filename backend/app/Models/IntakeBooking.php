@@ -128,4 +128,9 @@ class IntakeBooking extends Model
     {
         return $this->belongsTo(Therapist::class);
     }
+
+    public function safetyReports(): HasMany
+    {
+        return $this->hasMany(IntakeSafetyReport::class, 'intake_booking_id');
+    }
 }

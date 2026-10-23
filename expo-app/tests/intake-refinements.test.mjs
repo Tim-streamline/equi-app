@@ -1,9 +1,10 @@
+import * as intakeDates from '../lib/intake/dates.ts';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import test from 'node:test';
 import ts from 'typescript';
 const modules = {};
-for (const name of ['schema', 'config', 'logic']) {
+for (const name of ['dates', 'schema', 'config', 'logic']) {
   const source = readFileSync(name === 'schema' && process.env.INTAKE_SCHEMA_SOURCE ? process.env.INTAKE_SCHEMA_SOURCE : new URL(`../lib/intake/${name}.ts`, import.meta.url), 'utf8');
   const exports = {};
   new Function('require', 'exports', ts.transpileModule(source, { compilerOptions: { module: ts.ModuleKind.CommonJS } }).outputText)(name => modules[name], exports);
@@ -13,7 +14,7 @@ const { INTAKE_SCHEMA, INTAKE_NONE_OPTIONS } = modules['./schema'];
 const { buildIntakeSchema } = modules['./config'];
 const { visibleFields, missingRequired, isFieldAnswered, fieldFlagged, answeredCount, countFlags } = modules['./logic'];
 const payload = JSON.parse(readFileSync(new URL('../../backend/database/data/intake-questionnaire.json', import.meta.url)));
-const synced = buildIntakeSchema(payload.sections.map(s => ({ ...s, key: s.id, order: s.nr })), payload.sections.flatMap(s => s.fields.map((f, order) => ({ ...f, key: f.id, section_id: s.id, answer_section_key: f.answerSection, photo_config: JSON.stringify(f.photoConfig), age_config: JSON.stringify(f.ageConfig), order, show_if: JSON.stringify(f.showIf), flag_if: JSON.stringify(f.flagIf), critical_if: JSON.stringify(f.criticalIf), repeater_sub: JSON.stringify(f.sub) }))));
+const synced = buildIntakeSchema(payload.sections.map(s => ({ ...s, key: s.id, order: s.nr })), payload.sections.flatMap(s => s.fields.map((f, order) => ({ ...f, key: f.id, section_id: s.id, answer_section_key: f.answerSection, photo_config: JSON.stringify(f.photoConfig), age_config: JSON.stringify(f.ageConfig), date_config: JSON.stringify(f.dateConfig), signal_config: JSON.stringify(f.signalConfig), order, show_if: JSON.stringify(f.showIf), flag_if: JSON.stringify(f.flagIf), critical_if: JSON.stringify(f.criticalIf), repeater_sub: JSON.stringify(f.sub) }))));
 
 test('the exported questionnaire matches the offline source including all 13 sections', () => {
   assert.deepEqual(INTAKE_SCHEMA, payload.sections);
@@ -219,7 +220,11 @@ for (const [name, schema] of [['offline', INTAKE_SCHEMA], ['synced', synced]]) {
       assert.equal(fieldFlagged(f, 'Ik vermoed dit'), true);
       assert.equal(fieldFlagged(f, 'Voor zover ik weet niet'), false);
     }
-    for (const answer of ['aangetoond door dierenarts', 'Vastgesteld door dierenarts/onderzoek']) assert.ok(visible('medisch', { 'ir-status': answer }).includes('ir-attest'));
+    for (const answer of ['aangetoond door dierenarts', 'Vastgesteld door dierenarts/onderzoek']) {
+      assert.ok(visible('medisch', { 'ir-status': answer }).includes('ir-onderzoek-wanneer-welk'));
+      assert.ok(!visible('medisch', { 'ir-status': answer }).includes('ir-attest'));
+      assert.ok(visible('medisch', { 'ir-status': answer, 'ir-uitslag-beschikbaar': 'Ja' }).includes('ir-attest'));
+    }
   });
   test(`${name}: medication followup needs a selected medicine and supports other names (OPT-85)`, () => {
     for (const value of [[], ['Geen']]) assert.ok(!visible('medisch', { 'medicatie-recent': 'Ja, incidenteel', 'medicatie-ooit-welke': value }).includes('medicatie-ooit-details'));

@@ -119,6 +119,7 @@
                         {#if row.type === 'sectionhead'}<h3 class="subheading">{row.label}</h3>
                         {:else}<div class="answer-row" id={`answer-${row.id}`}>
                             <div class="question"><span>{row.label}</span>
+                                {#if row.owner_reported}<small class="attention">Vermoeden eigenaar · niet bevestigd</small>{/if}
                                 {#if row.critical}<small class="critical">Blokkeert protocol</small>{:else if row.flagged}<small class="attention">Aandachtspunt</small>{/if}
                                 {#if row.required && row.empty}<small class="missing">Verplicht, niet ingevuld</small>{/if}
                             </div>
@@ -133,6 +134,7 @@
         <aside class="review-sidebar">
             <section class="surface"><header><ShieldCheck size={20}/><h2>Veiligheidscheck</h2></header>
                 <p class:critical={review.blocked} class="safety-status">{review.blocked ? 'Geblokkeerd' : review.safety.some(r => r.empty) ? 'Nog niet volledig ingevuld' : 'Geen blokkades'}</p>
+                {#each review.submission_blocks ?? [] as block}<p class="critical p-3">{block.message}</p>{/each}
                 {#each review.safety as row}<button class="safety-item" onclick={() => jump(`answer-${row.id}`, true)}><span class:danger={row.critical} class:unknown={row.empty} class="dot"></span><span>{row.label}<small>{row.empty ? 'Niet ingevuld' : Array.isArray(row.value) ? row.value.join(', ') : row.value}</small></span></button>{/each}
                 {#if !review.safety.length}<p>Geen veiligheidsregels voor zichtbare vragen geconfigureerd.</p>{/if}
             </section>

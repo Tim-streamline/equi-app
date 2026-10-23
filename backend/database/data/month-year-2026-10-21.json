@@ -1,0 +1,735 @@
+{
+  "patches": [
+    {
+      "section": "paard",
+      "id": "gewicht-methode-wanneer",
+      "patch": {
+        "type": "month_year",
+        "hint": "Vul de maand en het jaar in. Een schatting is goed.",
+        "dateConfig": {
+          "mode": "single",
+          "allow_future": false,
+          "allow_year_only": true
+        },
+        "placeholder": null
+      }
+    },
+    {
+      "section": "paard",
+      "id": "sinds-bezit",
+      "patch": {
+        "type": "month_year",
+        "hint": "Vul de maand en het jaar in. Een schatting is goed.",
+        "dateConfig": {
+          "mode": "single",
+          "allow_future": false,
+          "allow_year_only": true
+        },
+        "placeholder": null
+      }
+    },
+    {
+      "section": "klacht",
+      "id": "begonnen-wanneer",
+      "patch": {
+        "type": "month_year",
+        "hint": "Vul de maand en het jaar in. Een schatting is goed.",
+        "dateConfig": {
+          "mode": "single",
+          "allow_future": false,
+          "allow_year_only": true
+        },
+        "placeholder": null
+      }
+    },
+    {
+      "section": "geschiedenis",
+      "id": "penis-koker-wanneer",
+      "patch": {
+        "type": "month_year",
+        "hint": "Vul de maand en het jaar in. Een schatting is goed.",
+        "dateConfig": {
+          "mode": "single",
+          "allow_future": false,
+          "allow_year_only": true
+        },
+        "placeholder": null
+      }
+    },
+    {
+      "section": "geschiedenis",
+      "id": "medische-gebeurtenissen",
+      "patch": {
+        "sub": [
+          {
+            "id": "datum",
+            "label": "Geschatte datum / periode",
+            "type": "month_year",
+            "hint": "Vul de maand en het jaar in. Een schatting is goed.",
+            "dateConfig": {
+              "mode": "single",
+              "allow_future": false,
+              "allow_year_only": true
+            }
+          },
+          {
+            "id": "diagnose",
+            "label": "Diagnose of klacht",
+            "type": "text"
+          },
+          {
+            "id": "symptomen",
+            "label": "Wat was er aan de hand?",
+            "type": "textarea",
+            "hint": "Beschrijf kort de klacht, blessure, ziekte of andere medische gebeurtenis."
+          },
+          {
+            "id": "dierenarts",
+            "label": "Is hiervoor een dierenarts geweest?",
+            "type": "radio",
+            "options": [
+              "Ja",
+              "Nee",
+              "Weet ik niet"
+            ]
+          },
+          {
+            "id": "onderzoeken",
+            "label": "Is er onderzoek gedaan?",
+            "type": "text",
+            "hint": "Zo ja, welk onderzoek en wat kwam daaruit? Denk aan bloedonderzoek, röntgenfoto’s, echo, scopie of ander onderzoek. Geen onderzoek gedaan? Vul \"nee\" in."
+          },
+          {
+            "id": "behandelingen",
+            "label": "Is er iets gedaan of behandeld?",
+            "type": "text",
+            "hint": "Zo ja, beschrijf kort wat er is gedaan of gegeven. Denk aan medicatie, rust, revalidatie, therapie of aanpassingen in management. Niets gedaan? Vul ‘nee’ in."
+          },
+          {
+            "id": "reactie",
+            "label": "Hoe reageerde je paard daarop?",
+            "type": "text",
+            "hint": "Beschrijf kort wat je merkte na de behandeling of aanpassing. Is er niets gedaan? Vul ‘n.v.t.’ in."
+          },
+          {
+            "id": "verdwenen",
+            "label": "Hoe is het nu met deze klacht?",
+            "type": "radio",
+            "options": [
+              "Volledig verdwenen",
+              "Verbeterd, maar nog aanwezig",
+              "Komt af en toe terug",
+              "Nog steeds aanwezig",
+              "Weet ik niet"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "section": "medisch",
+      "id": "vacc-laatst",
+      "patch": {
+        "type": "month_year",
+        "hint": "Vul de maand en het jaar in. Een schatting is goed.",
+        "dateConfig": {
+          "mode": "single",
+          "allow_future": false,
+          "allow_year_only": true
+        },
+        "placeholder": null
+      }
+    },
+    {
+      "section": "medisch",
+      "id": "vacc-volgende",
+      "patch": {
+        "type": "month_year",
+        "hint": "Vul de maand en het jaar in. Een schatting is goed.",
+        "dateConfig": {
+          "mode": "single",
+          "allow_future": true,
+          "allow_year_only": true
+        },
+        "placeholder": null
+      }
+    },
+    {
+      "section": "medisch",
+      "id": "mestonderzoek-laatst",
+      "patch": {
+        "type": "month_year",
+        "hint": "Vul de maand en het jaar in. Een schatting is goed.",
+        "dateConfig": {
+          "mode": "single",
+          "allow_future": false,
+          "allow_year_only": true
+        },
+        "placeholder": null
+      }
+    },
+    {
+      "section": "medisch",
+      "id": "ontworming-laatst",
+      "patch": {
+        "type": "month_year",
+        "hint": "Vul de maand en het jaar in. Een schatting is goed.",
+        "dateConfig": {
+          "mode": "single",
+          "allow_future": false,
+          "allow_year_only": true
+        },
+        "placeholder": null
+      }
+    },
+    {
+      "section": "medisch",
+      "id": "tandarts-laatst",
+      "patch": {
+        "type": "month_year",
+        "hint": "Vul de maand en het jaar in. Een schatting is goed.",
+        "dateConfig": {
+          "mode": "single",
+          "allow_future": false,
+          "allow_year_only": true
+        },
+        "placeholder": null
+      }
+    },
+    {
+      "section": "medisch",
+      "id": "tandarts-volgende",
+      "patch": {
+        "type": "month_year",
+        "hint": "Vul de maand en het jaar in. Een schatting is goed.",
+        "dateConfig": {
+          "mode": "single",
+          "allow_future": true,
+          "allow_year_only": true
+        },
+        "placeholder": null
+      }
+    },
+    {
+      "section": "medisch",
+      "id": "ijzers-af",
+      "patch": {
+        "type": "month_year",
+        "hint": "Vul de maand en het jaar in. Een schatting is goed.",
+        "dateConfig": {
+          "mode": "single",
+          "allow_future": false,
+          "allow_year_only": true
+        },
+        "placeholder": null
+      }
+    },
+    {
+      "section": "medisch",
+      "id": "zadelmaker-laatst",
+      "patch": {
+        "type": "month_year",
+        "hint": "Vul de maand en het jaar in. Een schatting is goed.",
+        "dateConfig": {
+          "mode": "single",
+          "allow_future": false,
+          "allow_year_only": true
+        },
+        "placeholder": null
+      }
+    },
+    {
+      "section": "medisch",
+      "id": "ir-onderzoek-wanneer-welk",
+      "patch": {
+        "type": "month_year",
+        "hint": "Vul de maand en het jaar in. Een schatting is goed.",
+        "dateConfig": {
+          "mode": "single",
+          "allow_future": false,
+          "allow_year_only": true
+        },
+        "placeholder": null
+      }
+    },
+    {
+      "section": "medisch",
+      "id": "kpu-onderzoek-datum",
+      "patch": {
+        "type": "month_year",
+        "hint": "Vul de maand en het jaar in. Een schatting is goed.",
+        "dateConfig": {
+          "mode": "single",
+          "allow_future": false,
+          "allow_year_only": true
+        },
+        "placeholder": null
+      }
+    },
+    {
+      "section": "medisch",
+      "id": "hoefbevangenheid-begonnen",
+      "patch": {
+        "type": "month_year",
+        "hint": "Vul de maand en het jaar in. Een schatting is goed.",
+        "dateConfig": {
+          "mode": "single",
+          "allow_future": false,
+          "allow_year_only": true
+        },
+        "placeholder": null
+      }
+    },
+    {
+      "section": "medisch",
+      "id": "hoefbevangenheid-recent",
+      "patch": {
+        "type": "month_year",
+        "hint": "Vul de maand en het jaar in. Een schatting is goed.",
+        "dateConfig": {
+          "mode": "single",
+          "allow_future": false,
+          "allow_year_only": true
+        },
+        "placeholder": null
+      }
+    },
+    {
+      "section": "medisch",
+      "id": "maag-med-wanneer",
+      "patch": {
+        "type": "month_year",
+        "hint": "Vul de maand en het jaar in. Een schatting is goed.",
+        "dateConfig": {
+          "mode": "single",
+          "allow_future": false,
+          "allow_year_only": true
+        },
+        "placeholder": null
+      }
+    },
+    {
+      "section": "medisch",
+      "id": "medicatie-nu-details",
+      "patch": {
+        "sub": [
+          {
+            "id": "naam",
+            "label": "Medicatie / productnaam",
+            "type": "text"
+          },
+          {
+            "id": "reden",
+            "label": "Reden van gebruik",
+            "type": "text"
+          },
+          {
+            "id": "dosering",
+            "label": "Dosering (indien bekend)",
+            "type": "text"
+          },
+          {
+            "id": "sinds",
+            "label": "Sinds wanneer",
+            "type": "month_year",
+            "hint": "Vul de maand en het jaar in. Een schatting is goed.",
+            "dateConfig": {
+              "mode": "single",
+              "allow_future": false,
+              "allow_year_only": true
+            }
+          }
+        ]
+      }
+    },
+    {
+      "section": "medisch",
+      "id": "medicatie-ooit-details",
+      "patch": {
+        "sub": [
+          {
+            "id": "naam",
+            "label": "Naam medicatie",
+            "type": "text"
+          },
+          {
+            "id": "klacht",
+            "label": "Vanwege welke klacht/symptoom ingezet?",
+            "type": "text"
+          },
+          {
+            "id": "wanneer",
+            "label": "Wanneer ongeveer gegeven (jaartal/maand)",
+            "type": "month_year",
+            "hint": "Vul de maand en het jaar in. Een schatting is goed.",
+            "dateConfig": {
+              "mode": "single",
+              "allow_future": false,
+              "allow_year_only": true
+            }
+          },
+          {
+            "id": "hoelang",
+            "label": "Hoe lang gegeven",
+            "type": "text"
+          },
+          {
+            "id": "reactie",
+            "label": "Reageerde jouw paard erop? (ja / nee / weet ik niet)",
+            "type": "text"
+          },
+          {
+            "id": "reactie-hoe",
+            "label": "Zo ja, hoe?",
+            "type": "textarea"
+          }
+        ]
+      }
+    },
+    {
+      "section": "medisch",
+      "id": "ontworming-volgende-detail",
+      "patch": {
+        "label": "Met welk middel / welke werkzame stof?"
+      }
+    },
+    {
+      "section": "voer",
+      "id": "voordroog-periode",
+      "patch": {
+        "type": "month_year",
+        "hint": "Vul de begin- en eindmaand en het jaar in. Een schatting is goed.",
+        "dateConfig": {
+          "mode": "range",
+          "allow_future": false,
+          "allow_year_only": true
+        },
+        "placeholder": null
+      }
+    },
+    {
+      "section": "voer",
+      "id": "huidige-bijvoeding",
+      "patch": {
+        "sub": [
+          {
+            "id": "merk",
+            "label": "Merk",
+            "type": "text"
+          },
+          {
+            "id": "product",
+            "label": "Exacte productnaam",
+            "type": "text"
+          },
+          {
+            "id": "hoeveelheid",
+            "label": "Hoeveelheid per voerbeurt",
+            "type": "text"
+          },
+          {
+            "id": "voerbeurten",
+            "label": "Aantal voerbeurten per dag",
+            "type": "text"
+          },
+          {
+            "id": "sinds",
+            "label": "Sinds wanneer (ongeveer)?",
+            "type": "month_year",
+            "hint": "Vul de maand en het jaar in. Een schatting is goed.",
+            "dateConfig": {
+              "mode": "single",
+              "allow_future": false,
+              "allow_year_only": true
+            }
+          }
+        ]
+      }
+    },
+    {
+      "section": "voer",
+      "id": "bijvoeding-historie",
+      "patch": {
+        "sub": [
+          {
+            "id": "merk",
+            "label": "Merk",
+            "type": "text"
+          },
+          {
+            "id": "product",
+            "label": "Exacte productnaam",
+            "type": "text"
+          },
+          {
+            "id": "wanneer",
+            "label": "Wanneer ongeveer (jaartal/periode)",
+            "type": "month_year",
+            "hint": "Vul de maand en het jaar in. Een schatting is goed.",
+            "dateConfig": {
+              "mode": "single",
+              "allow_future": false,
+              "allow_year_only": true
+            }
+          },
+          {
+            "id": "hoelang",
+            "label": "Hoe lang gevoerd",
+            "type": "text"
+          },
+          {
+            "id": "hoeveelheid",
+            "label": "Hoeveelheid per voerbeurt",
+            "type": "text"
+          },
+          {
+            "id": "voerbeurten",
+            "label": "Aantal voerbeurten per dag",
+            "type": "text"
+          }
+        ]
+      }
+    },
+    {
+      "section": "voer",
+      "id": "snacks-details",
+      "patch": {
+        "sub": [
+          {
+            "id": "wat",
+            "label": "Wat krijgt jouw paard?",
+            "type": "text"
+          },
+          {
+            "id": "merk",
+            "label": "Merk + productnaam (indien van toepassing)",
+            "type": "text"
+          },
+          {
+            "id": "hoeveel",
+            "label": "Hoeveel krijgt jouw paard hiervan ongeveer?",
+            "type": "text"
+          },
+          {
+            "id": "hoevaak",
+            "label": "Hoe vaak krijgt jouw paard dit?",
+            "type": "radio",
+            "options": [
+              "Dagelijks",
+              "Meerdere keren per week",
+              "Wekelijks",
+              "Af en toe",
+              "Seizoensgebonden"
+            ]
+          },
+          {
+            "id": "sinds",
+            "label": "Sinds wanneer krijgt jouw paard dit ongeveer?",
+            "type": "month_year",
+            "hint": "Vul de maand en het jaar in. Een schatting is goed.",
+            "dateConfig": {
+              "mode": "single",
+              "allow_future": false,
+              "allow_year_only": true
+            }
+          },
+          {
+            "id": "waarom",
+            "label": "Waarom geef je dit?",
+            "type": "radio",
+            "options": [
+              "Beloning",
+              "Training",
+              "Verrijking",
+              "Gezondheid / ondersteuning",
+              "Omdat mijn paard het lekker vindt",
+              "Anders, namelijk"
+            ]
+          },
+          {
+            "id": "waarom-anders",
+            "label": "Anders, namelijk (waarom)",
+            "type": "text"
+          }
+        ]
+      }
+    },
+    {
+      "section": "voer",
+      "id": "huidig-extra",
+      "patch": {
+        "sub": [
+          {
+            "id": "merk",
+            "label": "Merknaam",
+            "type": "text"
+          },
+          {
+            "id": "product",
+            "label": "Exacte productnaam",
+            "type": "text"
+          },
+          {
+            "id": "dosering",
+            "label": "Hoeveel krijgt jouw paard per dag?",
+            "type": "text"
+          },
+          {
+            "id": "sinds",
+            "label": "Sinds wanneer krijgt jouw paard dit?",
+            "type": "month_year",
+            "hint": "Vul de maand en het jaar in. Een schatting is goed.",
+            "dateConfig": {
+              "mode": "single",
+              "allow_future": false,
+              "allow_year_only": true
+            }
+          },
+          {
+            "id": "reden",
+            "label": "Waarom geef je dit product?",
+            "type": "text"
+          },
+          {
+            "id": "verschil",
+            "label": "Heb je verschil gemerkt sinds je dit geeft?",
+            "type": "radio",
+            "options": [
+              "Ja, duidelijk positief",
+              "Enigszins positief",
+              "Geen merkbaar verschil",
+              "Negatief effect",
+              "Weet ik niet"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "section": "voer",
+      "id": "historie-extra",
+      "patch": {
+        "sub": [
+          {
+            "id": "merk",
+            "label": "Merknaam",
+            "type": "text"
+          },
+          {
+            "id": "product",
+            "label": "Exacte productnaam",
+            "type": "text"
+          },
+          {
+            "id": "periode",
+            "label": "Periode",
+            "type": "month_year",
+            "hint": "Vul de maand en het jaar in. Een schatting is goed.",
+            "dateConfig": {
+              "mode": "range",
+              "allow_future": false,
+              "allow_year_only": true
+            }
+          },
+          {
+            "id": "hoelang",
+            "label": "Hoe lang gegeven?",
+            "type": "text"
+          },
+          {
+            "id": "waarom",
+            "label": "Waarom gegeven?",
+            "type": "text"
+          },
+          {
+            "id": "waarom-gestopt",
+            "label": "Waarom gestopt?",
+            "type": "text"
+          }
+        ]
+      }
+    },
+    {
+      "section": "voer",
+      "id": "voer-gewisseld-toelichting",
+      "patch": {
+        "label": "Licht de voerwissel toe.",
+        "hint": "Wat kreeg je paard eerst en waar ben je naar overgestapt?"
+      }
+    },
+    {
+      "section": "gedrag",
+      "id": "training-veranderd-details",
+      "patch": {
+        "label": "Wat is er veranderd?"
+      }
+    }
+  ],
+  "added": [
+    {
+      "section": "medisch",
+      "before": "ontworming-volgende-detail",
+      "field": {
+        "id": "ontworming-volgende-wanneer",
+        "label": "Wanneer staat de volgende ontworming gepland?",
+        "type": "month_year",
+        "hint": "Vul de maand en het jaar in. Een schatting is goed.",
+        "dateConfig": {
+          "mode": "single",
+          "allow_future": true,
+          "allow_year_only": true
+        },
+        "showIf": {
+          "ontworming-methode": [
+            "Op vaste momenten, volgens een standaardschema",
+            "Op basis van mestonderzoek",
+            "Een combinatie van beide"
+          ],
+          "ontworming-volgende": "ja"
+        }
+      }
+    },
+    {
+      "section": "voer",
+      "before": "voer-gewisseld-toelichting",
+      "field": {
+        "id": "voer-gewisseld-wanneer",
+        "label": "Wanneer vond de voerwissel plaats?",
+        "type": "month_year",
+        "hint": "Vul de maand en het jaar in. Een schatting is goed.",
+        "dateConfig": {
+          "mode": "single",
+          "allow_future": false,
+          "allow_year_only": true
+        },
+        "showIf": {
+          "voer-gewisseld": [
+            "Ja, in de afgelopen 2 weken",
+            "Ja, in de afgelopen maand",
+            "Ja, in de afgelopen 3 maanden",
+            "Ja, in de afgelopen 6 maanden",
+            "Ja, langer geleden"
+          ]
+        }
+      }
+    },
+    {
+      "section": "gedrag",
+      "before": "training-veranderd-details",
+      "field": {
+        "id": "training-veranderd-wanneer",
+        "label": "Wanneer veranderde de training?",
+        "type": "month_year",
+        "hint": "Vul de maand en het jaar in. Een schatting is goed.",
+        "dateConfig": {
+          "mode": "single",
+          "allow_future": false,
+          "allow_year_only": true
+        },
+        "showIf": {
+          "training-veranderd": "Ja"
+        }
+      }
+    }
+  ]
+}

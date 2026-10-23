@@ -84,6 +84,7 @@ class ProtocolController extends Controller
                     $protocol->archived_previous_status = $protocol->status;
                     $protocol->status = 'archived';
                 } elseif ($data['action'] === 'restore' && $protocol->status === 'archived') {
+                    if ($protocol->archived_previous_status === 'active') $protocol->assertIntakeSubmitted();
                     $protocol->status = $protocol->archived_previous_status ?? 'paused';
                     $protocol->archived_previous_status = null;
                 } else {
@@ -130,6 +131,7 @@ class ProtocolController extends Controller
                     throw ValidationException::withMessages(['horse_id' => 'Open het protocol vanuit de juiste intake. Er zijn meerdere concepten.']);
                 }
                 $protocol = $drafts->first() ?? new Protocol;
+                $protocol->assertIntakeSubmitted();
                 $protocol->fill($this->protocolAttributes($data, $protocolTemplate))->save();
                 $this->syncStructure($protocol, $data);
                 AuditLogger::created($protocol);
@@ -172,6 +174,7 @@ class ProtocolController extends Controller
                 if ($protocol->status === 'archived') {
                     $data['status'] = 'archived';
                 }
+                $protocol->assertIntakeSubmitted();
                 $history = app(ProtocolDayHistory::class);
                 $history->preserve($protocol, CarbonImmutable::now($history->timezone($protocol)));
                 $attributes = $this->protocolAttributes($data, $protocol->protocol_template_id ? null : ProtocolTemplate::findOrFail($data['protocol_template_id']));
@@ -217,6 +220,7 @@ class ProtocolController extends Controller
         DB::transaction(function () use ($protocol, $status, $request) {
             $protocol = Protocol::whereKey($protocol->id)->lockForUpdate()->firstOrFail();
             abort_if($protocol->status === 'archived', 422, 'Herstel het protocol eerst vanuit het archief.');
+            if ($status === 'active') $protocol->assertIntakeSubmitted();
             $before = $protocol->only('status');
             $protocol->update(['status' => $status]);
             $this->synchronizeProtocolTiming($protocol);

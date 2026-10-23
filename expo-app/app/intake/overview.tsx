@@ -1,5 +1,6 @@
 import { Button } from '@/components/ui/Button';
 import { MissingQuestionsModal } from '@/components/intake/MissingQuestionsModal';
+import { SubmissionBlockNotice } from '@/components/intake/SubmissionBlockNotice';
 import { formatIntakeDate } from '@/lib/intake/submission';
 import { isPhotoSection } from '@/lib/intake/logic';
 // Section overview "hub" — shows progress, auto-save state, and the intake
@@ -30,7 +31,7 @@ type Status = 'done' | 'active' | 'todo';
 
 export default function IntakeOverview() {
   const rootNavigation = useNavigation('/');
-  const { state, loaded, submit, submitting } = useIntake();
+  const { state, loaded, submit, submitting, submissionBlocks } = useIntake();
   const [submitError, setSubmitError] = useState('');
   const [showMissing, setShowMissing] = useState(false);
   const { schema, disclaimerShort, noneOptions } = useIntakeSchema();
@@ -154,8 +155,9 @@ export default function IntakeOverview() {
 
           {!state.submittedAt && (
             <View className="mx-4 mt-3">
+              <SubmissionBlockNotice />
               <Button title={submitting ? 'Synchroniseren en versturen…' : 'Intake versturen'}
-                disabled={!loaded || total === 0 || submitting} onPress={onSubmit} />
+                disabled={!loaded || total === 0 || submitting || submissionBlocks.length > 0} onPress={onSubmit} />
               {!!submitError && <Text accessibilityRole="alert" className="mt-2 text-danger">{submitError}</Text>}
               <Text className="mt-2 text-sm text-ink-70">Na het versturen kun je je intake nog inzien, maar niet meer aanpassen.</Text>
             </View>

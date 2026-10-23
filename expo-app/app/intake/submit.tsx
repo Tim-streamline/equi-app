@@ -10,6 +10,7 @@ import { ChevronLeft, Check, Send, AlertTriangle } from 'lucide-react-native';
 import { Button } from '@/components/ui/Button';
 import { IconButton } from '@/components/ui/IconButton';
 import { MissingQuestionsModal } from '@/components/intake/MissingQuestionsModal';
+import { SubmissionBlockNotice } from '@/components/intake/SubmissionBlockNotice';
 import { useIntakeSchema } from '@/lib/intake/schema-provider';
 import {
   hasCriticalAnswers,
@@ -21,7 +22,7 @@ import { useIntake } from '@/lib/intake/store';
 
 export default function IntakeSubmit() {
   const insets = useSafeAreaInsets();
-  const { state, submit, submitting } = useIntake();
+  const { state, submit, submitting, submissionBlocks } = useIntake();
   const { schema, noneOptions } = useIntakeSchema();
   const critical = hasCriticalAnswers(state.answers, schema);
   const [showMissing, setShowMissing] = useState(false);
@@ -131,23 +132,23 @@ export default function IntakeSubmit() {
               insturen kan het niet meer worden aangepast.
             </Text>
           </View>
-        </ScrollView>
-
         <View
-          className="absolute bottom-0 left-0 right-0 px-5 pt-3"
+          className="pt-3"
           style={{
             backgroundColor: 'rgba(251,248,243,0.96)',
             paddingBottom: insets.bottom + 16,
           }}
         >
+          <SubmissionBlockNotice />
           <Button
             title={submitting ? "Synchroniseren en versturen…" : "Intake versturen"}
-            disabled={submitting || !!state.submittedAt}
+            disabled={submitting || !!state.submittedAt || submissionBlocks.length > 0}
             variant="primary"
             onPress={onSubmit}
             leading={<Send size={18} color="#fff" />}
           />
         </View>
+        </ScrollView>
         <MissingQuestionsModal visible={showMissing} sections={missingBySection} onClose={() => setShowMissing(false)}
           onSelect={(section, field) => {
             setShowMissing(false);

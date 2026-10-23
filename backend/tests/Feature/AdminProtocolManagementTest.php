@@ -63,6 +63,7 @@ class AdminProtocolManagementTest extends TestCase
             'weight_kg' => 550,
             'status' => 'active',
         ]);
+        \App\Models\IntakeBooking::create(['horse_id' => $this->horse->id, 'user_id' => $owner->id, 'submitted_at' => now()]);
         $this->therapist = Therapist::query()->create([
             'name' => 'Shelley',
             'title' => 'Equine therapist',
@@ -140,12 +141,15 @@ class AdminProtocolManagementTest extends TestCase
 
     public function test_admin_can_open_the_horse_specific_protocol_creator(): void
     {
+        $draft = $this->horse->protocols()->sole();
         $this->actingAs($this->admin, 'admin')
             ->get('/admin/protocols/create?horse_id='.$this->horse->id)
+            ->assertRedirect('/admin/protocols/'.$draft->id.'/edit');
+        $this->get('/admin/protocols/'.$draft->id.'/edit')
             ->assertOk()
             ->assertInertia(fn (Assert $page) => $page
                 ->component('Protocols/Edit')
-                ->where('protocol', null)
+                ->where('protocol.id', $draft->id)
                 ->where('selectedHorseId', $this->horse->id)
                 ->where('protocolTemplates.0.name', 'Darm protocol')
                 ->where('protocolTemplates.0.phases.0.required', true)
@@ -745,6 +749,7 @@ class AdminProtocolManagementTest extends TestCase
 
     public function test_failed_new_save_rolls_back_every_table_and_returns_a_clear_error(): void
     {
+        $draft = Protocol::firstOrFail()->getRawOriginal();
         AuditLog::creating(function (): void {
             throw new \RuntimeException('Simulated failure after saving the complete protocol');
         });
@@ -757,7 +762,9 @@ class AdminProtocolManagementTest extends TestCase
             AuditLog::flushEventListeners();
         }
 
-        foreach (['protocols', 'protocol_phases', 'protocol_phase_weeks', 'protocol_phase_supplements', 'protocol_phase_supplement_weeks', 'protocol_analyses', 'protocol_advice', 'audit_logs'] as $table) {
+        $this->assertDatabaseCount('protocols', 1);
+        $this->assertSame($draft, Protocol::firstOrFail()->getRawOriginal());
+        foreach (['protocol_phases', 'protocol_phase_weeks', 'protocol_phase_supplements', 'protocol_phase_supplement_weeks', 'protocol_analyses', 'protocol_advice', 'audit_logs'] as $table) {
             $this->assertDatabaseCount($table, 0);
         }
     }

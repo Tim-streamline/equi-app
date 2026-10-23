@@ -23,6 +23,7 @@ class DashboardController extends Controller
             'horses' => Models\Horse::where('status', 'active')->count(),
             'protocols_active' => Models\Protocol::where('status', 'active')->count(),
             'scans' => Models\ScanResult::count(),
+            'feed_review' => Models\Product::where(fn ($q) => $q->where('needs_review', true)->orWhere('catalog_status', 'legacy'))->where('catalog_status', '!=', 'archived')->count(),
             'scans_week' => Models\ScanResult::where('scanned_at', '>=', $weekAgo)->count(),
             'community_posts' => Models\CommunityPost::count(),
             'bookings_pending' => Models\IntakeBooking::where('status', 'pending')->count(),

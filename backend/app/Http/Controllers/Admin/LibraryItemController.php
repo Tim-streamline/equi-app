@@ -303,6 +303,8 @@ class LibraryItemController extends Controller
             'is_plus' => ['boolean'],
             'is_featured' => ['boolean'],
             'order' => ['nullable', 'integer', 'min:0', 'max:'.LibraryItem::MAX_ORDER],
+            'series_name' => ['nullable', 'required_with:series_part', 'string', 'max:255'],
+            'series_part' => ['nullable', 'required_with:series_name', 'integer', 'min:1', 'max:999'],
         ], [
             'author_therapist_id.exists' => 'Deze author is gearchiveerd of niet beschikbaar. Kies een actieve author.',
             'duration_minutes.numeric' => 'Vul een geldig positief getal in voor de videoduur.',

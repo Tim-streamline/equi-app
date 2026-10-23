@@ -19,10 +19,16 @@
 // mapping and the handful of items flagged as best-effort / not (yet)
 // supported by the renderer.
 
+import type { DateAnswer, DateConfig } from './dates';
+
+/** _rowId is stable internal identity, excluded from answer validation/display. */
+export type RepeaterRow = Record<string, string | DateAnswer>;
+
 export type FieldType =
   | 'text'
   | 'textarea'
   | 'number'
+  | 'month_year'
   | 'date'
   | 'radio'
   | 'multi'
@@ -39,11 +45,14 @@ export type ShowIf = Record<string, Trigger>;
 export type RepeaterSub = {
   id: string;
   label: string;
-  type: 'text' | 'number' | 'textarea' | 'date' | 'radio';
+  type: 'text' | 'number' | 'textarea' | 'date' | 'month_year' | 'radio';
+  dateConfig?: DateConfig;
   /** Smaller helper line under the sub-field label. */
   hint?: string;
   /** Options for a `radio` sub-field (rendered as a compact chip row). */
   options?: string[];
+  /** Server-side preparation for owner-reported observations; never a diagnosis. */
+  signalConfig?: { condition: string; signals: Record<string, string> };
 };
 
 export type PhotoConfig = {
@@ -72,6 +81,10 @@ export type AgeConfig = {
 };
 
 export type Field = {
+  answerAliases?: Record<string, string>;
+  submissionBlocks?: { answer: string; message: string; when?: Record<string, string[]> }[];
+  signalConfig?: { condition: string; signals: Record<string, string> };
+  dateConfig?: DateConfig;
   ageConfig?: AgeConfig;
   photoConfig?: PhotoConfig;
   id: string;
@@ -97,6 +110,7 @@ export type Field = {
    * For a `text` field: render this many stacked single-line inputs instead of
    * one (e.g. "omschrijf het karakter in 3 woorden" → 3 boxes). The value is
    * stored as a string array, one entry per box.
+   * For a `textarea`: the visible number of rows, stored as one string.
    */
   lines?: number;
   /** Placeholder / example text shown inside a text or textarea input. */
@@ -158,6 +172,7 @@ export const INTAKE_NONE_OPTIONS = [
   'geen opvallende bijzonderheden',
   'geen bijzonderheden',
   'geen merkbare gevolgen meer',
+  'weet ik niet',
 ];
 
 /** Short disclaimer shown at the top of the intake overview screen. */
@@ -701,10 +716,16 @@ export const INTAKE_SCHEMA: Section[] = [
         id: 'gewicht-methode-wanneer',
         answerSection: 'paard',
         label: 'Wanneer is het gewicht bepaald?',
-        type: 'text',
-        required: true,
-        placeholder: 'Bijv. mei 2026',
-        showIf: { 'paard.gewicht-methode': ['gewogen op weegbrug', 'gemeten met gewichts-lint', 'rapport dierenarts'] },
+        type: "month_year",
+        required: true,        showIf: { 'paard.gewicht-methode': ['gewogen op weegbrug', 'gemeten met gewichts-lint', 'rapport dierenarts'] },
+
+        dateConfig: {
+  "mode": "single",
+  "allow_future": false,
+  "allow_year_only": true
+},
+
+        hint: "Vul de maand en het jaar in. Een schatting is goed.",
       },
       {
         id: 'stokmaat',
@@ -723,9 +744,14 @@ export const INTAKE_SCHEMA: Section[] = [
       {
         id: 'sinds-bezit',
         label: 'Sinds wanneer is je paard bij jou?',
-        type: 'text',
+        type: "month_year",
         required: true,
-        hint: 'Maand + jaar is genoeg.',
+        hint: "Vul de maand en het jaar in. Een schatting is goed.",
+        dateConfig: {
+  "mode": "single",
+  "allow_future": false,
+  "allow_year_only": true
+},
       },
       {
         "id": "eerdere-eigenaar",
@@ -845,9 +871,14 @@ export const INTAKE_SCHEMA: Section[] = [
       {
         "id": "begonnen-wanneer",
         "label": "Wanneer is dit begonnen?",
-        "type": "textarea",
+        "type": "month_year",
         "required": true,
-        "hint": "Een exacte datum hoeft niet. Een maand, seizoen of periode is ook goed."
+        "hint": "Vul de maand en het jaar in. Een schatting is goed.",
+        dateConfig: {
+  "mode": "single",
+  "allow_future": false,
+  "allow_year_only": true
+},
       },
       {
         "id": "ontstaan-verandering",
@@ -1467,8 +1498,15 @@ export const INTAKE_SCHEMA: Section[] = [
       {
         id: 'penis-koker-wanneer',
         label: 'Wanneer was de laatste controle of reiniging ongeveer?',
-        type: 'text',
+        type: "month_year",
         showIf: { 'paard.geslacht': ['ruin', 'hengst'], 'penis-koker-controle': 'Ja' },
+        dateConfig: {
+  "mode": "single",
+  "allow_future": false,
+  "allow_year_only": true
+},
+
+        hint: "Vul de maand en het jaar in. Een schatting is goed.",
       },
 
       /* ----- Overige medische gebeurtenissen ----- */
@@ -1481,67 +1519,74 @@ export const INTAKE_SCHEMA: Section[] = [
         "id": "medische-gebeurtenissen",
         "label": "Werk hieronder overige medische gebeurtenissen uit die jouw paard heeft meegemaakt.",
         "type": "repeater",
+        "options": ["Niet van toepassing"],
         "required": true,
         "hint": "Denk aan bijzonderheden waarvoor een dierenarts kwam, ziektes, blessures, kreupelheden, operaties, onderzoeken of andere medische gebeurtenissen.",
         "flagIf": "any",
         "sub": [
-          {
-            "id": "datum",
-            "label": "Geschatte datum / periode",
-            "type": "text"
-          },
-          {
-            "id": "diagnose",
-            "label": "Diagnose of klacht",
-            "type": "text"
-          },
-          {
-            "id": "symptomen",
-            "label": "Wat was er aan de hand?",
-            "type": "textarea",
-            "hint": "Beschrijf kort de klacht, blessure, ziekte of andere medische gebeurtenis."
-          },
-          {
-            "id": "dierenarts",
-            "label": "Is hiervoor een dierenarts geweest?",
-            "type": "radio",
-            "options": [
-              "Ja",
-              "Nee",
-              "Weet ik niet"
-            ]
-          },
-          {
-            "id": "onderzoeken",
-            "label": "Is er onderzoek gedaan?",
-            "type": "text",
-            "hint": "Zo ja, welk onderzoek en wat kwam daaruit? Denk aan bloedonderzoek, röntgenfoto’s, echo, scopie of ander onderzoek. Geen onderzoek gedaan? Vul \"nee\" in."
-          },
-          {
-            "id": "behandelingen",
-            "label": "Is er iets gedaan of behandeld?",
-            "type": "text",
-            "hint": "Zo ja, beschrijf kort wat er is gedaan of gegeven. Denk aan medicatie, rust, revalidatie, therapie of aanpassingen in management. Niets gedaan? Vul ‘nee’ in."
-          },
-          {
-            "id": "reactie",
-            "label": "Hoe reageerde je paard daarop?",
-            "type": "text",
-            "hint": "Beschrijf kort wat je merkte na de behandeling of aanpassing. Is er niets gedaan? Vul ‘n.v.t.’ in."
-          },
-          {
-            "id": "verdwenen",
-            "label": "Hoe is het nu met deze klacht?",
-            "type": "radio",
-            "options": [
-              "Volledig verdwenen",
-              "Verbeterd, maar nog aanwezig",
-              "Komt af en toe terug",
-              "Nog steeds aanwezig",
-              "Weet ik niet"
-            ]
-          }
-        ]
+  {
+    "id": "datum",
+    "label": "Geschatte datum / periode",
+    "type": "month_year",
+    "hint": "Vul de maand en het jaar in. Een schatting is goed.",
+    "dateConfig": {
+      "mode": "single",
+      "allow_future": false,
+      "allow_year_only": true
+    }
+  },
+  {
+    "id": "diagnose",
+    "label": "Diagnose of klacht",
+    "type": "text"
+  },
+  {
+    "id": "symptomen",
+    "label": "Wat was er aan de hand?",
+    "type": "textarea",
+    "hint": "Beschrijf kort de klacht, blessure, ziekte of andere medische gebeurtenis."
+  },
+  {
+    "id": "dierenarts",
+    "label": "Is hiervoor een dierenarts geweest?",
+    "type": "radio",
+    "options": [
+      "Ja",
+      "Nee",
+      "Weet ik niet"
+    ]
+  },
+  {
+    "id": "onderzoeken",
+    "label": "Is er onderzoek gedaan?",
+    "type": "text",
+    "hint": "Zo ja, welk onderzoek en wat kwam daaruit? Denk aan bloedonderzoek, röntgenfoto’s, echo, scopie of ander onderzoek. Geen onderzoek gedaan? Vul \"nee\" in."
+  },
+  {
+    "id": "behandelingen",
+    "label": "Is er iets gedaan of behandeld?",
+    "type": "text",
+    "hint": "Zo ja, beschrijf kort wat er is gedaan of gegeven. Denk aan medicatie, rust, revalidatie, therapie of aanpassingen in management. Niets gedaan? Vul ‘nee’ in."
+  },
+  {
+    "id": "reactie",
+    "label": "Hoe reageerde je paard daarop?",
+    "type": "text",
+    "hint": "Beschrijf kort wat je merkte na de behandeling of aanpassing. Is er niets gedaan? Vul ‘n.v.t.’ in."
+  },
+  {
+    "id": "verdwenen",
+    "label": "Hoe is het nu met deze klacht?",
+    "type": "radio",
+    "options": [
+      "Volledig verdwenen",
+      "Verbeterd, maar nog aanwezig",
+      "Komt af en toe terug",
+      "Nog steeds aanwezig",
+      "Weet ik niet"
+    ]
+  }
+]
       },
     ],
   },
@@ -1608,9 +1653,14 @@ export const INTAKE_SCHEMA: Section[] = [
       {
         "id": "vacc-laatst",
         "label": "Wanneer is je paard voor het laatst gevaccineerd?",
-        "type": "text",
-        "hint": "Maand en jaartal is voldoende indien je de exacte datum niet weet. Indien niet bekend, vul dan \"onbekend\" in.",
-        "required": true
+        "type": "month_year",
+        "hint": "Vul de maand en het jaar in. Een schatting is goed.",
+        "required": true,
+        dateConfig: {
+  "mode": "single",
+  "allow_future": false,
+  "allow_year_only": true
+},
       },
       {
         "id": "vacc-gepland",
@@ -1626,22 +1676,29 @@ export const INTAKE_SCHEMA: Section[] = [
       {
         "id": "vacc-volgende",
         "label": "Wanneer staat de volgende vaccinatie gepland?",
-        "type": "text",
-        "hint": "Een exacte datum is niet nodig. Maand of periode is ook voldoende.",
+        "type": "month_year",
+        "hint": "Vul de maand en het jaar in. Een schatting is goed.",
         "required": true,
         "showIf": {
           "vacc-gepland": "Ja"
-        }
+        },
+        dateConfig: {
+  "mode": "single",
+  "allow_future": true,
+  "allow_year_only": true
+},
       },
       {
         id: 'ontworming-methode',
-        label: 'Hoe wordt jouw paard ontwormd?',
+        answerAliases: { 'Op vaste momenten / standaard schema': 'Op vaste momenten, volgens een standaardschema', 'Combinatie van beide': 'Een combinatie van beide' },
+        label: 'Hoe wordt bepaald óf en wanneer je paard ontworming nodig heeft?',
         type: 'radio',
         required: true,
         options: [
-          'Op vaste momenten / standaard schema',
+          'Op vaste momenten, volgens een standaardschema',
           'Op basis van mestonderzoek',
-          'Combinatie van beide',
+          'Een combinatie van beide',
+          'Mijn paard wordt niet ontwormd',
           'Weet ik niet',
         ],
       },
@@ -1661,7 +1718,7 @@ export const INTAKE_SCHEMA: Section[] = [
       {
         id: 'mestonderzoek-laatst',
         label: 'Wanneer was de laatste keer?',
-        type: 'text',
+        type: "month_year",
         showIf: {
           'mestonderzoek-gedaan': [
             'Ja, routinematig (elk kwartaal)',
@@ -1669,6 +1726,13 @@ export const INTAKE_SCHEMA: Section[] = [
             'Ja, 1 keer',
           ],
         },
+        dateConfig: {
+  "mode": "single",
+  "allow_future": false,
+  "allow_year_only": true
+},
+
+        hint: "Vul de maand en het jaar in. Een schatting is goed.",
       },
       {
         "id": "mestonderzoek-uitslag",
@@ -1687,14 +1751,23 @@ export const INTAKE_SCHEMA: Section[] = [
       {
         id: 'ontworming-laatst',
         label: 'Wanneer kreeg jouw paard voor het laatst een ontworming?',
-        type: 'date',
+        type: "month_year",
         required: true,
+        showIf: { 'ontworming-methode': ['Op vaste momenten, volgens een standaardschema', 'Op basis van mestonderzoek', 'Een combinatie van beide'] },
+        dateConfig: {
+  "mode": "single",
+  "allow_future": false,
+  "allow_year_only": true
+},
+
+        hint: "Vul de maand en het jaar in. Een schatting is goed.",
       },
       {
         id: 'ontworming-middel',
         label: 'Met welk wormmiddel?',
         type: 'text',
         required: true,
+        showIf: { 'ontworming-methode': ['Op vaste momenten, volgens een standaardschema', 'Op basis van mestonderzoek', 'Een combinatie van beide'] },
       },
       {
         id: 'ontworming-volgende',
@@ -1702,17 +1775,38 @@ export const INTAKE_SCHEMA: Section[] = [
         type: 'radio',
         required: true,
         options: ['ja', 'nee'],
+        showIf: { 'ontworming-methode': ['Op vaste momenten, volgens een standaardschema', 'Op basis van mestonderzoek', 'Een combinatie van beide'] },
       },
       {
+  "id": "ontworming-volgende-wanneer",
+  "label": "Wanneer staat de volgende ontworming gepland?",
+  "type": "month_year",
+  "hint": "Vul de maand en het jaar in. Een schatting is goed.",
+  "dateConfig": {
+    "mode": "single",
+    "allow_future": true,
+    "allow_year_only": true
+  },
+  "showIf": {
+    "ontworming-methode": [
+      "Op vaste momenten, volgens een standaardschema",
+      "Op basis van mestonderzoek",
+      "Een combinatie van beide"
+    ],
+    "ontworming-volgende": "ja"
+  }
+},
+      {
         id: 'ontworming-volgende-detail',
-        label: 'Wanneer en met welk middel / werkzame stof?',
+        label: "Met welk middel / welke werkzame stof?",
         type: 'text',
-        showIf: { 'ontworming-volgende': 'ja' },
+        showIf: { 'ontworming-methode': ['Op vaste momenten, volgens een standaardschema', 'Op basis van mestonderzoek', 'Een combinatie van beide'], 'ontworming-volgende': 'ja' },
       },
       {
         id: 'ontworming-reactie',
         label: 'Reageert je paard op ontwormingen?',
         type: 'multi',
+        showIf: { 'ontworming-methode': ['Op vaste momenten, volgens een standaardschema', 'Op basis van mestonderzoek', 'Een combinatie van beide'] },
         options: [
           'Nee',
           'Ja, enkele dagen wat sloom of minder fit',
@@ -1734,7 +1828,7 @@ export const INTAKE_SCHEMA: Section[] = [
         id: 'ontworming-reactie-toelichting',
         label: 'Toelichting',
         type: 'text',
-        showIf: { 'ontworming-reactie': 'Ja, anders, namelijk' },
+        showIf: { 'ontworming-methode': ['Op vaste momenten, volgens een standaardschema', 'Op basis van mestonderzoek', 'Een combinatie van beide'], 'ontworming-reactie': 'Ja, anders, namelijk' },
       },
 
       { id: 'sec-tand', label: 'Gebit en tandarts', type: 'sectionhead' },
@@ -1755,14 +1849,28 @@ export const INTAKE_SCHEMA: Section[] = [
       {
         id: 'tandarts-laatst',
         label: 'Wanneer is de tandarts voor het laatst geweest?',
-        type: 'date',
+        type: "month_year",
         required: true,
+        dateConfig: {
+  "mode": "single",
+  "allow_future": false,
+  "allow_year_only": true
+},
+
+        hint: "Vul de maand en het jaar in. Een schatting is goed.",
       },
       {
         id: 'tandarts-volgende',
         label: 'Wanneer komt de tandarts weer?',
-        type: 'text',
+        type: "month_year",
         required: true,
+        dateConfig: {
+  "mode": "single",
+  "allow_future": true,
+  "allow_year_only": true
+},
+
+        hint: "Vul de maand en het jaar in. Een schatting is goed.",
       },
       {
         id: 'tandarts-methode',
@@ -1836,7 +1944,7 @@ export const INTAKE_SCHEMA: Section[] = [
       },
       {
         id: 'hoeven-anders',
-        label: 'Anders, namelijk',
+        label: 'Licht je antwoord toe',
         type: 'text',
         showIf: { 'hoeven-bijz': 'anders' },
       },
@@ -1869,13 +1977,18 @@ export const INTAKE_SCHEMA: Section[] = [
       {
         "id": "ijzers-af",
         "label": "Wanneer zijn de hoefijzers eraf gegaan?",
-        "type": "text",
+        "type": "month_year",
         "optional": true,
-        "hint": "Een geschatte maand of periode is voldoende.",
+        "hint": "Vul de maand en het jaar in. Een schatting is goed.",
         "showIf": {
           "ijzers": "nee",
           "ijzers-afgelopen-twee-jaar": "Ja"
-        }
+        },
+        dateConfig: {
+  "mode": "single",
+  "allow_future": false,
+  "allow_year_only": true
+},
       },
 
       { id: 'sec-zadel', label: 'Zadel', type: 'sectionhead' },
@@ -1888,7 +2001,14 @@ export const INTAKE_SCHEMA: Section[] = [
       {
         id: 'zadelmaker-laatst',
         label: 'Laatste bezoek zadelmaker',
-        type: 'date',
+        type: "month_year",
+        dateConfig: {
+  "mode": "single",
+  "allow_future": false,
+  "allow_year_only": true
+},
+
+        hint: "Vul de maand en het jaar in. Een schatting is goed.",
       },
       {
         id: 'zadel-bijz',
@@ -1922,16 +2042,173 @@ export const INTAKE_SCHEMA: Section[] = [
         ]
       },
       {
+        "id": "ir-onderzoeken",
+        "label": "Welk onderzoek is uitgevoerd?",
+        "type": "multi",
+        "required": true,
+        "options": [
+          "Basale insulinemeting",
+          "Orale suikertest (OST)",
+          "Orale glucosetest (OGT)",
+          "Glucosemeting",
+          "Gecombineerd insuline- en glucoseonderzoek",
+          "Intraveneuze glucosetolerantietest (IVGTT)",
+          "Gecombineerde glucose-insulinetest (CGIT)",
+          "Ander onderzoek, namelijk...",
+          "Weet ik niet"
+        ],
+        "showIf": {
+          "ir-status": ["Vastgesteld door dierenarts/onderzoek", "Ja, vastgesteld door dierenarts/onderzoek", "aangetoond door dierenarts"]
+        }
+      },
+      {
+        "id": "ir-onderzoeken-anders",
+        "label": "Ander onderzoek, namelijk...",
+        "type": "text",
+        "required": true,
+        "showIf": {
+          "ir-status": ["Vastgesteld door dierenarts/onderzoek", "Ja, vastgesteld door dierenarts/onderzoek", "aangetoond door dierenarts"],
+          "ir-onderzoeken": "Ander onderzoek, namelijk..."
+        }
+      },
+      {
+        "id": "ir-voeding-tussenkop",
+        "label": "Voeding en vasten voorafgaand aan bloedonderzoek",
+        "type": "sectionhead",
+        "showIf": {
+          "ir-status": ["Vastgesteld door dierenarts/onderzoek", "Ja, vastgesteld door dierenarts/onderzoek", "aangetoond door dierenarts"],
+          "ir-onderzoeken": "any-checked"
+        }
+      },
+      {
+        "id": "ir-voeding-vooraf",
+        "label": "Wat heeft je paard gegeten voorafgaand aan het onderzoek?",
+        "type": "radio",
+        "required": true,
+        "options": [
+          "Niet anders dan normaal gegeten",
+          "Dezelfde hoeveelheid hooi als normaal gegeten",
+          "Beperkte hoeveelheid hooi gegeten",
+          "Helemaal niets gegeten (volledig gevast)",
+          "Anders, namelijk...",
+          "Weet ik niet"
+        ],
+        "showIf": {
+          "ir-status": ["Vastgesteld door dierenarts/onderzoek", "Ja, vastgesteld door dierenarts/onderzoek", "aangetoond door dierenarts"],
+          "ir-onderzoeken": "any-checked"
+        }
+      },
+      {
+        "id": "ir-voeding-vooraf-anders",
+        "label": "Anders, namelijk...",
+        "type": "text",
+        "required": true,
+        "showIf": {
+          "ir-status": ["Vastgesteld door dierenarts/onderzoek", "Ja, vastgesteld door dierenarts/onderzoek", "aangetoond door dierenarts"],
+          "ir-onderzoeken": "any-checked",
+          "ir-voeding-vooraf": "Anders, namelijk..."
+        }
+      },
+      {
+        "id": "ir-hooi-hoeveelheid",
+        "label": "Hoeveel hooi heeft je paard gekregen?",
+        "type": "number",
+        "required": true,
+        "unit": "kg",
+        "options": ["Weet ik niet"],
+        "showIf": {
+          "ir-status": ["Vastgesteld door dierenarts/onderzoek", "Ja, vastgesteld door dierenarts/onderzoek", "aangetoond door dierenarts"],
+          "ir-onderzoeken": "any-checked",
+          "ir-voeding-vooraf": "Beperkte hoeveelheid hooi gegeten"
+        }
+      },
+      {
+        "id": "ir-laatst-gegeten",
+        "label": "Hoelang vóór het onderzoek heeft je paard voor het laatst gegeten?",
+        "type": "radio",
+        "required": true,
+        "options": ["Minder dan 1 uur", "1 tot 3 uur", "3 tot 6 uur", "6 tot 12 uur", "Meer dan 12 uur", "Weet ik niet"],
+        "showIf": {
+          "ir-status": ["Vastgesteld door dierenarts/onderzoek", "Ja, vastgesteld door dierenarts/onderzoek", "aangetoond door dierenarts"],
+          "ir-onderzoeken": "any-checked",
+          "ir-voeding-vooraf": ["Beperkte hoeveelheid hooi gegeten", "Helemaal niets gegeten (volledig gevast)"]
+        }
+      },
+      {
+        "id": "ir-vasten-duur",
+        "label": "Hoelang heeft je paard gevast vóór het onderzoek?",
+        "type": "radio",
+        "required": true,
+        "options": ["Minder dan 3 uur", "3 tot 6 uur", "6 tot 12 uur", "Meer dan 12 uur", "Weet ik niet"],
+        "showIf": {
+          "ir-status": ["Vastgesteld door dierenarts/onderzoek", "Ja, vastgesteld door dierenarts/onderzoek", "aangetoond door dierenarts"],
+          "ir-onderzoeken": "any-checked",
+          "ir-voeding-vooraf": "Helemaal niets gegeten (volledig gevast)"
+        }
+      },
+      {
+        "id": "ir-onderzoek-wanneer-welk",
+        "label": "Wanneer is het onderzoek uitgevoerd?",
+        "type": "month_year",
+        "required": true,
+        "hint": "Vul de maand en het jaar in. Een schatting is goed.",        "showIf": {
+          "ir-status": ["Vastgesteld door dierenarts/onderzoek", "Ja, vastgesteld door dierenarts/onderzoek", "aangetoond door dierenarts"]
+        },
+
+        dateConfig: {
+  "mode": "single",
+  "allow_future": false,
+  "allow_year_only": true
+},
+      },
+      {
+        "id": "ir-onderzoek-uitslag",
+        "label": "Wat kwam er uit het onderzoek?",
+        "type": "textarea",
+        "required": true,
+        "showIf": {
+          "ir-status": ["Vastgesteld door dierenarts/onderzoek", "Ja, vastgesteld door dierenarts/onderzoek", "aangetoond door dierenarts"]
+        }
+      },
+      {
+        "id": "ir-uitslag-beschikbaar",
+        "label": "Heb je de uitslag beschikbaar?",
+        "type": "radio",
+        "required": true,
+        "options": ["Ja", "Nee"],
+        "showIf": {
+          "ir-status": ["Vastgesteld door dierenarts/onderzoek", "Ja, vastgesteld door dierenarts/onderzoek", "aangetoond door dierenarts"]
+        }
+      },
+      {
         "id": "ir-attest",
-        "label": "Onderzoeksresultaten urine-/bloedonderzoek",
+        "label": "Upload de uitslag van het onderzoek",
         "type": "file",
-        "optional": true,
-        "hint": "Optioneel. Upload het bestand indien beschikbaar.",
+        "required": true,
+        "hint": "Upload minimaal één PDF of afbeelding.",
         "showIf": {
           "ir-status": [
             "aangetoond door dierenarts",
-            "Vastgesteld door dierenarts/onderzoek"
-          ]
+            "Vastgesteld door dierenarts/onderzoek",
+            "Ja, vastgesteld door dierenarts/onderzoek"
+          ],
+          "ir-uitslag-beschikbaar": "Ja"
+        }
+      },
+      {
+        "id": "ir-vermoeden-toelichting",
+        "label": "Leg kort uit waarom je vermoedt dat je paard IR heeft.",
+        "type": "textarea",
+
+        "lines": 2,
+        "placeholder": "Beschrijf kort welke klachten, kenmerken of eerdere onderzoeken aanleiding geven tot je vermoeden.",
+        "signalConfig": {
+          "condition": "IR",
+          "signals": { "vetkam": "Een vetkam genoemd door de eigenaar", "moeite_met_afvallen": "Moeite met afvallen genoemd door de eigenaar", "hoefbevangenheid_verleden": "Een eerdere episode van hoefbevangenheid genoemd door de eigenaar", "overgewicht": "Overgewicht genoemd door de eigenaar", "plaatselijke_vetophopingen": "Plaatselijke vetophopingen genoemd door de eigenaar", "eerdere_onderzoeken": "Eerdere onderzoeken genoemd door de eigenaar" }
+        },
+        "required": true,
+        "showIf": {
+          "ir-status": ["Ik vermoed dit", "Niet vastgesteld, maar ik vermoed dit zelf"]
         }
       },
       {
@@ -1953,6 +2230,49 @@ export const INTAKE_SCHEMA: Section[] = [
         ]
       },
       {
+        "id": "ems-diagnose-basis",
+        "label": "Waarop is de diagnose EMS gebaseerd?",
+        "type": "multi",
+        "required": true,
+        "options": [
+          "Vastgestelde insulinedysregulatie / insulineresistentie",
+          "Overgewicht of plaatselijke vetophopingen",
+          "Eerdere of terugkerende hoefbevangenheid",
+          "Beoordeling door een dierenarts",
+          "Anders, namelijk",
+          "Weet ik niet"
+        ],
+        "showIf": {
+          "ems-status": ["Vastgesteld door dierenarts/onderzoek", "Ja, vastgesteld door dierenarts/onderzoek", "aangetoond door dierenarts"]
+        }
+      },
+      {
+        "id": "ems-diagnose-basis-anders",
+        "label": "Anders, namelijk — licht kort toe",
+        "type": "text",
+        "required": true,
+        "showIf": {
+          "ems-status": ["Vastgesteld door dierenarts/onderzoek", "Ja, vastgesteld door dierenarts/onderzoek", "aangetoond door dierenarts"],
+          "ems-diagnose-basis": "Anders, namelijk"
+        }
+      },
+      {
+        "id": "ems-vermoeden-toelichting",
+        "label": "Leg kort uit waarom je dit vermoedt.",
+        "type": "textarea",
+
+        "lines": 2,
+        "placeholder": "Beschrijf kort welke klachten, kenmerken of eerdere onderzoeken aanleiding geven tot je vermoeden.",
+        "signalConfig": {
+          "condition": "EMS",
+          "signals": { "vetkam": "Een vetkam genoemd door de eigenaar", "moeite_met_afvallen": "Moeite met afvallen genoemd door de eigenaar", "hoefbevangenheid_verleden": "Een eerdere episode van hoefbevangenheid genoemd door de eigenaar", "overgewicht": "Overgewicht genoemd door de eigenaar", "plaatselijke_vetophopingen": "Plaatselijke vetophopingen genoemd door de eigenaar", "eerdere_onderzoeken": "Eerdere onderzoeken genoemd door de eigenaar" }
+        },
+        "required": true,
+        "showIf": {
+          "ems-status": ["Ik vermoed dit", "Niet vastgesteld, maar ik vermoed dit zelf"]
+        }
+      },
+      {
         "id": "kpu-status",
         "label": "KPU (Kryptopyrrolurie)",
         "type": "radio",
@@ -1971,103 +2291,246 @@ export const INTAKE_SCHEMA: Section[] = [
         ]
       },
       {
+        "id": "kpu-onderzoek-datum",
+        "label": "Wanneer is het urineonderzoek uitgevoerd?",
+        "type": "month_year",
+        "required": true,
+        "hint": "Vul de maand en het jaar in. Een schatting is goed.",        "showIf": {
+          "kpu-status": ["aangetoond uit urine onderzoek", "Aangetoond met urineonderzoek", "Ja, positieve uitslag bij urineonderzoek"]
+        },
+
+        dateConfig: {
+  "mode": "single",
+  "allow_future": false,
+  "allow_year_only": true
+},
+      },
+      {
+        "id": "kpu-onderzoek-uitslag",
+        "label": "Wat was de uitslag van het urineonderzoek?",
+        "type": "text",
+        "required": true,
+        "placeholder": "Vul de gemeten waarde(n), eenheid en eventuele referentiewaarden in.",
+        "showIf": {
+          "kpu-status": ["aangetoond uit urine onderzoek", "Aangetoond met urineonderzoek", "Ja, positieve uitslag bij urineonderzoek"]
+        }
+      },
+      {
+        "id": "kpu-uitslag-beschikbaar",
+        "label": "Heb je de uitslag beschikbaar?",
+        "type": "radio",
+        "required": true,
+        "options": ["Ja", "Nee"],
+        "showIf": {
+          "kpu-status": ["aangetoond uit urine onderzoek", "Aangetoond met urineonderzoek", "Ja, positieve uitslag bij urineonderzoek"]
+        }
+      },
+      {
         "id": "kpu-attest",
-        "label": "Onderzoeksresultaten urine-/bloedonderzoek",
+        "label": "Upload de uitslag van het onderzoek",
         "type": "file",
-        "optional": true,
-        "hint": "Optioneel. Upload het bestand indien beschikbaar.",
+        "required": true,
+        "hint": "Upload minimaal één PDF of afbeelding.",
         "showIf": {
           "kpu-status": [
             "aangetoond uit urine onderzoek",
-            "Aangetoond met urineonderzoek"
+            "Aangetoond met urineonderzoek",
+            "Ja, positieve uitslag bij urineonderzoek"
+          ],
+          "kpu-uitslag-beschikbaar": "Ja"
+        }
+      },
+      {
+        "id": "kpu-vermoeden-toelichting",
+        "label": "Waarom vermoed je dat je paard KPU heeft?",
+        "type": "textarea",
+
+        "lines": 2,
+        "placeholder": "Beschrijf kort welke klachten, kenmerken of eerdere onderzoeken aanleiding geven tot je vermoeden.",
+        "signalConfig": {
+          "condition": "KPU",
+          "signals": { "vetkam": "Een vetkam genoemd door de eigenaar", "moeite_met_afvallen": "Moeite met afvallen genoemd door de eigenaar", "hoefbevangenheid_verleden": "Een eerdere episode van hoefbevangenheid genoemd door de eigenaar", "overgewicht": "Overgewicht genoemd door de eigenaar", "plaatselijke_vetophopingen": "Plaatselijke vetophopingen genoemd door de eigenaar", "eerdere_onderzoeken": "Eerdere onderzoeken genoemd door de eigenaar" }
+        },
+        "required": true,
+        "showIf": {
+          "kpu-status": ["Ik vermoed dit", "Niet vastgesteld, maar ik vermoed dit zelf"]
+        }
+      },
+      {
+        "id": "hoefbevangenheid",
+        "label": "Is je paard hoefbevangen (geweest) of heeft het een verhoogd risico?",
+        "type": "radio",
+        "required": true,
+        "options": [
+          "Ja, mijn paard is momenteel hoefbevangen",
+          "Ja, mijn paard is in het verleden hoefbevangen geweest",
+          "Mijn paard heeft een verhoogd risico op hoefbevangenheid",
+          "Nee, voor zover bekend niet"
+        ],
+        "flagIf": [
+          "Ja, mijn paard is momenteel hoefbevangen",
+          "Ja, mijn paard is in het verleden hoefbevangen geweest",
+          "Mijn paard heeft een verhoogd risico op hoefbevangenheid"
+        ],
+        "criticalIf": [
+          "Ja, mijn paard is momenteel hoefbevangen"
+        ]
+      ,
+        submissionBlocks: [
+          {
+            "answer": "nu acuut",
+            "message": "Hoefbevangenheid is een spoedeisende aandoening. Neem direct contact op met je dierenarts als dat nog niet is gebeurd. Het persoonlijke Plus-protocol kan pas worden opgesteld wanneer de acute fase voorbij is en je dierenarts aangeeft dat je paard voldoende stabiel is."
+          },
+          {
+            "answer": "Ja, mijn paard is momenteel hoefbevangen",
+            "message": "Hoefbevangenheid is een spoedeisende aandoening. Neem direct contact op met je dierenarts als dat nog niet is gebeurd. Het persoonlijke Plus-protocol kan pas worden opgesteld wanneer de acute fase voorbij is en je dierenarts aangeeft dat je paard voldoende stabiel is."
+          }
+        ]
+      },
+      {
+        "id": "hoefbevangenheid-waarschuwing",
+        "label": "Belangrijk bij acute hoefbevangenheid",
+        "type": "sectionhead",
+        "hint": "Hoefbevangenheid is een spoedeisende aandoening. Neem direct contact op met je dierenarts als dat nog niet is gebeurd. Het persoonlijke Plus-protocol kan pas worden opgesteld wanneer de acute fase voorbij is en je dierenarts aangeeft dat je paard voldoende stabiel is.",
+        "showIf": {
+          "hoefbevangenheid": "Ja, mijn paard is momenteel hoefbevangen"
+        }
+      },
+      {
+        "id": "hoefbevangenheid-dierenarts",
+        "label": "Is je paard hiervoor onder behandeling van een dierenarts?",
+        "type": "radio",
+        "options": [
+          "Ja",
+          "Nee"
+        ],
+        "showIf": {
+          "hoefbevangenheid": "Ja, mijn paard is momenteel hoefbevangen"
+        }
+      },
+      {
+        "id": "hoefbevangenheid-begonnen",
+        "label": "Wanneer zijn de klachten begonnen?",
+        "type": "month_year",
+        "hint": "Vul de maand en het jaar in. Een schatting is goed.",
+        "showIf": {
+          "hoefbevangenheid": "Ja, mijn paard is momenteel hoefbevangen"
+        },
+
+        dateConfig: {
+  "mode": "single",
+  "allow_future": false,
+  "allow_year_only": true
+},
+      },
+      {
+        "id": "hoefbevangenheid-recent",
+        "label": "Wanneer was de laatste episode?",
+        "type": "month_year",
+        "hint": "Vul de maand en het jaar in. Een schatting is goed.",
+        "showIf": {
+          "hoefbevangenheid": "Ja, mijn paard is in het verleden hoefbevangen geweest"
+        },
+
+        dateConfig: {
+  "mode": "single",
+  "allow_future": false,
+  "allow_year_only": true
+},
+      },
+      {
+        "id": "hoefbevangenheid-aantal",
+        "label": "Hoe vaak is je paard hoefbevangen geweest?",
+        "type": "radio",
+        "options": [
+          "1 keer",
+          "2 keer",
+          "3 keer of vaker",
+          "Weet ik niet"
+        ],
+        "showIf": {
+          "hoefbevangenheid": "Ja, mijn paard is in het verleden hoefbevangen geweest"
+        }
+      },
+      {
+        "id": "hoefbevangenheid-oorzaak",
+        "label": "Is de oorzaak bekend?",
+        "type": "textarea",
+        "lines": 2,
+        "hint": "Vul onbekend in als je de oorzaak niet weet.",
+        "showIf": {
+          "hoefbevangenheid": "Ja, mijn paard is in het verleden hoefbevangen geweest"
+        }
+      },
+      {
+        "id": "hoefbevangenheid-hersteld",
+        "label": "Is je paard inmiddels volledig hersteld?",
+        "type": "radio",
+        "options": [
+          "Ja",
+          "Nee",
+          "Weet ik niet"
+        ],
+        "showIf": {
+          "hoefbevangenheid": "Ja, mijn paard is in het verleden hoefbevangen geweest"
+        }
+      ,
+        submissionBlocks: [
+          {
+            "answer": "Nee",
+            "message": "Aanhoudende klachten moeten eerst veterinair beoordeeld worden voordat een protocol kan worden opgesteld.",
+            "when": {
+              "hoefbevangenheid": [
+                "in verleden gehad",
+                "Ja, mijn paard is in het verleden hoefbevangen geweest"
+              ]
+            }
+          },
+          {
+            "answer": "Weet ik niet",
+            "message": "Aanhoudende klachten moeten eerst veterinair beoordeeld worden voordat een protocol kan worden opgesteld.",
+            "when": {
+              "hoefbevangenheid": [
+                "in verleden gehad",
+                "Ja, mijn paard is in het verleden hoefbevangen geweest"
+              ]
+            }
+          }
+        ]
+      },
+      {
+        "id": "hoefbevangenheid-restklachten",
+        "label": "Welke klachten zijn nog aanwezig?",
+        "type": "textarea",
+        "lines": 2,
+        "showIf": {
+          "hoefbevangenheid": "Ja, mijn paard is in het verleden hoefbevangen geweest",
+          "hoefbevangenheid-hersteld": "Nee"
+        }
+      },
+      {
+        "id": "hoefbevangenheid-aanhoudend",
+        "label": "Veterinaire beoordeling nodig",
+        "type": "sectionhead",
+        "hint": "Aanhoudende klachten moeten eerst veterinair beoordeeld worden voordat een protocol kan worden opgesteld.",
+        "showIf": {
+          "hoefbevangenheid": "Ja, mijn paard is in het verleden hoefbevangen geweest",
+          "hoefbevangenheid-hersteld": [
+            "Nee",
+            "Weet ik niet"
           ]
         }
       },
       {
-        id: 'hoefbevangenheid',
-        label: 'Hoefbevangenheid (geweest of risico)',
-        type: 'radio',
-        required: true,
-        options: ['nu acuut', 'in verleden gehad', 'risico / vermoeden', 'nooit'],
-        flagIf: ['nu acuut', 'in verleden gehad', 'risico / vermoeden'],
-        criticalIf: ['nu acuut'],
+        "id": "hoefbevangenheid-risico-toelichting",
+        "label": "Waarom denk je dat je paard een verhoogd risico heeft?",
+        "type": "textarea",
+        "lines": 2,
+        "placeholder": "Beschrijf bijvoorbeeld bekende aandoeningen, eerdere onderzoeken of kenmerken die wijzen op een verhoogd risico.",
+        "showIf": {
+          "hoefbevangenheid": "Mijn paard heeft een verhoogd risico op hoefbevangenheid"
+        }
       },
-      {
-        id: 'hoefbevangenheid-eerste',
-        label: 'Wanneer was de eerste episode van hoefbevangenheid?',
-        type: 'text',
-        showIf: { hoefbevangenheid: ['nu acuut', 'in verleden gehad', 'risico / vermoeden'] },
-      },
-      {
-        id: 'hoefbevangenheid-recent',
-        label: 'Wanneer was de meest recente episode van hoefbevangenheid?',
-        type: 'text',
-        showIf: { hoefbevangenheid: ['nu acuut', 'in verleden gehad', 'risico / vermoeden'] },
-      },
-      {
-        id: 'hoefbevangenheid-aantal',
-        label: 'Hoeveel episodes van hoefbevangenheid heeft jouw paard ongeveer gehad?',
-        type: 'radio',
-        options: ['1', '2-3', '4-5', 'Meer dan 5', 'Weet ik niet'],
-        showIf: { hoefbevangenheid: ['nu acuut', 'in verleden gehad', 'risico / vermoeden'] },
-      },
-      {
-        id: 'hoefbevangenheid-rontgen',
-        label: "Zijn er röntgenfoto's gemaakt?",
-        type: 'radio',
-        options: ['Ja', 'Nee', 'Weet ik niet'],
-        showIf: { hoefbevangenheid: ['nu acuut', 'in verleden gehad', 'risico / vermoeden'] },
-      },
-      {
-        id: 'hoefbevangenheid-bevindingen',
-        label: 'Is er volgens de dierenarts of op de röntgenfoto sprake van één of meer van onderstaande?',
-        type: 'multi',
-        hint: 'Klik alles aan wat relevant is.',
-        options: [
-          'Kanteling / rotatie van het hoefbeen',
-          'Zinking van het hoefbeen',
-          'Verbreding van de witte lijn',
-          'Verlies van zooldikte',
-          'Misvormde hoefcapsule',
-          'Weet ik niet',
-        ],
-        flagIf: [
-          'Kanteling / rotatie van het hoefbeen',
-          'Zinking van het hoefbeen',
-          'Verbreding van de witte lijn',
-          'Verlies van zooldikte',
-          'Misvormde hoefcapsule',
-        ],
-        showIf: { hoefbevangenheid: ['nu acuut', 'in verleden gehad', 'risico / vermoeden'] },
-      },
-      {
-        id: 'hoefbevangenheid-gevolgen',
-        label: 'Merk je momenteel nog gevolgen van de hoefbevangenheid?',
-        type: 'multi',
-        hint: 'Klik alles aan wat relevant is.',
-        options: [
-          'Geen merkbare gevolgen meer',
-          'Gevoelig op harde ondergrond',
-          'Gevoelig op steen of grind',
-          'Regelmatig warme hoeven',
-          'Sterke digitale pols',
-          'Loopt korter dan vroeger',
-          'Moeite met draaien',
-          'Regelmatig stijf uit beweging komen',
-          'Veranderingen in hoefvorm of hoefgroei',
-          'Heeft aangepaste bekapping of hoefondersteuning nodig',
-          'Anders, namelijk',
-        ],
-        flagIf: 'any',
-        showIf: { hoefbevangenheid: ['nu acuut', 'in verleden gehad', 'risico / vermoeden'] },
-      },
-      {
-        id: 'hoefbevangenheid-gevolgen-anders',
-        label: 'Anders, namelijk',
-        type: 'text',
-        showIf: { 'hoefbevangenheid-gevolgen': 'Anders, namelijk' },
-      },
-
       { id: 'sec-maag', label: 'Maag', type: 'sectionhead' },
       {
         id: 'maag-symptomen',
@@ -2109,8 +2572,15 @@ export const INTAKE_SCHEMA: Section[] = [
       {
         id: 'maag-med-wanneer',
         label: 'Wanneer was dit precies?',
-        type: 'text',
+        type: "month_year",
         showIf: { 'maag-medicatie': 'ja' },
+        dateConfig: {
+  "mode": "single",
+  "allow_future": false,
+  "allow_year_only": true
+},
+
+        hint: "Vul de maand en het jaar in. Een schatting is goed.",
       },
       {
         id: 'maag-med-hoelang',
@@ -2210,11 +2680,33 @@ export const INTAKE_SCHEMA: Section[] = [
           "Denk bijvoorbeeld aan NSAID's, maagmedicatie, corticosteroïden, PPID-medicatie, luchtwegmedicatie, antibiotica etc.",
         showIf: { 'medicatie-nu': 'Ja' },
         sub: [
-          { id: 'naam', label: 'Medicatie / productnaam', type: 'text' },
-          { id: 'reden', label: 'Reden van gebruik', type: 'text' },
-          { id: 'dosering', label: 'Dosering (indien bekend)', type: 'text' },
-          { id: 'sinds', label: 'Sinds wanneer', type: 'text' },
-        ],
+  {
+    "id": "naam",
+    "label": "Medicatie / productnaam",
+    "type": "text"
+  },
+  {
+    "id": "reden",
+    "label": "Reden van gebruik",
+    "type": "text"
+  },
+  {
+    "id": "dosering",
+    "label": "Dosering (indien bekend)",
+    "type": "text"
+  },
+  {
+    "id": "sinds",
+    "label": "Sinds wanneer",
+    "type": "month_year",
+    "hint": "Vul de maand en het jaar in. Een schatting is goed.",
+    "dateConfig": {
+      "mode": "single",
+      "allow_future": false,
+      "allow_year_only": true
+    }
+  }
+],
       },
       {
         id: 'medicatie-recent',
@@ -2273,37 +2765,43 @@ export const INTAKE_SCHEMA: Section[] = [
           "medicatie-ooit-welke": "any-checked"
         },
         "sub": [
-          {
-            "id": "naam",
-            "label": "Naam medicatie",
-            "type": "text"
-          },
-          {
-            "id": "klacht",
-            "label": "Vanwege welke klacht/symptoom ingezet?",
-            "type": "text"
-          },
-          {
-            "id": "wanneer",
-            "label": "Wanneer ongeveer gegeven (jaartal/maand)",
-            "type": "text"
-          },
-          {
-            "id": "hoelang",
-            "label": "Hoe lang gegeven",
-            "type": "text"
-          },
-          {
-            "id": "reactie",
-            "label": "Reageerde jouw paard erop? (ja / nee / weet ik niet)",
-            "type": "text"
-          },
-          {
-            "id": "reactie-hoe",
-            "label": "Zo ja, hoe?",
-            "type": "textarea"
-          }
-        ],
+  {
+    "id": "naam",
+    "label": "Naam medicatie",
+    "type": "text"
+  },
+  {
+    "id": "klacht",
+    "label": "Vanwege welke klacht/symptoom ingezet?",
+    "type": "text"
+  },
+  {
+    "id": "wanneer",
+    "label": "Wanneer ongeveer gegeven (jaartal/maand)",
+    "type": "month_year",
+    "hint": "Vul de maand en het jaar in. Een schatting is goed.",
+    "dateConfig": {
+      "mode": "single",
+      "allow_future": false,
+      "allow_year_only": true
+    }
+  },
+  {
+    "id": "hoelang",
+    "label": "Hoe lang gegeven",
+    "type": "text"
+  },
+  {
+    "id": "reactie",
+    "label": "Reageerde jouw paard erop? (ja / nee / weet ik niet)",
+    "type": "text"
+  },
+  {
+    "id": "reactie-hoe",
+    "label": "Zo ja, hoe?",
+    "type": "textarea"
+  }
+],
         "hint": "Voeg de gebruikte medicatie één voor één toe. Geef per middel aan waarvoor het is gegeven, wanneer en hoe lang je paard het heeft gekregen en, voor zover je dat weet, wat het effect was."
       },
     ],
@@ -2502,32 +3000,56 @@ export const INTAKE_SCHEMA: Section[] = [
         ],
       },
       {
-        id: 'hooi-pauze-incl-nacht',
-        label: 'Heeft jouw paard periodes zonder ruwvoer (inclusief de nachten!)?',
-        type: 'radio',
-        options: ['Nee, nooit', 'Ja, soms', 'Ja, regelmatig', 'Weet ik niet'],
-        flagIf: ['Ja, soms', 'Ja, regelmatig'],
-      },
-      {
-        id: 'hooi-pauze-uren',
-        label: 'Hoeveel uur achter elkaar heeft jouw paard meestal geen toegang tot ruwvoer?',
-        type: 'radio',
-        options: [
-          'Minder dan 1 uur',
-          '1–2 uur',
-          '2–4 uur',
-          '4–6 uur',
-          '6–8 uur',
-          'Meer dan 8 uur',
-          'Wisselend / moeilijk in te schatten',
+        "id": "hooi-zonder-ruwvoer-langste",
+        "label": "Wat is de langste periode dat je paard achter elkaar zonder ruwvoer staat, inclusief de nacht?",
+        "type": "radio",
+        "options": [
+          "Nooit, er is altijd ruwvoer beschikbaar",
+          "Minder dan 2 uur",
+          "2 tot 4 uur",
+          "4 tot 6 uur",
+          "Meer dan 6 uur",
+          "Wisselend",
+          "Weet ik niet"
         ],
-        showIf: { 'hooi-pauze-incl-nacht': ['Ja, soms', 'Ja, regelmatig'] },
+        "flagIf": [
+          "Minder dan 2 uur",
+          "2 tot 4 uur",
+          "4 tot 6 uur",
+          "Meer dan 6 uur",
+          "Wisselend"
+        ]
       },
       {
-        id: 'hooi-pauze-langste',
-        label: "Wat is de langste periode zonder ruwvoer die jouw paard doorgaans heeft (inclusief 's nachts)?",
-        type: 'number',
-        unit: 'uur',
+        "id": "hooi-zonder-ruwvoer-toelichting",
+        "label": "Licht je antwoord toe.",
+        "type": "textarea",
+        "lines": 2,
+        "showIf": {
+          "hooi-zonder-ruwvoer-langste": "Wisselend"
+        }
+      },
+      {
+        "id": "hooi-zonder-ruwvoer-frequentie",
+        "label": "Hoe vaak komt dit voor?",
+        "type": "radio",
+        "options": [
+          "Dagelijks",
+          "Meerdere keren per week",
+          "Ongeveer één keer per week",
+          "Enkele keren per maand",
+          "Zelden",
+          "Wisselend / weet ik niet"
+        ],
+        "showIf": {
+          "hooi-zonder-ruwvoer-langste": [
+            "Minder dan 2 uur",
+            "2 tot 4 uur",
+            "4 tot 6 uur",
+            "Meer dan 6 uur",
+            "Wisselend"
+          ]
+        }
       },
       {
         id: 'hooi-eerst-ruwvoer',
@@ -2613,7 +3135,7 @@ export const INTAKE_SCHEMA: Section[] = [
       {
         id: 'voordroog-periode',
         label: 'In welke periode kreeg jouw paard dit ongeveer?',
-        type: 'text',
+        type: "month_year",
         showIf: {
           'voordroog-verleden': [
             'Ja, incidenteel of kortdurend',
@@ -2622,6 +3144,13 @@ export const INTAKE_SCHEMA: Section[] = [
             'Ja, momenteel',
           ],
         },
+        dateConfig: {
+  "mode": "range",
+  "allow_future": false,
+  "allow_year_only": true
+},
+
+        hint: "Vul de begin- en eindmaand en het jaar in. Een schatting is goed.",
       },
       {
         id: 'voordroog-hoelang',
@@ -2743,10 +3272,30 @@ export const INTAKE_SCHEMA: Section[] = [
         ],
       },
       {
+  "id": "voer-gewisseld-wanneer",
+  "label": "Wanneer vond de voerwissel plaats?",
+  "type": "month_year",
+  "hint": "Vul de maand en het jaar in. Een schatting is goed.",
+  "dateConfig": {
+    "mode": "single",
+    "allow_future": false,
+    "allow_year_only": true
+  },
+  "showIf": {
+    "voer-gewisseld": [
+      "Ja, in de afgelopen 2 weken",
+      "Ja, in de afgelopen maand",
+      "Ja, in de afgelopen 3 maanden",
+      "Ja, in de afgelopen 6 maanden",
+      "Ja, langer geleden"
+    ]
+  }
+},
+      {
         id: 'voer-gewisseld-toelichting',
-        label: 'Licht de voerwissel toe.',
+        label: "Licht de voerwissel toe.",
         type: 'textarea',
-        hint: 'Wat kreeg je paard eerst, waar ben je naar overgestapt en wanneer vond deze verandering plaats?',
+        hint: "Wat kreeg je paard eerst en waar ben je naar overgestapt?",
         showIf: {
           'voer-gewisseld': [
             'Ja, in de afgelopen 2 weken',
@@ -2776,32 +3325,38 @@ export const INTAKE_SCHEMA: Section[] = [
         "required": true,
         "hint": "Voeg ieder product apart toe.",
         "sub": [
-          {
-            "id": "merk",
-            "label": "Merk",
-            "type": "text"
-          },
-          {
-            "id": "product",
-            "label": "Exacte productnaam",
-            "type": "text"
-          },
-          {
-            "id": "hoeveelheid",
-            "label": "Hoeveelheid per voerbeurt",
-            "type": "text"
-          },
-          {
-            "id": "voerbeurten",
-            "label": "Aantal voerbeurten per dag",
-            "type": "text"
-          },
-          {
-            "id": "sinds",
-            "label": "Sinds wanneer (ongeveer)?",
-            "type": "text"
-          }
-        ],
+  {
+    "id": "merk",
+    "label": "Merk",
+    "type": "text"
+  },
+  {
+    "id": "product",
+    "label": "Exacte productnaam",
+    "type": "text"
+  },
+  {
+    "id": "hoeveelheid",
+    "label": "Hoeveelheid per voerbeurt",
+    "type": "text"
+  },
+  {
+    "id": "voerbeurten",
+    "label": "Aantal voerbeurten per dag",
+    "type": "text"
+  },
+  {
+    "id": "sinds",
+    "label": "Sinds wanneer (ongeveer)?",
+    "type": "month_year",
+    "hint": "Vul de maand en het jaar in. Een schatting is goed.",
+    "dateConfig": {
+      "mode": "single",
+      "allow_future": false,
+      "allow_year_only": true
+    }
+  }
+],
         "showIf": {
           "bijvoeding-nu": "Ja"
         }
@@ -2825,37 +3380,43 @@ export const INTAKE_SCHEMA: Section[] = [
         "required": true,
         "hint": "Voeg ieder product apart toe. Neem ook producten mee die maar tijdelijk zijn gevoerd.",
         "sub": [
-          {
-            "id": "merk",
-            "label": "Merk",
-            "type": "text"
-          },
-          {
-            "id": "product",
-            "label": "Exacte productnaam",
-            "type": "text"
-          },
-          {
-            "id": "wanneer",
-            "label": "Wanneer ongeveer (jaartal/periode)",
-            "type": "text"
-          },
-          {
-            "id": "hoelang",
-            "label": "Hoe lang gevoerd",
-            "type": "text"
-          },
-          {
-            "id": "hoeveelheid",
-            "label": "Hoeveelheid per voerbeurt",
-            "type": "text"
-          },
-          {
-            "id": "voerbeurten",
-            "label": "Aantal voerbeurten per dag",
-            "type": "text"
-          }
-        ],
+  {
+    "id": "merk",
+    "label": "Merk",
+    "type": "text"
+  },
+  {
+    "id": "product",
+    "label": "Exacte productnaam",
+    "type": "text"
+  },
+  {
+    "id": "wanneer",
+    "label": "Wanneer ongeveer (jaartal/periode)",
+    "type": "month_year",
+    "hint": "Vul de maand en het jaar in. Een schatting is goed.",
+    "dateConfig": {
+      "mode": "single",
+      "allow_future": false,
+      "allow_year_only": true
+    }
+  },
+  {
+    "id": "hoelang",
+    "label": "Hoe lang gevoerd",
+    "type": "text"
+  },
+  {
+    "id": "hoeveelheid",
+    "label": "Hoeveelheid per voerbeurt",
+    "type": "text"
+  },
+  {
+    "id": "voerbeurten",
+    "label": "Aantal voerbeurten per dag",
+    "type": "text"
+  }
+],
         "showIf": {
           "bijvoeding-eerder": "Ja"
         }
@@ -2902,37 +3463,63 @@ export const INTAKE_SCHEMA: Section[] = [
         showIf: { 'snacks-aanwezig': 'Ja' },
         flagIf: 'any',
         sub: [
-          { id: 'wat', label: 'Wat krijgt jouw paard?', type: 'text' },
-          { id: 'merk', label: 'Merk + productnaam (indien van toepassing)', type: 'text' },
-          { id: 'hoeveel', label: 'Hoeveel krijgt jouw paard hiervan ongeveer?', type: 'text' },
-          {
-            id: 'hoevaak',
-            label: 'Hoe vaak krijgt jouw paard dit?',
-            type: 'radio',
-            options: [
-              'Dagelijks',
-              'Meerdere keren per week',
-              'Wekelijks',
-              'Af en toe',
-              'Seizoensgebonden',
-            ],
-          },
-          { id: 'sinds', label: 'Sinds wanneer krijgt jouw paard dit ongeveer?', type: 'text' },
-          {
-            id: 'waarom',
-            label: 'Waarom geef je dit?',
-            type: 'radio',
-            options: [
-              'Beloning',
-              'Training',
-              'Verrijking',
-              'Gezondheid / ondersteuning',
-              'Omdat mijn paard het lekker vindt',
-              'Anders, namelijk',
-            ],
-          },
-          { id: 'waarom-anders', label: 'Anders, namelijk (waarom)', type: 'text' },
-        ],
+  {
+    "id": "wat",
+    "label": "Wat krijgt jouw paard?",
+    "type": "text"
+  },
+  {
+    "id": "merk",
+    "label": "Merk + productnaam (indien van toepassing)",
+    "type": "text"
+  },
+  {
+    "id": "hoeveel",
+    "label": "Hoeveel krijgt jouw paard hiervan ongeveer?",
+    "type": "text"
+  },
+  {
+    "id": "hoevaak",
+    "label": "Hoe vaak krijgt jouw paard dit?",
+    "type": "radio",
+    "options": [
+      "Dagelijks",
+      "Meerdere keren per week",
+      "Wekelijks",
+      "Af en toe",
+      "Seizoensgebonden"
+    ]
+  },
+  {
+    "id": "sinds",
+    "label": "Sinds wanneer krijgt jouw paard dit ongeveer?",
+    "type": "month_year",
+    "hint": "Vul de maand en het jaar in. Een schatting is goed.",
+    "dateConfig": {
+      "mode": "single",
+      "allow_future": false,
+      "allow_year_only": true
+    }
+  },
+  {
+    "id": "waarom",
+    "label": "Waarom geef je dit?",
+    "type": "radio",
+    "options": [
+      "Beloning",
+      "Training",
+      "Verrijking",
+      "Gezondheid / ondersteuning",
+      "Omdat mijn paard het lekker vindt",
+      "Anders, namelijk"
+    ]
+  },
+  {
+    "id": "waarom-anders",
+    "label": "Anders, namelijk (waarom)",
+    "type": "text"
+  }
+],
       },
       {
         "id": "supplementen-nu",
@@ -2953,44 +3540,50 @@ export const INTAKE_SCHEMA: Section[] = [
         "hint": "Voeg ieder supplement of kruidenproduct apart toe.",
         "flagIf": "any",
         "sub": [
-          {
-            "id": "merk",
-            "label": "Merknaam",
-            "type": "text"
-          },
-          {
-            "id": "product",
-            "label": "Exacte productnaam",
-            "type": "text"
-          },
-          {
-            "id": "dosering",
-            "label": "Hoeveel krijgt jouw paard per dag?",
-            "type": "text"
-          },
-          {
-            "id": "sinds",
-            "label": "Sinds wanneer krijgt jouw paard dit?",
-            "type": "text"
-          },
-          {
-            "id": "reden",
-            "label": "Waarom geef je dit product?",
-            "type": "text"
-          },
-          {
-            "id": "verschil",
-            "label": "Heb je verschil gemerkt sinds je dit geeft?",
-            "type": "radio",
-            "options": [
-              "Ja, duidelijk positief",
-              "Enigszins positief",
-              "Geen merkbaar verschil",
-              "Negatief effect",
-              "Weet ik niet"
-            ]
-          }
-        ],
+  {
+    "id": "merk",
+    "label": "Merknaam",
+    "type": "text"
+  },
+  {
+    "id": "product",
+    "label": "Exacte productnaam",
+    "type": "text"
+  },
+  {
+    "id": "dosering",
+    "label": "Hoeveel krijgt jouw paard per dag?",
+    "type": "text"
+  },
+  {
+    "id": "sinds",
+    "label": "Sinds wanneer krijgt jouw paard dit?",
+    "type": "month_year",
+    "hint": "Vul de maand en het jaar in. Een schatting is goed.",
+    "dateConfig": {
+      "mode": "single",
+      "allow_future": false,
+      "allow_year_only": true
+    }
+  },
+  {
+    "id": "reden",
+    "label": "Waarom geef je dit product?",
+    "type": "text"
+  },
+  {
+    "id": "verschil",
+    "label": "Heb je verschil gemerkt sinds je dit geeft?",
+    "type": "radio",
+    "options": [
+      "Ja, duidelijk positief",
+      "Enigszins positief",
+      "Geen merkbaar verschil",
+      "Negatief effect",
+      "Weet ik niet"
+    ]
+  }
+],
         "showIf": {
           "supplementen-nu": "Ja"
         }
@@ -3014,37 +3607,43 @@ export const INTAKE_SCHEMA: Section[] = [
         "required": true,
         "hint": "Voeg ieder supplement of kruidenproduct apart toe. Neem ook producten mee die maar tijdelijk zijn gegeven.",
         "sub": [
-          {
-            "id": "merk",
-            "label": "Merknaam",
-            "type": "text"
-          },
-          {
-            "id": "product",
-            "label": "Exacte productnaam",
-            "type": "text"
-          },
-          {
-            "id": "periode",
-            "label": "Periode",
-            "type": "text"
-          },
-          {
-            "id": "hoelang",
-            "label": "Hoe lang gegeven?",
-            "type": "text"
-          },
-          {
-            "id": "waarom",
-            "label": "Waarom gegeven?",
-            "type": "text"
-          },
-          {
-            "id": "waarom-gestopt",
-            "label": "Waarom gestopt?",
-            "type": "text"
-          }
-        ],
+  {
+    "id": "merk",
+    "label": "Merknaam",
+    "type": "text"
+  },
+  {
+    "id": "product",
+    "label": "Exacte productnaam",
+    "type": "text"
+  },
+  {
+    "id": "periode",
+    "label": "Periode",
+    "type": "month_year",
+    "hint": "Vul de maand en het jaar in. Een schatting is goed.",
+    "dateConfig": {
+      "mode": "range",
+      "allow_future": false,
+      "allow_year_only": true
+    }
+  },
+  {
+    "id": "hoelang",
+    "label": "Hoe lang gegeven?",
+    "type": "text"
+  },
+  {
+    "id": "waarom",
+    "label": "Waarom gegeven?",
+    "type": "text"
+  },
+  {
+    "id": "waarom-gestopt",
+    "label": "Waarom gestopt?",
+    "type": "text"
+  }
+],
         "showIf": {
           "supplementen-eerder": "Ja"
         }
@@ -4267,9 +4866,23 @@ export const INTAKE_SCHEMA: Section[] = [
         ]
       },
       {
+  "id": "training-veranderd-wanneer",
+  "label": "Wanneer veranderde de training?",
+  "type": "month_year",
+  "hint": "Vul de maand en het jaar in. Een schatting is goed.",
+  "dateConfig": {
+    "mode": "single",
+    "allow_future": false,
+    "allow_year_only": true
+  },
+  "showIf": {
+    "training-veranderd": "Ja"
+  }
+},
+      {
         "id": "training-veranderd-details",
         "type": "textarea",
-        "label": "Wat is er veranderd en sinds wanneer?",
+        "label": "Wat is er veranderd?",
         "required": true,
         "hint": "Denk aan vaker of minder vaak trainen, langere trainingen, meer galop, zwaarder werk, een andere discipline of juist een periode van rust.",
         "showIf": {
@@ -4794,7 +5407,8 @@ export type FieldValue =
   | string
   | number
   | string[]
-  | Record<string, string>[] // repeater rows
+  | DateAnswer
+  | RepeaterRow[] // repeater rows
   | undefined;
 
 /** Whole-section answers keyed by field id. */

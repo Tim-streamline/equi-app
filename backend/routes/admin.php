@@ -110,8 +110,26 @@ Route::middleware('auth:admin')->group(function () {
     });
 
     // ---- Scanner: products, ingredients, results ------------------------
-    Route::resource('products', ProductController::class)->except(['create', 'show']);
-    Route::resource('ingredients', IngredientController::class)->except(['create', 'show']);
+    Route::middleware('admin.role:admin,content_editor')->prefix('feed-scanner')->as('feed-scanner.')->controller(\App\Http\Controllers\Admin\FeedCatalogController::class)->group(function () {
+        Route::get('ingredients', 'ingredients')->name('ingredients');
+        Route::post('ingredients', 'saveIngredient');
+        Route::put('ingredients/{ingredient}', 'saveIngredient');
+        Route::post('ingredients/{ingredient}/publish', 'publishIngredient');
+        Route::post('ingredients/{ingredient}/archive', 'archiveIngredient');
+        Route::get('products', 'products')->name('products');
+        Route::post('products', 'saveProduct');
+        Route::put('products/{product}', 'saveProduct');
+        Route::post('products/{product}/review', 'reviewProduct');
+        Route::post('products/{product}/archive', 'archiveProduct');
+        Route::post('versions/{version}/attachments', 'upload');
+        Route::get('attachments/{attachment}', 'attachment');
+        Route::get('rules', 'rules')->name('rules');
+        Route::post('cards', 'saveCard');
+        Route::put('cards/{card}', 'saveCard');
+        Route::post('profiles/{profile}/rules', 'saveRules')->whereUuid('profile');
+    });
+    Route::resource('products', ProductController::class)->except(['create', 'show'])->middleware('admin.role:admin');
+    Route::resource('ingredients', IngredientController::class)->except(['create', 'show'])->middleware('admin.role:admin');
     Route::controller(ScanResultController::class)->prefix('scans')->as('scans.')->group(function () {
         Route::get('/', 'index')->name('index');
         Route::get('{scan}', 'show')->name('show');

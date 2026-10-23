@@ -1,0 +1,164 @@
+[
+  {
+    "id": "hoefbevangenheid",
+    "label": "Is je paard hoefbevangen (geweest) of heeft het een verhoogd risico?",
+    "type": "radio",
+    "required": true,
+    "options": [
+      "Ja, mijn paard is momenteel hoefbevangen",
+      "Ja, mijn paard is in het verleden hoefbevangen geweest",
+      "Mijn paard heeft een verhoogd risico op hoefbevangenheid",
+      "Nee, voor zover bekend niet"
+    ],
+    "flagIf": [
+      "Ja, mijn paard is momenteel hoefbevangen",
+      "Ja, mijn paard is in het verleden hoefbevangen geweest",
+      "Mijn paard heeft een verhoogd risico op hoefbevangenheid"
+    ],
+    "criticalIf": [
+      "Ja, mijn paard is momenteel hoefbevangen"
+    ]
+  },
+  {
+    "id": "hoefbevangenheid-waarschuwing",
+    "label": "Belangrijk bij acute hoefbevangenheid",
+    "type": "sectionhead",
+    "hint": "Hoefbevangenheid is een spoedeisende aandoening. Neem direct contact op met je dierenarts als dat nog niet is gebeurd. Het persoonlijke Plus-protocol kan pas worden opgesteld wanneer de acute fase voorbij is en je dierenarts aangeeft dat je paard voldoende stabiel is.",
+    "showIf": {
+      "hoefbevangenheid": "Ja, mijn paard is momenteel hoefbevangen"
+    }
+  },
+  {
+    "id": "hoefbevangenheid-dierenarts",
+    "label": "Is je paard hiervoor onder behandeling van een dierenarts?",
+    "type": "radio",
+    "options": [
+      "Ja",
+      "Nee"
+    ],
+    "showIf": {
+      "hoefbevangenheid": "Ja, mijn paard is momenteel hoefbevangen"
+    }
+  },
+  {
+    "id": "hoefbevangenheid-begonnen",
+    "label": "Wanneer zijn de klachten begonnen?",
+    "type": "date",
+    "hint": "Een geschatte periode is ook goed.",
+    "showIf": {
+      "hoefbevangenheid": "Ja, mijn paard is momenteel hoefbevangen"
+    }
+  },
+  {
+    "id": "hoefbevangenheid-recent",
+    "label": "Wanneer was de laatste episode?",
+    "type": "date",
+    "hint": "Een geschatte periode is ook goed.",
+    "showIf": {
+      "hoefbevangenheid": "Ja, mijn paard is in het verleden hoefbevangen geweest"
+    }
+  },
+  {
+    "id": "hoefbevangenheid-aantal",
+    "label": "Hoe vaak is je paard hoefbevangen geweest?",
+    "type": "radio",
+    "options": [
+      "1 keer",
+      "2 keer",
+      "3 keer of vaker",
+      "Weet ik niet"
+    ],
+    "showIf": {
+      "hoefbevangenheid": "Ja, mijn paard is in het verleden hoefbevangen geweest"
+    }
+  },
+  {
+    "id": "hoefbevangenheid-oorzaak",
+    "label": "Is de oorzaak bekend?",
+    "type": "textarea",
+    "lines": 2,
+    "hint": "Vul onbekend in als je de oorzaak niet weet.",
+    "showIf": {
+      "hoefbevangenheid": "Ja, mijn paard is in het verleden hoefbevangen geweest"
+    }
+  },
+  {
+    "id": "hoefbevangenheid-hersteld",
+    "label": "Is je paard inmiddels volledig hersteld?",
+    "type": "radio",
+    "options": [
+      "Ja",
+      "Nee",
+      "Weet ik niet"
+    ],
+    "showIf": {
+      "hoefbevangenheid": "Ja, mijn paard is in het verleden hoefbevangen geweest"
+    }
+  },
+  {
+    "id": "hoefbevangenheid-restklachten",
+    "label": "Welke klachten zijn nog aanwezig?",
+    "type": "textarea",
+    "lines": 2,
+    "showIf": {
+      "hoefbevangenheid": "Ja, mijn paard is in het verleden hoefbevangen geweest",
+      "hoefbevangenheid-hersteld": "Nee"
+    }
+  },
+  {
+    "id": "hoefbevangenheid-aanhoudend",
+    "label": "Veterinaire beoordeling nodig",
+    "type": "sectionhead",
+    "hint": "Aanhoudende klachten moeten eerst veterinair beoordeeld worden voordat een protocol kan worden opgesteld.",
+    "showIf": {
+      "hoefbevangenheid": "Ja, mijn paard is in het verleden hoefbevangen geweest",
+      "hoefbevangenheid-hersteld": [
+        "Nee",
+        "Weet ik niet"
+      ]
+    }
+  },
+  {
+    "id": "hoefbevangenheid-risico-toelichting",
+    "label": "Waarom denk je dat je paard een verhoogd risico heeft?",
+    "type": "textarea",
+    "lines": 2,
+    "placeholder": "Beschrijf bijvoorbeeld bekende aandoeningen, eerdere onderzoeken of kenmerken die wijzen op een verhoogd risico.",
+    "showIf": {
+      "hoefbevangenheid": "Mijn paard heeft een verhoogd risico op hoefbevangenheid"
+    }
+  },
+  {
+    "id": "hoefbevangenheid-herstel-uitleg",
+    "label": "Herstelstatus bijwerken",
+    "type": "sectionhead",
+    "hint": "Je antwoorden worden opgeslagen. Versturen en het opstellen van een Plus-protocol zijn geblokkeerd totdat je beide vragen met Ja beantwoordt en je herstelstatus bevestigt. Hiermee verklaar je als eigenaar wat de dierenarts heeft aangegeven.",
+    "showIf": {
+      "_laminitis_recovery_required": "Ja"
+    }
+  },
+  {
+    "id": "hoefbevangenheid-acute-fase-voorbij",
+    "label": "Is de acute fase inmiddels voorbij?",
+    "type": "radio",
+    "options": [
+      "Ja",
+      "Nee"
+    ],
+    "showIf": {
+      "_laminitis_recovery_required": "Ja"
+    }
+  },
+  {
+    "id": "hoefbevangenheid-stabiel",
+    "label": "Heeft de dierenarts bevestigd dat je paard voldoende stabiel is?",
+    "type": "radio",
+    "options": [
+      "Ja",
+      "Nee"
+    ],
+    "showIf": {
+      "_laminitis_recovery_required": "Ja"
+    }
+  }
+]

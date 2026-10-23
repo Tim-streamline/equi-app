@@ -1,10 +1,11 @@
+import * as intakeDates from '../lib/intake/dates.ts';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import test from 'node:test';
 import ts from 'typescript';
 
 const modules = {};
-for (const name of ['schema', 'config', 'logic']) {
+for (const name of ['dates', 'schema', 'config', 'logic']) {
   const source = readFileSync(new URL(`../lib/intake/${name}.ts`, import.meta.url), 'utf8');
   const { outputText } = ts.transpileModule(source, {
     compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 },

@@ -59,6 +59,14 @@ class Protocol extends Model
         });
     }
 
+    /** Preparing a protocol requires its own submitted intake; answer rules run at submission. */
+    public function assertIntakeSubmitted(): void
+    {
+        if (! $this->exists || ! $this->intake()->whereNotNull('submitted_at')->where('status', '!=', 'cancelled')->exists()) {
+            throw ValidationException::withMessages(['intake' => 'De bijbehorende intake moet eerst worden verstuurd voordat je het protocol kunt opstellen.']);
+        }
+    }
+
     public function delete()
     {
         return DB::transaction(function () {

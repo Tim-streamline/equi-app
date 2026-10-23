@@ -2,7 +2,7 @@ import type { ScrollView } from 'react-native';
 import type { ReactNode, Ref } from 'react';
 import { KeyboardViewport, KeyboardScrollView } from '../ui/KeyboardForm';
 
-export { KeyboardTextInput as IntakeTextInput } from '../ui/KeyboardForm';
+export { IntakeInputFrame, IntakeTextInput } from './IntakeInputFrame';
 
 export function IntakeScrollView({ children, footer, scrollRef }: { children: ReactNode; footer?: ReactNode; scrollRef?: Ref<ScrollView> }) {
   return <KeyboardViewport style={{ flex: 1 }}>
