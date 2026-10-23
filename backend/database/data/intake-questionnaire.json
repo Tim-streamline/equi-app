@@ -3253,45 +3253,56 @@
           ]
         },
         {
-          "id": "hooi-pauze-incl-nacht",
-          "label": "Heeft jouw paard periodes zonder ruwvoer (inclusief de nachten!)?",
+          "id": "hooi-zonder-ruwvoer-langste",
+          "label": "Wat is de langste periode dat je paard achter elkaar zonder ruwvoer staat, inclusief de nacht?",
           "type": "radio",
           "options": [
-            "Nee, nooit",
-            "Ja, soms",
-            "Ja, regelmatig",
+            "Nooit, er is altijd ruwvoer beschikbaar",
+            "Minder dan 2 uur",
+            "2 tot 4 uur",
+            "4 tot 6 uur",
+            "Meer dan 6 uur",
+            "Wisselend",
             "Weet ik niet"
           ],
           "flagIf": [
-            "Ja, soms",
-            "Ja, regelmatig"
+            "Minder dan 2 uur",
+            "2 tot 4 uur",
+            "4 tot 6 uur",
+            "Meer dan 6 uur",
+            "Wisselend"
           ]
         },
         {
-          "id": "hooi-pauze-uren",
-          "label": "Hoeveel uur achter elkaar heeft jouw paard meestal geen toegang tot ruwvoer?",
-          "type": "radio",
-          "options": [
-            "Minder dan 1 uur",
-            "1–2 uur",
-            "2–4 uur",
-            "4–6 uur",
-            "6–8 uur",
-            "Meer dan 8 uur",
-            "Wisselend / moeilijk in te schatten"
-          ],
+          "id": "hooi-zonder-ruwvoer-toelichting",
+          "label": "Licht je antwoord toe.",
+          "type": "textarea",
+          "lines": 2,
           "showIf": {
-            "hooi-pauze-incl-nacht": [
-              "Ja, soms",
-              "Ja, regelmatig"
-            ]
+            "hooi-zonder-ruwvoer-langste": "Wisselend"
           }
         },
         {
-          "id": "hooi-pauze-langste",
-          "label": "Wat is de langste periode zonder ruwvoer die jouw paard doorgaans heeft (inclusief 's nachts)?",
-          "type": "number",
-          "unit": "uur"
+          "id": "hooi-zonder-ruwvoer-frequentie",
+          "label": "Hoe vaak komt dit voor?",
+          "type": "radio",
+          "options": [
+            "Dagelijks",
+            "Meerdere keren per week",
+            "Ongeveer één keer per week",
+            "Enkele keren per maand",
+            "Zelden",
+            "Wisselend / weet ik niet"
+          ],
+          "showIf": {
+            "hooi-zonder-ruwvoer-langste": [
+              "Minder dan 2 uur",
+              "2 tot 4 uur",
+              "4 tot 6 uur",
+              "Meer dan 6 uur",
+              "Wisselend"
+            ]
+          }
         },
         {
           "id": "hooi-eerst-ruwvoer",

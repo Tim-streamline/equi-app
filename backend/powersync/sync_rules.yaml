@@ -18,8 +18,9 @@ streams:
             - SELECT * FROM therapists WHERE auth.parameter('subscribed') = 1
 
             # scanner catalog
-            - SELECT * FROM products WHERE auth.parameter('subscribed') = 1
-            - SELECT * FROM ingredients WHERE auth.parameter('subscribed') = 1
+            # Explicit public projection: never replicate internal notes or drafts.
+            - SELECT id, brand, name, barcode, category, created_at, updated_at FROM products WHERE auth.parameter('subscribed') = 1 AND (catalog_status = 'legacy' OR catalog_status = 'published')
+            - SELECT id, name, description, default_tag, created_at, updated_at FROM ingredients WHERE auth.parameter('subscribed') = 1 AND (catalog_status = 'legacy' OR catalog_status = 'published')
 
             # Public preview only; protected text is in the item-scoped stream below.
             - |

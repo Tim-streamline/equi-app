@@ -11818,7 +11818,7 @@
                 },
                 {
                     "key": "bijvoeding-eerder",
-                    "order": 47,
+                    "order": 50,
                     "answer_section_key": null,
                     "label": "Heeft je paard in de afgelopen 2–5 jaar ander voer uit een zak gekregen dan wat je hierboven hebt ingevuld?",
                     "type": "radio",
@@ -11849,7 +11849,7 @@
                 },
                 {
                     "key": "bijvoeding-historie",
-                    "order": 48,
+                    "order": 51,
                     "answer_section_key": null,
                     "label": "Welk ander voer uit een zak heeft je paard in die periode gekregen?",
                     "type": "repeater",
@@ -11915,7 +11915,7 @@
                 },
                 {
                     "key": "bijvoeding-nu",
-                    "order": 45,
+                    "order": 48,
                     "answer_section_key": null,
                     "label": "Krijgt je paard op dit moment voer uit een zak?",
                     "type": "radio",
@@ -11946,7 +11946,7 @@
                 },
                 {
                     "key": "graszaadhooi",
-                    "order": 32,
+                    "order": 35,
                     "answer_section_key": null,
                     "label": "Krijgt jouw paard graszaadhooi?",
                     "type": "radio",
@@ -11977,7 +11977,7 @@
                 },
                 {
                     "key": "graszaadhooi-aandeel",
-                    "order": 33,
+                    "order": 36,
                     "answer_section_key": null,
                     "label": "Ongeveer hoeveel van het totale ruwvoer bestaat uit graszaadhooi?",
                     "type": "radio",
@@ -12013,7 +12013,7 @@
                 },
                 {
                     "key": "graszaadhooi-cert",
-                    "order": 34,
+                    "order": 37,
                     "answer_section_key": null,
                     "label": "Is het graszaadhooi gecertificeerd geschikt als paardenvoer?",
                     "type": "radio",
@@ -12046,7 +12046,7 @@
                 },
                 {
                     "key": "historie-extra",
-                    "order": 57,
+                    "order": 60,
                     "answer_section_key": null,
                     "label": "Welke andere supplementen en/of kruiden heeft je paard in die periode gekregen?",
                     "type": "repeater",
@@ -12239,7 +12239,7 @@
                 },
                 {
                     "key": "hooi-eerst-ruwvoer",
-                    "order": 22,
+                    "order": 25,
                     "answer_section_key": null,
                     "label": "Krijgt je paard 's ochtends eerst ruwvoer of krachtvoer?",
                     "type": "radio",
@@ -12308,7 +12308,7 @@
                 },
                 {
                     "key": "hooi-kg-methode",
-                    "order": 24,
+                    "order": 27,
                     "answer_section_key": null,
                     "label": "Hoe heb je dit bepaald?",
                     "type": "radio",
@@ -12342,7 +12342,7 @@
                 },
                 {
                     "key": "hooi-kg-per-dag",
-                    "order": 23,
+                    "order": 26,
                     "answer_section_key": null,
                     "label": "Hoeveel kilo ruwvoer krijgt jouw paard gemiddeld per dag?",
                     "type": "number",
@@ -12450,7 +12450,7 @@
                 },
                 {
                     "key": "hooi-pauze-incl-nacht",
-                    "order": 19,
+                    "order": 22,
                     "answer_section_key": null,
                     "label": "Heeft jouw paard periodes zonder ruwvoer (inclusief de nachten!)?",
                     "type": "radio",
@@ -12481,11 +12481,11 @@
                     "age_config": null,
                     "signal_config": null,
                     "date_config": null,
-                    "active": true
+                    "active": false
                 },
                 {
                     "key": "hooi-pauze-langste",
-                    "order": 21,
+                    "order": 24,
                     "answer_section_key": null,
                     "label": "Wat is de langste periode zonder ruwvoer die jouw paard doorgaans heeft (inclusief 's nachts)?",
                     "type": "number",
@@ -12508,11 +12508,11 @@
                     "age_config": null,
                     "signal_config": null,
                     "date_config": null,
-                    "active": true
+                    "active": false
                 },
                 {
                     "key": "hooi-pauze-uren",
-                    "order": 20,
+                    "order": 23,
                     "answer_section_key": null,
                     "label": "Hoeveel uur achter elkaar heeft jouw paard meestal geen toegang tot ruwvoer?",
                     "type": "radio",
@@ -12548,7 +12548,7 @@
                     "age_config": null,
                     "signal_config": null,
                     "date_config": null,
-                    "active": true
+                    "active": false
                 },
                 {
                     "key": "hooi-porties",
@@ -12743,8 +12743,120 @@
                     "active": true
                 },
                 {
+                    "key": "hooi-zonder-ruwvoer-frequentie",
+                    "order": 21,
+                    "answer_section_key": null,
+                    "label": "Hoe vaak komt dit voor?",
+                    "type": "radio",
+                    "hint": null,
+                    "required": true,
+                    "optional": false,
+                    "unit": null,
+                    "step": null,
+                    "tall": false,
+                    "lines": null,
+                    "placeholder": null,
+                    "link": null,
+                    "options": [
+                        "Dagelijks",
+                        "Meerdere keren per week",
+                        "Ongeveer één keer per week",
+                        "Enkele keren per maand",
+                        "Zelden",
+                        "Wisselend / weet ik niet"
+                    ],
+                    "show_if": {
+                        "hooi-zonder-ruwvoer-langste": [
+                            "Minder dan 2 uur",
+                            "2 tot 4 uur",
+                            "4 tot 6 uur",
+                            "Meer dan 6 uur",
+                            "Wisselend"
+                        ]
+                    },
+                    "flag_if": null,
+                    "critical_if": null,
+                    "protocol_if": null,
+                    "repeater_sub": null,
+                    "photo_config": null,
+                    "age_config": null,
+                    "signal_config": null,
+                    "date_config": null,
+                    "active": true
+                },
+                {
+                    "key": "hooi-zonder-ruwvoer-langste",
+                    "order": 19,
+                    "answer_section_key": null,
+                    "label": "Wat is de langste periode dat je paard achter elkaar zonder ruwvoer staat, inclusief de nacht?",
+                    "type": "radio",
+                    "hint": null,
+                    "required": true,
+                    "optional": false,
+                    "unit": null,
+                    "step": null,
+                    "tall": false,
+                    "lines": null,
+                    "placeholder": null,
+                    "link": null,
+                    "options": [
+                        "Nooit, er is altijd ruwvoer beschikbaar",
+                        "Minder dan 2 uur",
+                        "2 tot 4 uur",
+                        "4 tot 6 uur",
+                        "Meer dan 6 uur",
+                        "Wisselend",
+                        "Weet ik niet"
+                    ],
+                    "show_if": null,
+                    "flag_if": [
+                        "Minder dan 2 uur",
+                        "2 tot 4 uur",
+                        "4 tot 6 uur",
+                        "Meer dan 6 uur",
+                        "Wisselend"
+                    ],
+                    "critical_if": null,
+                    "protocol_if": null,
+                    "repeater_sub": null,
+                    "photo_config": null,
+                    "age_config": null,
+                    "signal_config": null,
+                    "date_config": null,
+                    "active": true
+                },
+                {
+                    "key": "hooi-zonder-ruwvoer-toelichting",
+                    "order": 20,
+                    "answer_section_key": null,
+                    "label": "Licht je antwoord toe.",
+                    "type": "textarea",
+                    "hint": null,
+                    "required": true,
+                    "optional": false,
+                    "unit": null,
+                    "step": null,
+                    "tall": false,
+                    "lines": 2,
+                    "placeholder": null,
+                    "link": null,
+                    "options": null,
+                    "show_if": {
+                        "hooi-zonder-ruwvoer-langste": "Wisselend"
+                    },
+                    "flag_if": null,
+                    "critical_if": null,
+                    "protocol_if": null,
+                    "repeater_sub": null,
+                    "photo_config": null,
+                    "age_config": null,
+                    "signal_config": null,
+                    "date_config": null,
+                    "active": true
+                },
+                {
                     "key": "huidig-extra",
-                    "order": 55,
+                    "order": 58,
                     "answer_section_key": null,
                     "label": "Welke supplementen en/of kruiden krijgt je paard op dit moment?",
                     "type": "repeater",
@@ -12817,7 +12929,7 @@
                 },
                 {
                     "key": "huidige-bijvoeding",
-                    "order": 46,
+                    "order": 49,
                     "answer_section_key": null,
                     "label": "Welk voer uit een zak krijgt je paard op dit moment?",
                     "type": "repeater",
@@ -12878,7 +12990,7 @@
                 },
                 {
                     "key": "mineralen-toegang",
-                    "order": 49,
+                    "order": 52,
                     "answer_section_key": null,
                     "label": "Heeft je paard verder nog toegang tot andere mineralen?",
                     "type": "multi",
@@ -12915,7 +13027,7 @@
                 },
                 {
                     "key": "mineralen-toegang-anders",
-                    "order": 50,
+                    "order": 53,
                     "answer_section_key": null,
                     "label": "Anders, namelijk",
                     "type": "text",
@@ -12975,7 +13087,7 @@
                 },
                 {
                     "key": "sec-graszaadhooi",
-                    "order": 31,
+                    "order": 34,
                     "answer_section_key": null,
                     "label": "Graszaadhooi",
                     "type": "sectionhead",
@@ -13002,7 +13114,7 @@
                 },
                 {
                     "key": "sec-kracht",
-                    "order": 41,
+                    "order": 44,
                     "answer_section_key": null,
                     "label": "Krachtvoer en bijvoer",
                     "type": "sectionhead",
@@ -13056,7 +13168,7 @@
                 },
                 {
                     "key": "sec-stro",
-                    "order": 35,
+                    "order": 38,
                     "answer_section_key": null,
                     "label": "Stro",
                     "type": "sectionhead",
@@ -13083,7 +13195,7 @@
                 },
                 {
                     "key": "sec-supp",
-                    "order": 51,
+                    "order": 54,
                     "answer_section_key": null,
                     "label": "Snacks en supplementen",
                     "type": "sectionhead",
@@ -13110,7 +13222,7 @@
                 },
                 {
                     "key": "sec-voordroog",
-                    "order": 25,
+                    "order": 28,
                     "answer_section_key": null,
                     "label": "Voordroog en kuil",
                     "type": "sectionhead",
@@ -13137,7 +13249,7 @@
                 },
                 {
                     "key": "snacks-aanwezig",
-                    "order": 52,
+                    "order": 55,
                     "answer_section_key": null,
                     "label": "Krijgt jouw paard snacks, tussendoortjes of extra's buiten het normale rantsoen om?",
                     "type": "radio",
@@ -13168,7 +13280,7 @@
                 },
                 {
                     "key": "snacks-details",
-                    "order": 53,
+                    "order": 56,
                     "answer_section_key": null,
                     "label": "Welke snacks of extra's krijgt jouw paard?",
                     "type": "repeater",
@@ -13254,7 +13366,7 @@
                 },
                 {
                     "key": "stro-aanwezig",
-                    "order": 36,
+                    "order": 39,
                     "answer_section_key": null,
                     "label": "Eet jouw paard stro?",
                     "type": "radio",
@@ -13288,7 +13400,7 @@
                 },
                 {
                     "key": "stro-biologisch",
-                    "order": 39,
+                    "order": 42,
                     "answer_section_key": null,
                     "label": "Is het stro biologisch?",
                     "type": "radio",
@@ -13325,7 +13437,7 @@
                 },
                 {
                     "key": "stro-hoeveelheid",
-                    "order": 40,
+                    "order": 43,
                     "answer_section_key": null,
                     "label": "Hoeveel stro eet jouw paard ongeveer?",
                     "type": "number",
@@ -13359,7 +13471,7 @@
                 },
                 {
                     "key": "stro-type",
-                    "order": 37,
+                    "order": 40,
                     "answer_section_key": null,
                     "label": "Om welk type stro gaat het?",
                     "type": "radio",
@@ -13399,7 +13511,7 @@
                 },
                 {
                     "key": "stro-type-anders",
-                    "order": 38,
+                    "order": 41,
                     "answer_section_key": null,
                     "label": "Anders, namelijk",
                     "type": "text",
@@ -13428,7 +13540,7 @@
                 },
                 {
                     "key": "supplementen-eerder",
-                    "order": 56,
+                    "order": 59,
                     "answer_section_key": null,
                     "label": "Heeft je paard in de afgelopen 2–5 jaar andere supplementen en/of kruiden gekregen dan wat je hierboven hebt ingevuld?",
                     "type": "radio",
@@ -13459,7 +13571,7 @@
                 },
                 {
                     "key": "supplementen-nu",
-                    "order": 54,
+                    "order": 57,
                     "answer_section_key": null,
                     "label": "Krijgt je paard op dit moment supplementen en/of kruiden?",
                     "type": "radio",
@@ -13489,7 +13601,7 @@
                 },
                 {
                     "key": "voer-gewisseld",
-                    "order": 42,
+                    "order": 45,
                     "answer_section_key": null,
                     "label": "Ben je recent gewisseld van (ruw)voer?",
                     "type": "radio",
@@ -13528,7 +13640,7 @@
                 },
                 {
                     "key": "voer-gewisseld-toelichting",
-                    "order": 44,
+                    "order": 47,
                     "answer_section_key": null,
                     "label": "Licht de voerwissel toe.",
                     "type": "textarea",
@@ -13563,7 +13675,7 @@
                 },
                 {
                     "key": "voer-gewisseld-wanneer",
-                    "order": 43,
+                    "order": 46,
                     "answer_section_key": null,
                     "label": "Wanneer vond de voerwissel plaats?",
                     "type": "month_year",
@@ -13602,7 +13714,7 @@
                 },
                 {
                     "key": "voordroog-hoelang",
-                    "order": 30,
+                    "order": 33,
                     "answer_section_key": null,
                     "label": "Hoe lang kreeg jouw paard dit ongeveer?",
                     "type": "text",
@@ -13636,7 +13748,7 @@
                 },
                 {
                     "key": "voordroog-periode",
-                    "order": 29,
+                    "order": 32,
                     "answer_section_key": null,
                     "label": "In welke periode kreeg jouw paard dit ongeveer?",
                     "type": "month_year",
@@ -13674,7 +13786,7 @@
                 },
                 {
                     "key": "voordroog-type",
-                    "order": 27,
+                    "order": 30,
                     "answer_section_key": null,
                     "label": "Om welk type ruwvoer ging het?",
                     "type": "multi",
@@ -13714,7 +13826,7 @@
                 },
                 {
                     "key": "voordroog-type-anders",
-                    "order": 28,
+                    "order": 31,
                     "answer_section_key": null,
                     "label": "Anders, namelijk",
                     "type": "text",
@@ -13749,7 +13861,7 @@
                 },
                 {
                     "key": "voordroog-verleden",
-                    "order": 26,
+                    "order": 29,
                     "answer_section_key": null,
                     "label": "Heeft jouw paard ooit ruwvoer gekregen dat in plastic verpakt was?",
                     "type": "radio",
