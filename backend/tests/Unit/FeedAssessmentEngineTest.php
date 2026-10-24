@@ -109,6 +109,64 @@ class FeedAssessmentEngineTest extends TestCase
         $this->assertSame('5', $closed['score_cap']);
     }
 
+    public static function impossibleDryMatterTotals(): array
+    {
+        return [
+            'dry matter basis with moisture' => ['60', '50', 'dry_matter', 'dry_matter', 'moisture', '20', 'exact'],
+            'dry matter basis with explicit dry matter' => ['60', '50', 'dry_matter', 'dry_matter', 'dry_matter', '80', 'exact'],
+            'product basis' => ['48', '40', 'product', 'product', 'moisture', '20', 'exact'],
+            'mixed bases' => ['60', '40', 'dry_matter', 'product', 'moisture', '20', 'exact'],
+            'minimum exceeds available dry matter' => ['60', '50', 'dry_matter', 'dry_matter', 'moisture', '20', 'minimum'],
+            'open lower boundary at all dry matter' => ['60', '40', 'dry_matter', 'dry_matter', 'moisture', '20', 'greater_than'],
+        ];
+    }
+
+    #[DataProvider('impossibleDryMatterTotals')]
+    public function test_combined_nutrients_cannot_exceed_known_dry_matter(string $sugar, string $starch, string $sugarBasis, string $starchBasis, string $dryMatterCode, string $dryMatterValue, string $qualifier): void
+    {
+        $result = $this->assess([
+            $this->row('sugar', $sugar, $sugarBasis, qualifier: $qualifier),
+            $this->row('starch', $starch, $starchBasis),
+            $this->row($dryMatterCode, $dryMatterValue),
+        ]);
+
+        $this->assertSame('insufficient_data', $result['status']);
+        $this->assertNull($result['sugar_starch']);
+        $this->assertNull($result['score_cap']);
+        $this->assertNull($result['automatic_score']);
+        $this->assertSame([], $result['applied_caps']);
+        $this->assertNotEmpty($result['missing_data']);
+    }
+
+    public function test_combined_nutrients_can_equal_all_available_dry_matter(): void
+    {
+        foreach (['exact', 'minimum'] as $qualifier) {
+            $result = $this->assess([
+                $this->row('sugar', '60', 'dry_matter', qualifier: $qualifier),
+                $this->row('starch', '40', 'dry_matter'),
+                $this->row('moisture', '20'),
+            ]);
+
+            $this->assertSame(['lower' => '80', 'upper' => '80', 'lower_open' => false, 'upper_open' => false, 'exact' => true], $result['sugar_starch']);
+            $this->assertSame('0', $result['automatic_score']);
+            $this->assertSame([], $result['missing_data']);
+        }
+    }
+
+    public function test_combined_upper_bound_is_limited_to_available_dry_matter(): void
+    {
+        $result = $this->assess([
+            $this->row('sugar', '10', 'dry_matter', qualifier: 'minimum'),
+            $this->row('starch', '10', 'dry_matter', qualifier: 'greater_than'),
+            $this->row('moisture', '20'),
+        ]);
+
+        $this->assertSame(['lower' => '16', 'upper' => '80', 'lower_open' => true, 'upper_open' => false, 'exact' => false], $result['sugar_starch']);
+        $this->assertSame('4', $result['score_cap']);
+        $this->assertNull($result['automatic_score']);
+        $this->assertNotEmpty($result['missing_data']);
+    }
+
     public function test_selenium_caps_require_evidence_and_total_is_not_addition(): void
     {
         $rows = [$this->row('sugar', '3'), $this->row('starch', '3'), $this->row('selenium_total', '0.3', 'product', 'mg/kg')];

@@ -17,7 +17,7 @@ class FeedPolicy
             'sugar_starch_caps.*.inclusive' => ['required', 'boolean'],
             'sugar_starch_caps.*.max_score' => ['required', 'numeric', 'min:0', 'max:10', 'decimal:0,2'],
             'organic_selenium_cap' => ['required', 'numeric', 'min:0', 'max:10', 'decimal:0,2'],
-            'unknown_added_selenium_cap' => ['required', 'numeric', 'min:0', 'max:10', 'decimal:0,2'],
+            'unknown_added_selenium_cap' => ['required', 'numeric', 'min:0', 'max:10', 'decimal:0,2', 'gte:organic_selenium_cap'],
         ];
     }
 

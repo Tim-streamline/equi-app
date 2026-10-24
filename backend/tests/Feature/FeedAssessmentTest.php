@@ -165,6 +165,48 @@ class FeedAssessmentTest extends TestCase
         $this->assertSame('5.00', $oldPolicyCalculation->fresh()->score_cap);
     }
 
+    public function test_saving_policy_rejects_unknown_selenium_cap_below_organic_cap(): void
+    {
+        $policy = $this->activate();
+        $count = FeedRuleVersion::count();
+        $data = array_replace($policy->data, ['organic_selenium_cap' => 8, 'unknown_added_selenium_cap' => 1]);
+
+        $this->post("/admin/feed-scanner/profiles/{$policy->profile_id}/rules", $data + ['expected_number' => $policy->number])
+            ->assertSessionHasErrors('unknown_added_selenium_cap');
+
+        $this->assertSame($count, FeedRuleVersion::count());
+        $this->assertSame($policy->id, DB::table('feed_assessment_profiles')->where('id', $policy->profile_id)->value('active_rule_version_id'));
+    }
+
+    public function test_publishing_existing_draft_rejects_unknown_selenium_cap_below_organic_cap(): void
+    {
+        $policy = $this->activate();
+        $data = array_replace($policy->data, ['organic_selenium_cap' => 8, 'unknown_added_selenium_cap' => 1]);
+        $draft = FeedRuleVersion::create(['profile_id' => $policy->profile_id, 'number' => $policy->number + 1,
+            'status' => 'draft', 'calibration_status' => 'uncalibrated', 'schema_version' => $policy->schema_version,
+            'data' => $data, 'content_hash' => hash('sha256', json_encode($data)), 'created_by' => $this->admin->id]);
+
+        $this->post("/admin/feed-scanner/profiles/{$policy->profile_id}/publish", ['version_id' => $draft->id])
+            ->assertSessionHasErrors('unknown_added_selenium_cap');
+
+        $this->assertSame('draft', $draft->fresh()->status);
+        $this->assertSame($policy->id, DB::table('feed_assessment_profiles')->where('id', $policy->profile_id)->value('active_rule_version_id'));
+    }
+
+    public function test_equal_or_higher_unknown_selenium_caps_can_be_saved_and_published(): void
+    {
+        $policy = $this->activate();
+        foreach ([3, 5.5] as $unknownCap) {
+            $data = array_replace($policy->data, ['organic_selenium_cap' => 3, 'unknown_added_selenium_cap' => $unknownCap]);
+            $this->post("/admin/feed-scanner/profiles/{$policy->profile_id}/rules", $data + ['expected_number' => $policy->number])
+                ->assertRedirect()->assertSessionHasNoErrors();
+
+            $policy = $this->activate();
+            $this->assertEquals($unknownCap, $policy->data['unknown_added_selenium_cap']);
+            $this->assertSame($policy->id, DB::table('feed_assessment_profiles')->where('id', $policy->profile_id)->value('active_rule_version_id'));
+        }
+    }
+
     public function test_balancer_and_standard_profiles_and_product_ownership_are_not_interchangeable(): void
     {
         $standard = $this->activate();

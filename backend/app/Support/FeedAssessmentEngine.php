@@ -29,14 +29,17 @@ class FeedAssessmentEngine
         }
         $sum = null;
         if ($sugar !== null && $starch !== null) {
+            $maximum = $dm ?? Decimal::of(100);
             $sum = ['lower' => $sugar['lower']->plus($starch['lower']), 'upper' => $sugar['upper']->plus($starch['upper']),
                 'lower_open' => $sugar['lower_open'] || $starch['lower_open'], 'upper_open' => $sugar['upper_open'] || $starch['upper_open']];
-            if ($sum['lower']->isGreaterThan(100) || ($sum['lower']->isEqualTo(100) && $sum['lower_open'])) {
-                $missing[] = 'Suiker + zetmeel is meer dan 100%; controleer de analysegegevens.';
+            if ($sum['lower']->isGreaterThan($maximum) || ($sum['lower']->isEqualTo($maximum) && $sum['lower_open'])) {
+                $missing[] = $dm === null
+                    ? 'Suiker + zetmeel is meer dan 100%; controleer de analysegegevens.'
+                    : 'Suiker + zetmeel is meer dan de beschikbare droge stof ('.$this->text($dm).'% op productbasis); controleer de analysegegevens.';
                 $sum = null;
             } else {
-                if ($sum['upper']->isGreaterThan(100)) {
-                    $sum['upper'] = Decimal::of(100);
+                if ($sum['upper']->isGreaterThan($maximum)) {
+                    $sum['upper'] = $maximum;
                     $sum['upper_open'] = false;
                 }
                 foreach ($policy['sugar_starch_caps'] as $tier) {
