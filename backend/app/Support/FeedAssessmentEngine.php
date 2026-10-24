@@ -17,7 +17,11 @@ class FeedAssessmentEngine
         $missing = [];
         $trace = [];
         $caps = [];
-        $dm = $this->dryMatter($rows);
+        $dryMatter = $this->dryMatter($rows);
+        $dm = $dryMatter['value'];
+        if (! $dryMatter['valid']) {
+            $missing[] = 'De droge-stof- of vochtwaarden zijn ongeldig of tegenstrijdig; controleer de analysegegevens.';
+        }
         $sugar = $this->nutrient('sugar', $rows, $dm, $trace);
         $starch = $this->nutrient('starch', $rows, $dm, $trace);
         foreach (['sugar' => $sugar, 'starch' => $starch] as $code => $interval) {
@@ -28,7 +32,7 @@ class FeedAssessmentEngine
             }
         }
         $sum = null;
-        if ($sugar !== null && $starch !== null) {
+        if ($dryMatter['valid'] && $sugar !== null && $starch !== null) {
             $maximum = $dm ?? Decimal::of(100);
             $sum = ['lower' => $sugar['lower']->plus($starch['lower']), 'upper' => $sugar['upper']->plus($starch['upper']),
                 'lower_open' => $sugar['lower_open'] || $starch['lower_open'], 'upper_open' => $sugar['upper_open'] || $starch['upper_open']];
@@ -96,7 +100,8 @@ class FeedAssessmentEngine
             'calibration_pending' => true];
     }
 
-    private function dryMatter(array $rows): ?Decimal
+    /** @return array{value: ?Decimal, valid: bool} */
+    private function dryMatter(array $rows): array
     {
         $values = [];
         foreach ($rows as $row) {
@@ -105,20 +110,20 @@ class FeedAssessmentEngine
             }
             $value = $this->percent($row);
             if ($value === null || $value->isNegative() || $value->isGreaterThan(100)) {
-                return null;
+                return ['value' => null, 'valid' => false];
             }
             $values[] = $row['code'] === 'moisture' ? Decimal::of(100)->minus($value) : $value;
         }
-        if ($values === [] || ! $values[0]->isGreaterThan(0)) {
-            return null;
+        if ($values === []) {
+            return ['value' => null, 'valid' => true];
         }
         foreach ($values as $value) {
             if (! $value->isEqualTo($values[0])) {
-                return null;
+                return ['value' => null, 'valid' => false];
             }
         }
 
-        return $values[0];
+        return ['value' => $values[0], 'valid' => true];
     }
 
     private function percent(array $row): ?Decimal
@@ -146,7 +151,8 @@ class FeedAssessmentEngine
                 continue;
             }
             $basis = $row['basis'] ?? 'unknown';
-            if ($basis !== 'product' && ($basis !== 'dry_matter' || $dm === null)) {
+            // Dry-matter percentages have no defined basis when no dry matter exists.
+            if ($basis !== 'product' && ($basis !== 'dry_matter' || $dm === null || $dm->isZero())) {
                 continue;
             }
             $value = $this->percent($row);

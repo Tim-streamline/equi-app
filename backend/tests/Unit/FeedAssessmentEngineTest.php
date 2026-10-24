@@ -153,6 +153,79 @@ class FeedAssessmentEngineTest extends TestCase
         }
     }
 
+    public static function invalidDryMatterValues(): array
+    {
+        return [
+            'moisture contradicts dry matter' => [[['moisture', '90'], ['dry_matter', '20']]],
+            'dry matter contradicts moisture' => [[['dry_matter', '20'], ['moisture', '90']]],
+            'conflicting dry matter rows' => [[['dry_matter', '10'], ['dry_matter', '20']]],
+            'conflicting moisture rows' => [[['moisture', '90'], ['moisture', '80']]],
+            'zero contradicts positive dry matter' => [[['dry_matter', '0'], ['dry_matter', '20']]],
+            'negative dry matter' => [[['dry_matter', '-1']]],
+            'moisture exceeds 100 percent' => [[['moisture', '101']]],
+        ];
+    }
+
+    #[DataProvider('invalidDryMatterValues')]
+    public function test_invalid_dry_matter_prevents_product_basis_sugar_starch_caps(array $values): void
+    {
+        $rows = array_map(fn ($row) => $this->row(...$row), $values);
+        $result = $this->assess([$this->row('sugar', '10'), $this->row('starch', '20'), ...$rows]);
+
+        $this->assertSame('insufficient_data', $result['status']);
+        $this->assertNull($result['sugar_starch']);
+        $this->assertNull($result['score_cap']);
+        $this->assertNull($result['automatic_score']);
+        $this->assertSame([], $result['applied_caps']);
+        $this->assertNotEmpty($result['missing_data']);
+    }
+
+    public static function zeroDryMatterValues(): array
+    {
+        return [
+            'zero dry matter' => ['dry_matter', '0'],
+            '100 percent moisture' => ['moisture', '100'],
+        ];
+    }
+
+    #[DataProvider('zeroDryMatterValues')]
+    public function test_zero_dry_matter_is_a_known_bound(string $code, string $value): void
+    {
+        $result = $this->assess([$this->row('sugar', '10'), $this->row('starch', '20'), $this->row($code, $value)]);
+        $this->assertSame('insufficient_data', $result['status']);
+        $this->assertNull($result['sugar_starch']);
+        $this->assertNull($result['score_cap']);
+        $this->assertNull($result['automatic_score']);
+        $this->assertSame([], $result['applied_caps']);
+        $this->assertNotEmpty($result['missing_data']);
+
+        $zero = $this->assess([$this->row('sugar', '0'), $this->row('starch', '0'), $this->row($code, $value)]);
+        $this->assertSame('0', $zero['sugar_starch']['lower']);
+        $this->assertTrue($zero['sugar_starch']['exact']);
+        $this->assertSame([], $zero['missing_data']);
+        $this->assertNull($zero['automatic_score']);
+    }
+
+    #[DataProvider('zeroDryMatterValues')]
+    public function test_zero_dry_matter_cannot_normalize_dry_matter_percentages(string $code, string $value): void
+    {
+        $result = $this->assess([$this->row('sugar', '10', 'dry_matter'), $this->row('starch', '20', 'dry_matter'), $this->row($code, $value)]);
+        $this->assertSame('insufficient_data', $result['status']);
+        $this->assertNull($result['sugar_starch']);
+        $this->assertNull($result['automatic_score']);
+        $this->assertNotEmpty($result['missing_data']);
+    }
+
+    public function test_missing_or_consistent_dry_matter_allows_product_basis_assessment(): void
+    {
+        foreach ([[], [$this->row('moisture', '20'), $this->row('dry_matter', '800', unit: 'g/kg')]] as $rows) {
+            $result = $this->assess([$this->row('sugar', '10'), $this->row('starch', '20'), ...$rows]);
+            $this->assertSame('30', $result['sugar_starch']['lower']);
+            $this->assertSame('0', $result['automatic_score']);
+            $this->assertSame([], $result['missing_data']);
+        }
+    }
+
     public function test_combined_upper_bound_is_limited_to_available_dry_matter(): void
     {
         $result = $this->assess([
