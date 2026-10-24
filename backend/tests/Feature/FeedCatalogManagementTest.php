@@ -137,9 +137,9 @@ class FeedCatalogManagementTest extends TestCase
     {
         $card = FeedKnowledgeCard::create(['title' => 'Suiker + zetmeel', 'explanation' => 'Samen beoordelen', 'status' => 'published']);
         $profile = DB::table('feed_assessment_profiles')->where('code', 'standard')->sole();
-        $original = FeedRuleVersion::where('profile_id', $profile->id)->sole();
+        $original = FeedRuleVersion::where('profile_id', $profile->id)->orderByDesc('number')->firstOrFail();
         $payload = collect($original->data)->only(['principles', 'explanation', 'sugar_starch_challenged', 'sugar_starch_healthy', 'organic_selenium_cap', 'unknown_added_selenium_cap', 'exceptions'])->all();
-        $this->post("/admin/feed-scanner/profiles/{$profile->id}/rules", $payload + ['expected_number' => 1])->assertSessionHasNoErrors();
+        $this->post("/admin/feed-scanner/profiles/{$profile->id}/rules", $payload + ['expected_number' => $original->number])->assertSessionHasNoErrors();
         $latest = FeedRuleVersion::where('profile_id', $profile->id)->orderByDesc('number')->first();
         $card->update(['explanation' => 'Nieuwe uitleg']);
         $this->assertSame('Samen beoordelen', $latest->fresh()->data['knowledge_snapshot'][0]['explanation']);
@@ -147,7 +147,7 @@ class FeedCatalogManagementTest extends TestCase
         $this->assertArrayNotHasKey('weights', $latest->data);
         $this->assertEquals(5.5, $latest->data['unknown_added_selenium_cap']);
         $this->assertSame('draft', $latest->status);
-        $this->post("/admin/feed-scanner/profiles/{$profile->id}/rules", $payload + ['expected_number' => 1])->assertSessionHasErrors('expected_number');
+        $this->post("/admin/feed-scanner/profiles/{$profile->id}/rules", $payload + ['expected_number' => $original->number])->assertSessionHasErrors('expected_number');
     }
 
     public function test_content_editor_can_save_concepts_but_cannot_publish_or_approve(): void

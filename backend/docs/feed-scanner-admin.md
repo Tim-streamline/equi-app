@@ -50,4 +50,6 @@ De migratie weigert een destructieve `down()`: terugschakelen gebeurt met gecont
 
 ## Volgende fase
 
+De versiegebonden motor voor de afgesproken scoreplafonds is inmiddels toegevoegd. Zie [feed-assessment-engine.md](feed-assessment-engine.md) voor activering, berekeningen en historie. De onderstaande kalibratie en publieke scanneraansluiting blijven vervolgwerk.
+
 Kalibratie bepaalt essentiële gegevens en puntenweging per profiel. Daarna volgen de deterministische evaluator, juiste analyseconversies, bewijsafhankelijke seleniumplafonds, versiegebonden berekeningen, verschilweergave en gemotiveerde scorecorrecties. Bij het aansluiten van de scanner worden nieuwe berekende scores servergestuurd; bestaande door de client schrijfbare legacyresultaten gelden niet als door die motor gevalideerd.

@@ -13,6 +13,7 @@ use App\Models\Product;
 use App\Models\ProductVersion;
 use App\Support\AuditLogger;
 use App\Support\FeedCatalog;
+use App\Support\FeedPolicy;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
@@ -131,7 +132,7 @@ class FeedCatalogController extends Controller
             ->when($request->string('sort')->toString() === 'scans', fn ($q) => $q->orderByDesc('scans_count'))
             ->orderBy('brand')->orderBy('name')->paginate(20)->withQueryString();
         $rows->through(function ($product) {
-            $product->setAttribute('versions', ProductVersion::where('product_id', $product->id)->with('attachments')->orderByDesc('number')->get());
+            $product->setAttribute('versions', ProductVersion::where('product_id', $product->id)->with(['attachments', 'assessments.overrides', 'assessments.ruleVersion:id,number,profile_id,status'])->orderByDesc('number')->get());
 
             return $product;
         });
@@ -140,6 +141,7 @@ class FeedCatalogController extends Controller
             'products' => $rows, 'filters' => $request->only('q', 'review', 'sort', 'category'),
             'reviewCount' => Product::where(fn ($q) => $q->where('needs_review', true)->orWhere('catalog_status', 'legacy'))->where('catalog_status', '!=', 'archived')->count(),
             'ingredientOptions' => Ingredient::where('catalog_status', '!=', 'archived')->orderBy('name')->get(['id', 'name', 'published_version_id']),
+            'assessmentProfiles' => DB::table('feed_assessment_profiles')->get(['id', 'active_rule_version_id']),
         ]));
     }
 
@@ -317,7 +319,7 @@ class FeedCatalogController extends Controller
 
     public function saveRules(Request $request, string $profile)
     {
-        $data = $request->validate([
+        $data = $request->validate(array_merge([
             'expected_number' => ['nullable', 'integer', 'min:1'],
             'principles' => ['nullable', 'string', 'max:20000'], 'explanation' => ['nullable', 'string', 'max:20000'],
             'sugar_starch_challenged' => ['required', 'numeric', 'min:0', 'max:100'], 'sugar_starch_healthy' => ['required', 'numeric', 'min:0', 'max:100', 'gte:sugar_starch_challenged'],
@@ -325,20 +327,42 @@ class FeedCatalogController extends Controller
             'exceptions' => ['present', 'array', 'max:100'], 'exceptions.*.ingredient_id' => ['required', 'uuid', 'distinct', 'exists:ingredients,id'],
             'exceptions.*.condition' => ['required', 'string', 'max:2000'],
             'exceptions.*.max_percentage' => ['nullable', 'numeric', 'min:0', 'max:100'],
-        ]);
+        ], FeedPolicy::capRules(false)));
         DB::transaction(function () use ($request, $profile, $data) {
             $record = DB::table('feed_assessment_profiles')->where('id', $profile)->lockForUpdate()->first();
             abort_unless($record, 404);
             $latest = FeedRuleVersion::where('profile_id', $profile)->orderByDesc('number')->first();
             $this->checkVersion($data, $latest?->number);
             unset($data['expected_number']);
+            $data['sugar_starch_caps'] ??= $latest?->data['sugar_starch_caps'] ?? [];
+            FeedPolicy::validate($data);
             $data['knowledge_snapshot'] = FeedKnowledgeCard::where('status', 'published')->get(['id', 'title', 'explanation', 'library_item_id'])->toArray();
             $data['ingredient_revision_ids'] = Ingredient::where('catalog_status', 'published')->pluck('published_version_id')->all();
-            $version = FeedRuleVersion::create(['profile_id' => $profile, 'number' => ($latest?->number ?? 0) + 1, 'status' => 'draft', 'calibration_status' => 'uncalibrated',
+            $version = FeedRuleVersion::create(['profile_id' => $profile, 'number' => ($latest?->number ?? 0) + 1, 'status' => 'draft', 'calibration_status' => 'uncalibrated', 'schema_version' => FeedPolicy::SCHEMA_VERSION,
                 'data' => $data, 'content_hash' => hash('sha256', json_encode($data)), 'created_by' => $request->user('admin')->id]);
             AuditLogger::log('feed_rules_draft_saved', $version);
         });
 
         return back()->with('success', 'Voedingsbeleid opgeslagen als concept. De puntenweging volgt na kalibratie.');
+    }
+
+    public function publishRules(Request $request, string $profile)
+    {
+        abort_unless($this->canPublish($request), 403);
+        $data = $request->validate(['version_id' => ['required', 'uuid']]);
+        DB::transaction(function () use ($request, $profile, $data) {
+            $record = DB::table('feed_assessment_profiles')->where('id', $profile)->lockForUpdate()->first();
+            abort_unless($record, 404);
+            $version = FeedRuleVersion::where('profile_id', $profile)->orderByDesc('number')->first();
+            if (! $version || $version->id !== $data['version_id'] || $version->status !== 'draft' || $version->schema_version !== FeedPolicy::SCHEMA_VERSION) {
+                throw ValidationException::withMessages(['policy' => 'Open het nieuwste concept met scoreplafonds.']);
+            }
+            FeedPolicy::validate($version->data);
+            $version->update(['status' => 'published', 'published_at' => now(), 'published_by' => $request->user('admin')->id]);
+            DB::table('feed_assessment_profiles')->where('id', $profile)->update(['active_rule_version_id' => $version->id, 'updated_at' => now()]);
+            AuditLogger::log('feed_rules_activated', $version, before: ['active_rule_version_id' => $record->active_rule_version_id], after: ['active_rule_version_id' => $version->id]);
+        });
+
+        return back()->with('success', 'Scoreplafonds geactiveerd. De volledige puntenweging blijft nog ongekalibreerd.');
     }
 }

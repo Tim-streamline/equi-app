@@ -4,10 +4,11 @@
     import Pagination from '$lib/components/Pagination.svelte';
     import Modal from '$lib/components/Modal.svelte';
     import Field from '$lib/components/Field.svelte';
+    import AssessmentHistory from './AssessmentHistory.svelte';
     import { router, useForm } from '@inertiajs/svelte';
     import { Card, CardContent, Button, Input, Textarea, Select, Badge } from '$lib/components/ui';
 
-    let { products, filters, reviewCount, ingredientOptions, categories, nutrientOptions, canPublish, errors = {} } = $props();
+    let { products, filters, reviewCount, ingredientOptions, categories, nutrientOptions, canPublish, assessmentProfiles = [], errors = {} } = $props();
     let q = $state(filters.q ?? '');
     let review = $state(!!Number(filters.review));
     let category = $state(filters.category ?? '');
@@ -15,7 +16,8 @@
     let editing = $state(null);
     let open = $state(false);
     let tab = $state('general');
-    let detail = $state(null);
+    let detailId = $state(null);
+    const detail = $derived(products.data.find(p => p.id === detailId));
     let historyOpen = $state(false);
     let timer;
     let uploadVersion = $state(null);
@@ -82,7 +84,7 @@
                     </div>
                     <div class="flex flex-wrap gap-2">
                         <Button size="sm" variant="outline" onclick={() => edit(product)}>Bewerken</Button>
-                        <Button size="sm" variant="ghost" onclick={() => { detail = product; historyOpen = true; }}>Details & historie</Button>
+                        <Button size="sm" variant="ghost" onclick={() => { detailId = product.id; historyOpen = true; }}>Beoordelingen & historie</Button>
                         {#if ['draft', 'needs_info'].includes(latest?.status) && product.catalog_status !== 'archived'}
                             <Button size="sm" variant="outline" onclick={() => beginUpload(latest)}>Etiket toevoegen</Button>
                             {#if canPublish}<Button size="sm" onclick={() => reviewProduct(product, 'approve')}>Goedkeuren</Button><Button size="sm" variant="ghost" onclick={() => reviewProduct(product, 'needs_info')}>Meer informatie nodig</Button><Button size="sm" variant="ghost" onclick={() => reviewProduct(product, 'reject')}>Afwijzen</Button>{/if}
@@ -150,7 +152,8 @@
         {#snippet footer()}<Button variant="outline" onclick={() => uploadOpen = false}>Annuleren</Button><Button form="feed-upload" type="submit" disabled={$uploadForm.processing || !$uploadForm.file}>Etiket toevoegen</Button>{/snippet}
     </Modal>
     <Modal bind:open={historyOpen} title="Productdetails & historie" size="xl">
-        <p class="mb-4 rounded-lg bg-muted p-3 text-sm">Er is nog geen automatische beoordeling. De puntenweging wordt met echte producten gekalibreerd.</p>
+        {#if detail}<AssessmentHistory product={detail} {canPublish} profiles={assessmentProfiles} {errors} />{/if}
+        <h3 class="mt-8 text-lg font-semibold">Productgegevens & versiehistorie</h3>
         {#if detail}{#each detail.versions as version}
             <section class="space-y-3 border-t py-5">
                 <div class="flex flex-wrap items-center gap-2"><h3 class="font-semibold">Versie {version.number}</h3><Badge variant="muted">{labels[version.status]}</Badge><span class="text-sm text-muted-foreground">{new Date(version.created_at).toLocaleString('nl-NL')}</span></div>

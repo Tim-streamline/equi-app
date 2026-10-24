@@ -1,0 +1,41 @@
+[
+  {
+    "brand": "Metazoa", "name": "BalanceFit Timothee", "category": "balancer", "reference_score": 8,
+    "expected_automatic_score": null,
+    "notes": "Kalibratievoorbeeld van Shelley: 8/10. Eenvoudige samenstelling met timothee en lijnzaad; suiker + zetmeel op het aangeleverde overzicht 6,66%. Analysebasis nog niet expliciet bevestigd. Alleen de anorganische seleniumvorm is op deze bronnen bevestigd; overige mineraalvormen en toevoegingen niet veronderstellen. IJzer, mangaan en calcium zijn volgens haar beleid aandachtspunten. Dit referentiecijfer is geen automatische score.",
+    "files": [["Metazoa balancefit timothee.jpg", "packaging"], ["Metazoa balancefit timothee 1.jpg", "composition"], ["Metazoa balancefit timothee 2.jpg", "analysis"]],
+    "data": {
+      "composition_text": "Timothy; Vitamin and mineral mix; Calcium carbonate; Flaxseed; Salt.",
+      "ingredients": [
+        {"label": "Timothy", "ingredient_id": null, "match_status": "unknown", "added_selenium": "unknown"},
+        {"label": "Vitamin and mineral mix", "ingredient_id": null, "match_status": "unknown", "added_selenium": "unknown", "selenium_form": "inorganic", "evidence": "Aangeleverd mineralenoverzicht vermeldt bij selenium expliciet: As Na2SeO3, inorganic."},
+        {"label": "Calcium carbonate", "ingredient_id": null, "match_status": "unknown", "added_selenium": "unknown"},
+        {"label": "Flaxseed", "ingredient_id": null, "match_status": "unknown", "added_selenium": "unknown"},
+        {"label": "Salt", "ingredient_id": null, "match_status": "unknown", "added_selenium": "unknown"}
+      ],
+      "nutrients": [{"code": "sugar", "value": "4.8", "unit": "%", "basis": "unknown", "qualifier": "exact"}, {"code": "starch", "value": "1.86", "unit": "%", "basis": "unknown", "qualifier": "exact"}]
+    }
+  },
+  {
+    "brand": "Vitalbix", "name": "NutriMash", "category": "mash", "reference_score": 6,
+    "expected_automatic_score": null,
+    "notes": "Kalibratievoorbeeld van Shelley: 6/10. Positief: timothee, luzerne, lijnzaad en 6,8% suiker + zetmeel. Beleidsmatige minpunten: cichorei- en appelpulp samen 15,76%, standaard toegevoegde kruiden, brede B-vitaminemix, geïsoleerde lijnzaadolie en erwtenvlokken. Hoeveelheid olie onbekend. Selenium totaal is geen bewijs voor toegevoegd selenium. Dit referentiecijfer is geen automatische score; geen willekeurige strafpunten toekennen.",
+    "files": [["vitalbix nutrimash.jpg", "packaging"], ["vitalbix nutrimash2.jpg", "composition"], ["vitalbix nutrimash 1.jpg", "analysis"]],
+    "data": {
+      "composition_text": "Timotheegras kunstmatig gedroogd, Luzerne gedehydrateerd, Cichoreipulp (7,88%), Appelpulp (7,88%), Lijnzaad geplet, Lijnzaadolie, Erwtenvlokken, Brandnetelblad (0,5%), Venkelzaad (0,5%), Kamillekruid (0,5%), Monocalciumfosfaat.",
+      "ingredients": [],
+      "nutrients": [{"code": "sugar", "value": "3.1", "unit": "%", "basis": "product", "qualifier": "exact"}, {"code": "starch", "value": "3.7", "unit": "%", "basis": "product", "qualifier": "exact"}, {"code": "fibre", "value": "23.8", "unit": "%", "basis": "product", "qualifier": "exact"}, {"code": "selenium_total", "value": "0.3", "unit": "mg/kg", "basis": "product", "qualifier": "exact"}]
+    }
+  },
+  {
+    "brand": "Vente", "name": "Paardenbrok Sport", "category": "complementary", "reference_score": 0,
+    "expected_automatic_score": "0",
+    "notes": "Kalibratievoorbeeld van Shelley: 0/10 volgens haar voedingsfilosofie. 6,6% suiker + 26,4% zetmeel = 33% op productbasis. De afgesproken regel vanaf 20% bepaalt zelfstandig een 0. Haar overige bezwaren betreffen granen/graanbijproducten, bietenpulp, melasse, genetisch gemodificeerde soja en sojaolie. Geen uitspraak dat iedere hoeveelheid aantoonbaar schadelijk is. Voorlopige admincategorie: aanvullend voer; controleer de formele indeling op het volledige etiket. Geen individuele geschiktheidsbeoordeling.",
+    "files": [["vente sport2.jpg", "packaging"], ["vente sport.jpg", "composition"], ["vente sport1.jpg", "analysis"]],
+    "data": {
+      "composition_text": "Tarwegries, Gerst, Haverpellets, Tarwe, Maisglutenvoermeel, Mais, Bietenpulp, Melasse, Zonnebloemzaadschroot, Sojahullen*, Krijt, Grasbrok, Sojaolie, Lijnzaad, Zout, Magnesiumoxide. *Geproduceerd met genetisch gemodificeerde soja.",
+      "ingredients": [],
+      "nutrients": [{"code": "sugar", "value": "6.6", "unit": "%", "basis": "product", "qualifier": "exact"}, {"code": "starch", "value": "26.4", "unit": "%", "basis": "product", "qualifier": "exact"}, {"code": "selenium_total", "value": "0.5", "unit": "mg/kg", "basis": "product", "qualifier": "exact"}]
+    }
+  }
+]
