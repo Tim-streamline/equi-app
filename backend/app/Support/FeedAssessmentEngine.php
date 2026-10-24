@@ -33,18 +33,21 @@ class FeedAssessmentEngine
         }
         $sum = null;
         if ($dryMatter['valid'] && $sugar !== null && $starch !== null) {
-            $maximum = $dm ?? Decimal::of(100);
+            $maximum = $dryMatter['bounds']['upper'];
+            $maximumOpen = $dryMatter['bounds']['upper_open'];
             $sum = ['lower' => $sugar['lower']->plus($starch['lower']), 'upper' => $sugar['upper']->plus($starch['upper']),
                 'lower_open' => $sugar['lower_open'] || $starch['lower_open'], 'upper_open' => $sugar['upper_open'] || $starch['upper_open']];
-            if ($sum['lower']->isGreaterThan($maximum) || ($sum['lower']->isEqualTo($maximum) && $sum['lower_open'])) {
-                $missing[] = $dm === null
+            if ($sum['lower']->isGreaterThan($maximum) || ($sum['lower']->isEqualTo($maximum) && ($sum['lower_open'] || $maximumOpen))) {
+                $missing[] = $maximum->isEqualTo(100) && ! $maximumOpen
                     ? 'Suiker + zetmeel is meer dan 100%; controleer de analysegegevens.'
-                    : 'Suiker + zetmeel is meer dan de beschikbare droge stof ('.$this->text($dm).'% op productbasis); controleer de analysegegevens.';
+                    : 'Suiker + zetmeel past niet binnen de beschikbare droge stof; controleer de analysegegevens.';
                 $sum = null;
             } else {
                 if ($sum['upper']->isGreaterThan($maximum)) {
                     $sum['upper'] = $maximum;
-                    $sum['upper_open'] = false;
+                    $sum['upper_open'] = $maximumOpen;
+                } elseif ($sum['upper']->isEqualTo($maximum)) {
+                    $sum['upper_open'] = $sum['upper_open'] || $maximumOpen;
                 }
                 foreach ($policy['sugar_starch_caps'] as $tier) {
                     $comparison = $sum['lower']->compareTo((string) $tier['threshold']);
@@ -100,30 +103,29 @@ class FeedAssessmentEngine
             'calibration_pending' => true];
     }
 
-    /** @return array{value: ?Decimal, valid: bool} */
+    /** @return array{value: ?Decimal, valid: bool, bounds: ?array} */
     private function dryMatter(array $rows): array
     {
-        $values = [];
+        $bounds = ['lower' => Decimal::of(0), 'upper' => Decimal::of(100), 'lower_open' => false, 'upper_open' => false];
         foreach ($rows as $row) {
-            if (! in_array($row['code'] ?? null, ['dry_matter', 'moisture'], true) || ($row['basis'] ?? null) !== 'product' || ($row['qualifier'] ?? 'exact') !== 'exact') {
+            if (! in_array($row['code'] ?? null, ['dry_matter', 'moisture'], true) || ($row['basis'] ?? null) !== 'product') {
                 continue;
             }
-            $value = $this->percent($row);
-            if ($value === null || $value->isNegative() || $value->isGreaterThan(100)) {
-                return ['value' => null, 'valid' => false];
+            $interval = $this->percentageInterval($row);
+            if ($interval === null) {
+                return ['value' => null, 'valid' => false, 'bounds' => null];
             }
-            $values[] = $row['code'] === 'moisture' ? Decimal::of(100)->minus($value) : $value;
-        }
-        if ($values === []) {
-            return ['value' => null, 'valid' => true];
-        }
-        foreach ($values as $value) {
-            if (! $value->isEqualTo($values[0])) {
-                return ['value' => null, 'valid' => false];
+            if ($row['code'] === 'moisture') {
+                $interval = ['lower' => Decimal::of(100)->minus($interval['upper']), 'upper' => Decimal::of(100)->minus($interval['lower']),
+                    'lower_open' => $interval['upper_open'], 'upper_open' => $interval['lower_open']];
+            }
+            $bounds = $this->intersect($bounds, $interval);
+            if ($bounds === null) {
+                return ['value' => null, 'valid' => false, 'bounds' => null];
             }
         }
 
-        return ['value' => $values[0], 'valid' => true];
+        return ['value' => $this->isExact($bounds) ? $bounds['lower'] : null, 'valid' => true, 'bounds' => $bounds];
     }
 
     private function percent(array $row): ?Decimal
@@ -155,17 +157,7 @@ class FeedAssessmentEngine
             if ($basis !== 'product' && ($basis !== 'dry_matter' || $dm === null || $dm->isZero())) {
                 continue;
             }
-            $value = $this->percent($row);
-            if ($value === null || $value->isNegative() || $value->isGreaterThan(100)) {
-                return null;
-            }
-            $qualifier = $row['qualifier'] ?? 'exact';
-            $interval = match ($qualifier) {
-                'exact' => ['lower' => $value, 'upper' => $value, 'lower_open' => false, 'upper_open' => false],
-                'minimum', 'greater_than' => ['lower' => $value, 'upper' => Decimal::of(100), 'lower_open' => $qualifier === 'greater_than', 'upper_open' => false],
-                'maximum', 'less_than' => ['lower' => Decimal::of(0), 'upper' => $value, 'lower_open' => false, 'upper_open' => $qualifier === 'less_than'],
-                default => null,
-            };
+            $interval = $this->percentageInterval($row);
             if ($interval === null) {
                 return null;
             }
@@ -178,28 +170,55 @@ class FeedAssessmentEngine
             if ($result === null) {
                 $result = $interval;
             } else {
-                $low = $result['lower']->compareTo($interval['lower']);
-                $high = $result['upper']->compareTo($interval['upper']);
-                if ($low < 0) {
-                    $result['lower'] = $interval['lower'];
-                    $result['lower_open'] = $interval['lower_open'];
-                } elseif ($low === 0) {
-                    $result['lower_open'] = $result['lower_open'] || $interval['lower_open'];
-                }
-                if ($high > 0) {
-                    $result['upper'] = $interval['upper'];
-                    $result['upper_open'] = $interval['upper_open'];
-                } elseif ($high === 0) {
-                    $result['upper_open'] = $result['upper_open'] || $interval['upper_open'];
-                }
+                $result = $this->intersect($result, $interval);
             }
-            $comparison = $result['lower']->compareTo($result['upper']);
-            if ($comparison > 0 || ($comparison === 0 && ($result['lower_open'] || $result['upper_open']))) {
+            if ($result === null) {
                 return null;
             }
         }
 
         return $result;
+    }
+
+    private function percentageInterval(array $row): ?array
+    {
+        $value = $this->percent($row);
+        if ($value === null || $value->isNegative() || $value->isGreaterThan(100)) {
+            return null;
+        }
+        $qualifier = $row['qualifier'] ?? 'exact';
+        $interval = match ($qualifier) {
+            'exact' => ['lower' => $value, 'upper' => $value, 'lower_open' => false, 'upper_open' => false],
+            'minimum', 'greater_than' => ['lower' => $value, 'upper' => Decimal::of(100), 'lower_open' => $qualifier === 'greater_than', 'upper_open' => false],
+            'maximum', 'less_than' => ['lower' => Decimal::of(0), 'upper' => $value, 'lower_open' => false, 'upper_open' => $qualifier === 'less_than'],
+            default => null,
+        };
+        if ($interval !== null && $interval['lower']->isEqualTo($interval['upper']) && ($interval['lower_open'] || $interval['upper_open'])) {
+            return null;
+        }
+
+        return $interval;
+    }
+
+    private function intersect(array $left, array $right): ?array
+    {
+        $low = $left['lower']->compareTo($right['lower']);
+        $high = $left['upper']->compareTo($right['upper']);
+        if ($low < 0) {
+            $left['lower'] = $right['lower'];
+            $left['lower_open'] = $right['lower_open'];
+        } elseif ($low === 0) {
+            $left['lower_open'] = $left['lower_open'] || $right['lower_open'];
+        }
+        if ($high > 0) {
+            $left['upper'] = $right['upper'];
+            $left['upper_open'] = $right['upper_open'];
+        } elseif ($high === 0) {
+            $left['upper_open'] = $left['upper_open'] || $right['upper_open'];
+        }
+        $comparison = $left['lower']->compareTo($left['upper']);
+
+        return $comparison > 0 || ($comparison === 0 && ($left['lower_open'] || $left['upper_open'])) ? null : $left;
     }
 
     private function isExact(array $value): bool

@@ -226,6 +226,84 @@ class FeedAssessmentEngineTest extends TestCase
         }
     }
 
+    public static function dryMatterUpperBounds(): array
+    {
+        return [
+            'minimum moisture' => ['moisture', '80', '%', 'minimum', false],
+            'maximum dry matter' => ['dry_matter', '20', '%', 'maximum', false],
+            'strict minimum moisture' => ['moisture', '80', '%', 'greater_than', true],
+            'strict maximum dry matter' => ['dry_matter', '20', '%', 'less_than', true],
+            'minimum moisture in g/kg' => ['moisture', '800', 'g/kg', 'minimum', false],
+            'maximum dry matter in g/kg' => ['dry_matter', '200', 'g/kg', 'maximum', false],
+        ];
+    }
+
+    #[DataProvider('dryMatterUpperBounds')]
+    public function test_moisture_and_dry_matter_bounds_limit_combined_nutrients(string $code, string $value, string $unit, string $qualifier, bool $open): void
+    {
+        $bound = $this->row($code, $value, unit: $unit, qualifier: $qualifier);
+        $impossible = $this->assess([$this->row('sugar', '10'), $this->row('starch', '20'), $bound]);
+        $this->assertSame('insufficient_data', $impossible['status']);
+        $this->assertNull($impossible['sugar_starch']);
+        $this->assertNull($impossible['automatic_score']);
+        $this->assertSame([], $impossible['applied_caps']);
+        $this->assertNotEmpty($impossible['missing_data']);
+
+        $boundary = $this->assess([$this->row('sugar', '10'), $this->row('starch', '10'), $bound]);
+        if ($open) {
+            $this->assertNull($boundary['sugar_starch']);
+            $this->assertNull($boundary['automatic_score']);
+            $this->assertNotEmpty($boundary['missing_data']);
+        } else {
+            $this->assertSame('20', $boundary['sugar_starch']['lower']);
+            $this->assertSame('0', $boundary['automatic_score']);
+            $this->assertSame([], $boundary['missing_data']);
+        }
+
+        $possible = $this->assess([$this->row('sugar', '8'), $this->row('starch', '8'), $bound]);
+        $this->assertSame('16', $possible['sugar_starch']['lower']);
+        $this->assertSame('4', $possible['score_cap']);
+        $this->assertSame([], $possible['missing_data']);
+
+        $range = $this->assess([$this->row('sugar', '8', qualifier: 'minimum'), $this->row('starch', '8'), $bound]);
+        $this->assertSame(['lower' => '16', 'upper' => '20', 'lower_open' => false, 'upper_open' => $open, 'exact' => false], $range['sugar_starch']);
+
+        $matchingUpper = $this->assess([$this->row('sugar', '10', qualifier: 'maximum'), $this->row('starch', '10'), $bound]);
+        $this->assertSame($open, $matchingUpper['sugar_starch']['upper_open']);
+
+        $dry = $this->assess([$this->row('sugar', '10', 'dry_matter'), $this->row('starch', '20', 'dry_matter'), $bound]);
+        $this->assertNull($dry['sugar_starch']);
+        $this->assertNotEmpty($dry['missing_data']);
+    }
+
+    public function test_dry_matter_bounds_are_intersected_with_exact_values_and_each_other(): void
+    {
+        $sugarStarch = [$this->row('sugar', '4'), $this->row('starch', '4')];
+        $minimumMoisture = $this->row('moisture', '80', qualifier: 'minimum');
+        $maximumDryMatter = $this->row('dry_matter', '20', qualifier: 'maximum');
+        foreach ([
+            [$minimumMoisture, $this->row('dry_matter', '30')],
+            [$this->row('dry_matter', '30'), $minimumMoisture],
+            [$maximumDryMatter, $this->row('moisture', '70', qualifier: 'maximum')],
+            [$this->row('dry_matter', '20', qualifier: 'minimum'), $this->row('moisture', '80', qualifier: 'greater_than')],
+        ] as $bounds) {
+            $result = $this->assess([...$sugarStarch, ...$bounds]);
+            $this->assertSame('insufficient_data', $result['status']);
+            $this->assertNull($result['sugar_starch']);
+            $this->assertSame([], $result['applied_caps']);
+        }
+
+        $consistent = $this->assess([...$sugarStarch, $minimumMoisture, $this->row('dry_matter', '10')]);
+        $this->assertSame('8', $consistent['sugar_starch']['lower']);
+        $this->assertSame([], $consistent['missing_data']);
+
+        $exact = $this->assess([$this->row('sugar', '10', 'dry_matter'), $this->row('starch', '20', 'dry_matter'),
+            $maximumDryMatter, $this->row('moisture', '80', qualifier: 'maximum')]);
+        $this->assertSame('6', $exact['sugar_starch']['lower']);
+        $this->assertSame('20', $exact['normalization'][0]['dry_matter_percent']);
+        $this->assertSame([], $exact['missing_data']);
+    }
+
     public function test_combined_upper_bound_is_limited_to_available_dry_matter(): void
     {
         $result = $this->assess([
