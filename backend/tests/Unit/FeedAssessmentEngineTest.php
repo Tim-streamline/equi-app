@@ -276,6 +276,52 @@ class FeedAssessmentEngineTest extends TestCase
         $this->assertNotEmpty($dry['missing_data']);
     }
 
+    public static function conflictingNutrientBasesWithBoundedDryMatter(): array
+    {
+        return [
+            'sugar with minimum moisture' => ['sugar', '30', '10', 'moisture', '10', 'minimum'],
+            'starch with maximum dry matter' => ['starch', '30', '10', 'dry_matter', '90', 'maximum'],
+            'sugar at excluded dry matter boundary' => ['sugar', '30', '50', 'dry_matter', '60', 'less_than'],
+            'starch at excluded moisture boundary' => ['starch', '30', '50', 'moisture', '40', 'greater_than'],
+            'sugar below minimum dry matter conversion' => ['sugar', '20', '50', 'dry_matter', '80', 'minimum'],
+            'starch below maximum moisture conversion' => ['starch', '20', '50', 'moisture', '20', 'maximum'],
+        ];
+    }
+
+    #[DataProvider('conflictingNutrientBasesWithBoundedDryMatter')]
+    public function test_conflicting_nutrient_bases_with_bounded_dry_matter_are_unresolved(string $code, string $productValue, string $dryValue, string $boundCode, string $boundValue, string $qualifier): void
+    {
+        $nutrients = [$this->row($code, $productValue), $this->row($code, $dryValue, 'dry_matter')];
+        foreach ([$nutrients, array_reverse($nutrients)] as $rows) {
+            $result = $this->assess([...$rows,
+                $this->row($code === 'sugar' ? 'starch' : 'sugar', '0'),
+                $this->row($boundCode, $boundValue, qualifier: $qualifier)]);
+
+            $this->assertSame('insufficient_data', $result['status']);
+            $this->assertNull($result['sugar_starch']);
+            $this->assertNull($result['score_cap']);
+            $this->assertNull($result['automatic_score']);
+            $this->assertSame([], $result['applied_caps']);
+            $this->assertNotEmpty($result['missing_data']);
+        }
+    }
+
+    public function test_mixed_basis_nutrients_require_exact_dry_matter_even_when_potentially_compatible(): void
+    {
+        $rows = [$this->row('sugar', '30'), $this->row('sugar', '50', 'dry_matter'),
+            $this->row('starch', '0'), $this->row('moisture', '10', qualifier: 'minimum')];
+        $unresolved = $this->assess($rows);
+        $this->assertSame('insufficient_data', $unresolved['status']);
+        $this->assertNull($unresolved['sugar_starch']);
+        $this->assertNull($unresolved['automatic_score']);
+        $this->assertNotEmpty($unresolved['missing_data']);
+
+        $resolved = $this->assess([...$rows, $this->row('dry_matter', '60')]);
+        $this->assertSame('30', $resolved['sugar_starch']['lower']);
+        $this->assertSame('0', $resolved['automatic_score']);
+        $this->assertSame([], $resolved['missing_data']);
+    }
+
     public function test_dry_matter_bounds_are_intersected_with_exact_values_and_each_other(): void
     {
         $sugarStarch = [$this->row('sugar', '4'), $this->row('starch', '4')];

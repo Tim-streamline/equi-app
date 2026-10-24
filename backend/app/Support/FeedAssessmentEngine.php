@@ -153,9 +153,12 @@ class FeedAssessmentEngine
                 continue;
             }
             $basis = $row['basis'] ?? 'unknown';
-            // Dry-matter percentages have no defined basis when no dry matter exists.
-            if ($basis !== 'product' && ($basis !== 'dry_matter' || $dm === null || $dm->isZero())) {
+            if ($basis !== 'product' && $basis !== 'dry_matter') {
                 continue;
+            }
+            // An unconvertible dry-matter row may contradict another row for this nutrient.
+            if ($basis === 'dry_matter' && ($dm === null || $dm->isZero())) {
+                return null;
             }
             $interval = $this->percentageInterval($row);
             if ($interval === null) {
