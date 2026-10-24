@@ -3,10 +3,10 @@
     import PageHeader from '$lib/components/PageHeader.svelte';
     import Modal from '$lib/components/Modal.svelte';
     import Field from '$lib/components/Field.svelte';
-    import { useForm } from '@inertiajs/svelte';
+    import { router, useForm } from '@inertiajs/svelte';
     import { Card, CardContent, Button, Input, Textarea, Select, Badge } from '$lib/components/ui';
 
-    let { profiles, cards, libraryOptions, ingredientOptions, canPublish } = $props();
+    let { profiles, cards, libraryOptions, ingredientOptions, canPublish, errors = {} } = $props();
     let profile = $state(null);
     let ruleOpen = $state(false);
     let cardOpen = $state(false);
@@ -14,11 +14,11 @@
     let history = $state(null);
     let historyOpen = $state(false);
     const cardForm = useForm({ title: '', explanation: '', internal_notes: '', status: 'draft', library_item_id: '', expected_updated_at: null });
-    const rules = useForm({ principles: '', explanation: '', sugar_starch_challenged: '', sugar_starch_healthy: '', organic_selenium_cap: '', unknown_added_selenium_cap: '', exceptions: [], expected_number: null });
+    const rules = useForm({ principles: '', explanation: '', sugar_starch_challenged: '', sugar_starch_healthy: '', sugar_starch_caps: [], organic_selenium_cap: '', unknown_added_selenium_cap: '', exceptions: [], expected_number: null });
     function editProfile(item) {
         profile = item;
         const version = item.versions[0];
-        $rules.defaults({ principles: '', explanation: '', ...version?.data, exceptions: version?.data?.exceptions ?? [], expected_number: version?.number ?? null });
+        $rules.defaults({ principles: '', explanation: '', ...version?.data, sugar_starch_caps: version?.data?.sugar_starch_caps ?? [], exceptions: version?.data?.exceptions ?? [], expected_number: version?.number ?? null });
         $rules.reset(); $rules.clearErrors(); ruleOpen = true;
     }
     function saveRules(e) { e.preventDefault(); $rules.post(`/admin/feed-scanner/profiles/${profile.id}/rules`, { onSuccess: () => ruleOpen = false }); }
@@ -33,14 +33,17 @@
 <svelte:head><title>Beoordelingsregels & kennis · EquiApp Admin</title></svelte:head>
 <AdminLayout title="Voerscanner · Beoordelingsregels & kennis">
     <PageHeader title="Beoordelingsregels & kennis" description="Beheer jouw voedingsbeleid en de uitleg die daarbij hoort." />
-    <div class="mb-5 rounded-lg border bg-muted p-4 text-sm">De grenzen en uitgangspunten zijn alvast vastgelegd. De definitieve puntenweging kalibreren we later met echte producten. Er worden nu nog geen scores berekend.</div>
+    <div class="mb-5 rounded-lg border bg-muted p-4 text-sm">Activeer de scoreplafonds per profiel om producten te beoordelen. Een plafond is een maximum, geen eindscore. Alleen een zeker geldend plafond van 0 bepaalt de automatische score volledig. De overige puntenweging volgt na kalibratie.</div>
+    {#each Object.values(errors) as error}<p role="alert" class="mb-3 text-sm text-destructive">{error}</p>{/each}
     <div class="grid gap-4 md:grid-cols-2">
         {#each profiles as item}
             <Card><CardContent class="space-y-4 p-5">
-                <div class="flex items-center justify-between"><h2 class="text-lg font-semibold">{item.name}</h2><Badge variant="muted">Conceptbeleid</Badge></div>
+                <div class="flex items-center justify-between"><h2 class="text-lg font-semibold">{item.name}</h2><Badge variant="muted">{item.active_rule_version_id === item.versions[0]?.id ? 'Actieve plafonds' : 'Conceptbeleid'}</Badge></div>
                 {@const data = item.versions[0]?.data}
                 {#if data}<div class="space-y-2 text-sm"><p>Suiker + zetmeel: maximaal {data.sugar_starch_challenged}% bij gezondheidsuitdagingen / {data.sugar_starch_healthy}% voor gezonde paarden.</p><p>Bevestigd organisch selenium: maximaal {data.organic_selenium_cap}/10.</p><p>Bevestigd toegevoegd selenium, vorm onbekend: maximaal {data.unknown_added_selenium_cap}/10.</p><p class="text-muted-foreground">Versie {item.versions[0].number} · Puntenweging nog niet gekalibreerd</p></div>{/if}
-                <div class="flex gap-2"><Button variant="outline" onclick={() => editProfile(item)}>Beleid bewerken</Button><Button variant="ghost" onclick={() => { history = item; historyOpen = true; }}>Historie</Button></div>
+                {#each data?.sugar_starch_caps ?? [] as tier}<p class="text-sm">{tier.inclusive ? 'Vanaf' : 'Boven'} {tier.threshold}% suiker + zetmeel: maximaal {tier.max_score}/10.</p>{/each}
+                {#if item.active_rule_version_id && item.active_rule_version_id !== item.versions[0]?.id}<p class="text-xs text-muted-foreground">Actief: versie {item.versions.find(v => v.id === item.active_rule_version_id)?.number}. Het nieuwe concept verandert bestaande berekeningen nog niet.</p>{/if}
+                <div class="flex flex-wrap gap-2"><Button variant="outline" onclick={() => editProfile(item)}>Beleid bewerken</Button><Button variant="ghost" onclick={() => { history = item; historyOpen = true; }}>Historie</Button>{#if canPublish && item.versions[0]?.status === 'draft' && item.versions[0]?.schema_version === 2}<Button onclick={() => router.post(`/admin/feed-scanner/profiles/${item.id}/publish`, { version_id: item.versions[0].id })}>Scoreplafonds activeren</Button>{/if}</div>
             </CardContent></Card>
         {/each}
     </div>
@@ -57,6 +60,11 @@
             <Field label="Voedingsprincipes"><Textarea bind:value={$rules.principles} rows={3} /></Field>
             <h3 class="border-t pt-3 font-semibold">Suiker + zetmeel samen · op productbasis</h3>
             <div class="grid gap-4 sm:grid-cols-2"><Field label="Maximum bij gezondheidsuitdagingen (%)"><Input type="number" step="0.1" min="0" max="100" bind:value={$rules.sugar_starch_challenged} /></Field><Field label="Maximum voor gezonde paarden (%)"><Input type="number" step="0.1" min="0" max="100" bind:value={$rules.sugar_starch_healthy} /></Field></div>
+            <p class="text-xs text-muted-foreground">Deze twee beleidsgrenzen zijn nog geen puntenaftrek of persoonlijke geschiktheidsbeoordeling.</p>
+            <h3 class="border-t pt-3 font-semibold">Scoreplafonds suiker + zetmeel</h3>
+            {#each $rules.sugar_starch_caps as tier, index}<div class="grid gap-3 rounded-lg border p-3 sm:grid-cols-3"><Field label="Grens"><Select bind:value={tier.inclusive} options={[{ value: true, label: 'Vanaf (inclusief)' }, { value: false, label: 'Boven (exclusief)' }]} /></Field><Field label="Suiker + zetmeel (%)"><Input type="number" step="any" min="0" max="100" bind:value={tier.threshold} /></Field><Field label="Maximale score /10"><Input type="number" step="0.01" min="0" max="10" bind:value={tier.max_score} /></Field><Button type="button" variant="ghost" size="sm" onclick={() => $rules.sugar_starch_caps = $rules.sugar_starch_caps.filter((_, i) => i !== index)}>Grens verwijderen</Button></div>{/each}
+            <Button type="button" variant="outline" onclick={() => $rules.sugar_starch_caps = [...$rules.sugar_starch_caps, { threshold: '', inclusive: false, max_score: '' }]}>Scoregrens toevoegen</Button>
+            <p class="text-xs text-muted-foreground">Het strengste toepasselijke plafond geldt. Opslaan maakt een concept; pas na activeren gebruiken nieuwe berekeningen deze regels.</p>
             <h3 class="border-t pt-3 font-semibold">Selenium · scoreplafonds</h3>
             <Field label="Bevestigd organisch gebonden selenium (maximaal /10)"><Input type="number" step="0.1" min="0" max="10" bind:value={$rules.organic_selenium_cap} /></Field>
             <Field label="Bevestigd toegevoegd selenium, vorm onbekend (maximaal /10)"><Input type="number" step="0.1" min="0" max="10" bind:value={$rules.unknown_added_selenium_cap} /></Field>
@@ -82,7 +90,7 @@
         {#snippet footer()}<Button variant="outline" onclick={() => cardOpen = false}>Annuleren</Button><Button form="feed-card" type="submit" disabled={$cardForm.processing}>Opslaan</Button>{/snippet}
     </Modal>
     <Modal bind:open={historyOpen} title={`Beleidshistorie · ${history?.name ?? ''}`} size="lg">
-        {#if history}{#each history.versions as version}<div class="space-y-2 border-b py-4"><p class="font-semibold">Versie {version.number} · Concept · {new Date(version.created_at).toLocaleString('nl-NL')}</p><p class="whitespace-pre-wrap text-sm">{version.data.principles}</p><p class="text-sm">Suiker + zetmeel: {version.data.sugar_starch_challenged}% / {version.data.sugar_starch_healthy}%</p><p class="text-sm">Seleniumplafonds: {version.data.organic_selenium_cap}/10 · {version.data.unknown_added_selenium_cap}/10</p><p class="whitespace-pre-wrap text-sm">{version.data.explanation}</p>{#each version.data.exceptions ?? [] as row}<p class="text-sm">{ingredientOptions.find(i => i.id === row.ingredient_id)?.name ?? 'Ingrediënt'}: {row.condition} {row.max_percentage != null ? `(maximaal ${row.max_percentage}%)` : ''}</p>{/each}</div>{/each}{/if}
+        {#if history}{#each history.versions as version}<div class="space-y-2 border-b py-4"><p class="font-semibold">Versie {version.number} · {version.id === history.active_rule_version_id ? 'Actief' : version.status === 'published' ? 'Eerder geactiveerd' : 'Concept'} · {new Date(version.created_at).toLocaleString('nl-NL')}</p><p class="whitespace-pre-wrap text-sm">{version.data.principles}</p><p class="text-sm">Suiker + zetmeel: {version.data.sugar_starch_challenged}% / {version.data.sugar_starch_healthy}%</p>{#each version.data.sugar_starch_caps ?? [] as tier}<p class="text-sm">{tier.inclusive ? 'Vanaf' : 'Boven'} {tier.threshold}%: maximaal {tier.max_score}/10</p>{/each}<p class="text-sm">Seleniumplafonds: {version.data.organic_selenium_cap}/10 · {version.data.unknown_added_selenium_cap}/10</p><p class="whitespace-pre-wrap text-sm">{version.data.explanation}</p>{#each version.data.exceptions ?? [] as row}<p class="text-sm">{ingredientOptions.find(i => i.id === row.ingredient_id)?.name ?? 'Ingrediënt'}: {row.condition} {row.max_percentage != null ? `(maximaal ${row.max_percentage}%)` : ''}</p>{/each}</div>{/each}{/if}
         {#snippet footer()}<Button onclick={() => historyOpen = false}>Sluiten</Button>{/snippet}
     </Modal>
 </AdminLayout>

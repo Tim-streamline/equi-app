@@ -1,0 +1,7 @@
+{
+  "sugar_starch_caps": [
+    {"threshold": 20, "inclusive": true, "max_score": 0},
+    {"threshold": 15, "inclusive": false, "max_score": 4},
+    {"threshold": 12, "inclusive": false, "max_score": 5}
+  ]
+}

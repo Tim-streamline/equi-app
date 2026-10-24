@@ -127,6 +127,11 @@ Route::middleware('auth:admin')->group(function () {
         Route::post('cards', 'saveCard');
         Route::put('cards/{card}', 'saveCard');
         Route::post('profiles/{profile}/rules', 'saveRules')->whereUuid('profile');
+        Route::post('profiles/{profile}/publish', 'publishRules')->whereUuid('profile');
+    });
+    Route::middleware('admin.role:admin,content_editor')->prefix('feed-scanner')->controller(\App\Http\Controllers\Admin\FeedAssessmentController::class)->group(function () {
+        Route::post('products/{product}/assess', 'calculate');
+        Route::post('assessments/{assessment}/correct', 'correct');
     });
     Route::resource('products', ProductController::class)->except(['create', 'show'])->middleware('admin.role:admin');
     Route::resource('ingredients', IngredientController::class)->except(['create', 'show'])->middleware('admin.role:admin');
