@@ -36,6 +36,7 @@ function renderScan(rows, id) {
     '@/db/hooks': hooks,
     '@/lib/scanner-presentation': presentation,
     '@/components/scanner/ScannerUI': { C: {}, s: {}, ScanScore: 'ScanScore' },
+    '@/components/scanner/ScannerAnalysisStates': {},
   });
   const flatten = node => Array.isArray(node) ? node.flatMap(flatten)
     : node && typeof node === 'object' ? [node, ...flatten(node.props?.children)] : [node];
