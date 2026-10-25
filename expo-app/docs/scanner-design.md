@@ -11,3 +11,7 @@ Camera en fotobibliotheek gebruiken de bestaande Expo ImagePicker. Geselecteerde
 De native cameratoestemming is in `app.json` ingeschakeld met een gebruikersgerichte toelichting. Dit vereist een nieuwe native build; alleen een JavaScript-update voegt de toestemming niet aan een al geïnstalleerde app toe. De fotobibliotheek blijft beschikbaar als alternatief.
 
 De serverkoppeling voor productidentificatie, etiketherkenning, upload/review en gepubliceerde versiegebonden beoordelingen blijft afzonderlijk vervolgwerk. De fictieve API-routes uit het ontwerp worden niet aangeroepen. Er zijn geen database- of beoordelingsregelwijzigingen voor deze frontend nodig.
+
+De visuele vergelijking van 25 oktober volgt de HTML-maten voor de zoekbalk in de kop, de grote productkaart met vaste actieknoppen onderaan, compacte recente scans, de scanhistorie en resultaatkaarten. De scannerbalk verwijst naar de bestaande accountpagina zoals het ontwerp. De echte systeemcamera/fotokiezer blijft in gebruik; de getekende camera en gesimuleerde herkennings- en analyseanimaties zijn geen werkende functies. Onderdelen waarvoor nog geen echte gegevens bestaan (zoals positieve punten en analytische tabellen) krijgen geen voorbeeldinhoud.
+
+De recent overeengekomen introductie, lege scanhistorie, ondertitel “Wij beoordelen het voer voor je.” en toelichting direct onder het cijfer hebben voorrang op de teksten in het HTML-bestand. De opsomming van voercategorieën blijft verwijderd van het startscherm.
