@@ -10,15 +10,15 @@
 
     let { products, filters, reviewCount, ingredientOptions, categories, nutrientOptions, canPublish, assessmentProfiles = [], errors = {} } = $props();
     let q = $state(filters.q ?? '');
-    let review = $state(!!Number(filters.review));
+    let status = $state(filters.status ?? '');
     let category = $state(filters.category ?? '');
     let sort = $state(filters.sort ?? 'name');
     let editing = $state(null);
     let open = $state(false);
     let tab = $state('general');
-    let detailId = $state(null);
+    let detailId = $state(filters.open ?? null);
     const detail = $derived(products.data.find(p => p.id === detailId));
-    let historyOpen = $state(false);
+    let historyOpen = $state(!!filters.open);
     let timer;
     let uploadVersion = $state(null);
     let uploadOpen = $state(false);
@@ -29,7 +29,7 @@
     const empty = () => ({ brand: '', name: '', barcode: '', category: '', composition_text: '', usage: '', source: '', internal_notes: '', ingredients: [], nutrients: [], expected_number: null, approve: false });
     const form = useForm(empty());
     const uploadForm = useForm({ file: null, purpose: 'composition' });
-    function apply() { clearTimeout(timer); timer = setTimeout(() => router.get('/admin/feed-scanner/products', { q, review: review ? 1 : undefined, sort, category }, { preserveState: true, replace: true }), 250); }
+    function apply() { clearTimeout(timer); timer = setTimeout(() => router.get('/admin/feed-scanner/products', { q, status, sort, category }, { preserveState: true, replace: true }), 250); }
     function edit(record = null) {
         editing = record; tab = 'general';
         const version = record?.versions?.[0];
@@ -56,18 +56,20 @@
     function upload(e) { e.preventDefault(); $uploadForm.post(`/admin/feed-scanner/versions/${uploadVersion.id}/attachments`, { forceFormData: true, onSuccess: () => uploadOpen = false }); }
 </script>
 
-<svelte:head><title>Merken & producten · EquiApp Admin</title></svelte:head>
-<AdminLayout title="Voerscanner · Merken & producten">
-    <PageHeader title="Merken & producten" description={`${products.total} producten · ${reviewCount} wachten op controle`}>
+<svelte:head><title>Voerproducten · EquiApp Admin</title></svelte:head>
+<AdminLayout title="Voerscanner · Voerproducten">
+    <PageHeader title="Voerproducten" description={`${products.total} producten in dit overzicht · ${reviewCount} wachten op controle`}>
         {#snippet actions()}<Button onclick={() => edit()}>Product toevoegen</Button>{/snippet}
     </PageHeader>
+    <div class="mb-5 flex flex-wrap gap-2" aria-label="Productstatus">
+        {#each [['', 'Alle producten'], ['review', 'Te beoordelen'], ['approved', 'Goedgekeurd'], ['needs_info', 'Informatie ontbreekt']] as [value, label]}<Button variant={status === value ? 'default' : 'outline'} aria-pressed={status === value} onclick={() => { status = value; apply(); }}>{label}</Button>{/each}
+    </div>
     {#each Object.values(errors) as error}<p role="alert" class="mb-3 rounded-lg border border-destructive p-3 text-sm text-destructive">{error}</p>{/each}
     <Card><CardContent class="space-y-4 p-4">
         <div class="flex flex-wrap items-center gap-3">
             <Input class="min-w-56 flex-1" placeholder="Zoek merk, product of barcode…" bind:value={q} oninput={apply} aria-label="Producten zoeken" />
             <Select bind:value={category} onchange={apply} options={[{ value: '', label: 'Alle categorieën' }, ...Object.entries(categories).map(([value, label]) => ({ value, label }))]} />
-            <Select bind:value={sort} onchange={apply} options={[{ value: 'name', label: 'Merk en naam' }, { value: 'scans', label: 'Meest gescand' }]} />
-            <label class="flex items-center gap-2 text-sm"><input type="checkbox" bind:checked={review} onchange={apply} /> Te beoordelen</label>
+            <Select bind:value={sort} onchange={apply} options={[{ value: 'name', label: 'Merk en naam' }, { value: 'newest', label: 'Nieuwste eerst' }, { value: 'scans', label: 'Meest gescand' }]} />
         </div>
         {#each products.data as product (product.id)}
             {@const latest = product.versions?.[0]}
@@ -84,6 +86,7 @@
                     </div>
                     <div class="flex flex-wrap gap-2">
                         <Button size="sm" variant="outline" onclick={() => edit(product)}>Bewerken</Button>
+                        {#if ['draft', 'needs_info', 'legacy'].includes(latest?.status)}<Button size="sm" variant="outline" onclick={() => { detailId = product.id; historyOpen = true; }}>Product bekijken</Button>{/if}
                         <Button size="sm" variant="ghost" onclick={() => { detailId = product.id; historyOpen = true; }}>Beoordelingen & historie</Button>
                         {#if ['draft', 'needs_info'].includes(latest?.status) && product.catalog_status !== 'archived'}
                             <Button size="sm" variant="outline" onclick={() => beginUpload(latest)}>Etiket toevoegen</Button>
@@ -167,6 +170,6 @@
                 {#each version.attachments ?? [] as file}<a href={`/admin/feed-scanner/attachments/${file.id}`} class="block text-sm text-primary underline">{purposes[file.purpose]}: {file.original_name}</a>{/each}
             </section>
         {/each}{/if}
-        {#snippet footer()}<Button onclick={() => historyOpen = false}>Sluiten</Button>{/snippet}
+        {#snippet footer()}{#if canPublish && detail && ['draft', 'needs_info'].includes(detail.versions[0]?.status) && detail.catalog_status !== 'archived'}<Button variant="outline" onclick={() => reviewProduct(detail, 'needs_info')}>Informatie ontbreekt</Button><Button onclick={() => reviewProduct(detail, 'approve')}>Goedkeuren</Button>{/if}<Button variant="outline" onclick={() => historyOpen = false}>Sluiten</Button>{/snippet}
     </Modal>
 </AdminLayout>

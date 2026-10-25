@@ -21,6 +21,7 @@
 
     function isActive(item) {
         if (item.match) return url === item.match || url === item.match + '/';
+        if (item.aliases?.some(alias => url === alias || url.startsWith(alias + '?'))) return true;
         return url === item.href || url.startsWith(item.href + '/') || url.startsWith(item.href + '?');
     }
 

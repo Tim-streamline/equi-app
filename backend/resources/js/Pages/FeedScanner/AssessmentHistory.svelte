@@ -32,7 +32,7 @@
         {@const profile = profiles.find(p => p.id === version.profile_id)}
         <div class="space-y-3 rounded-lg border p-4">
             <div class="flex flex-wrap items-center justify-between gap-2"><h4 class="font-semibold">Productversie {version.number}</h4><Button size="sm" variant="outline" disabled={calculating || !profile?.active_rule_version_id || product.catalog_status === 'archived'} onclick={() => calculate(version)}>Berekenen met actieve regels</Button></div>
-            {#if !version.profile_id}<p class="text-sm text-muted-foreground">Kies eerst een categorie door een nieuw productconcept op te slaan.</p>{:else if !profile?.active_rule_version_id}<p class="text-sm text-muted-foreground"><a href="/admin/feed-scanner/rules" class="underline">Activeer eerst de scoreplafonds</a> voor dit profiel.</p>{/if}
+            {#if !version.profile_id}<p class="text-sm text-muted-foreground">Kies eerst een categorie door een nieuw productconcept op te slaan.</p>{:else if !profile?.active_rule_version_id}<p class="text-sm text-muted-foreground"><a href="/admin/feed-scanner/settings" class="underline">Activeer eerst de scoreplafonds</a> voor dit profiel.</p>{/if}
             {#each version.assessments ?? [] as assessment, index (assessment.id)}
                 {@const manual = assessment.overrides[0]}
                 {@const isCurrent = versionIndex === 0 && index === 0 && assessment.rule_version_id === profile?.active_rule_version_id}

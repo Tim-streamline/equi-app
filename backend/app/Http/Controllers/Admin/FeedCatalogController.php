@@ -12,6 +12,7 @@ use App\Models\LibraryItem;
 use App\Models\Product;
 use App\Models\ProductVersion;
 use App\Support\AuditLogger;
+use App\Support\FeedAdminReadModel;
 use App\Support\FeedCatalog;
 use App\Support\FeedPolicy;
 use Illuminate\Http\Request;
@@ -39,7 +40,7 @@ class FeedCatalogController extends Controller
     {
         $rows = Ingredient::query()->when($request->filled('q'), fn ($q) => $q->where(function ($query) use ($request) {
             $query->where('name', 'ilike', '%'.$request->string('q').'%')->orWhereIn('id', IngredientRevision::select('ingredient_id')->whereRaw('data::text ILIKE ?', ['%'.$request->string('q').'%']));
-        }))->when($request->filled('status'), fn ($q) => $q->where('catalog_status', $request->string('status')))
+        }))->when($request->filled('status'), fn ($q) => $q->where('catalog_status', $request->string('status')), fn ($q) => $q->where('catalog_status', '!=', 'removed'))
             ->orderBy('name')->paginate(25)->withQueryString();
         $rows->through(function ($ingredient) {
             $ingredient->setAttribute('versions', IngredientRevision::where('ingredient_id', $ingredient->id)->orderByDesc('number')->get());
@@ -52,6 +53,7 @@ class FeedCatalogController extends Controller
 
     public function saveIngredient(Request $request, ?Ingredient $ingredient = null)
     {
+        abort_if($ingredient?->catalog_status === 'removed', 409, 'Herstel dit ingrediënt voordat je het bewerkt.');
         $data = $request->validate([
             'name' => ['required', 'string', 'max:255', Rule::unique('ingredients')->ignore($ingredient?->id)],
             'category' => ['nullable', 'string', 'max:255'], 'explanation' => ['nullable', 'string', 'max:20000'],
@@ -72,6 +74,7 @@ class FeedCatalogController extends Controller
         }
         DB::transaction(function () use ($data, $ingredient, $request) {
             $record = $ingredient ? Ingredient::lockForUpdate()->findOrFail($ingredient->id) : (new Ingredient)->forceFill(['name' => $data['name'], 'catalog_status' => 'draft']);
+            abort_if($record->catalog_status === 'removed', 409, 'Herstel dit ingrediënt voordat je het bewerkt.');
             if (! $record->exists) {
                 $record->save();
             }
@@ -102,7 +105,7 @@ class FeedCatalogController extends Controller
             // Same lock order for all ingredient publishers, including different ingredients.
             DB::table('feed_assessment_profiles')->orderBy('id')->lockForUpdate()->get();
             $record = Ingredient::lockForUpdate()->findOrFail($ingredient->id);
-            abort_if($record->catalog_status === 'archived', 409, 'Sla eerst een nieuw concept op om deze kaart opnieuw te publiceren.');
+            abort_if(in_array($record->catalog_status, ['archived', 'removed']), 409, 'Herstel de kaart en sla een nieuw concept op om opnieuw te publiceren.');
             $revision = FeedCatalog::latestIngredient($record);
             abort_unless($revision && $revision->id === $data['version_id'] && $revision->status === 'draft', 409, 'Open het nieuwste concept.');
             FeedCatalog::publishIngredient($record, $revision, $request->user('admin')->id);
@@ -115,21 +118,73 @@ class FeedCatalogController extends Controller
     public function archiveIngredient(Request $request, Ingredient $ingredient)
     {
         abort_unless($this->canPublish($request), 403);
-        $ingredient->forceFill(['catalog_status' => 'archived'])->save();
-        AuditLogger::log('archived', $ingredient);
+        DB::transaction(function () use ($ingredient) {
+            $record = Ingredient::lockForUpdate()->findOrFail($ingredient->id);
+            abort_if($record->catalog_status === 'removed', 409);
+            $record->forceFill(['catalog_status' => 'archived'])->save();
+            AuditLogger::log('archived', $record);
+        });
 
         return back()->with('success', 'Ingrediënt gearchiveerd. De historie blijft bewaard.');
     }
 
+    public function removeIngredient(Request $request, Ingredient $ingredient)
+    {
+        abort_unless($this->canPublish($request), 403);
+        DB::transaction(function () use ($ingredient) {
+            $record = Ingredient::lockForUpdate()->findOrFail($ingredient->id);
+            $before = $record->only('catalog_status');
+            $record->forceFill(['catalog_status' => 'removed'])->save();
+            AuditLogger::log('ingredient_removed', $record, before: $before, after: ['catalog_status' => 'removed']);
+        });
+
+        return back()->with('success', 'Ingrediënt verwijderd. Eerdere koppelingen en historie blijven bewaard. Herstellen kan via de filter Verwijderd.');
+    }
+
+    public function restoreIngredient(Request $request, Ingredient $ingredient)
+    {
+        abort_unless($this->canPublish($request), 403);
+        DB::transaction(function () use ($ingredient) {
+            $record = Ingredient::lockForUpdate()->findOrFail($ingredient->id);
+            abort_unless($record->catalog_status === 'removed', 409);
+            $record->forceFill(['catalog_status' => 'archived'])->save();
+            AuditLogger::log('ingredient_restored', $record);
+        });
+
+        return back()->with('success', 'Ingrediënt hersteld als gearchiveerd. Je kunt het weer bewerken; het is niet automatisch gepubliceerd.');
+    }
+
+    public function overview(Request $request)
+    {
+        return Inertia::render('FeedScanner/Overview', FeedAdminReadModel::dashboard());
+    }
+
+    public function knowledge(Request $request)
+    {
+        return $request->string('tab')->toString() === 'nutrition' ? $this->knowledgeCards($request) : $this->ingredients($request);
+    }
+
+    private function knowledgeCards(Request $request)
+    {
+        return Inertia::render('FeedScanner/Rules', array_merge($this->options($request), [
+            'mode' => 'knowledge', 'profiles' => [], 'ingredientOptions' => [], 'filters' => $request->only('q', 'status'),
+            'cards' => FeedKnowledgeCard::when($request->filled('q'), fn ($q) => $q->where('title', 'ilike', '%'.$request->string('q').'%'))
+                ->when($request->filled('status'), fn ($q) => $q->where('status', $request->string('status')))->orderBy('title')->get(),
+        ]));
+    }
+
     public function products(Request $request)
     {
-        $rows = Product::query()->withCount('scans')->when($request->filled('q'), fn ($q) => $q->where(function ($query) use ($request) {
+        $request->validate(['open' => ['nullable', 'uuid'], 'status' => ['nullable', Rule::in(['review', 'approved', 'needs_info'])]]);
+        $status = $request->string('status')->toString() ?: ($request->boolean('review') ? 'review' : '');
+        $rows = FeedAdminReadModel::products($status)->withCount('scans')->when($request->filled('open'), fn ($q) => $q->where('id', $request->string('open')))->when($request->filled('q'), fn ($q) => $q->where(function ($query) use ($request) {
             $term = '%'.$request->string('q').'%';
             $query->where('name', 'ilike', $term)->orWhere('brand', 'ilike', $term)->orWhere('barcode', 'ilike', $term)
                 ->orWhereIn('id', ProductVersion::select('product_id')->whereRaw('data::text ILIKE ?', [$term]));
-        }))->when($request->boolean('review'), fn ($q) => $q->where(fn ($q) => $q->where('needs_review', true)->orWhere('catalog_status', 'legacy'))->where('catalog_status', '!=', 'archived'))
+        }))
             ->when($request->filled('category'), fn ($q) => $q->whereIn('id', ProductVersion::select('product_id')->whereRaw('number = (SELECT MAX(v.number) FROM product_versions v WHERE v.product_id = product_versions.product_id)')->whereRaw("data->>'category' = ?", [$request->string('category')->toString()])))
             ->when($request->string('sort')->toString() === 'scans', fn ($q) => $q->orderByDesc('scans_count'))
+            ->when($request->string('sort')->toString() === 'newest', fn ($q) => $q->orderByDesc('created_at'))
             ->orderBy('brand')->orderBy('name')->paginate(20)->withQueryString();
         $rows->through(function ($product) {
             $product->setAttribute('versions', ProductVersion::where('product_id', $product->id)->with(['attachments', 'assessments.overrides', 'assessments.ruleVersion:id,number,profile_id,status'])->orderByDesc('number')->get());
@@ -138,9 +193,9 @@ class FeedCatalogController extends Controller
         });
 
         return Inertia::render('FeedScanner/Products', array_merge($this->options($request), [
-            'products' => $rows, 'filters' => $request->only('q', 'review', 'sort', 'category'),
-            'reviewCount' => Product::where(fn ($q) => $q->where('needs_review', true)->orWhere('catalog_status', 'legacy'))->where('catalog_status', '!=', 'archived')->count(),
-            'ingredientOptions' => Ingredient::where('catalog_status', '!=', 'archived')->orderBy('name')->get(['id', 'name', 'published_version_id']),
+            'products' => $rows, 'filters' => array_merge($request->only('q', 'sort', 'category', 'open'), ['status' => $status]),
+            'reviewCount' => FeedAdminReadModel::products('review')->count(),
+            'ingredientOptions' => Ingredient::whereNotIn('catalog_status', ['archived', 'removed'])->orderBy('name')->get(['id', 'name', 'published_version_id']),
             'assessmentProfiles' => DB::table('feed_assessment_profiles')->get(['id', 'active_rule_version_id']),
         ]));
     }
@@ -283,13 +338,8 @@ class FeedCatalogController extends Controller
 
     public function rules(Request $request)
     {
-        return Inertia::render('FeedScanner/Rules', array_merge($this->options($request), ['cards' => FeedKnowledgeCard::orderBy('title')->get(),
-            'ingredientOptions' => Ingredient::where('catalog_status', '!=', 'archived')->orderBy('name')->get(['id', 'name']),
-            'profiles' => DB::table('feed_assessment_profiles')->orderBy('code')->get()->map(function ($profile) {
-                $profile->versions = FeedRuleVersion::where('profile_id', $profile->id)->orderByDesc('number')->get();
-
-                return $profile;
-            })]));
+        return Inertia::render('FeedScanner/Rules', array_merge($this->options($request), FeedAdminReadModel::profiles(), ['cards' => [],
+            'ingredientOptions' => Ingredient::whereNotIn('catalog_status', ['archived', 'removed'])->orderBy('name')->get(['id', 'name'])]));
     }
 
     public function saveCard(Request $request, ?FeedKnowledgeCard $card = null)

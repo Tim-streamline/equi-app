@@ -23,7 +23,7 @@ class FeedAssessments
             // Same product -> profile lock order as catalog product approval.
             $profile = DB::table('feed_assessment_profiles')->where('id', $version->profile_id)->lockForUpdate()->first();
             if (! $profile?->active_rule_version_id) {
-                throw ValidationException::withMessages(['assessment' => 'Activeer eerst de scoreplafonds bij Beoordelingsregels & kennis voor dit productprofiel.']);
+                throw ValidationException::withMessages(['assessment' => 'Activeer eerst de scoreplafonds bij Beoordelingsinstellingen voor dit productprofiel.']);
             }
             $rules = FeedRuleVersion::findOrFail($profile->active_rule_version_id);
             if ($rules->status !== 'published' || $rules->profile_id !== $profile->id || $rules->schema_version !== FeedPolicy::SCHEMA_VERSION) {

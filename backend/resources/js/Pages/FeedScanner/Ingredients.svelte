@@ -4,6 +4,7 @@
     import Pagination from '$lib/components/Pagination.svelte';
     import Modal from '$lib/components/Modal.svelte';
     import Field from '$lib/components/Field.svelte';
+    import KnowledgeTabs from './KnowledgeTabs.svelte';
     import { router, useForm } from '@inertiajs/svelte';
     import { Card, CardContent, Button, Input, Textarea, Select, Badge } from '$lib/components/ui';
 
@@ -14,12 +15,14 @@
     let editing = $state(null);
     let history = $state(null);
     let historyOpen = $state(false);
+    let removing = $state(null);
+    let removeOpen = $state(false);
     let timer;
-    const states = { draft: 'Concept', published: 'Gepubliceerd', archived: 'Gearchiveerd', legacy: 'Bestaand · nog te controleren' };
+    const states = { draft: 'Concept', published: 'Gepubliceerd', archived: 'Gearchiveerd', removed: 'Verwijderd', legacy: 'Bestaand · nog te controleren' };
     const assessments = [{ value: 'unrated', label: 'Nog niet beoordeeld' }, { value: 'preferred', label: 'Voorkeur' }, { value: 'conditional', label: 'Voorwaardelijk acceptabel' }, { value: 'critical', label: 'Kritisch beoordelen / blacklist' }];
     const empty = () => ({ name: '', category: '', assessment: 'unrated', explanation: '', exceptions: '', default_tag: '', library_item_id: '', internal_notes: '', terms: [], expected_number: null });
     const form = useForm(empty());
-    function apply() { clearTimeout(timer); timer = setTimeout(() => router.get('/admin/feed-scanner/ingredients', { q, status }, { preserveState: true, replace: true }), 250); }
+    function apply() { clearTimeout(timer); timer = setTimeout(() => router.get('/admin/feed-scanner/knowledge', { tab: 'ingredients', q, status }, { preserveState: true, replace: true }), 250); }
     function edit(record = null) {
         editing = record;
         const version = record?.versions?.[0];
@@ -37,11 +40,12 @@
     function archive(record) { if (confirm('Dit ingrediënt archiveren? De historie blijft bewaard.')) router.post(`/admin/feed-scanner/ingredients/${record.id}/archive`); }
 </script>
 
-<svelte:head><title>Ingrediënten · EquiApp Admin</title></svelte:head>
-<AdminLayout title="Voerscanner · Ingrediënten">
-    <PageHeader title="Ingrediëntenkennis" description="Leg jouw uitleg en beoordeling per ingrediënt vast.">
+<svelte:head><title>Kennisbank · EquiApp Admin</title></svelte:head>
+<AdminLayout title="Voerscanner · Kennisbank">
+    <PageHeader title="Kennisbank" description="Beheer jouw ingrediëntenkennis en voedingskundige uitleg.">
         {#snippet actions()}<Button onclick={() => edit()}>Ingrediënt toevoegen</Button>{/snippet}
     </PageHeader>
+    <KnowledgeTabs active="ingredients" />
     {#each Object.values(errors) as error}<p role="alert" class="mb-3 rounded-lg border border-destructive p-3 text-sm text-destructive">{error}</p>{/each}
     <Card><CardContent class="space-y-4 p-4">
         <div class="flex flex-wrap gap-3">
@@ -54,13 +58,16 @@
                 <div class="min-w-0 flex-1">
                     <div class="font-semibold">{latest?.data?.name ?? item.name}</div>
                     <div class="mt-1 flex flex-wrap gap-2 text-sm text-muted-foreground"><Badge variant="muted">{states[item.catalog_status]}</Badge><span>Versie {latest?.number ?? 1}</span>{#if item.needs_review}<span>· Concept te controleren</span>{/if}</div>
+                    <p class="mt-2 text-sm font-medium">{assessments.find(a => a.value === latest?.data?.assessment)?.label ?? 'Nog niet beoordeeld'}</p>
                     <p class="mt-2 line-clamp-2 text-sm text-muted-foreground">{latest?.data?.explanation ?? item.description ?? ''}</p>
                 </div>
                 <div class="flex flex-wrap gap-2">
-                    <Button size="sm" variant="outline" onclick={() => edit(item)}>Bewerken</Button>
+                    {#if item.catalog_status !== 'removed'}<Button size="sm" variant="outline" onclick={() => edit(item)}>Bewerken</Button>{/if}
                     <Button size="sm" variant="ghost" onclick={() => { history = item; historyOpen = true; }}>Historie</Button>
-                    {#if canPublish && latest?.status === 'draft' && item.catalog_status !== 'archived'}<Button size="sm" onclick={() => publish(item)}>Publiceren</Button>{/if}
-                    {#if canPublish && item.catalog_status !== 'archived'}<Button size="sm" variant="ghost" onclick={() => archive(item)}>Archiveren</Button>{/if}
+                    {#if canPublish && latest?.status === 'draft' && !['archived', 'removed'].includes(item.catalog_status)}<Button size="sm" onclick={() => publish(item)}>Publiceren</Button>{/if}
+                    {#if canPublish && !['archived', 'removed'].includes(item.catalog_status)}<Button size="sm" variant="ghost" onclick={() => archive(item)}>Archiveren</Button>{/if}
+                    {#if canPublish && item.catalog_status !== 'removed'}<Button size="sm" variant="ghost" class="text-destructive" onclick={() => { removing = item; removeOpen = true; }}>Verwijderen</Button>{/if}
+                    {#if canPublish && item.catalog_status === 'removed'}<Button size="sm" variant="outline" onclick={() => router.post(`/admin/feed-scanner/ingredients/${item.id}/restore`)}>Herstellen</Button>{/if}
                 </div>
             </div>
         {:else}<p class="py-8 text-center text-muted-foreground">Geen ingrediënten gevonden.</p>{/each}
@@ -74,7 +81,7 @@
             <Field label="Jouw basisbeoordeling"><Select bind:value={$form.assessment} options={assessments} /></Field>
             <Field label="Uitleg voor de gebruiker"><Textarea bind:value={$form.explanation} rows={3} /></Field>
             <Field label="Uitzonderingen"><Textarea bind:value={$form.exceptions} rows={2} placeholder="Beschrijf wanneer dit ingrediënt wel acceptabel kan zijn." /></Field>
-            <p class="text-xs text-muted-foreground">Een uitzondering die de berekening moet beïnvloeden leg je ook vast bij Beoordelingsregels & kennis.</p>
+            <p class="text-xs text-muted-foreground">Een uitzondering die de berekening moet beïnvloeden leg je ook vast bij Beoordelingsinstellingen.</p>
             <section class="space-y-3 border-t pt-4">
                 <div class="flex items-center justify-between"><h3 class="font-medium">Alternatieve benamingen</h3><Button type="button" size="sm" variant="outline" onclick={() => $form.terms = [...$form.terms, { term: '', language: 'nl', kind: 'exact' }]}>Benaming toevoegen</Button></div>
                 <p class="text-sm text-muted-foreground">Een synoniem betekent hetzelfde. Een verwante term geeft alleen een suggestie.</p>
@@ -96,5 +103,10 @@
     <Modal bind:open={historyOpen} title="Ingrediënthistorie" size="lg">
         {#if history}{#each history.versions as version}<div class="space-y-2 border-b py-4"><p class="font-medium">Versie {version.number} · {states[version.status] ?? version.status}</p><p class="text-sm text-muted-foreground">{new Date(version.created_at).toLocaleString('nl-NL')}</p><p>{version.data.name}</p><p class="whitespace-pre-wrap text-sm">{version.data.explanation}</p><p class="whitespace-pre-wrap text-sm">{version.data.exceptions}</p>{#each version.data.terms ?? [] as term}<p class="text-sm">{term.term} · {term.language} · {term.kind === 'exact' ? 'Exact synoniem' : 'Verwante term'}</p>{/each}</div>{/each}{/if}
         {#snippet footer()}<Button onclick={() => historyOpen = false}>Sluiten</Button>{/snippet}
+    </Modal>
+    <Modal bind:open={removeOpen} title="Ingrediënt verwijderen">
+        <p class="font-medium">Weet je zeker dat je dit ingrediënt wilt verwijderen?</p>
+        <p class="mt-2 text-sm text-muted-foreground">{removing?.versions?.[0]?.data?.name ?? removing?.name} verdwijnt uit de actieve kennisbank. Eerdere productkoppelingen en historie blijven bewaard. Via de filter ‘Verwijderd’ kun je het herstellen.</p>
+        {#snippet footer()}<Button variant="outline" onclick={() => removeOpen = false}>Annuleren</Button><Button variant="destructive" onclick={() => router.delete(`/admin/feed-scanner/ingredients/${removing.id}`, { onSuccess: () => removeOpen = false })}>Verwijderen</Button>{/snippet}
     </Modal>
 </AdminLayout>
