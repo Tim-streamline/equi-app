@@ -301,9 +301,9 @@ export function useScannerProducts() {
 export function useScanResults() {
   return useCamelQuery(`SELECT * FROM scan_results`);
 }
-export function useScanResult(id: string): Indexed {
+export function useScanResult(id: string): Indexed | undefined {
   const rows = useCamelQuery(`SELECT * FROM scan_results WHERE id = ?`, [id]);
-  return { ...(rows[0] ?? {}), id } as Indexed;
+  return rows[0];
 }
 export function useScanIngredients(scanId: string) {
   return sorted(useCamelQuery(`SELECT * FROM scan_ingredients WHERE scan_id = ?`, [scanId]));

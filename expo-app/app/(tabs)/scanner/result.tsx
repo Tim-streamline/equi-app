@@ -13,12 +13,11 @@ export default function ScannerResultScreen() {
   const scan = useScanResult(id ?? '');
   const ingredients = useScanIngredients(id ?? '');
   const [expanded, setExpanded] = useState(false);
-  const found = !!scan.productName;
-  const score = legacyScanScore(scan.score);
+  const score = legacyScanScore(scan?.score);
   return <ScannerFrame title="Voeranalyse">
-    {!found ? <><View style={[s.card, { marginTop: 12 }]}><Text style={s.heading}>Geen analyse gevonden</Text><Text style={s.body}>Deze analyse is nog niet beschikbaar. Open een eerdere scan vanuit je scanhistorie.</Text></View><ScannerButton title="Bekijk scanhistorie" onPress={() => router.replace('/(tabs)/scanner/history')} /></> : <>
+    {!scan ? <><View style={[s.card, { marginTop: 12 }]}><Text style={s.heading}>Geen analyse gevonden</Text><Text style={s.body}>Deze analyse is nog niet beschikbaar. Open een eerdere scan vanuit je scanhistorie.</Text></View><ScannerButton title="Bekijk scanhistorie" onPress={() => router.replace('/(tabs)/scanner/history')} /></> : <>
       <View style={s.card}>
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 14 }}><FeedIcon size={64} /><View style={{ flex: 1, gap: 3 }}><Text style={s.small}>{scan.brand}</Text><Text style={s.heading}>{scan.productName}</Text></View></View>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 14 }}><FeedIcon size={64} /><View style={{ flex: 1, gap: 3 }}><Text style={s.small}>{scan.brand}</Text><Text style={s.heading}>{scan.productName || 'Voeranalyse'}</Text></View></View>
         <View style={{ alignSelf: 'flex-start', borderRadius: 30, borderWidth: 1, borderColor: C.border, paddingHorizontal: 10, paddingVertical: 4 }}><Text style={[s.small, { fontFamily: 'SourceSans3_600SemiBold' }]}>Eerdere beoordeling</Text></View>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 16, borderTopWidth: 1, borderColor: C.border, paddingTop: 18, marginTop: 4 }}>
           <ScanScore value={scan.score} size={92} /><View style={{ flex: 1, gap: 3 }}><Text style={s.small}>{score === null ? 'Nog geen rapportcijfer' : `Rapportcijfer · ${scanScoreLabel(scan.score)} van 10`}</Text><Text style={[s.heading, { fontSize: 22 }]}>{scan.rating || (score === null ? 'Nog geen beoordeling' : 'Opgeslagen beoordeling')}</Text></View>
