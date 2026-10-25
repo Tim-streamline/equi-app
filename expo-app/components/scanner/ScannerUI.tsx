@@ -45,14 +45,15 @@ function ScannerNavigation() {
 }
 
 export function RoundButton({ label, onPress, children }: { label: string; onPress: () => void; children: ReactNode }) {
-  return <Pressable accessibilityRole="button" accessibilityLabel={label} onPress={onPress} style={({ pressed }) => [s.round, { opacity: pressed ? 0.6 : 1 }]}>{children}</Pressable>;
+  // These inline-only controls bypass NativeWind v4, which drops native Pressable style callbacks.
+  return <Pressable cssInterop={false} accessibilityRole="button" accessibilityLabel={label} onPress={onPress} style={({ pressed }) => [s.round, { opacity: pressed ? 0.6 : 1 }]}>{children}</Pressable>;
 }
 
 export function ScannerButton({ title, onPress, icon, variant = 'primary', disabled = false }: {
   title: string; onPress?: () => void; icon?: ReactNode; variant?: 'primary' | 'outline' | 'white' | 'light' | 'dark-outline' | 'text'; disabled?: boolean;
 }) {
   const color = variant === 'primary' || variant === 'dark-outline' ? '#fff' : variant === 'white' ? C.deep : C.teal;
-  return <Pressable accessibilityRole="button" accessibilityState={{ disabled }} disabled={disabled} onPress={onPress}
+  return <Pressable cssInterop={false} accessibilityRole="button" accessibilityState={{ disabled }} disabled={disabled} onPress={onPress}
     style={({ pressed }) => [s.button, { minHeight: variant === 'text' ? 44 : variant === 'primary' ? 56 : 52, backgroundColor: variant === 'primary' ? C.teal : variant === 'light' ? C.pale : variant === 'dark-outline' || variant === 'text' ? 'transparent' : '#fff', borderWidth: variant === 'outline' || variant === 'dark-outline' ? 1 : 0, borderColor: variant === 'dark-outline' ? 'rgba(255,255,255,0.4)' : 'rgba(27,42,42,0.15)', opacity: disabled ? 0.5 : pressed ? 0.75 : 1 }]}>
     {icon}<Text style={[s.buttonText, { color }]}>{title}</Text>
   </Pressable>;
@@ -73,7 +74,7 @@ export function ScanScore({ value, size = 48 }: { value: unknown; size?: number 
 }
 
 export function ScanRow({ scan, compact = false }: { scan: ScannerRow; compact?: boolean }) {
-  return <Pressable accessibilityRole="button" accessibilityLabel={`${scan.brand ?? ''} ${scan.productName ?? 'Scan'} bekijken`}
+  return <Pressable cssInterop={false} accessibilityRole="button" accessibilityLabel={`${scan.brand ?? ''} ${scan.productName ?? 'Scan'} bekijken`}
     onPress={() => router.push({ pathname: '/(tabs)/scanner/result', params: { id: scan.id } })} style={({ pressed }) => [s.row, { paddingVertical: compact ? 10 : 12, opacity: pressed ? 0.7 : 1 }]}>
     <ScanScore value={scan.score} size={compact ? 44 : 48} />
     <View style={{ flex: 1, gap: 2 }}><Text style={[s.rowTitle, compact && { fontSize: 15 }]} numberOfLines={2}>{scan.productName || 'Voeranalyse'}</Text><Text style={s.small}>{[scan.brand, scan.whenLabel].filter(Boolean).join(' · ')}</Text></View>
