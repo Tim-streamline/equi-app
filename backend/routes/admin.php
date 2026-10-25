@@ -111,11 +111,16 @@ Route::middleware('auth:admin')->group(function () {
 
     // ---- Scanner: products, ingredients, results ------------------------
     Route::middleware('admin.role:admin,content_editor')->prefix('feed-scanner')->as('feed-scanner.')->controller(\App\Http\Controllers\Admin\FeedCatalogController::class)->group(function () {
+        Route::get('/', 'overview')->name('overview');
+        Route::get('knowledge', 'knowledge')->name('knowledge');
+        Route::get('settings', 'rules')->name('settings');
         Route::get('ingredients', 'ingredients')->name('ingredients');
         Route::post('ingredients', 'saveIngredient');
         Route::put('ingredients/{ingredient}', 'saveIngredient');
         Route::post('ingredients/{ingredient}/publish', 'publishIngredient');
         Route::post('ingredients/{ingredient}/archive', 'archiveIngredient');
+        Route::delete('ingredients/{ingredient}', 'removeIngredient');
+        Route::post('ingredients/{ingredient}/restore', 'restoreIngredient');
         Route::get('products', 'products')->name('products');
         Route::post('products', 'saveProduct');
         Route::put('products/{product}', 'saveProduct');

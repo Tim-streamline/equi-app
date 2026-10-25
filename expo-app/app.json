@@ -40,8 +40,8 @@
       [
         "expo-image-picker",
         {
-          "photosPermission": "Selecteer foto’s en video’s voor je Community-bericht.",
-          "cameraPermission": false,
+            "photosPermission": "Selecteer foto’s voor de voerscanner, intake of je Community-bericht.",
+            "cameraPermission": "Maak een foto van je voerverpakking voor de voerscanner.",
           "microphonePermission": false
         }
       ],

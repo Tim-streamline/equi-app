@@ -88,10 +88,10 @@ class FeedCatalog
             }
             $normalized = self::normalize($term['term']);
             $collision = DB::table('ingredient_terms as t')->join('ingredients as i', 'i.published_version_id', '=', 't.ingredient_revision_id')
-                ->where('i.id', '!=', $ingredient->id)->where('i.catalog_status', '!=', 'archived')
+                ->where('i.id', '!=', $ingredient->id)->whereNotIn('i.catalog_status', ['archived', 'removed'])
                 ->where('t.kind', 'exact')->where('t.language', $term['language'])->where('t.normalized_term', $normalized)->exists();
             if ($term['language'] === 'nl') {
-                $collision = $collision || Ingredient::where('id', '!=', $ingredient->id)->where('catalog_status', '!=', 'archived')
+                $collision = $collision || Ingredient::where('id', '!=', $ingredient->id)->whereNotIn('catalog_status', ['archived', 'removed'])
                     ->whereRaw('LOWER(TRIM(name)) = ?', [$normalized])->exists();
             }
             if ($collision) {
@@ -115,8 +115,8 @@ class FeedCatalog
         foreach ($version->data['ingredients'] ?? [] as $row) {
             if (! empty($row['ingredient_id'])) {
                 $ingredient = Ingredient::findOrFail($row['ingredient_id']);
-                if ($ingredient->catalog_status === 'archived') {
-                    throw ValidationException::withMessages(['ingredients' => 'Een gekoppeld ingrediënt is gearchiveerd. Controleer de samenstelling.']);
+                if (in_array($ingredient->catalog_status, ['archived', 'removed'])) {
+                    throw ValidationException::withMessages(['ingredients' => 'Een gekoppeld ingrediënt is gearchiveerd of verwijderd. Controleer de samenstelling.']);
                 }
             }
         }

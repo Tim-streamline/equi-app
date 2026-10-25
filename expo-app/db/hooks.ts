@@ -294,6 +294,10 @@ export function useAllSupplementIntakes() {
 }
 
 // ---------------------------------------------------------------- scanner
+export function useScannerProducts() {
+  return useCamelQuery('SELECT * FROM products ORDER BY brand, name');
+}
+
 export function useScanResults() {
   return useCamelQuery(`SELECT * FROM scan_results`);
 }

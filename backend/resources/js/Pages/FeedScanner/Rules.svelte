@@ -3,10 +3,16 @@
     import PageHeader from '$lib/components/PageHeader.svelte';
     import Modal from '$lib/components/Modal.svelte';
     import Field from '$lib/components/Field.svelte';
+    import KnowledgeTabs from './KnowledgeTabs.svelte';
+    import PolicySummary from './PolicySummary.svelte';
     import { router, useForm } from '@inertiajs/svelte';
     import { Card, CardContent, Button, Input, Textarea, Select, Badge } from '$lib/components/ui';
 
-    let { profiles, cards, libraryOptions, ingredientOptions, canPublish, errors = {} } = $props();
+    let { profiles, cards, libraryOptions, ingredientOptions, canPublish, mode = 'settings', scoreConflicts = [], filters = {}, errors = {} } = $props();
+    let q = $state(filters.q ?? '');
+    let status = $state(filters.status ?? '');
+    let timer;
+    function filterCards() { clearTimeout(timer); timer = setTimeout(() => router.get('/admin/feed-scanner/knowledge', { tab: 'nutrition', q, status }, { preserveState: true, replace: true }), 250); }
     let profile = $state(null);
     let ruleOpen = $state(false);
     let cardOpen = $state(false);
@@ -30,23 +36,29 @@
     function saveCard(e) { e.preventDefault(); const opts = { onSuccess: () => cardOpen = false }; card ? $cardForm.put(`/admin/feed-scanner/cards/${card.id}`, opts) : $cardForm.post('/admin/feed-scanner/cards', opts); }
 </script>
 
-<svelte:head><title>Beoordelingsregels & kennis · EquiApp Admin</title></svelte:head>
-<AdminLayout title="Voerscanner · Beoordelingsregels & kennis">
-    <PageHeader title="Beoordelingsregels & kennis" description="Beheer jouw voedingsbeleid en de uitleg die daarbij hoort." />
-    <div class="mb-5 rounded-lg border bg-muted p-4 text-sm">Activeer de scoreplafonds per profiel om producten te beoordelen. Een plafond is een maximum, geen eindscore. Alleen een zeker geldend plafond van 0 bepaalt de automatische score volledig. De overige puntenweging volgt na kalibratie.</div>
+<svelte:head><title>{mode === 'knowledge' ? 'Kennisbank' : 'Beoordelingsinstellingen'} · EquiApp Admin</title></svelte:head>
+<AdminLayout title={`Voerscanner · ${mode === 'knowledge' ? 'Kennisbank' : 'Beoordelingsinstellingen'}`}>
+    <PageHeader title={mode === 'knowledge' ? 'Kennisbank' : 'Beoordelingsinstellingen'} description={mode === 'knowledge' ? 'Beheer jouw ingrediëntenkennis en voedingskundige uitleg.' : 'Jouw voedingsprincipes en de grenzen die bij beoordelingen worden gebruikt.'} />
     {#each Object.values(errors) as error}<p role="alert" class="mb-3 text-sm text-destructive">{error}</p>{/each}
-    <div class="grid gap-4 md:grid-cols-2">
+    {#if mode === 'settings'}
+    <PolicySummary {profiles} />
+    {#if scoreConflicts.length}<section class="mt-5 rounded-xl border bg-card p-5 text-sm" aria-label="Regels voor een score van nul"><h2 class="font-semibold">Een voer kan 0/10 scoren</h2><p class="mt-2">De beoordelingsschaal loopt van 0 tot 10. Onderstaande regels kunnen een score van 0/10 opleveren. Per regel zie je of deze actief, concept of historisch is.</p><ul class="mt-3 space-y-2">{#each scoreConflicts as conflict}<li><strong>{conflict.profile}</strong> · versie {conflict.version} · {conflict.state}: {conflict.rule}.</li>{/each}</ul></section>{/if}
+    <details class="mt-6 rounded-xl border bg-card p-5"><summary class="cursor-pointer font-semibold">Geavanceerde instellingen</summary>
+    <p class="my-4 text-sm text-muted-foreground">Beheer regelconcepten, activering, uitzonderingen en eerdere versies. Nieuwe concepten veranderen de actieve regels pas na activering. De verdere puntenweging is nog niet gekalibreerd.</p>
+    <div class="space-y-3">
         {#each profiles as item}
             <Card><CardContent class="space-y-4 p-5">
                 <div class="flex items-center justify-between"><h2 class="text-lg font-semibold">{item.name}</h2><Badge variant="muted">{item.active_rule_version_id === item.versions[0]?.id ? 'Actieve plafonds' : 'Conceptbeleid'}</Badge></div>
-                {@const data = item.versions[0]?.data}
-                {#if data}<div class="space-y-2 text-sm"><p>Suiker + zetmeel: maximaal {data.sugar_starch_challenged}% bij gezondheidsuitdagingen / {data.sugar_starch_healthy}% voor gezonde paarden.</p><p>Bevestigd organisch selenium: maximaal {data.organic_selenium_cap}/10.</p><p>Bevestigd toegevoegd selenium, vorm onbekend: maximaal {data.unknown_added_selenium_cap}/10.</p><p class="text-muted-foreground">Versie {item.versions[0].number} · Puntenweging nog niet gekalibreerd</p></div>{/if}
-                {#each data?.sugar_starch_caps ?? [] as tier}<p class="text-sm">{tier.inclusive ? 'Vanaf' : 'Boven'} {tier.threshold}% suiker + zetmeel: maximaal {tier.max_score}/10.</p>{/each}
+                <p class="text-sm text-muted-foreground">Nieuwste versie: {item.versions[0]?.number ?? 'nog niet vastgelegd'}.</p>
                 {#if item.active_rule_version_id && item.active_rule_version_id !== item.versions[0]?.id}<p class="text-xs text-muted-foreground">Actief: versie {item.versions.find(v => v.id === item.active_rule_version_id)?.number}. Het nieuwe concept verandert bestaande berekeningen nog niet.</p>{/if}
                 <div class="flex flex-wrap gap-2"><Button variant="outline" onclick={() => editProfile(item)}>Beleid bewerken</Button><Button variant="ghost" onclick={() => { history = item; historyOpen = true; }}>Historie</Button>{#if canPublish && item.versions[0]?.status === 'draft' && item.versions[0]?.schema_version === 2}<Button onclick={() => router.post(`/admin/feed-scanner/profiles/${item.id}/publish`, { version_id: item.versions[0].id })}>Scoreplafonds activeren</Button>{/if}</div>
             </CardContent></Card>
         {/each}
     </div>
+    </details>
+    {:else}
+    <KnowledgeTabs active="nutrition" />
+    <div class="mb-5 flex flex-wrap gap-3"><Input bind:value={q} oninput={filterCards} placeholder="Zoek een kenniskaart…" aria-label="Kenniskaarten zoeken" class="min-w-56 flex-1" /><Select bind:value={status} onchange={filterCards} options={[{ value: '', label: 'Alle statussen' }, { value: 'draft', label: 'Concept' }, { value: 'published', label: 'Gepubliceerd' }, { value: 'archived', label: 'Gearchiveerd' }]} /></div>
     <div class="mb-4 mt-8 flex items-center justify-between gap-3"><h2 class="text-lg font-semibold">Voedingskundige kenniskaarten</h2><Button onclick={() => editCard()}>Kenniskaart toevoegen</Button></div>
     <p class="mb-4 text-sm text-muted-foreground">Deze kaarten bevatten uitleg. Alleen een beschrijving aanpassen verandert geen rekenregel.</p>
     <div class="space-y-3">
@@ -54,6 +66,7 @@
             <Card><CardContent class="flex items-start justify-between gap-4 p-4"><div><h3 class="font-semibold">{item.title}</h3><Badge variant="muted">{item.status === 'published' ? 'Gepubliceerd' : item.status === 'archived' ? 'Gearchiveerd' : 'Concept'}</Badge><p class="mt-2 whitespace-pre-wrap text-sm text-muted-foreground">{item.explanation}</p></div><Button size="sm" variant="outline" onclick={() => editCard(item)}>Bewerken</Button></CardContent></Card>
         {:else}<p class="rounded-lg border p-6 text-sm text-muted-foreground">Voeg bijvoorbeeld een uitlegkaart toe over suiker + zetmeel of mineraalvormen.</p>{/each}
     </div>
+    {/if}
     <Modal bind:open={ruleOpen} title={`Voedingsbeleid · ${profile?.name ?? ''}`} size="lg">
         <form id="feed-rules" onsubmit={saveRules} class="space-y-4">
             {#each Object.values($rules.errors) as error}<p class="text-sm text-destructive" role="alert">{error}</p>{/each}

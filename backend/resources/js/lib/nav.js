@@ -61,10 +61,11 @@ export const navSections = [
         title: 'Voerscanner',
         roles: ['admin', 'content_editor'],
         items: [
-            { label: 'Ingrediënten', href: '/admin/feed-scanner/ingredients', icon: FlaskConical },
-            { label: 'Beoordelingsregels & kennis', href: '/admin/feed-scanner/rules', icon: SlidersHorizontal },
-            { label: 'Merken & producten', href: '/admin/feed-scanner/products', icon: Package },
+            { label: 'Overzicht', href: '/admin/feed-scanner', icon: LayoutDashboard, match: '/admin/feed-scanner' },
+            { label: 'Voerproducten', href: '/admin/feed-scanner/products', icon: Package },
+            { label: 'Kennisbank', href: '/admin/feed-scanner/knowledge', icon: BookOpen, aliases: ['/admin/feed-scanner/ingredients'] },
             { label: 'Scanhistorie', href: '/admin/scans', icon: ScanLine },
+            { label: 'Beoordelingsinstellingen', href: '/admin/feed-scanner/settings', icon: SlidersHorizontal, aliases: ['/admin/feed-scanner/rules'] },
         ],
     },
     {

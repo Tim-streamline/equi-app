@@ -1,88 +1,40 @@
-import { View, Text, ScrollView } from 'react-native';
+import { useState } from 'react';
+import { Pressable, Text, View } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { Bookmark, Leaf } from 'lucide-react-native';
-import { SubHeader } from '@/components/ui/SubHeader';
-import { IconButton } from '@/components/ui/IconButton';
-import { Coach } from '@/components/ui/Coach';
-import { SectionTitle } from '@/components/ui/SectionTitle';
-import { ScoreRing } from '@/components/ui/ScoreRing';
-import { Eyebrow } from '@/components/ui/Eyebrow';
-import { Chip } from '@/components/ui/Chip';
-import { Button } from '@/components/ui/Button';
-import { useTabBarPadding } from '@/hooks/useTabBarPadding';
-import { useHorse, useScanIngredients, useScanResult, useScanResults } from '@/db/hooks';
+import { BookOpen, ChevronDown, ChevronRight, ChevronUp, Leaf } from 'lucide-react-native';
+import { useScanIngredients, useScanResult } from '@/db/hooks';
+import { legacyScanScore, scanScoreLabel } from '@/lib/scanner-presentation';
+import { C, FeedIcon, ScannerButton, ScannerFrame, ScannerNote, ScanScore, s } from '@/components/scanner/ScannerUI';
 
-const DOT: Record<string, string> = { good: '#2EA875', warn: '#D9A441', danger: '#C2543E' };
+const DOT: Record<string, string> = { good: C.success, warn: C.warning, danger: C.danger };
 
 export default function ScannerResultScreen() {
   const { id } = useLocalSearchParams<{ id?: string }>();
-  const allScans = useScanResults();
-  const targetId = id ?? allScans.find((s: any) => s.advice)?.id ?? allScans[0]?.id ?? '';
-  const r = useScanResult(targetId);
-  const ingredients = useScanIngredients(targetId);
-  const horse = useHorse();
-  const padBottom = useTabBarPadding();
-
-  const score = (r.score as number) ?? 0;
-  const chipVariant: 'success' | 'warn' | 'danger' = score >= 75 ? 'success' : score >= 50 ? 'warn' : 'danger';
-
-  return (
-    <View className="flex-1 bg-canvas">
-      <SafeAreaView edges={['top']} style={{ flex: 1 }}>
-        <SubHeader
-          title="Resultaat"
-          onBack={() => router.back()}
-          right={
-            <IconButton>
-              <Bookmark size={18} color="#1B2A2A" />
-            </IconButton>
-          }
-        />
-        <ScrollView contentContainerStyle={{ paddingBottom: padBottom }}>
-          <View className="flex-row items-center gap-4 px-5 pb-5">
-            <ScoreRing score={score} size={96} stroke={6} />
-            <View className="flex-1">
-              <Eyebrow>{r.brand as string}</Eyebrow>
-              <Text className="mt-1 font-bold text-ink" style={{ fontSize: 18, lineHeight: 22 }}>
-                {r.productName as string}
-              </Text>
-              <View className="mt-2 self-start">
-                <Chip label={r.rating as string} variant={chipVariant} />
-              </View>
-            </View>
-          </View>
-
-          {r.advice ? (
-            <Coach tag={`Advies voor ${horse.name as string}`}>{r.advice as string}</Coach>
-          ) : null}
-
-          <SectionTitle>Ingrediënten ({ingredients.length})</SectionTitle>
-          <View className="px-5 gap-2">
-            {ingredients.map((ing: any) => (
-              <View key={ing.id} className="flex-row gap-3 rounded-2xl border border-ink-8 bg-white p-3.5">
-                <View
-                  className="mt-1.5 h-2.5 w-2.5 rounded-full"
-                  style={{ backgroundColor: DOT[ing.tag] }}
-                />
-                <View className="flex-1">
-                  <Text className="font-bold text-ink text-[14px]">{ing.name}</Text>
-                  <Text className="mt-0.5 text-[12.5px] text-ink-50 leading-[18px]">{ing.description}</Text>
-                </View>
-              </View>
-            ))}
-          </View>
-
-          <View className="p-5">
-            <Button
-              title="Bekijk natuurlijke alternatieven"
-              variant="ghost"
-              leading={<Leaf size={18} color="#1B2A2A" />}
-              onPress={() => router.push({ pathname: '/(tabs)/library/article/[id]', params: { id: 'brandnetel' } } as any)}
-            />
-          </View>
-        </ScrollView>
-      </SafeAreaView>
-    </View>
-  );
+  const scan = useScanResult(id ?? '');
+  const ingredients = useScanIngredients(id ?? '');
+  const [expanded, setExpanded] = useState(false);
+  const found = !!scan.productName;
+  const score = legacyScanScore(scan.score);
+  return <ScannerFrame title="Voeranalyse">
+    {!found ? <><View style={[s.card, { marginTop: 12 }]}><Text style={s.heading}>Geen analyse gevonden</Text><Text style={s.body}>Deze analyse is nog niet beschikbaar. Open een eerdere scan vanuit je scanhistorie.</Text></View><ScannerButton title="Bekijk scanhistorie" onPress={() => router.replace('/(tabs)/scanner/history')} /></> : <>
+      <View style={s.card}>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 14 }}><FeedIcon size={64} /><View style={{ flex: 1, gap: 3 }}><Text style={s.small}>{scan.brand}</Text><Text style={s.heading}>{scan.productName}</Text></View></View>
+        <View style={{ alignSelf: 'flex-start', borderRadius: 30, borderWidth: 1, borderColor: C.border, paddingHorizontal: 10, paddingVertical: 4 }}><Text style={[s.small, { fontFamily: 'SourceSans3_600SemiBold' }]}>Eerdere beoordeling</Text></View>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 16, borderTopWidth: 1, borderColor: C.border, paddingTop: 18, marginTop: 4 }}>
+          <ScanScore value={scan.score} size={92} /><View style={{ flex: 1, gap: 3 }}><Text style={s.small}>{score === null ? 'Nog geen rapportcijfer' : `Rapportcijfer · ${scanScoreLabel(scan.score)} van 10`}</Text><Text style={[s.heading, { fontSize: 22 }]}>{scan.rating || (score === null ? 'Nog geen beoordeling' : 'Opgeslagen beoordeling')}</Text></View>
+        </View>
+        <Text style={s.small}>Dit is de opgeslagen eerdere beoordeling. Deze is niet opnieuw berekend met de nieuwe beoordelingsregels.</Text>
+      </View>
+      {!!scan.advice && <View style={s.card}><Text style={s.eyebrow}>Opgeslagen toelichting</Text><Text style={s.body}>{scan.advice}</Text></View>}
+      <View style={s.card}><Text style={s.eyebrow}>Suiker + zetmeel</Text><Text style={s.heading}>Niet beschikbaar</Text><Text style={s.body}>Bij deze eerdere scan zijn geen gestructureerde suiker- en zetmeelwaarden beschikbaar. We vullen geen ontbrekende waarden in.</Text></View>
+      <View style={[s.card, { padding: 0, overflow: 'hidden' }]}>
+        <Pressable accessibilityRole="button" accessibilityState={{ expanded }} onPress={() => setExpanded(value => !value)} style={{ minHeight: 62, padding: 18, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}><Text style={s.rowTitle}>Ingrediënten ({ingredients.length})</Text>{expanded ? <ChevronUp size={20} color={C.muted} /> : <ChevronDown size={20} color={C.muted} />}</Pressable>
+        {expanded && <View style={{ paddingHorizontal: 18, paddingBottom: 18, gap: 14 }}>{ingredients.length ? ingredients.map(ingredient => <View key={ingredient.id} style={{ flexDirection: 'row', gap: 10, borderTopWidth: 1, borderColor: C.border, paddingTop: 12 }}><View style={{ width: 8, height: 8, borderRadius: 4, marginTop: 7, backgroundColor: DOT[ingredient.tag] ?? C.muted }} /><View style={{ flex: 1, gap: 4 }}><Text style={s.rowTitle}>{ingredient.name}</Text>{!!ingredient.description && <Text style={s.body}>{ingredient.description}</Text>}</View></View>) : <Text style={s.small}>Er zijn geen ingrediënten opgeslagen bij deze scan.</Text>}</View>}
+      </View>
+      <ScannerNote>Deze algemene beoordeling gaat over de productsamenstelling en is niet specifiek afgestemd op jouw paard.</ScannerNote>
+      <Text style={[s.eyebrow, { marginTop: 8 }]}>Lees verder in de bibliotheek</Text>
+      <Pressable accessibilityRole="button" onPress={() => router.navigate('/(tabs)/(pager)/library')} style={s.row}><View style={{ backgroundColor: C.deep, borderRadius: 12, padding: 13 }}><BookOpen size={22} color="#fff" /></View><View style={{ flex: 1 }}><Text style={s.rowTitle}>Meer over paardenvoeding</Text><Text style={s.small}>Ontdek de artikelen en video’s</Text></View><ChevronRight size={18} color={C.muted} /></Pressable>
+      <ScannerButton title="Ander voer bekijken" variant="outline" icon={<Leaf size={19} color={C.teal} />} onPress={() => router.navigate('/(tabs)/scanner')} />
+    </>}
+  </ScannerFrame>;
 }

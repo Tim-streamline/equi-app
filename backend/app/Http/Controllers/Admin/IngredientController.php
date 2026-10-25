@@ -59,6 +59,7 @@ class IngredientController extends Controller
 
     public function destroy(Ingredient $ingredient): RedirectResponse
     {
+        abort_if($ingredient->catalog_status === 'removed', 409, 'Herstel dit ingrediënt via de kennisbank.');
         if (IngredientRevision::where('ingredient_id', $ingredient->id)->exists()) {
             $ingredient->forceFill(['catalog_status' => 'archived'])->save();
             AuditLogger::log('archived', $ingredient);
