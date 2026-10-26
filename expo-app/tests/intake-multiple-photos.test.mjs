@@ -49,7 +49,7 @@ function fixture({ assets = [asset('a.jpg'), asset('b.jpg')], max, slots, initia
     for (const effect of effects.splice(0)) effect();
     return tree;
   };
-  const button = label => draw().find(n => n.type === 'Pressable' && (label ? text(n) === label : n.props.accessibilityRole === 'button'));
+  const button = label => draw().find(n => n.type === 'Pressable' && (label ? text(n) === label : n.props.accessibilityRole === 'button' && n.props.accessibilityLabel !== 'Bijlage verwijderen'));
   return { draw, button, options, saved, published, assigned, props, session, intake, refreshSafety, value: () => value };
 }
 
@@ -92,7 +92,28 @@ test('remaining capacity includes existing photos and enforces web overflow', as
   assert.equal(app.saved.length, 1);
   assert.equal(app.value().length, 2);
   assert.match(text(app.draw()), /maximum aantal bestanden/);
-  assert.equal(app.button().props.disabled, true);
+  assert.equal(app.button(), undefined);
+});
+
+test('single-photo fields hide the upload area at capacity and require removal before adding again', async () => {
+  const app = fixture({ max: 1, assets: [asset('hoof.jpg')] });
+  app.props.photoDesign = true;
+  assert.match(text(app.draw()), /Maximaal\s+1\s+foto/);
+  app.button().props.onPress(); await tick();
+  assert.equal(app.value().length, 1);
+  assert.equal(app.button(), undefined);
+  assert.doesNotMatch(text(app.draw()), /Foto toevoegen|Maximaal\s+1\s+foto/);
+  const preview = app.draw().find(n => typeof n.type === 'function' && n.type.name === 'Photo');
+  assert.equal(preview.props.expanded, true);
+  const remove = app.draw().find(n => n.props?.accessibilityLabel === 'Bijlage verwijderen');
+  assert.equal(text(remove).trim(), 'Verwijderen');
+  remove.props.onPress();
+  assert.equal(app.value().length, 0);
+  assert.match(text(app.draw()), /Foto toevoegen.*Maximaal\s+1\s+foto/);
+  app.button().props.onPress(); await tick();
+  assert.equal(app.value().length, 1);
+  assert.equal(app.options.length, 2);
+  assert.equal(app.button(), undefined);
 });
 
 test('invalid files and storage failures keep successful photos and explain each failure', async () => {
@@ -169,7 +190,7 @@ test('existing-only photos allow deletion in drafts and lock during or after sub
   const refs = ['attachment:old:old.jpg', 'attachment:keep:keep.jpg'];
   const app = fixture({ initial: refs, max: 0 });
   const removals = () => app.draw().filter(n => n.props?.accessibilityLabel === 'Bijlage verwijderen');
-  assert.equal(app.button().props.disabled, true);
+  assert.equal(app.button(), undefined);
   assert.equal(removals().length, 2);
   removals()[0].props.onPress();
   assert.deepEqual(app.value(), [refs[1]]);

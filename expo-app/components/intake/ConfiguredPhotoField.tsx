@@ -112,7 +112,7 @@ export function ConfiguredPhotoField({ field, sectionId, value, onChange, design
       </View> : <AttachmentField value={refs} onChange={change} section={sectionId} field={field.id} photo
         max={config.existing_only ? 0 : config.max} renderMetadata={renderMetadata} photoDesign={design} />}
       </>}
-    {!!config.max && !na && !design && <Text className="text-xs text-ink-50">Maximaal {config.max} foto’s.</Text>}
+    {!!config.max && refs.length < config.max && !na && !design && <Text className="text-xs text-ink-50">Maximaal {config.max} {config.max === 1 ? 'foto' : 'foto’s'}.</Text>}
   </View>;
 }
 

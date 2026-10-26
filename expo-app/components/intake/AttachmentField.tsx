@@ -39,7 +39,7 @@ function UploadStatus({ reference }: { reference: string }) {
     {record.error ? 'Opgeslagen op dit apparaat · upload wordt opnieuw geprobeerd' : 'Opgeslagen op dit apparaat · wacht op upload'}
   </Text> : null;
 }
-export function Photo({ reference }: { reference: string }) {
+export function Photo({ reference, expanded = false }: { reference: string; expanded?: boolean }) {
   const local = useLocalAttachment(reference);
   const [source, setSource] = useState<{ uri: string; headers?: Record<string, string> }>();
   useEffect(() => {
@@ -69,7 +69,9 @@ export function Photo({ reference }: { reference: string }) {
     })().catch(() => {});
     return () => { active = false; controller.abort(); if (objectUrl) URL.revokeObjectURL(objectUrl); };
   }, [reference, local]);
-  return source ? <Image source={source} style={{ width: 80, height: 80, borderRadius: 12 }} /> : <Camera size={24} color="#108a82" />;
+  return source ? <Image source={source} accessibilityLabel={fileName(reference)} resizeMode={expanded ? 'contain' : 'cover'}
+    style={expanded ? { width: '100%', height: 240, borderRadius: 12, backgroundColor: '#f2f6f5' } : { width: 80, height: 80, borderRadius: 12 }} />
+    : <View style={expanded ? { width: '100%', height: 240, alignItems: 'center', justifyContent: 'center' } : undefined}><Camera size={24} color="#108a82" /></View>;
 }
 type PickedAsset = ImagePicker.ImagePickerAsset | DocumentPicker.DocumentPickerAsset;
 type PhotoSlot = { id: string; label: string; field: string };
@@ -92,6 +94,7 @@ export function AttachmentField({ value, onChange, section, field, photo, max, r
   const count = (refs: string[]) => refs.filter(item => item.startsWith('attachment:')).length;
   const remaining = () => latest.current.slots?.length ?? Math.max(0, (latest.current.max ?? (bloodTest ? 5 : Infinity)) - count(latest.current.value));
   const limitReached = remaining() === 0;
+  const singlePhoto = photo && max === 1 && !slots;
   const [busy, setBusy] = useState(false);
   const busyRef = useRef(false);
   const [error, setError] = useState('');
@@ -181,15 +184,20 @@ export function AttachmentField({ value, onChange, section, field, photo, max, r
   }
   return <View>
     <View className="mb-2 flex-row flex-wrap gap-3">
-      {!slots && value.map((reference, index) => <View key={`${reference}-${index}`} style={renderMetadata ? { width: 180 } : undefined} className="max-w-[180px] gap-2 rounded-xl bg-white p-3">
-        {photo && reference.startsWith('attachment:') ? <Photo reference={reference} /> : <FileText size={22} color="#108a82" />}
+      {!slots && value.map((reference, index) => <View key={`${reference}-${index}`} style={singlePhoto ? { width: '100%' } : renderMetadata ? { width: 180 } : undefined} className={`${singlePhoto ? '' : 'max-w-[180px]'} gap-2 rounded-xl bg-white p-3`}>
+        {photo && reference.startsWith('attachment:') ? <Photo reference={reference} expanded={singlePhoto} /> : <FileText size={22} color="#108a82" />}
         <Text className="text-xs text-ink">{reference.startsWith('attachment:') ? fileName(reference) : 'Oude testbijlage: voeg opnieuw toe'}</Text>
         {reference.startsWith('attachment:') && <UploadStatus reference={reference} />}
         {renderMetadata?.(reference)}
-        {!readOnly && <Pressable disabled={busy} accessibilityLabel="Bijlage verwijderen" onPress={() => onChange(value.filter((_, i) => i !== index))}><Trash2 size={18} color="#9b3f3f" /></Pressable>}
+        {!readOnly && <Pressable disabled={busy} accessibilityRole={singlePhoto ? 'button' : undefined} accessibilityLabel="Bijlage verwijderen"
+          onPress={() => { setError(''); onChange(value.filter((_, i) => i !== index)); }}
+          className={singlePhoto ? 'min-h-[44px] flex-row items-center justify-center gap-2 self-start rounded-lg border border-red-200 px-3 py-2' : 'self-start p-2'}>
+          <Trash2 size={18} color="#9b3f3f" />
+          {singlePhoto && <Text className="font-semi text-[14px] text-[#9b3f3f]">Verwijderen</Text>}
+        </Pressable>}
       </View>)}
     </View>
-    {!readOnly && !pending && (!slots || !limitReached) && <Pressable accessibilityRole="button" disabled={busy || limitReached} onPress={() => void add()}
+    {!readOnly && !pending && ((!photo && !slots) || !limitReached) && <Pressable accessibilityRole="button" disabled={busy || limitReached} onPress={() => void add()}
       className={photo && photoDesign
         ? `items-center justify-center rounded-[20px] border border-dashed border-[#A8DCDA] bg-[#EAF9F7] ${compactUpload ? 'min-h-[115px] p-4' : 'min-h-[175px] p-6'}`
         : 'flex-row items-center justify-center gap-2 rounded-xl border border-dashed border-ink-15 bg-white p-4'}>
