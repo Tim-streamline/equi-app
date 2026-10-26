@@ -10,6 +10,7 @@ use App\Models\IngredientRevision;
 use App\Models\Product;
 use App\Models\ScanResult;
 use App\Models\User;
+use App\Support\FeedCompositionOcr;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
@@ -32,6 +33,7 @@ class FeedScanSubmissionTest extends TestCase
         config(['feed-scanner.api_key' => 'test-only']);
         $this->owner = User::factory()->create();
         $this->asOwner($this->owner);
+        $this->mock(FeedCompositionOcr::class, fn ($mock) => $mock->shouldReceive('read')->andReturn(['text' => '', 'confidence' => 0, 'words' => 0, 'low_confidence_words' => 0]));
     }
 
     private function asOwner(User $user): void
@@ -55,7 +57,9 @@ class FeedScanSubmissionTest extends TestCase
         $s = $this->postJson('/api/feed-scanner/submissions', ['client_id' => $client, 'name' => 'Testvoer'])->assertOk()->json();
         $this->postJson('/api/feed-scanner/submissions', ['client_id' => $client, 'name' => 'Testvoer'])->assertJsonPath('id', $s['id']);
         if ($photos) {
-            foreach (['composition', 'analysis'] as $slot) {
+            $this->post('/api/feed-scanner/submissions/'.$s['id'].'/photos', ['slot' => 'composition', 'file' => UploadedFile::fake()->image('label.jpg')], ['Accept' => 'application/json'])->assertOk();
+            $s = $this->postJson('/api/feed-scanner/submissions/'.$s['id'].'/check')->assertOk()->json();
+            foreach (['analysis', 'front'] as $slot) {
                 $this->post('/api/feed-scanner/submissions/'.$s['id'].'/photos', ['slot' => $slot, 'file' => UploadedFile::fake()->image('label.jpg')], ['Accept' => 'application/json'])->assertOk();
             }
         }
@@ -99,7 +103,8 @@ class FeedScanSubmissionTest extends TestCase
         $this->postJson('/api/feed-scanner/submissions/'.$s['id'].'/analyse')->assertUnprocessable();
         $s = $this->createSubmission();
         config(['feed-scanner.api_key' => null]);
-        $this->postJson('/api/feed-scanner/submissions/'.$s['id'].'/analyse')->assertOk()->assertJsonPath('status', 'failed')->assertJsonPath('error_code', 'reader_not_configured');
+        $this->postJson('/api/feed-scanner/submissions/'.$s['id'].'/analyse', ['name' => 'Naam bij laatste fotostap'])->assertOk()->assertJsonPath('status', 'failed')->assertJsonPath('error_code', 'reader_not_configured')
+            ->assertJsonPath('submitted_name', 'Naam bij laatste fotostap');
         $this->assertDatabaseHas('products', ['id' => $s['product_id'], 'needs_review' => true, 'catalog_status' => 'draft', 'published_version_id' => null]);
         Http::assertNothingSent();
         $this->assertSame(0, ScanResult::count());

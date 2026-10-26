@@ -9,7 +9,7 @@ export function FeedScanResult({ result }: { result: FeedResult }) {
   return <>
     <View style={s.card}>
       <Text style={s.small}>{result.brand}</Text><Text style={s.heading}>{result.name}</Text>
-      <Text style={[s.eyebrow, { color: C.teal }]}>Voorlopige beoordeling</Text>
+      <Text style={[s.eyebrow, { color: C.teal }]}>{result.provisional ? 'Voorlopige beoordeling' : 'Gecontroleerde samenstelling'}</Text>
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 16 }}><ScanScore value={result.score === null ? null : Number(result.score) * 10} size={92} /><View style={{ flex: 1 }}><Text style={s.heading}>{result.score === null ? 'Nog geen rapportcijfer' : `${Number(result.score).toLocaleString('nl-NL')}/10`}</Text>{result.score_cap !== null && <Text style={s.small}>Geldend scoreplafond: {Number(result.score_cap).toLocaleString('nl-NL')}/10</Text>}</View></View>
       <Text style={s.small}>Deze score beoordeelt de samenstelling van het voer volgens de voedingsprincipes van De Paardentherapeut en houdt geen rekening met de individuele behoeften van jouw paard.</Text>
       <Text style={s.body}>{result.message}</Text>

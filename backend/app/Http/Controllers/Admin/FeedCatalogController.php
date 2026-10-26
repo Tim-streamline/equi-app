@@ -187,7 +187,7 @@ class FeedCatalogController extends Controller
             ->when($request->string('sort')->toString() === 'newest', fn ($q) => $q->orderByDesc('created_at'))
             ->orderBy('brand')->orderBy('name')->paginate(20)->withQueryString();
         $rows->through(function ($product) {
-            $product->setAttribute('submissions', \App\Models\FeedScanSubmission::where('product_id', $product->id)->orderByDesc('created_at')->get(['id', 'status', 'message', 'extraction', 'created_at']));
+            $product->setAttribute('submissions', \App\Models\FeedScanSubmission::where('product_id', $product->id)->orderByDesc('created_at')->get(['id', 'status', 'message', 'extraction', 'created_at', 'reference_version_id', 'recognition']));
             $product->setAttribute('versions', ProductVersion::where('product_id', $product->id)->with(['attachments', 'assessments.overrides', 'assessments.ruleVersion:id,number,profile_id,status'])->orderByDesc('number')->get());
 
             return $product;
@@ -216,6 +216,7 @@ class FeedCatalogController extends Controller
             'category' => ['required', Rule::in(array_keys(FeedCatalog::CATEGORIES))],
             'composition_text' => ['nullable', 'string', 'max:30000'], 'usage' => ['nullable', 'string', 'max:10000'],
             'source' => ['nullable', 'string', 'max:2000'], 'internal_notes' => ['nullable', 'string', 'max:20000'],
+            'recognition_enabled' => ['sometimes', 'boolean'],
             'ingredients' => ['present', 'array', 'max:150'],
             'ingredients.*.ingredient_id' => ['nullable', 'uuid', 'exists:ingredients,id'],
             'ingredients.*.label' => ['required', 'string', 'max:255'], 'ingredients.*.amount' => ['nullable', 'string', 'max:255'],

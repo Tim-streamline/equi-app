@@ -4,7 +4,7 @@ import { router, useLocalSearchParams } from 'expo-router';
 import { BookOpen, ChevronDown, ChevronRight, ChevronUp, Leaf } from 'lucide-react-native';
 import { useScanIngredients, useScanResult } from '@/db/hooks';
 import { legacyScanScore, scanScoreLabel } from '@/lib/scanner-presentation';
-import { C, FeedIcon, ScannerButton, ScannerFrame, ScanScore, s } from '@/components/scanner/ScannerUI';
+import { C, FeedIcon, ScannerButton, ScannerFrame, ScannerStepProgress, ScanScore, s } from '@/components/scanner/ScannerUI';
 import { AnalyticalConstituents, MissingDataCard, SugarStarchCard } from '@/components/scanner/ScannerAnalysisStates';
 import { useFeedScanResult } from '@/hooks/useFeedScanResult';
 import { FeedScanResult } from '@/components/scanner/FeedScanResult';
@@ -19,8 +19,8 @@ export default function ScannerResultScreen() {
   const score = legacyScanScore(scan?.score);
   const remote = useFeedScanResult(id ?? '');
   if (remote.loading) return <ScannerFrame title="Voeranalyse"><Text style={s.body}>Beoordeling ophalen…</Text></ScannerFrame>;
-  if (remote.result) return <ScannerFrame title="Voeranalyse"><FeedScanResult result={remote.result} /><ScannerButton title="Ander voer bekijken" variant="outline" onPress={() => router.navigate('/(tabs)/scanner')} /></ScannerFrame>;
-  if (scan?.rating === 'Voorlopig') return <ScannerFrame title="Voeranalyse"><Text style={s.heading}>Voorlopige beoordeling ophalen</Text><Text style={s.body}>{remote.error || 'Maak verbinding om de volledige bevindingen bij deze inzending te bekijken.'}</Text><ScannerButton title="Naar scanhistorie" onPress={() => router.replace('/(tabs)/scanner/history')} /></ScannerFrame>;
+  if (remote.result) return <ScannerFrame title="Voeranalyse"><ScannerStepProgress step={4} /><FeedScanResult result={remote.result} /><ScannerButton title="Ander voer bekijken" variant="outline" onPress={() => router.navigate('/(tabs)/scanner')} /></ScannerFrame>;
+  if (['Voorlopig', 'Gecontroleerd'].includes(scan?.rating ?? '')) return <ScannerFrame title="Voeranalyse"><Text style={s.heading}>Beoordeling ophalen</Text><Text style={s.body}>{remote.error || 'Maak verbinding om de volledige bevindingen bij deze inzending te bekijken.'}</Text><ScannerButton title="Naar scanhistorie" onPress={() => router.replace('/(tabs)/scanner/history')} /></ScannerFrame>;
   return <ScannerFrame title="Voeranalyse">
     {!!remote.error && <Text accessibilityRole="alert" style={s.small}>{remote.error}</Text>}
     {!scan ? <><View style={[s.card, { marginTop: 12 }]}><Text style={s.heading}>Geen analyse gevonden</Text><Text style={s.body}>Deze analyse is nog niet beschikbaar. Open een eerdere scan vanuit je scanhistorie.</Text></View><ScannerButton title="Bekijk scanhistorie" onPress={() => router.replace('/(tabs)/scanner/history')} /></> : <>

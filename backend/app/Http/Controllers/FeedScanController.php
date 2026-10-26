@@ -7,8 +7,8 @@ use App\Models\FeedScanSubmission;
 use App\Models\Product;
 use App\Models\ScanResult;
 use App\Support\AuditLogger;
-use App\Support\FeedCatalog;
 use App\Support\FeedScanProcessor;
+use App\Support\FeedScanRecognition;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
@@ -23,7 +23,7 @@ class FeedScanController extends Controller
 
     public function store(Request $request)
     {
-        $data = $request->validate(['client_id' => 'required|uuid', 'name' => 'required|string|max:255']);
+        $data = $request->validate(['client_id' => 'required|uuid', 'name' => 'nullable|string|max:255', 'reference_product_id' => 'nullable|uuid']);
         $user = $request->attributes->get('powersync_user_id');
         // Lock user to serialize retries before the unique idempotency record exists.
         $s = DB::transaction(function () use ($data, $user) {
@@ -31,16 +31,15 @@ class FeedScanController extends Controller
             if ($existing = FeedScanSubmission::where('user_id', $user)->where('client_id', $data['client_id'])->first()) {
                 return $existing;
             }
-            $product = Product::create(['brand' => 'Nog te controleren', 'name' => $data['name'], 'needs_review' => true]);
-            $product->forceFill(['catalog_status' => 'draft'])->save();
-            $version = FeedCatalog::productDraft($product, ['brand' => $product->brand, 'name' => $product->name, 'category' => null, 'ingredients' => [], 'nutrients' => [], 'composition_text' => null], null);
-            $s = FeedScanSubmission::create(['user_id' => $user, 'client_id' => $data['client_id'], 'product_id' => $product->id, 'product_version_id' => $version->id]);
-            AuditLogger::log('feed_scan_submitted', $product, after: ['submission_id' => $s->id, 'user_id' => $user]);
+            $reference = ! empty($data['reference_product_id']) ? Product::whereNotIn('catalog_status', ['archived', 'removed'])->findOrFail($data['reference_product_id']) : null;
+            $s = FeedScanSubmission::create(['user_id' => $user, 'client_id' => $data['client_id'], 'submitted_name' => $data['name'] ?? null,
+                'workflow_version' => 2, 'status' => 'awaiting_composition', 'reference_product_id' => $reference?->id]);
+            AuditLogger::log('feed_scan_submitted', $s, after: ['submission_id' => $s->id, 'user_id' => $user]);
 
             return $s;
         });
 
-        return response()->json($s);
+        return response()->json($s->fresh());
     }
 
     public function show(Request $request, string $id)
@@ -57,7 +56,10 @@ class FeedScanController extends Controller
         try {
             DB::transaction(function () use ($s, $data, &$path) {
                 $s = FeedScanSubmission::lockForUpdate()->findOrFail($s->id);
-                abort_unless(in_array($s->status, ['draft', 'failed']), 409, 'Deze inzending wordt al verwerkt.');
+                abort_unless(in_array($s->status, ['draft', 'failed', 'awaiting_composition', 'needs_photos']), 409, 'Deze inzending wordt al verwerkt.');
+                if ($s->workflow_version === 2 && $s->status === 'awaiting_composition' && $data['slot'] !== 'composition') {
+                    throw ValidationException::withMessages(['file' => 'Controleer eerst de samenstelling.']);
+                }
                 $file = $data['file'];
                 $checksum = hash_file('sha256', $file->getRealPath());
                 $current = isset($s->photo_ids[$data['slot']]) ? FeedLabelAttachment::find($s->photo_ids[$data['slot']]) : null;
@@ -82,7 +84,7 @@ class FeedScanController extends Controller
                     'disk' => 'local', 'path' => $path, 'original_name' => mb_substr($file->getClientOriginalName(), 0, 255),
                     'mime_type' => $file->getMimeType(), 'size_bytes' => $file->getSize(), 'checksum' => $checksum]);
                 $map[$data['slot']] = $a->id;
-                $s->update(['photo_ids' => $map, 'status' => 'draft', 'message' => null, 'error_code' => null]);
+                $s->update(['photo_ids' => $map, 'status' => $s->workflow_version === 2 ? ($s->product_version_id ? 'needs_photos' : 'awaiting_composition') : 'draft', 'error_code' => null]);
             });
         } catch (\Throwable $e) {
             if ($path) {
@@ -95,7 +97,31 @@ class FeedScanController extends Controller
 
     public function analyse(Request $request, string $id)
     {
-        return response()->json(app(FeedScanProcessor::class)->analyse($this->owned($request, $id)));
+        $data = $request->validate(['name' => 'nullable|string|max:255']);
+        $submission = $this->owned($request, $id);
+        if (filled($data['name'] ?? null)) {
+            FeedScanSubmission::whereKey($submission->id)->whereIn('status', ['draft', 'needs_photos', 'failed'])
+                ->update(['submitted_name' => trim($data['name'])]);
+        }
+
+        return response()->json(app(FeedScanProcessor::class)->analyse($submission));
+    }
+
+    public function check(Request $request, string $id)
+    {
+        return response()->json(app(FeedScanRecognition::class)->check($this->owned($request, $id)));
+    }
+
+    public function confirm(Request $request, string $id)
+    {
+        return response()->json(app(FeedScanRecognition::class)->confirm($this->owned($request, $id)));
+    }
+
+    public function morePhotos(Request $request, string $id)
+    {
+        $data = $request->validate(['changed' => 'required|boolean']);
+
+        return response()->json(app(FeedScanRecognition::class)->morePhotos($this->owned($request, $id), $data['changed']));
     }
 
     public function scans(Request $request)

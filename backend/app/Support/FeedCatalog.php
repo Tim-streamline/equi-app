@@ -59,7 +59,7 @@ class FeedCatalog
         return $revision;
     }
 
-    public static function productDraft(Product $product, array $data, ?string $actor): ProductVersion
+    public static function productDraft(Product $product, array $data, ?string $actor, bool $retainAttachments = true): ProductVersion
     {
         $previous = self::latestProduct($product);
         $profile = isset(self::CATEGORIES[$data['category'] ?? ''])
@@ -68,7 +68,7 @@ class FeedCatalog
             'number' => (int) ProductVersion::where('product_id', $product->id)->max('number') + 1,
             'status' => 'draft', 'profile_id' => $profile, 'data' => $data, 'created_by' => $actor,
             'content_hash' => hash('sha256', json_encode($data))]);
-        foreach ($previous?->attachments ?? [] as $attachment) {
+        foreach ($retainAttachments ? ($previous?->attachments ?? []) : [] as $attachment) {
             // Files are immutable; a new version can retain the same original evidence.
             $copy = $attachment->replicate();
             $copy->product_version_id = $version->id;
@@ -112,6 +112,9 @@ class FeedCatalog
         validator($version->data, ['barcode' => ['nullable', Rule::unique('products')->ignore($product->id)]])->validate();
         if (! isset(self::CATEGORIES[$version->data['category'] ?? ''])) {
             throw ValidationException::withMessages(['category' => 'Kies eerst een productcategorie.']);
+        }
+        if (($version->data['recognition_enabled'] ?? false) && strlen(FeedCompositionMatcher::canonical($version->data['composition_text'] ?? '')) < 25) {
+            throw ValidationException::withMessages(['composition_text' => 'Vul de volledige gecontroleerde ingrediënten- en toevoegingenlijst in voordat je herkenning inschakelt.']);
         }
         foreach ($version->data['ingredients'] ?? [] as $row) {
             if (! empty($row['ingredient_id'])) {

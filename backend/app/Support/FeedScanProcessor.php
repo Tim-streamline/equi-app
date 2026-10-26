@@ -22,6 +22,9 @@ class FeedScanProcessor
             if (in_array($s->status, ['completed', 'review_required']) || ($s->status === 'processing' && $s->processing_started_at?->gt(now()->subMinutes(3)))) {
                 return null;
             }
+            if ($s->workflow_version === 2 && (! in_array($s->status, ['needs_photos', 'failed', 'processing']) || ! $s->product_version_id || ! isset($s->photo_ids['front']))) {
+                throw ValidationException::withMessages(['photos' => 'Controleer eerst de samenstelling en voeg daarna de analyse en voorkant toe.']);
+            }
             if (! isset($s->photo_ids['composition'], $s->photo_ids['analysis'])) {
                 throw ValidationException::withMessages(['photos' => 'Voeg een foto van de samenstelling en de analyse toe.']);
             }
@@ -51,7 +54,35 @@ class FeedScanProcessor
                     return;
                 }
                 $data = $this->normalize($extraction, $product);
-                $version = FeedCatalog::productDraft($product, $data, null);
+                $originalProduct = null;
+                // The first photo may contain no identity. The front label can later
+                // identify a possible revision of an existing product (never a known-score match).
+                if ($s->workflow_version === 2 && ! $s->reference_product_id && $product->catalog_status === 'draft' && ! $product->published_version_id && filled($extraction['brand']) && filled($extraction['name'])) {
+                    $brand = FeedCompositionMatcher::canonical($extraction['brand']);
+                    $name = $this->identityName($extraction['name'], $extraction['brand']);
+                    $matches = Product::where('catalog_status', 'published')->whereNotNull('published_version_id')->get()->filter(fn ($p) => FeedCompositionMatcher::canonical($p->brand) === $brand && $this->identityName($p->name, $p->brand) === $name);
+                    if ($matches->count() === 1) {
+                        $originalProduct = $product;
+                        $product = Product::lockForUpdate()->findOrFail($matches->first()->id);
+                        if ($product->catalog_status !== 'published' || FeedCompositionMatcher::canonical($product->brand) !== $brand || $this->identityName($product->name, $product->brand) !== $name) {
+                            abort(409);
+                        }
+                        $s->reference_product_id = $product->id;
+                        $s->reference_version_id = $product->published_version_id;
+                        $product->forceFill(['needs_review' => true])->save();
+                    }
+                }
+                $version = FeedCatalog::productDraft($product, $data, null, ! $originalProduct);
+                if ($originalProduct) {
+                    foreach (FeedLabelAttachment::where('submission_id', $s->id)->whereIn('id', array_values($s->photo_ids))->get() as $attachment) {
+                        $copy = $attachment->replicate();
+                        $copy->product_version_id = $version->id;
+                        $copy->save();
+                    }
+                    // Retain the original evidence/version as an archived intake shell.
+                    $originalProduct->forceFill(['catalog_status' => 'archived', 'needs_review' => false])->save();
+                    AuditLogger::log('feed_scan_identity_linked_for_review', $product, after: ['submission_id' => $s->id, 'original_product_id' => $originalProduct->id, 'reference_version_id' => $s->reference_version_id]);
+                }
                 $assessment = null;
                 $missing = $extraction['unreadable_fields'];
                 try {
@@ -59,25 +90,13 @@ class FeedScanProcessor
                 } catch (ValidationException) {
                     $missing[] = 'De voercategorie of gepubliceerde beoordelingsregels ontbreken. De beheerder controleert dit.';
                 }
-                $result = $assessment?->result ?? ['automatic_score' => null, 'score_cap' => null, 'findings' => [], 'missing_data' => []];
-                $missing = array_merge($missing, $result['missing_data']);
-                foreach ($data['ingredients'] as $i) {
-                    if ($i['match_status'] !== 'confirmed') {
-                        $missing[] = 'Nog geen eenduidige gepubliceerde kenniskaart voor: '.$i['label'];
-                    }
-                }
-                $public = ['name' => $data['name'], 'brand' => $data['brand'], 'provisional' => true,
-                    'score' => $result['automatic_score'], 'score_cap' => $result['score_cap'],
-                    'findings' => array_merge($result['findings'], array_map(fn ($c) => ['message' => $c['message']], $result['applied_caps'] ?? [])),
-                    'missing_data' => array_values(array_unique($missing)), 'ingredients' => $data['ingredients'], 'nutrients' => $data['nutrients'],
-                    'product_version_id' => $version->id, 'rule_version_id' => $assessment?->rule_version_id,
-                    'calibration_pending' => $result['automatic_score'] === null,
-                    'message' => $result['automatic_score'] === null ? 'Voorlopige bevindingen. De volledige puntenweging is nog niet gekalibreerd; er wordt geen cijfer geschat. Dit product staat ter beoordeling.' : 'Voorlopige beoordeling op basis van het etiket en de gepubliceerde regels. Dit product staat ter beoordeling.'];
+                $public = FeedScanResults::make($version, $assessment, $missing);
                 $scan = ScanResult::create(['user_id' => $s->user_id, 'product_id' => $product->id, 'product_name' => $data['name'], 'brand' => $data['brand'],
                     'scanned_at' => now(), 'score' => $public['score'] === null ? null : (int) round((float) $public['score'] * 10),
                     'rating' => 'Voorlopig', 'advice' => $public['message']]);
-                $s->update(['status' => 'completed', 'product_version_id' => $version->id, 'assessment_id' => $assessment?->id,
-                    'scan_result_id' => $scan->id, 'extraction' => $extraction, 'public_result' => $public, 'processing_token' => null]);
+                $s->update(['status' => 'completed', 'product_id' => $product->id, 'reference_product_id' => $s->reference_product_id, 'reference_version_id' => $s->reference_version_id, 'product_version_id' => $version->id, 'assessment_id' => $assessment?->id,
+                    'scan_result_id' => $scan->id, 'extraction' => $extraction, 'public_result' => $public, 'processing_token' => null,
+                    'message' => 'De foto’s zijn uitgelezen. Deze productversie staat ter beoordeling.']);
                 AuditLogger::log('feed_scan_processed', $product, after: ['submission_id' => $s->id, 'product_version_id' => $version->id, 'user_id' => $s->user_id]);
             });
         } catch (\Throwable $e) {
@@ -87,6 +106,14 @@ class FeedScanProcessor
         }
 
         return $submission->fresh();
+    }
+
+    private function identityName(string $name, string $brand): string
+    {
+        $name = FeedCompositionMatcher::canonical($name);
+        $brand = FeedCompositionMatcher::canonical($brand);
+
+        return str_starts_with($name, $brand.' ') ? substr($name, strlen($brand) + 1) : $name;
     }
 
     private function normalize(array $raw, Product $product): array
@@ -123,6 +150,7 @@ class FeedScanProcessor
             'category' => $raw['category_confidence'] === 'high' && isset(FeedCatalog::CATEGORIES[$raw['category']]) ? $raw['category'] : null,
             'composition_text' => $raw['composition_confidence'] === 'high' ? $raw['composition_text'] : null, 'ingredients' => $ingredients,
             'nutrients' => array_values(array_filter($raw['nutrients'], fn ($n) => $n['confidence'] === 'high' && filled($n['source']) && $n['value'] !== null)),
+            'recognition_enabled' => false,
             'source' => 'Gebruikersinzending; automatisch uitgelezen, nog te beoordelen.'];
     }
 }

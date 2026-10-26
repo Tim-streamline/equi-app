@@ -26,7 +26,7 @@
     const purposes = { packaging: 'Verpakking', composition: 'Samenstelling', analysis: 'Analyse' };
     const bases = { product: 'Productbasis', dry_matter: 'Droge-stofbasis', unknown: 'Onbekend' };
     const qualifiers = { exact: 'Exact vermeld', less_than: 'Minder dan (<)', greater_than: 'Meer dan (>)', minimum: 'Minimaal (≥)', maximum: 'Maximaal (≤)' };
-    const empty = () => ({ brand: '', name: '', barcode: '', category: '', composition_text: '', usage: '', source: '', internal_notes: '', ingredients: [], nutrients: [], expected_number: null, approve: false });
+    const empty = () => ({ brand: '', name: '', barcode: '', category: '', composition_text: '', recognition_enabled: false, usage: '', source: '', internal_notes: '', ingredients: [], nutrients: [], expected_number: null, approve: false });
     const form = useForm(empty());
     const uploadForm = useForm({ file: null, purpose: 'composition' });
     function apply() { clearTimeout(timer); timer = setTimeout(() => router.get('/admin/feed-scanner/products', { q, status, sort, category }, { preserveState: true, replace: true }), 250); }
@@ -114,6 +114,7 @@
                 <Field label="Interne notities"><Textarea bind:value={$form.internal_notes} rows={2} /></Field>
             {:else if tab === 'ingredients'}
                 <Field label="Oorspronkelijke samenstelling op het etiket"><Textarea bind:value={$form.composition_text} rows={3} /></Field>
+                <label class="flex items-start gap-2 text-sm"><input type="checkbox" bind:checked={$form.recognition_enabled} class="mt-1" /><span>Herkennen op samenstelling inschakelen<span class="block text-muted-foreground">Controleer eerst de volledige ingrediënten- en toevoegingenlijst, inclusief volgorde en percentages. Herkenning gebruikt deze tekst pas nadat de productversie is goedgekeurd.</span></span></label>
                 <div class="flex items-center justify-between"><h3 class="font-medium">Ingrediënten in etiketvolgorde</h3><Button type="button" size="sm" variant="outline" onclick={() => $form.ingredients = [...$form.ingredients, { ingredient_id: '', label: '', amount: '', match_status: 'unknown', added_selenium: 'unknown', selenium_form: '', evidence: '' }]}>Ingrediënt toevoegen</Button></div>
                 {#each $form.ingredients as row, index}
                     <div class="space-y-3 rounded-lg border p-3">
@@ -158,9 +159,11 @@
         {#each detail?.submissions ?? [] as submission}
             <div class="mb-4 rounded-xl border p-4 space-y-2">
                 <h3 class="font-semibold">Gebruikersinzending · {new Date(submission.created_at).toLocaleDateString('nl-NL')}</h3>
-                <p class="text-sm">{({draft: 'Foto’s ontvangen / nog aan te vullen', processing: 'Etiket wordt uitgelezen', failed: 'Automatisch uitlezen niet gelukt', completed: 'Uitgelezen · ter beoordeling', review_required: 'Handmatige beoordeling nodig'})[submission.status] ?? submission.status}</p>
+                <p class="text-sm">{({draft: 'Foto’s ontvangen / nog aan te vullen', needs_photos: 'Wacht op analyse en voorkant', processing: 'Etiket wordt uitgelezen', failed: 'Automatisch uitlezen niet gelukt', completed: 'Uitgelezen · ter beoordeling', review_required: 'Handmatige beoordeling nodig'})[submission.status] ?? submission.status}</p>
+                {#if submission.reference_version_id}<p class="text-sm font-medium">Nieuwe etiketinzending bij versie {detail.versions.find(v => v.id === submission.reference_version_id)?.number ?? 'onbekend'}. De eerdere versie en beoordeling blijven bewaard.</p>{/if}
                 {#if submission.message}<p class="text-sm text-muted-foreground">{submission.message}</p>{/if}
-                {#if ['draft', 'failed'].includes(submission.status)}<Button size="sm" variant="outline" onclick={() => router.post(`/admin/feed-scanner/submissions/${submission.id}/retry`)}>Etiket opnieuw uitlezen</Button>{/if}
+                {#if ['draft', 'failed', 'needs_photos'].includes(submission.status)}<Button size="sm" variant="outline" onclick={() => router.post(`/admin/feed-scanner/submissions/${submission.id}/retry`)}>Etiket opnieuw uitlezen</Button>{/if}
+                {#if submission.recognition}<details><summary class="cursor-pointer text-sm">Controle van de samenstelling bekijken</summary><pre class="mt-2 whitespace-pre-wrap break-words text-xs">{JSON.stringify(submission.recognition, null, 2)}</pre></details>{/if}
                 {#if submission.extraction}<details><summary class="cursor-pointer text-sm">Uitgelezen brongegevens controleren</summary><pre class="mt-2 whitespace-pre-wrap break-words text-xs">{JSON.stringify(submission.extraction, null, 2)}</pre></details>{/if}
             </div>
         {/each}

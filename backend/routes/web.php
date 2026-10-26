@@ -58,6 +58,9 @@ Route::middleware(AuthenticatePowerSyncJwt::class)->group(function () {
         Route::get('submissions/{id}', 'show')->whereUuid('id');
         Route::post('submissions/{id}/photos', 'upload')->whereUuid('id')->middleware('throttle:60,1,feed-scan-upload:');
         Route::post('submissions/{id}/analyse', 'analyse')->whereUuid('id')->middleware('throttle:10,60,feed-scan-analyse:');
+        Route::post('submissions/{id}/check', 'check')->whereUuid('id')->middleware('throttle:30,60,feed-scan-check:');
+        Route::post('submissions/{id}/confirm', 'confirm')->whereUuid('id')->middleware('throttle:30,60,feed-scan-confirm:');
+        Route::post('submissions/{id}/more-photos', 'morePhotos')->whereUuid('id');
     });
     Route::post('/api/intakes/{booking}/activity', [IntakeActivityController::class, 'update'])->whereUuid('booking');
     Route::get('/api/intakes/{booking}/resume', [IntakeActivityController::class, 'resume'])->whereUuid('booking');
