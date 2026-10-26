@@ -8,6 +8,8 @@ Een herkend product heeft altijd een actuele, goedgekeurde productversie. De naa
 
 Een onzichtbare wijziging kan niet uit de eerste foto worden afgeleid. De bevestigingsstap biedt daarom ook **Samenstelling of etiketgegevens wijken af**, bijvoorbeeld als de analyse gewijzigd is terwijl de ingrediëntenlijst gelijk lijkt. Dat vraagt eveneens de twee aanvullende foto’s en opent een reviewversie.
 
+Productversies bewaren bij welke inzending ze horen; beheerdersbewerkingen nemen die koppeling over. Gelijktijdige inzendingen voor hetzelfde product kunnen daardoor onafhankelijk worden verwerkt, met uitsluitend hun eigen geselecteerde foto’s. Alleen beheerderswerk aan dezelfde inzending onderbreekt de automatische verwerking. De migratie koppelt bestaande versies via hun etiketfoto’s en maakt ten onrechte geblokkeerde, aantoonbaar onbewerkte inzendingen weer hervatbaar. Dit start geen automatische AI-aanroep.
+
 Als de productidentiteit pas op de voorkant wordt gelezen, kan een eenduidige exacte merk-/naamovereenkomst de inzending alsnog aan een bestaand product koppelen **voor beoordeling**. Daarbij ontstaat geen bekende-score-match: het nieuwe etiket wordt zelfstandig beoordeeld. Het tijdelijke ongeïdentificeerde concept wordt gearchiveerd met behoud van oorspronkelijke bewijsmaterialen; de bestaande goedgekeurde productversie wordt niet gewijzigd.
 
 ## Activeren

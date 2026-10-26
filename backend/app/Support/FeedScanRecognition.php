@@ -133,7 +133,7 @@ class FeedScanRecognition
         $data = ['brand' => $product->brand, 'name' => $s->submitted_name ?: $product->name, 'barcode' => null, 'category' => null,
             'composition_text' => null, 'ingredients' => [], 'nutrients' => [], 'recognition_enabled' => false,
             'source' => $s->reference_product_id ? 'Mogelijke receptwijziging uit gebruikersinzending; eerdere productversie blijft bewaard.' : 'Nieuwe gebruikersinzending; wacht op aanvullende etiketfoto’s.'];
-        $version = FeedCatalog::productDraft($product, $data, null, false);
+        $version = FeedCatalog::productDraft($product, $data, null, false, $s->id);
         $s->update(['product_id' => $product->id, 'product_version_id' => $version->id, 'reference_version_id' => $s->reference_version_id]);
         FeedLabelAttachment::where('submission_id', $s->id)->whereNull('product_version_id')->update(['product_version_id' => $version->id]);
         AuditLogger::log('feed_recipe_review_requested', $product, after: ['submission_id' => $s->id, 'reference_version_id' => $s->reference_version_id, 'version_id' => $version->id]);

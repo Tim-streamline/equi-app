@@ -3,7 +3,9 @@
 namespace Tests\Feature;
 
 use App\Http\Middleware\AuthenticatePowerSyncJwt;
+use App\Models\AdminUser;
 use App\Models\FeedAssessment;
+use App\Models\FeedLabelAttachment;
 use App\Models\FeedRuleVersion;
 use App\Models\FeedScanSubmission;
 use App\Models\Product;
@@ -13,6 +15,7 @@ use App\Models\User;
 use App\Support\FeedAssessments;
 use App\Support\FeedCatalog;
 use App\Support\FeedCompositionOcr;
+use App\Support\FeedLabelReader;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
@@ -93,6 +96,126 @@ class FeedCompositionRecognitionTest extends TestCase
     private function upload(string $id, string $slot): void
     {
         $this->post('/api/feed-scanner/submissions/'.$id.'/photos', ['slot' => $slot, 'file' => UploadedFile::fake()->image('etiket.jpg')], ['Accept' => 'application/json'])->assertOk();
+    }
+
+    private function pendingSubmission(Product $product): string
+    {
+        $this->ocr('', 0);
+        $id = $this->submission($product);
+        $this->postJson("/api/feed-scanner/submissions/$id/check")->assertJsonPath('status', 'needs_photos');
+        $this->upload($id, 'analysis');
+        $this->upload($id, 'front');
+
+        return $id;
+    }
+
+    private function extractedLabel(): array
+    {
+        return ['brand' => 'Testmerk', 'name' => 'Balansvoer', 'barcode' => null,
+            'category' => 'complementary', 'category_confidence' => 'high',
+            'composition_text' => self::RECIPE, 'composition_confidence' => 'high',
+            'ingredients' => [], 'nutrients' => [], 'unreadable_fields' => []];
+    }
+
+    public function test_overlapping_submissions_complete_independently_with_only_their_selected_photos(): void
+    {
+        $product = $this->product();
+        $firstOwner = $this->owner;
+        $first = $this->pendingSubmission($product);
+        // Replaced evidence must stay in history, not appear in the new analysis version.
+        $this->post("/api/feed-scanner/submissions/$first/photos", ['slot' => 'analysis', 'file' => UploadedFile::fake()->image('replacement.jpg', 30, 30)], ['Accept' => 'application/json'])->assertOk();
+        $secondOwner = User::factory()->create();
+        $this->owner($secondOwner);
+        $second = $this->pendingSubmission($product);
+        $this->mock(FeedLabelReader::class, fn ($mock) => $mock->shouldReceive('read')->twice()->andReturn($this->extractedLabel()));
+        $results = [];
+        foreach ([[$first, $firstOwner], [$second, $secondOwner]] as [$id, $owner]) {
+            $this->owner($owner);
+            $results[] = $this->postJson("/api/feed-scanner/submissions/$id/analyse")->assertOk()->assertJsonPath('status', 'completed')->json();
+            $submission = FeedScanSubmission::findOrFail($id);
+            $version = ProductVersion::findOrFail($submission->product_version_id);
+            $this->assertSame($id, $version->submission_id);
+            $photos = $version->attachments;
+            $this->assertCount(3, $photos);
+            $this->assertSame([$id], $photos->pluck('submission_id')->unique()->values()->all());
+            $selectedPaths = FeedLabelAttachment::whereIn('id', array_values($submission->photo_ids))->pluck('path')->all();
+            $this->assertEqualsCanonicalizing($selectedPaths, $photos->pluck('path')->all());
+            $this->postJson("/api/feed-scanner/submissions/$id/analyse")->assertJsonPath('scan_result_id', $submission->scan_result_id);
+        }
+        $this->assertNotSame($results[0]['scan_result_id'], $results[1]['scan_result_id']);
+        $this->assertNotSame($results[0]['product_version_id'], $results[1]['product_version_id']);
+        $this->assertSame(2, ScanResult::count());
+        $this->assertSame($product->published_version_id, $product->fresh()->published_version_id);
+        Http::assertNothingSent();
+    }
+
+    public function test_reviewer_edit_during_extraction_is_protected_even_after_another_submission_arrives(): void
+    {
+        $product = $this->product();
+        $first = $this->pendingSubmission($product);
+        $admin = AdminUser::create(['name' => 'Reviewer', 'email' => 'reviewer@example.com', 'password' => 'password', 'role' => 'admin', 'active' => true]);
+        $edited = null;
+        $this->mock(FeedLabelReader::class, function ($mock) use ($product, $admin, &$edited) {
+            $mock->shouldReceive('read')->once()->andReturnUsing(function () use ($product, $admin, &$edited) {
+                $edited = DB::transaction(fn () => FeedCatalog::productDraft($product, array_replace(FeedCatalog::latestProduct($product)->data, ['name' => 'Naam van beheerder']), $admin->id));
+                $this->pendingSubmission($product);
+
+                return $this->extractedLabel();
+            });
+        });
+        $this->postJson("/api/feed-scanner/submissions/$first/analyse")->assertOk()->assertJsonPath('status', 'review_required')->assertJsonPath('processing_token', null);
+        $this->assertSame($first, $edited->submission_id);
+        $this->assertSame('Naam van beheerder', $edited->fresh()->data['name']);
+        $this->assertSame(0, ScanResult::count());
+        $this->postJson("/api/feed-scanner/submissions/$first/analyse")->assertJsonPath('status', 'review_required');
+    }
+
+    public function test_reviewing_another_submission_does_not_block_this_submission(): void
+    {
+        $product = $this->product();
+        $first = $this->pendingSubmission($product);
+        $second = $this->pendingSubmission($product);
+        $admin = AdminUser::create(['name' => 'Reviewer', 'email' => 'reviewer@example.com', 'password' => 'password', 'role' => 'admin', 'active' => true]);
+        $edited = DB::transaction(fn () => FeedCatalog::productDraft($product, FeedCatalog::latestProduct($product)->data, $admin->id));
+        $this->assertSame($second, $edited->submission_id);
+        $this->mock(FeedLabelReader::class, fn ($mock) => $mock->shouldReceive('read')->twice()->andReturn($this->extractedLabel()));
+        $this->postJson("/api/feed-scanner/submissions/$first/analyse")->assertOk()->assertJsonPath('status', 'completed');
+        $this->postJson("/api/feed-scanner/submissions/$second/analyse")->assertOk()->assertJsonPath('status', 'review_required');
+        $this->assertSame(1, ScanResult::count());
+    }
+
+    public function test_reviewing_the_submission_draft_in_place_prevents_automatic_replacement(): void
+    {
+        $product = $this->product();
+        $id = $this->pendingSubmission($product);
+        $version = ProductVersion::findOrFail(FeedScanSubmission::findOrFail($id)->product_version_id);
+        $version->update(['status' => 'needs_info']);
+        $this->mock(FeedLabelReader::class, fn ($mock) => $mock->shouldReceive('read')->once()->andReturn($this->extractedLabel()));
+        $this->postJson("/api/feed-scanner/submissions/$id/analyse")->assertOk()->assertJsonPath('status', 'review_required');
+        $this->assertSame('needs_info', $version->fresh()->status);
+        $this->assertSame(0, ScanResult::count());
+    }
+
+    public function test_migration_links_existing_drafts_and_reopens_only_unreviewed_blocked_submissions(): void
+    {
+        $product = $this->product();
+        $first = $this->pendingSubmission($product);
+        $second = $this->pendingSubmission($product);
+        $admin = AdminUser::create(['name' => 'Reviewer', 'email' => 'reviewer@example.com', 'password' => 'password', 'role' => 'admin', 'active' => true]);
+        $edited = DB::transaction(fn () => FeedCatalog::productDraft($product, FeedCatalog::latestProduct($product)->data, $admin->id));
+        FeedScanSubmission::whereIn('id', [$first, $second])->update(['status' => 'review_required']);
+        $photos = FeedLabelAttachment::orderBy('id')->get()->toArray();
+        $migration = require database_path('migrations/2026_10_26_160000_link_product_versions_to_feed_submissions.php');
+        $migration->down();
+        $migration->up();
+        $this->assertSame($second, $edited->fresh()->submission_id);
+        $this->assertSame('needs_photos', FeedScanSubmission::findOrFail($first)->status);
+        $this->assertSame('review_required', FeedScanSubmission::findOrFail($second)->status);
+        $this->assertSame($photos, FeedLabelAttachment::orderBy('id')->get()->toArray());
+        $this->assertSame($product->published_version_id, $product->fresh()->published_version_id);
+        $this->assertNull(ProductVersion::findOrFail($product->published_version_id)->submission_id);
+        $this->mock(FeedLabelReader::class, fn ($mock) => $mock->shouldReceive('read')->once()->andReturn($this->extractedLabel()));
+        $this->postJson("/api/feed-scanner/submissions/$first/analyse")->assertOk()->assertJsonPath('status', 'completed');
     }
 
     public function test_known_recipe_reuses_only_the_approved_current_assessment_without_ai_or_extra_photos(): void

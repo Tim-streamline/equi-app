@@ -59,12 +59,13 @@ class FeedCatalog
         return $revision;
     }
 
-    public static function productDraft(Product $product, array $data, ?string $actor, bool $retainAttachments = true): ProductVersion
+    public static function productDraft(Product $product, array $data, ?string $actor, bool $retainAttachments = true, ?string $submissionId = null): ProductVersion
     {
         $previous = self::latestProduct($product);
         $profile = isset(self::CATEGORIES[$data['category'] ?? ''])
             ? DB::table('feed_assessment_profiles')->where('code', $data['category'] === 'balancer' ? 'balancer' : 'standard')->value('id') : null;
         $version = ProductVersion::create(['product_id' => $product->id,
+            'submission_id' => $submissionId ?? ($retainAttachments ? $previous?->submission_id : null),
             'number' => (int) ProductVersion::where('product_id', $product->id)->max('number') + 1,
             'status' => 'draft', 'profile_id' => $profile, 'data' => $data, 'created_by' => $actor,
             'content_hash' => hash('sha256', json_encode($data))]);

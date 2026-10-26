@@ -133,7 +133,9 @@ class IntakeWeightDateQuestionTest extends TestCase
         $snapshot = json_decode(file_get_contents(database_path('data/intake-questionnaire-local.json')), true);
         $fields = collect(collect($snapshot['sections'])->firstWhere('key', 'paard')['fields']);
         $definition = $fields->firstWhere('key', $date->key);
-        foreach (['answer_section_key', 'label', 'type', 'placeholder', 'show_if', 'required', 'optional', 'active'] as $key) {
+        // The historical snapshot preserves its original label; current wording is checked separately.
+        $this->assertSame('Wanneer was dat?', $date->label);
+        foreach (['answer_section_key', 'type', 'placeholder', 'show_if', 'required', 'optional', 'active'] as $key) {
             $this->assertSame($definition[$key], $date->$key, $key);
         }
         $this->assertSame($fields->firstWhere('key', $method->key)['order'] + 1, $definition['order']);

@@ -7,6 +7,7 @@ use App\Models\FeedScanSubmission;
 use App\Models\Ingredient;
 use App\Models\IngredientRevision;
 use App\Models\Product;
+use App\Models\ProductVersion;
 use App\Models\ScanResult;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
@@ -47,9 +48,10 @@ class FeedScanProcessor
                     return;
                 }
                 $product = Product::lockForUpdate()->findOrFail($s->product_id);
-                // A reviewer may already have edited the submission while AI was reading.
-                if (FeedCatalog::latestProduct($product)?->id !== $s->product_version_id) {
-                    $s->update(['status' => 'review_required', 'extraction' => $extraction, 'message' => 'Je foto’s zijn ontvangen. De beheerder beoordeelt dit product al.']);
+                // Other submissions have independent drafts. Protect only this
+                // submission's versions that a reviewer has edited or reviewed.
+                if ($this->hasReviewerChanges($s)) {
+                    $s->update(['status' => 'review_required', 'extraction' => $extraction, 'processing_token' => null, 'message' => 'Je foto’s zijn ontvangen. De beheerder beoordeelt dit product al.']);
 
                     return;
                 }
@@ -72,13 +74,13 @@ class FeedScanProcessor
                         $product->forceFill(['needs_review' => true])->save();
                     }
                 }
-                $version = FeedCatalog::productDraft($product, $data, null, ! $originalProduct);
+                $version = FeedCatalog::productDraft($product, $data, null, false, $s->id);
+                foreach (FeedLabelAttachment::where('submission_id', $s->id)->whereIn('id', array_values($s->photo_ids))->get() as $attachment) {
+                    $copy = $attachment->replicate();
+                    $copy->product_version_id = $version->id;
+                    $copy->save();
+                }
                 if ($originalProduct) {
-                    foreach (FeedLabelAttachment::where('submission_id', $s->id)->whereIn('id', array_values($s->photo_ids))->get() as $attachment) {
-                        $copy = $attachment->replicate();
-                        $copy->product_version_id = $version->id;
-                        $copy->save();
-                    }
                     // Retain the original evidence/version as an archived intake shell.
                     $originalProduct->forceFill(['catalog_status' => 'archived', 'needs_review' => false])->save();
                     AuditLogger::log('feed_scan_identity_linked_for_review', $product, after: ['submission_id' => $s->id, 'original_product_id' => $originalProduct->id, 'reference_version_id' => $s->reference_version_id]);
@@ -106,6 +108,21 @@ class FeedScanProcessor
         }
 
         return $submission->fresh();
+    }
+
+    private function hasReviewerChanges(FeedScanSubmission $submission): bool
+    {
+        return ProductVersion::where('product_id', $submission->product_id)
+            ->where(function ($query) use ($submission) {
+                $query->where('submission_id', $submission->id)->orWhere('id', $submission->product_version_id)
+                    // Older versions with mixed evidence cannot be backfilled unambiguously.
+                    ->orWhere(fn ($legacy) => $legacy->whereNull('submission_id')
+                        ->whereHas('attachments', fn ($photos) => $photos->where('submission_id', $submission->id)));
+            })
+            ->where(function ($query) {
+                $query->whereNotNull('created_by')->orWhereNotNull('reviewed_by')->orWhere('status', '!=', 'draft')
+                    ->orWhereHas('attachments', fn ($attachments) => $attachments->whereNotNull('uploaded_by'));
+            })->exists();
     }
 
     private function identityName(string $name, string $brand): string
