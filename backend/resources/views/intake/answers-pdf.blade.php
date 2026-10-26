@@ -15,6 +15,13 @@
     .answer { white-space: pre-wrap; overflow-wrap: break-word; }
     .entry { padding: 7px 10px; margin-bottom: 6px; background: #f2f6f5; }
     .entry p { margin: 0 0 5px; }
+    .review-answer { margin-bottom: 12px; }
+    .review-answer.attention { border-left: 3px solid #b7791f; background: #fff8e9; padding: 0 10px 2px; }
+    .review-answer.critical { border-left: 3px solid #a12d2d; background: #fff0ef; padding: 0 10px 2px; }
+    .review-label { font-size: 9px; font-weight: bold; color: #825507; }
+    .critical .review-label { color: #a12d2d; }
+    .flagged-option { font-weight: bold; color: #825507; }
+    .critical .flagged-option { color: #a12d2d; }
     img { max-width: 440px; max-height: 250px; }
     .photo { page-break-inside: avoid; margin-bottom: 10px; }
     ul { margin: 0 0 12px; padding-left: 18px; }
@@ -29,7 +36,13 @@
 @foreach ($sections as $section)
 <h2>{{ $section['nr'] + 1 }}. {{ $section['title'] }}</h2>
 @foreach ($section['rows'] as $row)
+<div class="review-answer{{ !empty($row['critical']) ? ' critical' : (!empty($row['flagged']) ? ' attention' : '') }}">
 <h3>{{ $row['label'] }}</h3>
+@if (!empty($row['critical']))
+<p class="review-label">Aandachtspunt · Blokkeert protocol</p>
+@elseif (!empty($row['flagged']))
+<p class="review-label">Aandachtspunt</p>
+@endif
 @if($row['owner_reported'] ?? false)<p class="muted">Vermoeden eigenaar · niet bevestigd</p>@endif
 @if ($row['type'] === 'sectionhead')
 @elseif (!empty($row['not_applicable']))
@@ -56,11 +69,13 @@
 </div>
 @endforeach
 @elseif ($row['type'] === 'multi')
-<ul>@foreach ((array) $row['value'] as $value)<li>{{ $value }}</li>@endforeach</ul>
+<ul>@foreach ((array) $row['value'] as $value)<li @if(in_array($value, $row['flagged_options'] ?? [], true))class="flagged-option"@endif>{{ $value }}</li>@endforeach</ul>
 @else
 <p class="answer">{{ is_array($row['value']) ? implode("\n", $row['value']) : $row['value'] }}{{ $row['type'] === 'number' && $row['unit'] ? ' '.$row['unit'] : '' }}</p>
 @endif
+</div>
 @endforeach
 @endforeach
+<div id="intake-document-complete"></div>
 </body>
 </html>

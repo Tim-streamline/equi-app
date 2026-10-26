@@ -19,7 +19,7 @@ abstract class FeedVersion extends Model
     protected static function booted(): void
     {
         static::updating(function (self $version) {
-            if ($version->isDirty(['data', 'number', 'content_hash', 'profile_id', 'ingredient_id', 'product_id'])) {
+            if ($version->isDirty(['data', 'number', 'content_hash', 'profile_id', 'ingredient_id', 'product_id', 'submission_id'])) {
                 throw new \LogicException('Maak een nieuwe versie om de inhoud te wijzigen.');
             }
             if (in_array($version->getOriginal('status'), ['published', 'approved', 'legacy'], true)) {

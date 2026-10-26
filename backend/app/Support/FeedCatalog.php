@@ -6,9 +6,9 @@ use App\Models\Ingredient;
 use App\Models\IngredientRevision;
 use App\Models\Product;
 use App\Models\ProductVersion;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
-use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 
 class FeedCatalog
@@ -29,7 +29,20 @@ class FeedCatalog
 
     public static function latestProduct(Product $product): ?ProductVersion
     {
-        return ProductVersion::where('product_id', $product->id)->orderByDesc('number')->first();
+        return ProductVersion::where('product_id', $product->id)->whereNull('superseded_by_product_id')->orderByDesc('number')->first();
+    }
+
+    /** One correction history per product; submissions are independent evidence. */
+    public static function currentProductVersions(?Product $product = null): Builder
+    {
+        return ProductVersion::query()->when($product, fn ($q) => $q->where('product_id', $product->id))
+            ->whereNull('superseded_by_product_id')
+            ->whereRaw('product_versions.number = (SELECT MAX(v.number) FROM product_versions v WHERE v.product_id = product_versions.product_id AND v.superseded_by_product_id IS NULL)');
+    }
+
+    public static function hasPendingProductVersions(Product $product): bool
+    {
+        return self::currentProductVersions($product)->whereIn('status', ['draft', 'needs_info', 'legacy'])->exists();
     }
 
     public static function snapshotLegacyIngredient(Ingredient $ingredient): void
@@ -59,19 +72,29 @@ class FeedCatalog
         return $revision;
     }
 
-    public static function productDraft(Product $product, array $data, ?string $actor): ProductVersion
+    public static function productDraft(Product $product, array $data, ?string $actor, bool $retainAttachments = true, ?ProductVersion $sourceVersion = null): ProductVersion
     {
-        $previous = self::latestProduct($product);
-        $profile = DB::table('feed_assessment_profiles')->where('code', $data['category'] === 'balancer' ? 'balancer' : 'standard')->value('id');
+        $previous = $sourceVersion ?? self::latestProduct($product);
+        if ($previous && $previous->product_id !== $product->id) {
+            throw new \LogicException('De bronversie hoort niet bij dit product.');
+        }
+        $profile = isset(self::CATEGORIES[$data['category'] ?? ''])
+            ? DB::table('feed_assessment_profiles')->where('code', $data['category'] === 'balancer' ? 'balancer' : 'standard')->value('id') : null;
         $version = ProductVersion::create(['product_id' => $product->id,
+            'submission_id' => null,
             'number' => (int) ProductVersion::where('product_id', $product->id)->max('number') + 1,
             'status' => 'draft', 'profile_id' => $profile, 'data' => $data, 'created_by' => $actor,
             'content_hash' => hash('sha256', json_encode($data))]);
-        foreach ($previous?->attachments ?? [] as $attachment) {
+        foreach ($retainAttachments ? ($previous?->attachments ?? []) : [] as $attachment) {
             // Files are immutable; a new version can retain the same original evidence.
             $copy = $attachment->replicate();
             $copy->product_version_id = $version->id;
             $copy->save();
+        }
+
+        if ($actor) {
+            // A correction must not be matched using the previous extracted facts.
+            $product->forceFill(['scan_fingerprint' => null])->save();
         }
 
         return $version;
@@ -106,11 +129,13 @@ class FeedCatalog
 
     public static function approveProduct(Product $product, ProductVersion $version, string $actor, ?string $notes): void
     {
-        // Serialize catalog publication so barcode validation remains valid until commit.
+        // Keep publication and assessment rules on the same lock order.
         DB::table('feed_assessment_profiles')->orderBy('id')->lockForUpdate()->get();
-        validator($version->data, ['barcode' => ['nullable', Rule::unique('products')->ignore($product->id)]])->validate();
         if (! isset(self::CATEGORIES[$version->data['category'] ?? ''])) {
             throw ValidationException::withMessages(['category' => 'Kies eerst een productcategorie.']);
+        }
+        if (($version->data['recognition_enabled'] ?? false) && strlen(FeedCompositionMatcher::canonical($version->data['composition_text'] ?? '')) < 25) {
+            throw ValidationException::withMessages(['composition_text' => 'Vul de volledige gecontroleerde ingrediënten- en toevoegingenlijst in voordat je herkenning inschakelt.']);
         }
         foreach ($version->data['ingredients'] ?? [] as $row) {
             if (! empty($row['ingredient_id'])) {
@@ -122,7 +147,8 @@ class FeedCatalog
         }
         $version->update(['status' => 'approved', 'reviewed_by' => $actor, 'reviewed_at' => now(), 'review_notes' => $notes]);
         $product->forceFill(['brand' => $version->data['brand'], 'name' => $version->data['name'], 'barcode' => $version->data['barcode'] ?: null,
-            'category' => $version->data['category'], 'catalog_status' => 'published', 'published_version_id' => $version->id, 'needs_review' => false])->save();
+            'category' => $version->data['category'], 'catalog_status' => 'published', 'published_version_id' => $version->id,
+            'needs_review' => self::hasPendingProductVersions($product)])->save();
         $links = [];
         foreach ($version->data['ingredients'] ?? [] as $index => $row) {
             if (! empty($row['ingredient_id']) && ($row['match_status'] ?? 'confirmed') === 'confirmed' && ! isset($links[$row['ingredient_id']])) {
@@ -130,5 +156,16 @@ class FeedCatalog
             }
         }
         $product->ingredients()->sync($links);
+        // Complete waiting evidence submissions after releasing the product lock.
+        $productId = $product->id;
+        DB::afterCommit(function () use ($productId) {
+            foreach (\App\Models\FeedScanSubmission::where('product_id', $productId)->where('status', '!=', 'completed')->get() as $submission) {
+                try {
+                    app(FeedScanReviewCompletion::class)->complete($submission);
+                } catch (\Throwable $e) {
+                    report($e); // Status/history reads can retry after publication.
+                }
+            }
+        });
     }
 }

@@ -23,6 +23,41 @@ class IntakeWeightDateQuestionTest extends TestCase
         return [['paard'], ['gezondheid']];
     }
 
+    public function test_weight_date_branch_handles_current_admin_labels_and_preserves_saved_answers(): void
+    {
+        $q = IntakeQuestionnaire::create(['slug' => 'protocol-intake', 'name' => 'Test', 'active' => true]);
+        $section = $q->sections()->create(['key' => 'paard', 'title' => 'Over je paard', 'active' => true]);
+        $options = ['Geschat op zicht', 'Gewogen op weegbrug', 'Gemeten met gewichtslint', 'Rapport dierenarts'];
+        $section->fields()->create(['key' => 'gewicht-methode', 'type' => 'radio', 'label' => 'Hoe is dit gewicht bepaald?', 'options' => $options, 'order' => 7, 'active' => true]);
+        $date = $section->fields()->create(['key' => 'gewicht-methode-wanneer', 'type' => 'text', 'label' => 'Oude datumvraag', 'order' => 8, 'optional' => true, 'active' => true,
+            'show_if' => ['paard.gewicht-methode' => ['rapport dierenarts']]]);
+        $user = User::factory()->create();
+        $horse = Horse::create(['owner_id' => $user->id, 'name' => 'Nova']);
+        $booking = IntakeBooking::create(['user_id' => $user->id, 'horse_id' => $horse->id]);
+        $method = $booking->answers()->create(['section_id' => 'paard', 'field_id' => 'gewicht-methode', 'value' => json_encode($options[3])]);
+        $answer = $booking->answers()->create(['section_id' => 'paard', 'field_id' => 'gewicht-methode-wanneer', 'value' => json_encode('mei 2026')]);
+        $original = $answer->value;
+        $migration = require database_path('migrations/2026_10_26_150000_repair_weight_measurement_date_branch.php');
+        $migration->up();
+        $migration->up();
+        $this->assertSame($original, $answer->fresh()->value);
+        $this->assertSame('Wanneer was dat?', $date->fresh()->label);
+        $this->assertSame('month_year', $date->fresh()->type);
+        $this->assertFalse($date->fresh()->optional);
+        $this->assertSame(1, $section->fields()->where('key', $date->key)->count());
+        $answer->update(['value' => null]);
+        foreach (array_slice($options, 1) as $option) {
+            $method->update(['value' => json_encode($option)]);
+            $this->assertSame([['section' => 'paard', 'field' => 'gewicht-methode-wanneer']], app(IntakeProgress::class)->forBooking($booking->fresh())['missing']);
+            $rows = collect(app(IntakeReview::class)->forBooking($booking->fresh())['sections'])->flatMap(fn ($s) => $s['rows']);
+            $this->assertNotNull($rows->firstWhere('key', 'gewicht-methode-wanneer'));
+        }
+        $method->update(['value' => json_encode($options[0])]);
+        $this->assertSame([], app(IntakeProgress::class)->forBooking($booking->fresh())['missing']);
+        $rows = collect(app(IntakeReview::class)->forBooking($booking->fresh())['sections'])->flatMap(fn ($s) => $s['rows']);
+        $this->assertNull($rows->firstWhere('key', 'gewicht-methode-wanneer'));
+    }
+
     #[DataProvider('placements')]
     public function test_migration_reuses_saved_dates_and_reviews_follow_the_question_location(string $sectionKey): void
     {
@@ -98,7 +133,9 @@ class IntakeWeightDateQuestionTest extends TestCase
         $snapshot = json_decode(file_get_contents(database_path('data/intake-questionnaire-local.json')), true);
         $fields = collect(collect($snapshot['sections'])->firstWhere('key', 'paard')['fields']);
         $definition = $fields->firstWhere('key', $date->key);
-        foreach (['answer_section_key', 'label', 'type', 'placeholder', 'show_if', 'required', 'optional', 'active'] as $key) {
+        // The historical snapshot preserves its original label; current wording is checked separately.
+        $this->assertSame('Wanneer was dat?', $date->label);
+        foreach (['answer_section_key', 'type', 'placeholder', 'show_if', 'required', 'optional', 'active'] as $key) {
             $this->assertSame($definition[$key], $date->$key, $key);
         }
         $this->assertSame($fields->firstWhere('key', $method->key)['order'] + 1, $definition['order']);

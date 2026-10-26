@@ -23,6 +23,12 @@ return Application::configure(basePath: dirname(__DIR__))
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->validateCsrfTokens(except: ['api/*']);
 
+        // User-keyed API limits need the verified JWT identity before throttling.
+        $middleware->prependToPriorityList(
+            \Illuminate\Routing\Middleware\ThrottleRequests::class,
+            \App\Http\Middleware\AuthenticatePowerSyncJwt::class,
+        );
+
         // Inertia shares props with every web response and handles
         // asset-version / partial-reload negotiation.
         $middleware->web(append: [

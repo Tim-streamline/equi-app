@@ -14,7 +14,7 @@ use Illuminate\Validation\ValidationException;
 
 class FeedAssessments
 {
-    public function calculate(Product $product, ProductVersion $version, AdminUser $actor): FeedAssessment
+    public function calculate(Product $product, ProductVersion $version, ?AdminUser $actor = null): FeedAssessment
     {
         return DB::transaction(function () use ($product, $version, $actor) {
             $product = Product::lockForUpdate()->findOrFail($product->id);
@@ -49,7 +49,7 @@ class FeedAssessments
                 'automatic_score' => $result['automatic_score'], 'score_cap' => $result['score_cap'],
                 'input_snapshot' => $version->data, 'input_hash' => hash('sha256', json_encode($version->data, JSON_THROW_ON_ERROR)),
                 'rule_snapshot' => $rules->data, 'result' => $result, 'changes' => $changes, 'previous_assessment_id' => $previous?->id,
-                'created_by' => $actor->id]);
+                'created_by' => $actor?->id]);
             AuditLogger::log('feed_assessment_created', $assessment, after: ['product_version_id' => $version->id, 'rule_version_id' => $rules->id,
                 'automatic_score' => $result['automatic_score'], 'score_cap' => $result['score_cap']]);
 

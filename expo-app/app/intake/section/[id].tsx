@@ -148,6 +148,7 @@ export default function IntakeSectionScreen() {
           </View>
         </View>
         }>
+            {photoSection && <Text accessibilityRole="header" className="mb-5 text-left font-bold text-[28px] leading-[34px] text-ink">{section.title}</Text>}
             {photoSection ? <View className="mb-6 rounded-[22px] bg-[#E8F4F2] p-5">
               {!!section.intro && <Text className="text-[15px] leading-[24px] text-[#174B49]">{section.intro.split('\n\n')[0]}</Text>}
               <View className="mt-4 gap-3 border-t border-[#D0E5E2] pt-4">

@@ -33,7 +33,7 @@ class IntakeAnswersPdf
         $files = IntakeAttachment::where('booking_id', $booking->id)->get()->keyBy('id');
         foreach ($review['sections'] as $section) {
             foreach ($section['rows'] as $row) {
-                if ($row['type'] !== 'photo') {
+                if (! in_array($row['type'], ['photo', 'file'], true)) {
                     continue;
                 }
                 foreach ($row['attachments'] as $attachment) {
@@ -42,7 +42,10 @@ class IntakeAnswersPdf
                         if (! Storage::disk('local')->exists($file->path)) {
                             throw new RuntimeException('Een intakefoto ontbreekt. De PDF is niet verstuurd.');
                         }
-                        $images[$file->id] = 'data:'.$file->mime.';base64,'.base64_encode(Storage::disk('local')->get($file->path));
+                        // Large base64 attributes can exceed parser limits, silently
+                        // losing the image and everything that follows in the intake.
+                        // Resolve only this booking's approved image references on the private disk.
+                        $images[$file->id] = 'file:///'.ltrim(str_replace('\\', '/', Storage::disk('local')->path($file->path)), '/');
                     }
                 }
             }
@@ -55,10 +58,13 @@ class IntakeAnswersPdf
     {
         $pdf = new Dompdf(new Options([
             'isRemoteEnabled' => false, 'isPhpEnabled' => false, 'isJavascriptEnabled' => false,
-            'allowedProtocols' => ['data://'], 'defaultFont' => 'DejaVu Sans',
+            'allowedProtocols' => ['file://'], 'chroot' => Storage::disk('local')->path(''), 'defaultFont' => 'DejaVu Sans',
             'tempDir' => storage_path('framework/cache'), 'fontCache' => storage_path('framework/cache'),
         ]));
         $pdf->loadHtml($this->html($booking), 'UTF-8');
+        if (! $pdf->getDom()->getElementById('intake-document-complete')) {
+            throw new RuntimeException('De PDF is onvolledig opgebouwd. Probeer opnieuw of neem contact op met de beheerder.');
+        }
         $pdf->setPaper('A4');
         $pdf->render();
         $pdf->getCanvas()->page_text(485, 805, '{PAGE_NUM} / {PAGE_COUNT}', null, 8, [0.4, 0.4, 0.4]);

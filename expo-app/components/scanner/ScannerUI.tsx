@@ -9,6 +9,13 @@ import { legacyScanScore, scanScoreLabel, type ScannerRow } from '@/lib/scanner-
 export const C = { canvas: '#FBF8F3', ink: '#1B2A2A', muted: 'rgba(27,42,42,0.7)', border: 'rgba(27,42,42,0.08)',
   teal: '#127A79', deep: '#0D5C5B', mint: '#18BAB0', pale: '#EAFBF9', success: '#2EA875', warning: '#D9A441', danger: '#C2543E' };
 
+export function ScannerStepProgress({ step }: { step: 1 | 2 | 3 | 4 }) {
+  return <View accessibilityRole="progressbar" accessibilityLabel={`Stap ${step} van 4`} accessibilityValue={{ min: 1, max: 4, now: step }} style={{ gap: 6 }}>
+    <Text style={s.small}>Stap {step} van 4 · {['Ingrediëntenlijst', 'Analysefoto', 'Voorkant', 'Resultaat'][step - 1]}</Text>
+    <View style={{ flexDirection: 'row', gap: 5 }}>{[1, 2, 3, 4].map(n => <View key={n} style={{ flex: 1, height: 3, borderRadius: 2, backgroundColor: n <= step ? C.teal : C.border }} />)}</View>
+  </View>;
+}
+
 export function ScannerFrame({ title, onBack, children, navigation = false, header = true, scroll = true, showHistory = true, headerContent, footer, largeTitle = false }: {
   title?: string; onBack?: () => void; children: ReactNode; navigation?: boolean; header?: boolean; scroll?: boolean; showHistory?: boolean; headerContent?: ReactNode; footer?: ReactNode; largeTitle?: boolean;
 }) {

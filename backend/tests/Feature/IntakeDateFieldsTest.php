@@ -51,6 +51,28 @@ class IntakeDateFieldsTest extends TestCase
         $this->assertNotContains($target, $missing());
     }
 
+    public function test_ownership_date_disallows_unknown_without_rewriting_existing_answers(): void
+    {
+        $booking = $this->booking();
+        $field = IntakeField::where('key', 'sinds-bezit')->firstOrFail();
+        $field->update(['date_config' => ['mode' => 'single', 'allow_future' => false, 'year_label' => 'Eigen jaartal']]);
+        $answer = $booking->answers()->create(['section_id' => 'paard', 'field_id' => 'sinds-bezit', 'value' => json_encode(['version' => 1, 'precision' => 'unknown'])]);
+        $original = $answer->value;
+        $migration = require database_path('migrations/2026_10_26_140000_require_known_horse_ownership_date.php');
+        $migration->up();
+        $migration->up();
+        $this->assertFalse($field->fresh()->date_config['allow_unknown']);
+        $this->assertSame('Eigen jaartal', $field->fresh()->date_config['year_label']);
+        $this->assertSame($original, $answer->fresh()->value);
+        $missing = fn () => app(IntakeProgress::class)->forBooking($booking->load('answers'))['missing'];
+        $target = ['section' => 'paard', 'field' => 'sinds-bezit'];
+        $this->assertContains($target, $missing());
+        $answer->update(['value' => json_encode(['version' => 1, 'precision' => 'month', 'month' => 8, 'year' => 2014])]);
+        $this->assertNotContains($target, $missing());
+        app(IntakeDates::class)->validateConfig(['allow_unknown' => false]);
+        $this->assertTrue(app(IntakeDates::class)->answered('Weet ik niet'));
+    }
+
     public function test_nested_dates_are_validated_and_review_and_pdf_receive_readable_values(): void
     {
         $booking = $this->booking();

@@ -1,5 +1,9 @@
 # Controle van alle schermen en toestanden
 
+**Update 26 oktober — samenstelling eerst:** de hoofdactie vraagt om de ingrediënten/samenstelling. Alleen bij een onbekend, gewijzigd of onzeker recept verschijnen analyse en voorkant als verplichte vervolgstappen. Een gecontroleerde match krijgt een productbevestiging met een bestaande beoordeling zonder betaalde AI-aanroep; de gebruiker kan ook afwijkende etiketgegevens melden. De ontwerpinspecteur blijft vormcontrole, de echte route staat beschreven bij [verwerking](../../feed-scanner-processing.md).
+
+**Update 25 oktober — echte verwerking:** de onderstaande tabel beschrijft de eerdere vormcontrole. De foto-inzendroute is inmiddels aangesloten op private uploads, server-side etiketherkenning, gepubliceerde regels/ingrediëntenkaarten, voorlopige resultaten, eigen historie en de bestaande productreview in de admin. De ontwerpinspecteur blijft alleen vormcontrole. Automatisch herkennen van een product op uitsluitend de voorkant en een eigen camerastream zijn nog niet aangesloten. Voor activering, de ontbrekende API-sleutel en de nog te kalibreren volledige puntenweging: zie [verwerking](../../feed-scanner-processing.md).
+
 Referentie: het originele `EquiApp Voerscanner.html`, inclusief de 16 knoppen onder **Toestanden**, de twee keuzes voor herkenning en de twee keuzes voor de uitkomst na uploaden. Ook het vervangmenu en de route voor een andere samenstelling zijn meegenomen. De wijzigingen in `README.md` hebben voorrang op de referentie.
 
 ## Lokaal controleren

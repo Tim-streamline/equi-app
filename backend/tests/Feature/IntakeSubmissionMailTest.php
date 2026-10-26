@@ -12,6 +12,7 @@ use App\Models\User;
 use App\Support\IntakeAnswersPdf;
 use App\Support\IntakeSubmissionMail;
 use Carbon\Carbon;
+use Dompdf\Dompdf;
 use Firebase\JWT\JWT;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
@@ -134,7 +135,7 @@ class IntakeSubmissionMailTest extends TestCase
         $photo = IntakeAttachment::create(['booking_id' => $this->booking->id, 'section_key' => 'paard', 'field_key' => 'foto', 'name' => 'hoef.png', 'path' => $path, 'mime' => 'image/png']);
         $this->booking->answers()->create(['section_id' => 'paard', 'field_id' => 'foto', 'value' => json_encode(['attachment:'.$photo->id.':hoef.png'])]);
         $html = app(IntakeAnswersPdf::class)->html($this->booking);
-        foreach (['540 kg', 'Hooi', '12 kg', 'Jeuk', 'Hoesten', 'hoef.png', 'data:image/png;base64,'] as $text) {
+        foreach (['540 kg', 'Hooi', '12 kg', 'Jeuk', 'Hoesten', 'hoef.png', 'file:///'] as $text) {
             $this->assertStringContainsString($text, $html);
         }
         foreach (['Private therapist notes', 'Hidden stale answer', 'Hidden question', '/admin/intake-media'] as $text) {
@@ -147,6 +148,125 @@ class IntakeSubmissionMailTest extends TestCase
         $this->upload([$this->submission()])->assertOk();
         $this->assertNull($this->booking->fresh()->answers_email_status);
         $this->get('/admin/bookings/'.$this->booking->id)->assertInertia(fn (Assert $page) => $page->where('booking.submission_email_status', 'pending'));
+    }
+
+    public function test_pdf_marks_the_same_attention_points_and_critical_answers_as_the_admin(): void
+    {
+        IntakeField::where('key', 'klachten')->firstOrFail()->update(['flag_if' => ['Jeuk'], 'options' => ['Jeuk', 'Hoesten', 'Niet geselecteerde optie']]);
+        IntakeField::where('key', 'gewicht')->firstOrFail()->update(['critical_if' => ['540']]);
+
+        $html = app(IntakeAnswersPdf::class)->html($this->booking->fresh());
+        $document = new \DOMDocument;
+        $document->loadHTML('<?xml encoding="UTF-8">'.$html);
+        $xpath = new \DOMXPath($document);
+        $attention = $xpath->query('//div[@class="review-answer attention"]');
+        $critical = $xpath->query('//div[@class="review-answer critical"]');
+
+        $this->assertCount(1, $attention);
+        $this->assertStringContainsString('Klachten', $attention->item(0)->textContent);
+        $this->assertStringContainsString('Aandachtspunt', $attention->item(0)->textContent);
+        $this->assertCount(1, $critical);
+        $this->assertStringContainsString('540 kg', $critical->item(0)->textContent);
+        $this->assertStringContainsString('Blokkeert protocol', $critical->item(0)->textContent);
+        $this->assertSame('Jeuk', $xpath->query('//li[@class="flagged-option"]')->item(0)->textContent);
+        $this->assertSame('Hoesten', $xpath->query('//li[not(@class)]')->item(0)->textContent);
+        $this->assertStringNotContainsString('Niet geselecteerde optie', $html);
+
+        // Changing the admin rule also changes the export; there is no separate PDF flag logic.
+        IntakeField::where('key', 'klachten')->firstOrFail()->update(['flag_if' => null]);
+        $this->assertStringNotContainsString('class="review-answer attention"', app(IntakeAnswersPdf::class)->html($this->booking->fresh()));
+    }
+
+    public function test_pdf_includes_answers_from_all_thirteen_sections_and_formats_structured_values(): void
+    {
+        $questionnaire = IntakeQuestionnaire::firstOrFail();
+        foreach (range(3, 13) as $number) {
+            $key = 'controle-'.$number;
+            $section = $questionnaire->sections()->create(['key' => $key, 'title' => 'Sectie '.$number, 'order' => $number - 1, 'active' => true]);
+            foreach ([
+                ['key' => 'tekst', 'type' => 'textarea', 'value' => "Uniek antwoord sectie $number\nTweede regel $number"],
+                ['key' => 'keuze', 'type' => 'radio', 'options' => ['Ja', 'Nee'], 'value' => 'Ja'],
+                ['key' => 'meerdere', 'type' => 'multi', 'options' => ['Geselecteerd A', 'Geselecteerd B', 'Niet gekozen C'], 'value' => ['Geselecteerd A', 'Geselecteerd B']],
+                ['key' => 'aantal', 'type' => 'number', 'unit' => 'kg', 'value' => 0],
+                ['key' => 'datum', 'type' => 'month_year', 'value' => ['version' => 1, 'precision' => 'month', 'year' => 2025, 'month' => 4]],
+                ['key' => 'onbekend', 'type' => 'month_year', 'value' => ['version' => 1, 'precision' => 'unknown']],
+                ['key' => 'herhaald', 'type' => 'repeater', 'repeater_sub' => [['id' => 'naam', 'label' => 'Naam'], ['id' => 'sinds', 'label' => 'Sinds', 'type' => 'month_year']],
+                    'value' => [['naam' => 'Eerste invoer '.$number, 'sinds' => ['version' => 1, 'precision' => 'year', 'year' => 2024]],
+                        ['naam' => 'Tweede invoer '.$number, 'sinds' => ['version' => 1, 'precision' => 'range', 'start' => ['version' => 1, 'precision' => 'month', 'year' => 2025, 'month' => 1], 'ongoing' => true]]]],
+                ['key' => 'niet-van-toepassing', 'type' => 'repeater', 'options' => ['Niet van toepassing'], 'value' => []],
+            ] as $config) {
+                $value = $config['value'];
+                unset($config['value']);
+                $section->fields()->create($config + ['label' => $config['key'], 'active' => true]);
+                $this->booking->answers()->create(['section_id' => $key, 'field_id' => $config['key'], 'value' => json_encode($value)]);
+            }
+            $this->booking->answers()->create(['section_id' => $key, 'field_id' => 'na:niet-van-toepassing', 'value' => json_encode('yes')]);
+        }
+        $html = app(IntakeAnswersPdf::class)->html($this->booking->fresh());
+        $document = new \DOMDocument;
+        $document->loadHTML('<?xml encoding="UTF-8">'.$html);
+        $xpath = new \DOMXPath($document);
+        $this->assertCount(13, $xpath->query('//h2'));
+        $this->assertCount(11, $xpath->query('//li[text()="Geselecteerd A"]'));
+        $this->assertCount(11, $xpath->query('//li[text()="Geselecteerd B"]'));
+        foreach (range(3, 13) as $number) {
+            foreach (["Uniek antwoord sectie $number", "Tweede regel $number", "Eerste invoer $number", "Tweede invoer $number"] as $answer) {
+                $this->assertStringContainsString($answer, $document->textContent);
+            }
+        }
+        foreach (['0 kg', 'april 2025', 'Onbekend', '2024 (maand onbekend)', 'januari 2025 – heden', 'Niet van toepassing'] as $answer) {
+            $this->assertStringContainsString($answer, $document->textContent);
+        }
+        $this->assertStringNotContainsString('Niet gekozen C', $document->textContent);
+    }
+
+    public function test_large_photo_keeps_all_following_photos_and_answers_in_the_pdf_document(): void
+    {
+        Storage::fake('local');
+        $small = UploadedFile::fake()->image('small.png', 20, 20);
+        $png = file_get_contents($small->getRealPath());
+        // A valid PNG whose base64 attribute exceeds libxml's 10 MB limit.
+        $metadata = "Comment\0".str_repeat('x', 500000);
+        $chunks = str_repeat(pack('N', strlen($metadata)).'tEXt'.$metadata.pack('N', crc32('tEXt'.$metadata)), 16);
+        $large = substr($png, 0, -12).$chunks.substr($png, -12);
+        Storage::disk('local')->put('intake/large.png', $large);
+        Storage::disk('local')->put('intake/after-large.png', $png);
+        $references = [];
+        foreach (['large.png', 'after-large.png'] as $name) {
+            $photo = IntakeAttachment::create(['booking_id' => $this->booking->id, 'section_key' => 'paard', 'field_key' => 'foto',
+                'name' => $name, 'path' => 'intake/'.$name, 'mime' => 'image/png']);
+            $references[] = 'attachment:'.$photo->id.':'.$name;
+        }
+        $this->booking->answers()->create(['section_id' => 'paard', 'field_id' => 'foto', 'value' => json_encode($references)]);
+        $last = IntakeQuestionnaire::firstOrFail()->sections()->create(['key' => 'laatste', 'title' => 'Laatste sectie', 'order' => 2, 'active' => true]);
+        $last->fields()->create(['key' => 'slotantwoord', 'label' => 'Laatste vraag', 'type' => 'text', 'active' => true]);
+        $this->booking->answers()->create(['section_id' => 'laatste', 'field_id' => 'slotantwoord', 'value' => json_encode('Antwoord na alle fotos')]);
+        $pdf = app(IntakeAnswersPdf::class);
+        $html = $pdf->html($this->booking->fresh());
+        $this->assertLessThan(100000, strlen($html));
+        $this->assertStringNotContainsString('data:image', $html);
+        $renderer = new Dompdf;
+        $renderer->loadHtml($html, 'UTF-8');
+        $body = $renderer->getDom()->getElementsByTagName('body')->item(0)->textContent;
+        $this->assertStringContainsString('after-large.png', $body);
+        $this->assertStringContainsString('Antwoord na alle fotos', $body);
+        $rendered = $pdf->render($this->booking->fresh());
+        $this->assertStringStartsWith('%PDF-', $rendered);
+        $this->assertStringContainsString('/Subtype /Image', $rendered);
+    }
+
+    public function test_pdf_rejects_a_document_that_was_truncated_during_html_parsing(): void
+    {
+        $pdf = new class extends IntakeAnswersPdf
+        {
+            public function html(IntakeBooking $booking): string
+            {
+                return '<html><body><h1>Alleen het begin van de intake</h1></body></html>';
+            }
+        };
+        $this->expectException(RuntimeException::class);
+        $this->expectExceptionMessage('onvolledig opgebouwd');
+        $pdf->render($this->booking);
     }
 
     public function test_pdf_download_uses_the_requested_filename_from_the_submission_and_intake_name(): void

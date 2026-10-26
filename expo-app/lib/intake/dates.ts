@@ -1,4 +1,4 @@
-export type DateConfig = { mode?: 'single' | 'range'; allow_future?: boolean; allow_year_only?: boolean; min_year?: number; month_label?: string; year_label?: string; unknown_label?: string; ongoing_label?: string };
+export type DateConfig = { mode?: 'single' | 'range'; allow_future?: boolean; allow_year_only?: boolean; allow_unknown?: boolean; min_year?: number; month_label?: string; year_label?: string; unknown_label?: string; ongoing_label?: string };
 export type DatePoint = { version: 1; precision: 'month' | 'year' | 'day' | 'unknown' | 'legacy'; year?: number; month?: number; day?: number; text?: string };
 export type DateAnswer = DatePoint | { version: 1; precision: 'range'; start?: DatePoint; end?: DatePoint; ongoing?: boolean };
 export const MONTHS = ['Januari', 'Februari', 'Maart', 'April', 'Mei', 'Juni', 'Juli', 'Augustus', 'September', 'Oktober', 'November', 'December'];
@@ -35,7 +35,7 @@ function validDay(year: number, month: number, day: number) {
 export function dateAnswered(raw: unknown, config: DateConfig = {}, now = new Date()): boolean {
   const value = normalizeDate(raw, config);
   if (!value || value.version !== 1) return false;
-  if (value.precision === 'unknown') return true;
+  if (value.precision === 'unknown') return config.allow_unknown !== false;
   if (value.precision === 'legacy') return typeof value.text === 'string' && !!value.text.trim();
   if (value.precision === 'range') {
     if (config.mode !== 'range') return false;

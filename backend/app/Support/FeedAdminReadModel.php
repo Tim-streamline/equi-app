@@ -17,9 +17,17 @@ class FeedAdminReadModel
         $query = Product::query();
         if ($status === 'review') {
             $query->where('catalog_status', '!=', 'archived')
-                ->where(fn ($q) => $q->where('needs_review', true)->orWhere('catalog_status', 'legacy'));
-            self::latestStatus($query, 'needs_info', false);
-        } elseif (in_array($status, ['approved', 'needs_info'])) {
+                ->where(function ($q) {
+                    $q->whereIn('id', FeedCatalog::currentProductVersions()->whereIn('status', ['draft', 'legacy'])->select('product_id'))
+                        ->orWhere(function ($q) {
+                            $q->where(fn ($q) => $q->where('needs_review', true)->orWhere('catalog_status', 'legacy'))
+                                ->whereNotIn('id', FeedCatalog::currentProductVersions()->where('status', 'needs_info')->select('product_id'));
+                        });
+                });
+        } elseif ($status === 'needs_info') {
+            $query->where('catalog_status', '!=', 'archived')
+                ->whereIn('id', FeedCatalog::currentProductVersions()->where('status', 'needs_info')->select('product_id'));
+        } elseif ($status === 'approved') {
             $query->where('catalog_status', '!=', 'archived');
             self::latestStatus($query, $status);
         }
@@ -30,7 +38,7 @@ class FeedAdminReadModel
     private static function latestStatus(Builder $query, string $status, bool $exists = true): void
     {
         $callback = fn ($q) => $q->selectRaw('1')->from('product_versions as pv')->whereColumn('pv.product_id', 'products.id')
-            ->whereRaw('pv.number = (SELECT MAX(v.number) FROM product_versions v WHERE v.product_id = products.id)')->where('pv.status', $status);
+            ->whereRaw('pv.number = (SELECT MAX(v.number) FROM product_versions v WHERE v.product_id = products.id AND v.superseded_by_product_id IS NULL)')->where('pv.status', $status);
         $exists ? $query->whereExists($callback) : $query->whereNotExists($callback);
     }
 

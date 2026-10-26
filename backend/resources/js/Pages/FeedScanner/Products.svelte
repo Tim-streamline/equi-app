@@ -26,33 +26,39 @@
     const purposes = { packaging: 'Verpakking', composition: 'Samenstelling', analysis: 'Analyse' };
     const bases = { product: 'Productbasis', dry_matter: 'Droge-stofbasis', unknown: 'Onbekend' };
     const qualifiers = { exact: 'Exact vermeld', less_than: 'Minder dan (<)', greater_than: 'Meer dan (>)', minimum: 'Minimaal (≥)', maximum: 'Maximaal (≤)' };
-    const empty = () => ({ brand: '', name: '', barcode: '', category: '', composition_text: '', usage: '', source: '', internal_notes: '', ingredients: [], nutrients: [], expected_number: null, approve: false });
+    const empty = () => ({ brand: '', name: '', barcode: '', category: '', composition_text: '', recognition_enabled: false, usage: '', source: '', internal_notes: '', ingredients: [], nutrients: [], related_product_id: null, source_version_id: null, expected_number: null, approve: false });
     const form = useForm(empty());
     const uploadForm = useForm({ file: null, purpose: 'composition' });
     function apply() { clearTimeout(timer); timer = setTimeout(() => router.get('/admin/feed-scanner/products', { q, status, sort, category }, { preserveState: true, replace: true }), 250); }
-    function edit(record = null) {
+    function edit(record = null, version = record?.versions?.find(v => v.is_current)) {
         editing = record; tab = 'general';
-        const version = record?.versions?.[0];
-        const data = version?.data ?? {};
+        const data = version?.data ?? { brand: record?.brand ?? '', name: record?.name ?? '' };
         $form.defaults({ ...empty(), ...data, category: Object.hasOwn(categories, data.category) ? data.category : '', barcode: data.barcode ?? '',
             ingredients: (data.ingredients ?? []).map(row => ({ ingredient_id: '', label: ingredientOptions.find(i => i.id === row.ingredient_id)?.name ?? '', amount: '', match_status: row.ingredient_id ? 'confirmed' : 'unknown', added_selenium: 'unknown', selenium_form: '', evidence: '', ...row })),
             nutrients: (data.nutrients ?? []).map(row => ({ qualifier: 'exact', ...row })),
-            internal_notes: record?.internal_notes ?? '', expected_number: version?.number ?? null, approve: false });
-        $form.reset(); $form.clearErrors(); open = true;
+            internal_notes: record?.internal_notes ?? '', source_version_id: version?.id ?? null, expected_number: version?.number ?? null, approve: false });
+        $form.reset(); $form.clearErrors(); historyOpen = false; open = true;
+    }
+    function newRecipe(record) {
+        edit();
+        $form.brand = record.brand;
+        $form.name = record.name;
+        $form.barcode = record.barcode ?? '';
+        $form.related_product_id = record.id;
     }
     function save(e) {
         e.preventDefault();
         const options = { onSuccess: () => open = false };
         editing ? $form.put(`/admin/feed-scanner/products/${editing.id}`, options) : $form.post('/admin/feed-scanner/products', options);
     }
-    function reviewProduct(record, decision) {
+    function reviewProduct(record, decision, version = record.versions.find(v => v.is_current)) {
         const notes = decision === 'approve' ? '' : prompt('Welke informatie ontbreekt of waarom wijs je dit af?');
         if (notes === null) return;
-        router.post(`/admin/feed-scanner/products/${record.id}/review`, { version_id: record.versions[0].id, decision, notes });
+        router.post(`/admin/feed-scanner/products/${record.id}/review`, { version_id: version.id, decision, notes });
     }
     function archive(record) { if (confirm('Dit product archiveren? De historie blijft bewaard.')) router.post(`/admin/feed-scanner/products/${record.id}/archive`); }
     function move(index, step) { const rows = [...$form.ingredients]; [rows[index], rows[index + step]] = [rows[index + step], rows[index]]; $form.ingredients = rows; }
-    function beginUpload(version) { uploadVersion = version; $uploadForm.reset(); $uploadForm.clearErrors(); uploadOpen = true; }
+    function beginUpload(version) { uploadVersion = version; $uploadForm.reset(); $uploadForm.clearErrors(); historyOpen = false; uploadOpen = true; }
     function upload(e) { e.preventDefault(); $uploadForm.post(`/admin/feed-scanner/versions/${uploadVersion.id}/attachments`, { forceFormData: true, onSuccess: () => uploadOpen = false }); }
 </script>
 
@@ -72,20 +78,22 @@
             <Select bind:value={sort} onchange={apply} options={[{ value: 'name', label: 'Merk en naam' }, { value: 'newest', label: 'Nieuwste eerst' }, { value: 'scans', label: 'Meest gescand' }]} />
         </div>
         {#each products.data as product (product.id)}
-            {@const latest = product.versions?.[0]}
+            {@const latest = product.versions?.find(v => v.is_current)}
+            {@const pendingSubmissions = product.submissions ?? []}
             <div class="space-y-3 border-t py-4">
                 <div class="flex flex-wrap items-start justify-between gap-3">
                     <div>
                         <p class="font-semibold">{latest?.data?.brand ?? product.brand} · {latest?.data?.name ?? product.name}</p>
                         <div class="mt-1 flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
                             <Badge variant="muted">{product.catalog_status === 'archived' ? 'Gearchiveerd' : labels[latest?.status] ?? 'Nog te controleren'}</Badge>
-                            <span>{categories[latest?.data?.category] ?? latest?.data?.category ?? 'Categorie nog kiezen'}</span><span>· Versie {latest?.number ?? 1}</span><span>· {product.scans_count} scans</span>
+                            <span>{categories[latest?.data?.category] ?? latest?.data?.category ?? 'Categorie nog kiezen'}</span><span>· {product.scans_count} scans</span>
                         </div>
                         <p class="mt-1 text-xs text-muted-foreground">Toegevoegd: {new Date(product.created_at).toLocaleDateString('nl-NL')} · Laatst gecontroleerd: {product.versions.find(v => v.reviewed_at) ? new Date(product.versions.find(v => v.reviewed_at).reviewed_at).toLocaleDateString('nl-NL') : 'nog niet'}</p>
                         {#if product.published_version_id && latest?.id !== product.published_version_id}<p class="mt-1 text-xs text-muted-foreground">De eerder goedgekeurde versie blijft beschikbaar tot het nieuwe concept is goedgekeurd.</p>{/if}
                     </div>
                     <div class="flex flex-wrap gap-2">
-                        <Button size="sm" variant="outline" onclick={() => edit(product)}>Bewerken</Button>
+                        <Button size="sm" variant="outline" onclick={() => edit(product)}>Gegevens corrigeren</Button><Button size="sm" variant="outline" onclick={() => newRecipe(product)}>Ander recept toevoegen</Button>
+                        {#if pendingSubmissions.length}<Button size="sm" variant="outline" onclick={() => { detailId = product.id; historyOpen = true; }}>Ingezonden etiketten ({pendingSubmissions.length})</Button>{/if}
                         {#if ['draft', 'needs_info', 'legacy'].includes(latest?.status)}<Button size="sm" variant="outline" onclick={() => { detailId = product.id; historyOpen = true; }}>Product bekijken</Button>{/if}
                         <Button size="sm" variant="ghost" onclick={() => { detailId = product.id; historyOpen = true; }}>Beoordelingen & historie</Button>
                         {#if ['draft', 'needs_info'].includes(latest?.status) && product.catalog_status !== 'archived'}
@@ -101,6 +109,8 @@
         <Pagination paginator={products} />
     </CardContent></Card>
     <Modal bind:open title={editing ? 'Product bewerken' : 'Product toevoegen'} size="xl">
+        {#if $form.source_version_id}<p class="mb-4 text-sm text-muted-foreground">Je corrigeert de productgegevens. De vorige gegevens en beoordelingen blijven in de historie. Een werkelijk gewijzigd recept voeg je toe als apart product.</p>{/if}
+        {#if $form.related_product_id}<p class="mb-4 text-sm text-muted-foreground">Dit recept wordt een apart product. Het oorspronkelijke product blijft bestaan. Voeg de nieuwe samenstelling en analyse toe.</p>{/if}
         <div class="mb-4 flex flex-wrap gap-2">{#each [['general', 'Algemeen'], ['ingredients', 'Samenstelling'], ['analysis', 'Analyse']] as [value, label]}<Button size="sm" variant={tab === value ? 'default' : 'outline'} onclick={() => tab = value}>{label}</Button>{/each}</div>
         <form id="feed-product" onsubmit={save} class="space-y-4">
             {#each Object.entries($form.errors) as [key, error]}<p role="alert" class="text-sm text-destructive">{error}</p>{/each}
@@ -114,6 +124,7 @@
                 <Field label="Interne notities"><Textarea bind:value={$form.internal_notes} rows={2} /></Field>
             {:else if tab === 'ingredients'}
                 <Field label="Oorspronkelijke samenstelling op het etiket"><Textarea bind:value={$form.composition_text} rows={3} /></Field>
+                <label class="flex items-start gap-2 text-sm"><input type="checkbox" bind:checked={$form.recognition_enabled} class="mt-1" /><span>Herkennen op samenstelling inschakelen<span class="block text-muted-foreground">Controleer eerst de volledige ingrediënten- en toevoegingenlijst, inclusief volgorde en percentages. Herkenning gebruikt deze tekst pas nadat de productversie is goedgekeurd.</span></span></label>
                 <div class="flex items-center justify-between"><h3 class="font-medium">Ingrediënten in etiketvolgorde</h3><Button type="button" size="sm" variant="outline" onclick={() => $form.ingredients = [...$form.ingredients, { ingredient_id: '', label: '', amount: '', match_status: 'unknown', added_selenium: 'unknown', selenium_form: '', evidence: '' }]}>Ingrediënt toevoegen</Button></div>
                 {#each $form.ingredients as row, index}
                     <div class="space-y-3 rounded-lg border p-3">
@@ -155,11 +166,27 @@
         {#snippet footer()}<Button variant="outline" onclick={() => uploadOpen = false}>Annuleren</Button><Button form="feed-upload" type="submit" disabled={$uploadForm.processing || !$uploadForm.file}>Etiket toevoegen</Button>{/snippet}
     </Modal>
     <Modal bind:open={historyOpen} title="Productdetails & historie" size="xl">
+        {#if detail?.related_product}
+            <p class="mb-4 text-sm">Apart recept, gerelateerd aan <a class="text-primary underline" href={`/admin/feed-scanner/products?open=${detail.related_product.id}`}>{detail.related_product.brand} · {detail.related_product.name}</a>.</p>
+        {/if}
+        {#each detail?.submissions ?? [] as submission}
+            <div class="mb-4 rounded-xl border p-4 space-y-2">
+                <h3 class="font-semibold">Ingezonden etiket · {new Date(submission.created_at).toLocaleDateString('nl-NL')}</h3>
+                <p class="text-sm">{({draft: 'Foto’s ontvangen / nog aan te vullen', needs_photos: 'Wacht op analyse en voorkant', processing: 'Etiket wordt uitgelezen', failed: 'Automatisch uitlezen niet gelukt', completed: 'Beoordeling beschikbaar', review_required: 'Handmatige beoordeling nodig'})[submission.status] ?? submission.status}</p>
+                <p class="text-xs text-muted-foreground">Deze foto’s zijn bewijsmateriaal bij het product. Corrigeer en beoordeel het product via de productacties.</p>
+                {#each submission.attachments ?? [] as file}<a href={`/admin/feed-scanner/attachments/${file.id}`} class="block text-sm text-primary underline">{purposes[file.purpose]}: {file.original_name}</a>{/each}
+                {#if submission.message}<p class="text-sm text-muted-foreground">{submission.message}</p>{/if}
+                {#if ['draft', 'failed', 'needs_photos'].includes(submission.status)}<Button size="sm" variant="outline" onclick={() => router.post(`/admin/feed-scanner/submissions/${submission.id}/retry`)}>Etiket opnieuw uitlezen</Button>{/if}
+                {#if submission.recognition}<details><summary class="cursor-pointer text-sm">Controle van de samenstelling bekijken</summary><pre class="mt-2 whitespace-pre-wrap break-words text-xs">{JSON.stringify(submission.recognition, null, 2)}</pre></details>{/if}
+                {#if submission.extraction}<details><summary class="cursor-pointer text-sm">Uitgelezen brongegevens controleren</summary><pre class="mt-2 whitespace-pre-wrap break-words text-xs">{JSON.stringify(submission.extraction, null, 2)}</pre></details>{/if}
+            </div>
+        {/each}
         {#if detail}<AssessmentHistory product={detail} {canPublish} profiles={assessmentProfiles} {errors} />{/if}
         <h3 class="mt-8 text-lg font-semibold">Productgegevens & versiehistorie</h3>
         {#if detail}{#each detail.versions as version}
             <section class="space-y-3 border-t py-5">
-                <div class="flex flex-wrap items-center gap-2"><h3 class="font-semibold">Versie {version.number}</h3><Badge variant="muted">{labels[version.status]}</Badge><span class="text-sm text-muted-foreground">{new Date(version.created_at).toLocaleString('nl-NL')}</span></div>
+                <div class="flex flex-wrap items-center gap-2"><h3 class="font-semibold">{version.number === 1 ? 'Oorspronkelijke gegevens' : `Correctie ${version.number - 1}`}</h3><Badge variant="muted">{labels[version.status]}</Badge><span class="text-sm text-muted-foreground">{new Date(version.created_at).toLocaleString('nl-NL')}</span></div>
+                {#if version.superseded_by_product_id}<p class="text-sm"><a class="text-primary underline" href={`/admin/feed-scanner/products?open=${version.superseded_by_product_id}`}>Dit recept wordt verder beoordeeld als apart product.</a></p>{/if}
                 <p>{version.data.brand} · {version.data.name}</p><p class="text-sm">{categories[version.data.category] ?? version.data.category} · {version.data.barcode ?? 'Geen barcode'}</p>
                 <p class="whitespace-pre-wrap text-sm">{version.data.composition_text}</p>
                 {#each version.data.ingredients ?? [] as row, index}<p class="text-sm">{index + 1}. {row.label ?? ingredientOptions.find(i => i.id === row.ingredient_id)?.name ?? 'Ingrediënt'} {row.amount ? `(${row.amount})` : ''}{row.match_status === 'suggested' ? ' · koppeling nog te controleren' : ''}</p>{/each}
@@ -170,6 +197,6 @@
                 {#each version.attachments ?? [] as file}<a href={`/admin/feed-scanner/attachments/${file.id}`} class="block text-sm text-primary underline">{purposes[file.purpose]}: {file.original_name}</a>{/each}
             </section>
         {/each}{/if}
-        {#snippet footer()}{#if canPublish && detail && ['draft', 'needs_info'].includes(detail.versions[0]?.status) && detail.catalog_status !== 'archived'}<Button variant="outline" onclick={() => reviewProduct(detail, 'needs_info')}>Informatie ontbreekt</Button><Button onclick={() => reviewProduct(detail, 'approve')}>Goedkeuren</Button>{/if}<Button variant="outline" onclick={() => historyOpen = false}>Sluiten</Button>{/snippet}
+        {#snippet footer()}{#if canPublish && detail && ['draft', 'needs_info'].includes(detail.versions.find(v => v.is_current)?.status) && detail.catalog_status !== 'archived'}<Button variant="outline" onclick={() => reviewProduct(detail, 'needs_info')}>Informatie ontbreekt</Button><Button onclick={() => reviewProduct(detail, 'approve')}>Goedkeuren</Button>{/if}<Button variant="outline" onclick={() => historyOpen = false}>Sluiten</Button>{/snippet}
     </Modal>
 </AdminLayout>

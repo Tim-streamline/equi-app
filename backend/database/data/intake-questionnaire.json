@@ -564,7 +564,7 @@
         {
           "id": "gewicht-methode-wanneer",
           "answerSection": "paard",
-          "label": "Wanneer is het gewicht bepaald?",
+          "label": "Wanneer was dat?",
           "type": "month_year",
           "required": true,
           "showIf": {
@@ -607,6 +607,7 @@
           "dateConfig": {
             "mode": "single",
             "allow_future": false,
+            "allow_unknown": false,
             "allow_year_only": true
           }
         },

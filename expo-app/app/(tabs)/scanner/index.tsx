@@ -1,26 +1,30 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { BackHandler, Platform, Pressable, Text, TextInput, View } from 'react-native';
+import { BackHandler, Image, Modal, Platform, Pressable, Text, TextInput, useWindowDimensions, View } from 'react-native';
 import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
 import * as ImagePicker from 'expo-image-picker';
-import { ArrowRight, Camera, CheckCircle2, ChevronRight, History, ImagePlus, Plus, ScanLine, Search, Sparkle, Upload, X } from 'lucide-react-native';
+import { Camera, CheckCircle2, ChevronRight, History, ImagePlus, Plus, ScanLine, Search, Upload, X } from 'lucide-react-native';
 import { PhotoReplacementSheet, ScannerPhotoCard } from '@/components/scanner/ScannerPhotoCard';
-import { useCurrentUserId, useScannerProducts, useScanResults } from '@/db/hooks';
-import { C, FeedIcon, RoundButton, ScannerButton, ScannerFrame, ScannerNote, ScanRow, s } from '@/components/scanner/ScannerUI';
-import { feedCategory, matchesFeed, recentScans, type ScannerRow } from '@/lib/scanner-presentation';
+import { useCurrentUserId, useScannerProducts } from '@/db/hooks';
+import { C, FeedIcon, RoundButton, ScannerButton, ScannerFrame, ScannerNote, ScannerStepProgress, ScanRow, s } from '@/components/scanner/ScannerUI';
+import { feedCategory, matchesFeed, type ScannerRow } from '@/lib/scanner-presentation';
+import { scannerRequest, scannerUuid, uploadFeedPhoto, type FeedSubmission } from '@/lib/feed-scanner-api';
+import { useScannerHistory } from '@/hooks/useScannerHistory';
+import { missingPhotoCount, needsAdditionalPhotos, resumePhotoStep, unreadableComposition, type PhotoStep } from '@/lib/scanner-photo-flow';
 
 type Screen = 'start' | 'search' | 'found' | 'photos';
 type Photos = Record<string, ImagePicker.ImagePickerAsset>;
-const PHOTO_FIELDS = [
-  { key: 'composition', title: 'Foto 1 · Samenstelling', detail: 'De volledige ingrediëntenlijst zoals op de verpakking.', required: true },
-  { key: 'analysis', title: 'Foto 2 · Analyse', detail: 'Analytische bestanddelen en, waar mogelijk, vitaminen en mineralen.', required: true },
-];
 
 export default function ScannerScreen() {
-  const params = useLocalSearchParams<{ mode?: string; productId?: string; designState?: string }>();
+  const params = useLocalSearchParams<{ mode?: string; productId?: string; designState?: string; submissionId?: string }>();
   const products = useScannerProducts();
-  const scans = recentScans(useScanResults());
+  const { scans } = useScannerHistory();
   const userId = useCurrentUserId();
   const [screen, setScreen] = useState<Screen>('start');
+  const [exampleOpen, setExampleOpen] = useState(false);
+  const [exampleType, setExampleType] = useState<'ingredients' | 'analysis'>('ingredients');
+  const { height: viewportHeight } = useWindowDimensions();
+  const [photoStep, setPhotoStep] = useState<PhotoStep>('composition');
+  const uploadedAssets = useRef<Photos>({});
   const [unknownFeed, setUnknownFeed] = useState(false);
   const [variant, setVariant] = useState(false);
   const [query, setQuery] = useState('');
@@ -38,11 +42,35 @@ export default function ScannerScreen() {
   const [picking, setPicking] = useState(false);
   const [focused, setFocused] = useState(false);
   const pickingRef = useRef(false);
+  const submission = useRef<FeedSubmission | null>(null);
+  const clientId = useRef(scannerUuid());
+  const sendingRef = useRef(false);
+  const [sending, setSending] = useState(false);
+  const [uploadingKey, setUploadingKey] = useState<string | null>(null);
+  const [submitted, setSubmitted] = useState(false);
+  const [recognition, setRecognition] = useState<FeedSubmission | null>(null);
+  const additional = needsAdditionalPhotos(recognition);
+  const candidate = recognition?.status === 'candidate';
+  const unreadable = unreadableComposition(recognition);
   const mounted = useRef(true);
   const currentUser = useRef(userId);
   currentUser.current = userId;
   useEffect(() => { mounted.current = true; return () => { mounted.current = false; }; }, []);
-  useEffect(() => { setPhotos({}); setName(''); setQuery(''); setSelected(null); setExtras([]); setUnknownFeed(false); setVariant(false); setReplaceKey(null); handledVariant.current = ''; handledDesignState.current = ''; setScreen('start'); }, [userId]);
+  useEffect(() => { submission.current = null; sendingRef.current = false; clientId.current = scannerUuid(); setRecognition(null); setSubmitted(false); setSending(false); setPhotos({}); uploadedAssets.current = {}; setPhotoStep('composition'); setName(''); setQuery(''); setSelected(null); setExtras([]); setUnknownFeed(false); setVariant(false); setReplaceKey(null); handledVariant.current = ''; handledDesignState.current = ''; setScreen('start'); }, [userId]);
+  useEffect(() => {
+    if (!params.submissionId || !userId) return;
+    let alive = true;
+    setError('');
+    void scannerRequest<FeedSubmission>(`/submissions/${params.submissionId}`).then(current => {
+      if (!alive) return;
+      if (current.status === 'completed' && current.scan_result_id) { router.replace({ pathname: '/(tabs)/scanner/result', params: { id: current.scan_result_id } }); return; }
+      if (['checking', 'processing', 'review_required'].includes(current.status)) { router.replace({ pathname: '/(tabs)/scanner/processing', params: { id: current.id } }); return; }
+      const savedExtras = Object.keys(current.photo_ids ?? {}).filter(key => key.startsWith('extra-'));
+      extraSequence.current = Math.max(-1, ...savedExtras.map(key => Number(key.slice(6)))) + 1;
+      submission.current = current; setRecognition(current); setPhotos({}); uploadedAssets.current = {}; setPhotoStep(resumePhotoStep(current)); setExtras(savedExtras); setName(current.submitted_name ?? ''); setScreen('photos'); setSubmitted(false);
+    }).catch(e => { if (alive) setError(e.message); });
+    return () => { alive = false; };
+  }, [params.submissionId, userId]);
   useEffect(() => {
     if (!designPreview) return;
     const key = `${userId}:${params.designState}`;
@@ -56,23 +84,26 @@ export default function ScannerScreen() {
     setScreen(params.designState === 'unknown' || params.designState === 'variant' ? 'photos' : params.designState === 'found' ? 'found' : params.designState === 'search' ? 'search' : 'start');
   }, [designPreview, params.designState, products, userId]);
   useEffect(() => {
-    if (params.mode !== 'variant' || !params.productId) return;
+    if (params.mode !== 'variant' || !params.productId) { handledVariant.current = ''; return; }
     const product = products.find(item => item.id === params.productId);
     const key = `${userId}:${params.productId}`;
     if (!product || handledVariant.current === key) return;
     handledVariant.current = key;
     setSelected(product); setName(`${product.brand ?? ''} ${product.name ?? ''}`.trim());
-    setPhotos({}); setExtras([]); setVariant(true); setUnknownFeed(false); setScreen('photos');
+    submission.current = null; clientId.current = scannerUuid(); setRecognition(null); setSubmitted(false);
+    setPhotos({}); uploadedAssets.current = {}; setPhotoStep('composition'); setExtras([]); setVariant(true); setUnknownFeed(false); setScreen('photos');
   }, [params.mode, params.productId, products, userId]);
 
   const back = useCallback(() => {
     setError('');
+    if (sending || picking) return;
+    if (screen === 'photos' && !candidate && photoStep !== 'composition') { setPhotoStep(photoStep === 'front' ? 'analysis' : 'composition'); return; }
     if (screen === 'photos' && variant && router.canGoBack()) { router.back(); return; }
     if (screen === 'start') {
       if (router.canGoBack()) router.back();
       else router.replace('/(tabs)/(pager)/home');
     } else setScreen(screen === 'found' ? 'search' : screen === 'photos' && query ? 'search' : 'start');
-  }, [screen, query, variant]);
+  }, [screen, query, variant, photoStep, candidate, sending, picking]);
   useFocusEffect(useCallback(() => {
     const subscription = BackHandler.addEventListener('hardwareBackPress', () => {
       if (screen === 'start') return false;
@@ -94,35 +125,128 @@ export default function ScannerScreen() {
       const result = camera ? await ImagePicker.launchCameraAsync(options) : await ImagePicker.launchImageLibraryAsync(options);
       if (!mounted.current || currentUser.current !== owner || result.canceled || !result.assets?.[0]) return;
       setPhotos(previous => ({ ...previous, [key]: result.assets[0] }));
-      if (key === 'front' && screen === 'start') { setUnknownFeed(false); setVariant(false); }
+      if (screen === 'start') { resetScan(); setPhotos({ [key]: result.assets[0] }); }
+      if (key === 'composition' && unreadable) { submission.current = null; clientId.current = scannerUuid(); setRecognition(null); uploadedAssets.current = {}; }
       setScreen('photos');
+      if (key === 'analysis' || key === 'front' || key.startsWith('extra-') || (key === 'composition' && screen !== 'start' && additional && !unreadable)) {
+        try { await persistPhoto(key, result.assets[0]); }
+        catch (e) { if (mounted.current && currentUser.current === owner) setError(e instanceof Error ? e.message : 'Uploaden is niet gelukt. Probeer opnieuw.'); }
+      }
     } catch (e) {
       if (mounted.current && currentUser.current === owner) setError(e instanceof Error ? e.message : 'De foto kon niet worden geopend. Probeer het opnieuw.');
     } finally { pickingRef.current = false; if (mounted.current) { setPicking(false); setPickingKey(null); } }
   }
 
+  async function persistPhoto(key: string, asset: ImagePicker.ImagePickerAsset) {
+    if (!submission.current) throw new Error('Controleer eerst de ingrediëntenlijst.');
+    const owner = userId;
+    setUploadingKey(key);
+    try {
+      const uploaded = await uploadFeedPhoto(submission.current.id, key, asset);
+      if (!mounted.current || currentUser.current !== owner) return;
+      submission.current = uploaded; setRecognition(uploaded); uploadedAssets.current[key] = asset; setError('');
+    } finally { if (mounted.current && currentUser.current === owner) setUploadingKey(null); }
+  }
+
+  async function continueAnalysis() {
+    if (sendingRef.current || picking) return;
+    sendingRef.current = true; setSending(true); setError('');
+    const owner = userId;
+    try {
+      if (photos.analysis && uploadedAssets.current.analysis !== photos.analysis) await persistPhoto('analysis', photos.analysis);
+      for (const key of extras) {
+        if (!mounted.current || currentUser.current !== owner) return;
+        if (photos[key] && uploadedAssets.current[key] !== photos[key]) await persistPhoto(key, photos[key]);
+      }
+      if (mounted.current && currentUser.current === owner && submission.current?.photo_ids?.analysis) setPhotoStep('front');
+    } catch (e) { if (mounted.current && currentUser.current === owner) setError(e instanceof Error ? e.message : 'Uploaden is niet gelukt.'); }
+    finally { if (currentUser.current === owner) { sendingRef.current = false; setSending(false); } }
+  }
+
+  async function submit() {
+    if (sendingRef.current || picking || designPreview) return;
+    sendingRef.current = true; setSending(true); setError(''); setSubmitted(true);
+    const owner = userId;
+    try {
+      if (!submission.current) {
+        const created = await scannerRequest<FeedSubmission>('/submissions', { client_id: clientId.current, name: name.trim() || undefined, reference_product_id: selected?.id });
+        if (currentUser.current !== owner) return;
+        submission.current = created;
+      }
+      if (currentUser.current !== owner) return;
+      const id = submission.current.id;
+      if (!additional && recognition === null && submission.current.photo_ids?.composition) {
+        const current = await scannerRequest<FeedSubmission>(`/submissions/${id}`);
+        if (!mounted.current || currentUser.current !== owner) return;
+        if (!photos.composition && ['checking', 'candidate', 'needs_photos'].includes(current.status)) {
+          submission.current = current; setRecognition(current); setPhotoStep(resumePhotoStep(current)); setSubmitted(false);
+          if (current.status === 'checking') router.push({ pathname: '/(tabs)/scanner/processing', params: { id } });
+          return;
+        }
+      }
+      for (const [slot, asset] of Object.entries(photos)) {
+        if (currentUser.current !== owner) return;
+        if (uploadedAssets.current[slot] !== asset) await persistPhoto(slot, asset);
+      }
+      if (photoStep === 'composition' && additional && !unreadable) { setPhotoStep('analysis'); setSubmitted(false); return; }
+      if (!additional && submission.current.workflow_version === 2) {
+        const checked = await scannerRequest<FeedSubmission>(`/submissions/${id}/check`, {});
+        if (!mounted.current || currentUser.current !== owner) return;
+        submission.current = checked; setRecognition(checked); setPhotoStep(resumePhotoStep(checked)); setSubmitted(false);
+        if (checked.status === 'checking') router.push({ pathname: '/(tabs)/scanner/processing', params: { id } });
+        return;
+      }
+      if (mounted.current && currentUser.current === owner) {
+        const productName = name.trim();
+        resetScan();
+        router.push({ pathname: '/(tabs)/scanner/processing', params: { id, start: '1', name: productName } });
+      }
+    } catch (e) { if (mounted.current && currentUser.current === owner) setError(e instanceof Error ? e.message : 'Versturen is niet gelukt. Probeer opnieuw.'); }
+    finally { if (currentUser.current === owner) sendingRef.current = false; if (mounted.current && currentUser.current === owner) { setSending(false); setUploadingKey(null); } }
+  }
+
+  function resetScan() {
+    setPhotoStep('composition'); uploadedAssets.current = {};
+    submission.current = null; clientId.current = scannerUuid(); handledVariant.current = ''; setRecognition(null); setSubmitted(false); setPhotos({}); setName(''); setExtras([]); setSelected(null); setVariant(false); setUnknownFeed(false); setScreen('start');
+    router.setParams({ submissionId: undefined, mode: undefined, productId: undefined });
+  }
+
+  async function chooseKnown(choice: 'confirm' | 'changed' | 'different') {
+    if (!recognition || sendingRef.current) return;
+    const owner = userId; sendingRef.current = true; setSending(true); setError('');
+    try {
+      const current = await scannerRequest<FeedSubmission>(`/submissions/${recognition.id}/${choice === 'confirm' ? 'confirm' : 'more-photos'}`, choice === 'confirm' ? {} : { changed: choice === 'changed' });
+      if (!mounted.current || currentUser.current !== owner) return;
+      if (current.status === 'completed' && current.scan_result_id) { resetScan(); router.push({ pathname: '/(tabs)/scanner/result', params: { id: current.scan_result_id } }); }
+      else { submission.current = current; setRecognition(current); setPhotoStep(resumePhotoStep(current)); setSubmitted(false); }
+    } catch (e) { if (mounted.current && currentUser.current === owner) setError(e instanceof Error ? e.message : 'Probeer opnieuw.'); }
+    finally { if (currentUser.current === owner) { sendingRef.current = false; setSending(false); } }
+  }
+
   const filtered = products.filter(product => matchesFeed(product, query));
   const previousScan = selected ? scans.find(scan => scan.productId === selected.id) : undefined;
-  const fields = [...PHOTO_FIELDS, ...(photos.front ? [{ key: 'front', title: 'Voorkant', detail: 'Je foto van de voorkant.', required: false }] : []), ...extras.map((key, i) => ({ key, title: `Extra foto ${i + 1}`, detail: 'Bijvoorbeeld de achterkant of zijkant.', required: false }))];
-  const missingPhotos = PHOTO_FIELDS.filter(field => !photos[field.key]).length;
+  const missingPhotos = missingPhotoCount(recognition, photos);
+  const hasPhoto = (key: string) => !!photos[key] || !!recognition?.photo_ids?.[key];
+  const busy = sending || picking || uploadingKey !== null;
   const photoActions = screen === 'photos' ? <View style={{ borderTopWidth: 1, borderColor: C.border, paddingTop: 0, paddingBottom: 12 }}>
-    <View accessibilityRole="button" accessibilityState={{ disabled: true }} style={{ minHeight: 56, borderRadius: 14, backgroundColor: 'rgba(27,42,42,0.08)', alignItems: 'center', justifyContent: 'center', paddingHorizontal: 12 }}>
-      <Text style={[s.buttonText, { color: C.muted }]}>{missingPhotos ? `Nog ${missingPhotos} ${missingPhotos === 1 ? 'foto' : "foto’s"} nodig` : 'Analyse nog niet beschikbaar'}</Text>
-    </View>
+    {candidate ? <><ScannerButton title={sending ? 'Even geduld…' : 'Dit is mijn voer · bekijk beoordeling'} disabled={sending || designPreview} onPress={() => void chooseKnown('confirm')} /><ScannerButton title="Ingrediëntenlijst of etiketgegevens wijken af" variant="outline" disabled={sending} onPress={() => void chooseKnown('changed')} /><ScannerButton title="Dit is ander voer" variant="text" disabled={sending} onPress={() => void chooseKnown('different')} /></>
+      : photoStep === 'analysis' ? (hasPhoto('analysis') && <ScannerButton title={busy ? 'Foto uploaden…' : 'Naar de laatste stap'} disabled={busy || designPreview} onPress={() => void continueAnalysis()} />)
+      : photoStep === 'front' ? <ScannerButton title={busy ? 'Foto’s versturen…' : 'Start de analyse'} disabled={busy || !!missingPhotos || !name.trim() || designPreview} onPress={() => void submit()} />
+      : hasPhoto('composition') && !unreadable ? <ScannerButton disabled={busy || designPreview} title={busy ? 'Ingrediëntenlijst controleren…' : additional ? 'Verder naar de analysefoto' : 'Ingrediëntenlijst controleren'} onPress={() => void submit()} /> : null}
   </View> : undefined;
   const searchInput = <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', borderWidth: 1.5, borderColor: focused ? C.mint : 'rgba(27,42,42,0.15)', borderRadius: 14, backgroundColor: '#fff', paddingLeft: 14 }}>
     <Search size={18} color={C.teal} /><TextInput autoFocus value={query} onChangeText={setQuery} placeholder="Merk of productnaam" accessibilityLabel="Merk of productnaam" placeholderTextColor={C.muted} onFocus={() => setFocused(true)} onBlur={() => setFocused(false)} style={[s.input, { fontSize: 17 }, Platform.OS === 'web' ? { outlineStyle: 'none' } as any : undefined]} />
     {!!query && <RoundButton label="Zoekopdracht wissen" onPress={() => setQuery('')}><X size={14} color={C.muted} /></RoundButton>}
   </View>;
   const foundActions = screen === 'found' && selected ? <>
-    {previousScan ? <ScannerButton title="Bekijk voeranalyse" icon={<ArrowRight size={18} color="#fff" />} onPress={() => router.push({ pathname: '/(tabs)/scanner/result', params: { id: previousScan.id } })} />
-      : <ScannerButton title="Etiketfoto’s toevoegen" icon={<ImagePlus size={20} color="#fff" />} onPress={() => { setName(`${selected.brand ?? ''} ${selected.name ?? ''}`.trim()); setUnknownFeed(false); setVariant(false); setScreen('photos'); }} />}
+    <ScannerButton title="Controleer de ingrediëntenlijst" icon={<ImagePlus size={20} color="#fff" />} onPress={() => { submission.current = null; clientId.current = scannerUuid(); setRecognition(null); setPhotos({}); uploadedAssets.current = {}; setPhotoStep('composition'); setExtras([]); setSubmitted(false); setName(`${selected.brand ?? ''} ${selected.name ?? ''}`.trim()); setUnknownFeed(false); setVariant(false); setScreen('photos'); }} />
     <ScannerButton title="Dit is niet mijn voer" variant="text" onPress={() => setScreen('search')} />
   </> : undefined;
 
   return <ScannerFrame title="" header={screen !== 'start'} onBack={back} navigation={screen === 'start'} showHistory={false} headerContent={screen === 'search' ? searchInput : undefined} footer={foundActions ?? photoActions}>
     {designPreview && <Text style={[s.small, { color: C.teal }]}>Ontwerpstand · alleen lokale vormcontrole</Text>}
     {!!error && <Text accessibilityRole="alert" style={[s.body, { color: C.danger }]}>{error}</Text>}
+    {!!error && submitted && !sending && <ScannerButton title="Nieuwe inzending starten" variant="outline" onPress={() => { resetScan(); setError(''); }} />}
     {screen === 'start' && <>
       <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingTop: 8, paddingLeft: 4 }}>
         <Text style={[s.eyebrow, { fontSize: 14, color: C.teal }]}>Voerscanner</Text>
@@ -130,16 +254,19 @@ export default function ScannerScreen() {
       </View>
       <Text style={[s.title, { paddingHorizontal: 4, paddingTop: 2 }]}>Welk voer wil je scannen?</Text>
       <Text style={[s.body, { color: C.muted, paddingHorizontal: 4, marginBottom: 6 }]}>Ontdek wat er écht in paardenvoer zit en hoe de samenstelling scoort!</Text>
+      <ScannerStepProgress step={1} />
       <View style={{ backgroundColor: C.deep, borderRadius: 22, padding: 20, gap: 16, overflow: 'hidden' }}>
         <View style={{ flexDirection: 'row', gap: 12, alignItems: 'flex-start' }}>
           <View style={{ width: 44, height: 44, borderRadius: 14, backgroundColor: 'rgba(255,255,255,0.14)', alignItems: 'center', justifyContent: 'center' }}><ScanLine size={22} color="#fff" /></View>
-          <View style={{ flex: 1 }}><Text style={[s.heading, { color: '#fff', fontSize: 19, lineHeight: 23 }]}>Fotografeer de voorkant</Text><Text style={[s.small, { fontSize: 14, lineHeight: 20, color: 'rgba(255,255,255,0.85)', marginTop: 3 }]}>Wij beoordelen het voer voor je.</Text></View>
+          <View style={{ flex: 1 }}><Text style={[s.heading, { color: '#fff', fontSize: 19, lineHeight: 23 }]}>Scan de ingrediëntenlijst</Text><Text style={[s.small, { fontSize: 14, lineHeight: 20, color: 'rgba(255,255,255,0.85)', marginTop: 3 }]}>Maak een foto van het gedeelte op de verpakking waar alle ingrediënten staan vermeld. Zoek op de zak naar “Samenstelling” of “Ingrediënten”. Een screenshot van een webshop mag ook.</Text></View>
         </View>
         <View style={{ flexDirection: 'row', gap: 8 }}>
-          <View style={{ flex: 1.3 }}><ScannerButton title="Camera" variant="white" disabled={picking} icon={<Camera size={20} color={C.deep} />} onPress={() => void pick('front', true)} /></View>
-          <View style={{ flex: 1 }}><ScannerButton title="Uploaden" variant="dark-outline" disabled={picking} icon={<Upload size={19} color="#fff" />} onPress={() => void pick('front', false)} /></View>
+          <View style={{ flex: 1.3 }}><ScannerButton title="Camera" variant="white" disabled={picking} icon={<Camera size={20} color={C.deep} />} onPress={() => void pick('composition', true)} /></View>
+          <View style={{ flex: 1 }}><ScannerButton title="Uploaden" variant="dark-outline" disabled={picking} icon={<Upload size={19} color="#fff" />} onPress={() => void pick('composition', false)} /></View>
         </View>
-        <Text style={[s.small, { color: 'rgba(255,255,255,0.8)', marginTop: -7 }]}>Een screenshot van een webshop kan ook.</Text>
+        <Pressable accessibilityRole="button" onPress={() => { setExampleType('ingredients'); setExampleOpen(true); }} style={{ minHeight: 44, justifyContent: 'center' }}>
+          <Text style={[s.small, { color: '#fff', textDecorationLine: 'underline' }]}>Klik hier voor een voorbeeld van een ingrediëntenlijst.</Text>
+        </Pressable>
       </View>
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: 8, paddingVertical: 4 }}><View style={{ height: 1, backgroundColor: 'rgba(27,42,42,0.15)', flex: 1 }} /><Text style={s.small}>of</Text><View style={{ height: 1, backgroundColor: 'rgba(27,42,42,0.15)', flex: 1 }} /></View>
       <Pressable accessibilityRole="button" accessibilityLabel="Zoek op merk of productnaam" onPress={() => setScreen('search')} style={[s.row, { minHeight: 56, paddingHorizontal: 16, borderColor: 'rgba(27,42,42,0.15)' }]}><Search size={20} color={C.teal} /><Text style={[s.body, { fontSize: 17, color: C.muted }]}>Zoek op merk of productnaam</Text></Pressable>
@@ -152,7 +279,7 @@ export default function ScannerScreen() {
         <FeedIcon /><View style={{ flex: 1, gap: 2 }}><Text style={s.small}>{product.brand}</Text><Text style={s.rowTitle}>{product.name}</Text><Text style={s.small}>{feedCategory(product.category)}</Text></View><ChevronRight size={18} color={C.muted} />
       </Pressable>)}
       {!filtered.length && <View style={{ padding: 16, gap: 6 }}><Text style={s.heading}>{query.trim() ? 'Geen voer gevonden' : 'Nog geen producten beschikbaar'}</Text><Text style={s.body}>Controleer de spelling, of voeg foto’s van het etiket toe.</Text></View>}
-      {!!query.trim() && <Pressable accessibilityRole="button" onPress={() => { setName(query.trim()); setUnknownFeed(true); setVariant(false); setScreen('photos'); }} style={[s.row, { borderStyle: 'dashed', borderColor: C.teal, backgroundColor: C.pale, padding: 16 }]}>
+      {!!query.trim() && <Pressable accessibilityRole="button" onPress={() => { resetScan(); setName(query.trim()); setUnknownFeed(true); setVariant(false); setScreen('photos'); }} style={[s.row, { borderStyle: 'dashed', borderColor: C.teal, backgroundColor: C.pale, padding: 16 }]}>
         <View style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: C.teal, alignItems: 'center', justifyContent: 'center' }}><Plus size={18} color="#fff" /></View><View style={{ flex: 1 }}><Text style={s.rowTitle}>Staat jouw voer er niet bij?</Text><Text style={s.small}>Foto’s toevoegen voor “{query.trim()}”</Text></View>
       </Pressable>}
     </>}
@@ -168,25 +295,41 @@ export default function ScannerScreen() {
       {!previousScan && <ScannerNote>Voor dit product is nog geen voeranalyse beschikbaar in jouw scanhistorie.</ScannerNote>}
     </>}
     {screen === 'photos' && <>
+      <ScannerStepProgress step={candidate || photoStep === 'composition' ? 1 : photoStep === 'analysis' ? 2 : 3} />
       <View style={{ paddingHorizontal: 4, paddingBottom: 6 }}>
-        {!variant && <View style={{ width: 52, height: 52, borderRadius: 16, backgroundColor: C.pale, alignItems: 'center', justifyContent: 'center', marginBottom: 14 }}><Sparkle size={26} color={C.teal} /></View>}
-        <Text style={[s.title, { fontSize: 28, lineHeight: 31 }]}>{variant ? 'Andere samenstelling?' : unknownFeed ? 'Dit voer kennen we nog niet!' : 'Foto’s van je voer'}</Text>
-        <Text style={[s.body, { color: C.muted, marginTop: 8 }]}>{variant ? `Voeg foto’s toe van de samenstelling en analyse op jouw verpakking van ${selected?.name ?? 'dit voer'}.` : unknownFeed ? 'Geen probleem! Voeg twee foto’s toe van de samenstelling en analyse. Zorg dat de tekst scherp en volledig leesbaar is.' : 'Voeg twee duidelijke foto’s toe van de samenstelling en analyse op jouw verpakking.'}</Text>
+        <Text style={[s.title, { fontSize: 28, lineHeight: 31 }]}>{candidate ? 'Is dit jouw voer?' : unreadable ? 'Maak een nieuwe foto' : photoStep === 'analysis' ? 'Geen zekere productmatch' : photoStep === 'front' ? 'Nog één foto!' : 'Scan de ingrediëntenlijst'}</Text>
+        <Text style={[s.body, { color: C.muted, marginTop: 8 }]}>{candidate ? 'Dit is het voer dat we hebben gedetecteerd. Klopt dat? Een overeenkomst in ingrediënten betekent niet automatisch dat het recept gelijk is.' : unreadable ? 'We konden de tekst op deze foto niet lezen. Maak een scherpe foto van de volledige ingrediëntenlijst, zonder schittering.' : photoStep === 'analysis' ? 'We herkennen dit voer op dit moment nog niet. Maak twee extra foto’s zodat we het voer kunnen analyseren en je een voorlopige beoordeling kunnen geven.' : photoStep === 'front' ? 'Maak een foto van de voorkant van de verpakking en type hieronder het merk en de productnaam.' : 'Maak een foto van het gedeelte op de verpakking waar alle ingrediënten staan vermeld. Zoek op de zak naar “Samenstelling” of “Ingrediënten”.'}</Text>
       </View>
-      {!variant && <View style={{ marginBottom: 4 }}>
-        <Text style={[s.small, { fontFamily: 'SourceSans3_700Bold', paddingHorizontal: 4, paddingBottom: 6 }]}>Merk en productnaam</Text>
-        <View style={{ backgroundColor: '#fff', borderWidth: 1, borderRadius: 14, borderColor: focused ? C.mint : 'rgba(27,42,42,0.15)' }}><TextInput value={name} onChangeText={setName} placeholder="Merk en productnaam" accessibilityLabel="Merk en productnaam" onFocus={() => setFocused(true)} onBlur={() => setFocused(false)} style={[s.input, Platform.OS === 'web' ? { outlineStyle: 'none' } as any : undefined]} /></View>
-      </View>}
-      {fields.map(field => <ScannerPhotoCard key={field.key} title={field.title} detail={field.detail} required={field.required}
-        uri={photos[field.key]?.uri} phase={pickingKey === field.key ? 'selecting' : photos[field.key] ? 'selected' : 'empty'} disabled={picking}
-        onCamera={() => void pick(field.key, true)} onUpload={() => void pick(field.key, false)} onReplace={() => setReplaceKey(field.key)}
-        onRemove={photos[field.key] || !field.required ? () => { setPhotos(old => { const next = { ...old }; delete next[field.key]; return next; }); if (!field.required) setExtras(old => old.filter(key => key !== field.key)); } : undefined} />)}
-      <Pressable accessibilityRole="button" onPress={() => setExtras(old => [...old, `extra-${extraSequence.current++}`])} style={[s.button, { borderWidth: 1, borderStyle: 'dashed', borderColor: 'rgba(27,42,42,0.3)', borderRadius: 16, marginTop: 12 }]}><Plus size={18} color={C.ink} /><Text style={[s.buttonText, { color: C.ink, fontSize: 15 }]}>Extra foto toevoegen</Text></Pressable>
-      <Text style={[s.small, { textAlign: 'center', paddingHorizontal: 12 }]}>Staan de gegevens verspreid over de verpakking? Voeg dan extra foto’s toe.</Text>
-      <ScannerNote>Automatische etiketherkenning wordt nog aangesloten. Je foto’s zijn alleen geselecteerd op dit scherm en worden nog niet verstuurd of geanalyseerd.</ScannerNote>
+      {candidate && <View style={s.card}><Text style={s.small}>{recognition?.recognition?.brand}</Text><Text style={s.heading}>{recognition?.recognition?.name}</Text><Text style={s.eyebrow}>Ingrediëntenlijst van dit product</Text><Text style={s.body}>{recognition?.recognition?.reference_composition}</Text><Text style={s.body}>Controleer ook merk, productnaam, verhoudingen, toevoegingen en voedingswaarden op jouw verpakking. Dezelfde productnaam bewijst niet dat het recept gelijk is. Bij twijfel of een verschil kies je voor aanvullende foto’s.</Text><ScannerButton title="Ik twijfel · aanvullende foto’s toevoegen" variant="outline" disabled={sending} onPress={() => void chooseKnown('changed')} /></View>}
+      {!candidate && photoStep !== 'composition' && <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: 4 }}><CheckCircle2 size={18} color={C.teal} /><Text style={[s.small, { flex: 1 }]}>Ingrediëntenlijst ontvangen</Text><Pressable accessibilityRole="button" disabled={busy} onPress={() => setReplaceKey('composition')} style={{ minHeight: 44, justifyContent: 'center' }}><Text style={[s.small, { color: C.teal }]}>Vervangen</Text></Pressable></View>}
+      {!candidate && photoStep === 'front' && <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: 4 }}><CheckCircle2 size={18} color={C.teal} /><Text style={[s.small, { flex: 1 }]}>Analysefoto ontvangen</Text><Pressable accessibilityRole="button" disabled={busy} onPress={() => { setPhotoStep('analysis'); setReplaceKey('analysis'); }} style={{ minHeight: 44, justifyContent: 'center' }}><Text style={[s.small, { color: C.teal }]}>Vervangen</Text></Pressable></View>}
+      {!candidate && <ScannerPhotoCard title={photoStep === 'analysis' ? 'Fotografeer de analyse' : photoStep === 'front' ? 'Voorkant verpakking' : 'Ingrediëntenlijst'}
+        detail={photoStep === 'analysis' ? 'Fotografeer de lijst waarop alle voedingswaarden, zoals suiker, zetmeel, eiwit, vet en ruwe celstof staan.' : photoStep === 'front' ? 'Zorg dat het merk en de productnaam zichtbaar zijn.' : unreadable ? 'Probeer het opnieuw met een beter leesbare foto.' : 'De volledige lijst, inclusief eventuele toevoegingen.'}
+        uri={photos[photoStep]?.uri} phase={uploadingKey === photoStep ? 'uploading' : pickingKey === photoStep ? 'selecting' : unreadable && photoStep === 'composition' ? 'empty' : hasPhoto(photoStep) ? 'selected' : 'empty'} disabled={busy}
+        onCamera={() => void pick(photoStep, true)} onUpload={() => void pick(photoStep, false)} onReplace={() => setReplaceKey(photoStep)} />}
+      {!candidate && photoStep === 'analysis' && <>
+        {extras.map((key, i) => <ScannerPhotoCard key={key} title={`Extra foto ${i + 1}`} detail="Aanvullende voedingswaarden of een andere tabel."
+          uri={photos[key]?.uri} phase={uploadingKey === key ? 'uploading' : pickingKey === key ? 'selecting' : hasPhoto(key) ? 'selected' : 'empty'} disabled={busy}
+          onCamera={() => void pick(key, true)} onUpload={() => void pick(key, false)} onReplace={() => setReplaceKey(key)}
+          onRemove={!busy && !recognition?.photo_ids?.[key] ? () => { setExtras(old => old.filter(item => item !== key)); setPhotos(old => { const next = { ...old }; delete next[key]; return next; }); } : undefined} />)}
+        <Text style={s.small}>Staan de voedingswaarden in meerdere tabellen of passen ze niet op één foto? Voeg dan een extra foto toe.</Text>
+        <ScannerButton title="Nog een foto toevoegen" variant="outline" icon={<Plus size={18} color={C.teal} />} disabled={busy || extras.length >= 7 || !hasPhoto('analysis')} onPress={() => setExtras(old => [...old, `extra-${extraSequence.current++}`])} />
+      </>}
+      {!candidate && photoStep === 'analysis' && <Pressable accessibilityRole="button" onPress={() => { setExampleType('analysis'); setExampleOpen(true); }} style={{ minHeight: 44, justifyContent: 'center', paddingHorizontal: 4 }}><Text style={[s.small, { color: C.teal, textDecorationLine: 'underline' }]}>Klik hier voor een voorbeeld van een analyse.</Text></Pressable>}
+      {!candidate && photoStep === 'front' && <View style={{ gap: 6 }}><Text style={[s.small, { fontFamily: 'SourceSans3_700Bold' }]}>Merk en productnaam</Text><View style={{ backgroundColor: '#fff', borderWidth: 1, borderRadius: 14, borderColor: focused ? C.mint : C.border }}><TextInput editable={!busy} value={name} maxLength={255} onChangeText={setName} placeholder="Vitalbix Nutrimash" accessibilityLabel="Merk en productnaam" onFocus={() => setFocused(true)} onBlur={() => setFocused(false)} style={[s.input, Platform.OS === 'web' ? { outlineStyle: 'none' } as any : undefined]} /></View></View>}
       <PhotoReplacementSheet visible={replaceKey !== null} onClose={() => setReplaceKey(null)}
         onCamera={() => { const key = replaceKey; setReplaceKey(null); if (key) void pick(key, true); }}
         onUpload={() => { const key = replaceKey; setReplaceKey(null); if (key) void pick(key, false); }} />
     </>}
+    <Modal visible={exampleOpen} transparent animationType="fade" onRequestClose={() => setExampleOpen(false)}>
+      <View style={{ flex: 1, backgroundColor: 'rgba(13,42,42,0.65)', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
+        <View accessibilityViewIsModal style={{ width: '100%', maxWidth: exampleType === 'analysis' ? 600 : 900, padding: 16, gap: 14, backgroundColor: C.canvas, borderRadius: 20 }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}><Text style={[s.heading, { flex: 1 }]}>{exampleType === 'analysis' ? 'Voorbeeld analyse' : 'Voorbeeld ingrediëntenlijst'}</Text><RoundButton label="Voorbeeld sluiten" onPress={() => setExampleOpen(false)}><X size={22} color={C.ink} /></RoundButton></View>
+          <View style={[{ width: '100%', backgroundColor: '#fff', borderRadius: 8, overflow: 'hidden' }, exampleType === 'analysis' ? { height: Math.min(480, viewportHeight * 0.5) } : { aspectRatio: 1599 / 199 }]}><Image source={exampleType === 'analysis' ? require('@/assets/images/scanner-analysis-example.jpg') : require('@/assets/images/scanner-ingredients-example.jpg')} accessibilityLabel={exampleType === 'analysis' ? 'Voorbeeld van analytische bestanddelen met voedingswaarden' : 'Echte ingrediëntenlijst met het kopje Samenstelling'} resizeMode="contain" style={{ width: '100%', height: '100%' }} /></View>
+          <Text style={s.body}>{exampleType === 'analysis' ? 'Fotografeer de lijst waarop alle voedingswaarden, zoals suiker, zetmeel, eiwit, vet en ruwe celstof staan.' : 'Zoek op de zak naar “Samenstelling” of “Ingrediënten”. Fotografeer de volledige lijst, inclusief eventuele toevoegingen.'}</Text>
+          <ScannerButton title="Sluiten" variant="outline" onPress={() => setExampleOpen(false)} />
+        </View>
+      </View>
+    </Modal>
   </ScannerFrame>;
 }

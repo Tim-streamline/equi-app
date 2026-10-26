@@ -24,6 +24,17 @@ class AppServiceProvider extends ServiceProvider
     {
         RateLimiter::for('community-write', fn (Request $request) => Limit::perMinute(60)
             ->by($request->attributes->get('powersync_user_id') ?? $request->ip()));
+        RateLimiter::for('feed-scan-create', fn (Request $request) => Limit::perHour(20)
+            ->by($request->attributes->get('powersync_user_id')));
+        RateLimiter::for('feed-scan-upload', fn (Request $request) => Limit::perMinute(60)
+            ->by($request->attributes->get('powersync_user_id')));
+        RateLimiter::for('feed-scan-analyse', fn (Request $request) => Limit::perHour(10)
+            ->by($request->attributes->get('powersync_user_id')));
+        RateLimiter::for('feed-scan-check', fn (Request $request) => Limit::perHour(30)
+            ->by($request->attributes->get('powersync_user_id')));
+        RateLimiter::for('feed-scan-confirm', fn (Request $request) => Limit::perHour(30)
+            ->by($request->attributes->get('powersync_user_id')));
+
         // Map polymorphic target_type values stored in community_reactions
         // to model classes. Keeps stored values short ('post' / 'reply')
         // and decoupled from class namespaces.

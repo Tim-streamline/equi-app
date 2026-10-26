@@ -32,7 +32,7 @@ class IntakeDates
         $v = $this->normalize($raw, $config);
         if (! is_array($v) || ($v['version'] ?? null) !== 1) return false;
         $precision = $v['precision'] ?? null;
-        if ($precision === 'unknown') return true;
+        if ($precision === 'unknown') return ($config['allow_unknown'] ?? true) !== false;
         if ($precision === 'legacy') return is_string($v['text'] ?? null) && trim($v['text']) !== '';
         if ($precision === 'range') {
             if (($config['mode'] ?? 'single') !== 'range') return false;
@@ -82,9 +82,9 @@ class IntakeDates
     public function validateConfig(mixed $config): void
     {
         Validator::make(['config' => $config], [
-            'config' => ['nullable', 'array:mode,allow_future,allow_year_only,min_year,month_label,year_label,unknown_label,ongoing_label'],
+            'config' => ['nullable', 'array:mode,allow_future,allow_year_only,allow_unknown,min_year,month_label,year_label,unknown_label,ongoing_label'],
             'config.mode' => ['sometimes', 'in:single,range'], 'config.allow_future' => ['sometimes', 'boolean'],
-            'config.allow_year_only' => ['sometimes', 'boolean'], 'config.min_year' => ['sometimes', 'integer', 'between:1000,9999'],
+            'config.allow_year_only' => ['sometimes', 'boolean'], 'config.allow_unknown' => ['sometimes', 'boolean'], 'config.min_year' => ['sometimes', 'integer', 'between:1000,9999'],
             'config.month_label' => ['sometimes', 'string', 'max:100'], 'config.year_label' => ['sometimes', 'string', 'max:100'],
             'config.unknown_label' => ['sometimes', 'string', 'max:100'], 'config.ongoing_label' => ['sometimes', 'string', 'max:100'],
         ])->validate();
