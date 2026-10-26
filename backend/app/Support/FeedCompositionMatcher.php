@@ -80,7 +80,7 @@ class FeedCompositionMatcher
             }
         }
         // Shared recipes and uncertain identity always need the extra evidence.
-        if (count($exact) === 1 && ((count($identity) === 0 && ! $referenceId) || (count($identity) === 1 && isset($exact[array_key_first($identity)])))) {
+        if (count($exact) === 1 && ((count($identity) === 0 && ! $referenceId) || isset($identity[array_key_first($exact)]))) {
             $version = reset($exact);
 
             return ['decision' => 'candidate', 'product_id' => $version->product_id, 'version_id' => $version->id, 'name' => $version->data['name'], 'brand' => $version->data['brand'], 'composition_text' => $section, 'reference_composition' => $version->data['composition_text']];

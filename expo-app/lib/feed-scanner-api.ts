@@ -4,7 +4,7 @@ import { getApiBaseUrl } from '@/db/auth';
 import { getOrMintToken } from '@/db/connector';
 import { accountSession } from '@/lib/account-session';
 
-export type FeedSubmission = { id: string; status: string; photo_ids: Record<string, string>; message?: string; scan_result_id?: string; error_code?: string; public_result?: FeedResult; product?: { name: string }; workflow_version: number; product_version_id?: string; submitted_name?: string;
+export type FeedSubmission = { id: string; status: string; photo_ids: Record<string, string>; message?: string; scan_result_id?: string; error_code?: string; public_result?: FeedResult; product?: { name: string }; workflow_version: number; product_id?: string; product_version_id?: string; submitted_name?: string;
   recognition?: { decision: string; name?: string; brand?: string; reference_composition?: string; ocr?: { engine?: string; words?: number } }; reference_product_id?: string };
 export type FeedResult = { name: string; brand: string; provisional: boolean; score: string | null; score_cap: string | null; message: string;
   missing_data: string[]; findings: { message: string }[]; ingredients: { label: string; explanation?: string; assessment: string; match_status: string; exceptions?: string }[];

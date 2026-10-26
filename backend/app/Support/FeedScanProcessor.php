@@ -2,6 +2,7 @@
 
 namespace App\Support;
 
+use App\Models\FeedAssessment;
 use App\Models\FeedLabelAttachment;
 use App\Models\FeedScanSubmission;
 use App\Models\Ingredient;
@@ -24,7 +25,7 @@ class FeedScanProcessor
             if (in_array($s->status, ['completed', 'review_required']) || ($s->status === 'processing' && $s->processing_started_at?->gt(now()->subMinutes(3)))) {
                 return null;
             }
-            if ($s->workflow_version === 2 && (! in_array($s->status, ['needs_photos', 'failed', 'processing']) || ! $s->product_version_id || ! isset($s->photo_ids['front']))) {
+            if ($s->workflow_version === 2 && (! in_array($s->status, ['needs_photos', 'failed', 'processing']) || ! $s->product_id || ! isset($s->photo_ids['front']))) {
                 throw ValidationException::withMessages(['photos' => 'Controleer eerst de samenstelling en voeg daarna de analyse en voorkant toe.']);
             }
             if (! isset($s->photo_ids['composition'], $s->photo_ids['analysis'])) {
@@ -48,58 +49,74 @@ class FeedScanProcessor
                 if ($s->processing_token !== $token) {
                     return;
                 }
+                $fingerprint = FeedRecipeIdentity::fingerprint($extraction);
+                if ($fingerprint) {
+                    // PostgreSQL transaction lock serializes identical labels even
+                    // before a matching product row exists. No paid work holds it.
+                    DB::select('SELECT pg_advisory_xact_lock(hashtextextended(?, 0))', [$fingerprint]);
+                }
                 $product = Product::lockForUpdate()->findOrFail($s->product_id);
-                // Other submissions have independent drafts. Protect only this
-                // submission's versions that a reviewer has edited or reviewed.
-                if ($this->hasReviewerChanges($s)) {
-                    $s->update(['status' => 'review_required', 'extraction' => $extraction, 'processing_token' => null, 'message' => 'Je foto’s zijn ontvangen. De beheerder beoordeelt dit product al.']);
+                if ($product->catalog_status === 'archived' || $this->hasReviewerChanges($s)) {
+                    $s->update(['status' => 'review_required', 'extraction' => $extraction, 'processing_token' => null,
+                        'message' => 'Je foto’s zijn ontvangen. De beheerder beoordeelt dit product al.']);
 
                     return;
                 }
                 $data = $this->normalize($extraction, $product, $s->submitted_name);
-                $originalProduct = null;
-                // The first photo may contain no identity. The front label can later
-                // identify a possible revision of an existing product (never a known-score match).
-                if ($s->workflow_version === 2 && ! $s->reference_product_id && $product->catalog_status === 'draft' && ! $product->published_version_id && filled($extraction['brand']) && filled($extraction['name'])) {
+                // Brand/name alone only supplies a relationship, never an identity.
+                if (! $product->related_product_id && filled($extraction['brand']) && filled($extraction['name'])) {
                     $brand = FeedCompositionMatcher::canonical($extraction['brand']);
                     $name = $this->identityName($extraction['name'], $extraction['brand']);
-                    $matches = Product::where('catalog_status', 'published')->whereNotNull('published_version_id')->get()->filter(fn ($p) => FeedCompositionMatcher::canonical($p->brand) === $brand && $this->identityName($p->name, $p->brand) === $name);
+                    $matches = Product::where('catalog_status', 'published')->where('id', '!=', $product->id)->get()
+                        ->filter(fn ($p) => FeedCompositionMatcher::canonical($p->brand) === $brand && $this->identityName($p->name, $p->brand) === $name);
                     if ($matches->count() === 1) {
-                        $originalProduct = $product;
-                        $product = Product::lockForUpdate()->findOrFail($matches->first()->id);
-                        if ($product->catalog_status !== 'published' || FeedCompositionMatcher::canonical($product->brand) !== $brand || $this->identityName($product->name, $product->brand) !== $name) {
-                            abort(409);
-                        }
-                        $s->reference_product_id = $product->id;
-                        $s->reference_version_id = $product->published_version_id;
-                        $product->forceFill(['needs_review' => true])->save();
+                        $reference = $matches->first();
+                        $product->forceFill(['related_product_id' => $reference->id])->save();
+                        $s->reference_product_id = $reference->id;
+                        $s->reference_version_id = $reference->published_version_id;
                     }
                 }
-                $version = FeedCatalog::productDraft($product, $data, null, false, $s->id);
-                foreach (FeedLabelAttachment::where('submission_id', $s->id)->whereIn('id', array_values($s->photo_ids))->get() as $attachment) {
-                    $copy = $attachment->replicate();
-                    $copy->product_version_id = $version->id;
-                    $copy->save();
+                $existing = $fingerprint ? Product::where('scan_fingerprint', $fingerprint)
+                    ->where('id', '!=', $product->id)->lockForUpdate()->first() : null;
+                $version = $existing ? FeedCatalog::latestProduct($existing) : null;
+                if ($version && in_array($existing->catalog_status, ['draft', 'published']) && in_array($version->status, ['draft', 'approved'])) {
+                    // Same complete label: attach evidence to the existing product,
+                    // leaving its revision and the other user's evidence untouched.
+                    $product->forceFill(['catalog_status' => 'archived', 'needs_review' => false])->save();
+                    $product = $existing;
+                } else {
+                    // An archived/rejected candidate must not reserve the identity
+                    // forever or be revived by a later submission.
+                    $existing?->forceFill(['scan_fingerprint' => null])->save();
+                    $product->forceFill(['brand' => $data['brand'], 'name' => $data['name'],
+                        'scan_fingerprint' => $fingerprint])->save();
+                    $version = FeedCatalog::productDraft($product, $data, null, false);
                 }
-                if ($originalProduct) {
-                    // Retain the original evidence/version as an archived intake shell.
-                    $originalProduct->forceFill(['catalog_status' => 'archived', 'needs_review' => false])->save();
-                    AuditLogger::log('feed_scan_identity_linked_for_review', $product, after: ['submission_id' => $s->id, 'original_product_id' => $originalProduct->id, 'reference_version_id' => $s->reference_version_id]);
+                // Only the first revision's selected evidence is frozen on it.
+                // All later submissions keep their own original photos separately.
+                if (! $existing || $version->product_id !== $existing->id) {
+                    foreach (FeedLabelAttachment::whereIn('id', array_values($s->photo_ids))->where('submission_id', $s->id)->get() as $attachment) {
+                        $copy = $attachment->replicate();
+                        $copy->product_version_id = $version->id;
+                        $copy->save();
+                    }
                 }
                 $assessment = null;
                 $missing = $extraction['unreadable_fields'];
                 try {
-                    $assessment = app(FeedAssessments::class)->calculate($product, $version);
+                    $ruleId = DB::table('feed_assessment_profiles')->where('id', $version->profile_id)->lockForUpdate()->value('active_rule_version_id');
+                    $assessment = $ruleId ? FeedAssessment::where('product_version_id', $version->id)->where('rule_version_id', $ruleId)->latest('created_at')->latest('id')->first() : null;
+                    $assessment ??= app(FeedAssessments::class)->calculate($product, $version);
                 } catch (ValidationException) {
                     $missing[] = 'De voercategorie of gepubliceerde beoordelingsregels ontbreken. De beheerder controleert dit.';
                 }
                 $public = FeedScanResults::make($version, $assessment, $missing);
-                $scan = ScanResult::create(['user_id' => $s->user_id, 'product_id' => $product->id, 'product_name' => $data['name'], 'brand' => $data['brand'],
+                $scan = ScanResult::create(['user_id' => $s->user_id, 'product_id' => $product->id, 'product_name' => $public['name'], 'brand' => $public['brand'],
                     'scanned_at' => now(), 'score' => $public['score'] === null ? null : (int) round((float) $public['score'] * 10),
-                    'rating' => 'Voorlopig', 'advice' => $public['message']]);
+                    'rating' => $public['provisional'] ? 'Voorlopig' : 'Gecontroleerd', 'advice' => $public['message']]);
                 $s->update(['status' => 'completed', 'product_id' => $product->id, 'reference_product_id' => $s->reference_product_id, 'reference_version_id' => $s->reference_version_id, 'product_version_id' => $version->id, 'assessment_id' => $assessment?->id,
                     'scan_result_id' => $scan->id, 'extraction' => $extraction, 'public_result' => $public, 'processing_token' => null,
-                    'message' => 'De foto’s zijn uitgelezen. Deze productversie staat ter beoordeling.']);
+                    'message' => $public['provisional'] ? 'De foto’s zijn uitgelezen. Dit product staat ter beoordeling.' : 'De gecontroleerde beoordeling staat klaar.']);
                 AuditLogger::log('feed_scan_processed', $product, after: ['submission_id' => $s->id, 'product_version_id' => $version->id, 'user_id' => $s->user_id]);
             });
         } catch (\Throwable $e) {
@@ -113,13 +130,7 @@ class FeedScanProcessor
 
     private function hasReviewerChanges(FeedScanSubmission $submission): bool
     {
-        return ProductVersion::where('product_id', $submission->product_id)
-            ->where(function ($query) use ($submission) {
-                $query->where('submission_id', $submission->id)->orWhere('id', $submission->product_version_id)
-                    // Older versions with mixed evidence cannot be backfilled unambiguously.
-                    ->orWhere(fn ($legacy) => $legacy->whereNull('submission_id')
-                        ->whereHas('attachments', fn ($photos) => $photos->where('submission_id', $submission->id)));
-            })
+        return ProductVersion::where('product_id', $submission->product_id)->whereNull('superseded_by_product_id')
             ->where(function ($query) {
                 $query->whereNotNull('created_by')->orWhereNotNull('reviewed_by')->orWhere('status', '!=', 'draft')
                     ->orWhereHas('attachments', fn ($attachments) => $attachments->whereNotNull('uploaded_by'));

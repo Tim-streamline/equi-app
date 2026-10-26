@@ -182,13 +182,22 @@ class FeedCatalogController extends Controller
             $query->where('name', 'ilike', $term)->orWhere('brand', 'ilike', $term)->orWhere('barcode', 'ilike', $term)
                 ->orWhereIn('id', ProductVersion::select('product_id')->whereRaw('data::text ILIKE ?', [$term]));
         }))
-            ->when($request->filled('category'), fn ($q) => $q->whereIn('id', ProductVersion::select('product_id')->whereRaw('number = (SELECT MAX(v.number) FROM product_versions v WHERE v.product_id = product_versions.product_id)')->whereRaw("data->>'category' = ?", [$request->string('category')->toString()])))
+            ->when($request->filled('category'), fn ($q) => $q->whereIn('id', ProductVersion::select('product_id')->whereRaw('number = (SELECT MAX(v.number) FROM product_versions v WHERE v.product_id = product_versions.product_id AND v.superseded_by_product_id IS NULL)')->whereRaw("data->>'category' = ?", [$request->string('category')->toString()])))
             ->when($request->string('sort')->toString() === 'scans', fn ($q) => $q->orderByDesc('scans_count'))
             ->when($request->string('sort')->toString() === 'newest', fn ($q) => $q->orderByDesc('created_at'))
             ->orderBy('brand')->orderBy('name')->paginate(20)->withQueryString();
         $rows->through(function ($product) {
-            $product->setAttribute('submissions', \App\Models\FeedScanSubmission::where('product_id', $product->id)->orderByDesc('created_at')->get(['id', 'status', 'message', 'extraction', 'created_at', 'reference_version_id', 'recognition']));
-            $product->setAttribute('versions', ProductVersion::where('product_id', $product->id)->with(['attachments', 'assessments.overrides', 'assessments.ruleVersion:id,number,profile_id,status'])->orderByDesc('number')->get());
+            $currentVersionIds = FeedCatalog::currentProductVersions($product)->pluck('id');
+            $submissions = \App\Models\FeedScanSubmission::where('product_id', $product->id)->orderByDesc('created_at')->with('attachments')
+                ->get(['id', 'status', 'message', 'extraction', 'created_at', 'reference_product_id', 'reference_version_id', 'recognition', 'photo_ids']);
+            foreach ($submissions as $submission) {
+                $submission->setRelation('attachments', $submission->attachments->whereIn('id', array_values($submission->photo_ids))->values());
+            }
+            $product->setAttribute('submissions', $submissions);
+            $product->setAttribute('versions', ProductVersion::where('product_id', $product->id)->with(['attachments', 'assessments.overrides', 'assessments.ruleVersion:id,number,profile_id,status'])->orderByDesc('number')->get()
+                ->each(fn ($version) => $version->setAttribute('is_current', $currentVersionIds->contains($version->id))));
+
+            $product->load('relatedProduct:id,brand,name');
 
             return $product;
         });
@@ -210,9 +219,11 @@ class FeedCatalogController extends Controller
     public function saveProduct(Request $request, ?Product $product = null)
     {
         $data = $request->validate([
+            'source_version_id' => ['nullable', 'uuid', Rule::prohibitedIf(! $product)],
+            'related_product_id' => ['nullable', 'uuid', 'exists:products,id', Rule::prohibitedIf((bool) $product)],
             'approve' => ['sometimes', 'boolean'],
             'brand' => ['required', 'string', 'max:255'], 'name' => ['required', 'string', 'max:255'],
-            'barcode' => ['nullable', 'string', 'max:64', Rule::unique('products')->ignore($product?->id)],
+            'barcode' => ['nullable', 'string', 'max:64'],
             'category' => ['required', Rule::in(array_keys(FeedCatalog::CATEGORIES))],
             'composition_text' => ['nullable', 'string', 'max:30000'], 'usage' => ['nullable', 'string', 'max:10000'],
             'source' => ['nullable', 'string', 'max:2000'], 'internal_notes' => ['nullable', 'string', 'max:20000'],
@@ -264,13 +275,20 @@ class FeedCatalogController extends Controller
         DB::transaction(function () use ($data, $product, $request) {
             $record = $product ? Product::lockForUpdate()->findOrFail($product->id) : (new Product)->forceFill(['brand' => $data['brand'], 'name' => $data['name'], 'barcode' => null, 'catalog_status' => 'draft']);
             if (! $record->exists) {
-                $record->save();
+                $record->forceFill(['related_product_id' => $data['related_product_id'] ?? null])->save();
             }
+            $source = null;
             if ($product) {
-                $this->checkVersion($data, FeedCatalog::latestProduct($record)?->number);
+                $source = ! empty($data['source_version_id'])
+                    ? ProductVersion::where('product_id', $record->id)->findOrFail($data['source_version_id'])
+                    : FeedCatalog::latestProduct($record);
+                if ($source) {
+                    abort_unless(FeedCatalog::currentProductVersions($record)->whereKey($source->id)->exists(), 409, 'Open de nieuwste correctie van dit product.');
+                }
+                $this->checkVersion($data, $source?->number);
             }
             $record->forceFill(['internal_notes' => $data['internal_notes'] ?? null, 'catalog_status' => in_array($record->catalog_status, ['published', 'legacy']) ? $record->catalog_status : 'draft', 'needs_review' => true])->save();
-            $version = FeedCatalog::productDraft($record, collect($data)->except(['internal_notes', 'expected_number', 'approve'])->all(), $request->user('admin')->id);
+            $version = FeedCatalog::productDraft($record, collect($data)->except(['internal_notes', 'expected_number', 'source_version_id', 'related_product_id', 'approve'])->all(), $request->user('admin')->id, sourceVersion: $source);
             if ($data['approve'] ?? false) {
                 FeedCatalog::approveProduct($record, $version, $request->user('admin')->id, null);
             }
@@ -287,14 +305,13 @@ class FeedCatalogController extends Controller
         DB::transaction(function () use ($data, $product, $request) {
             $record = Product::lockForUpdate()->findOrFail($product->id);
             abort_if($record->catalog_status === 'archived', 409, 'Sla eerst een nieuw concept op om dit product opnieuw te beoordelen.');
-            $version = FeedCatalog::latestProduct($record);
-            abort_unless($version && $version->id === $data['version_id'] && in_array($version->status, ['draft', 'needs_info']), 409, 'Open het nieuwste concept.');
+            $version = FeedCatalog::currentProductVersions($record)->whereKey($data['version_id'])->first();
+            abort_unless($version && in_array($version->status, ['draft', 'needs_info']), 409, 'Open het nieuwste concept van dit product.');
             if ($data['decision'] === 'approve') {
-                validator($version->data, ['barcode' => ['nullable', Rule::unique('products')->ignore($product->id)]])->validate();
                 FeedCatalog::approveProduct($record, $version, $request->user('admin')->id, $data['notes'] ?? null);
             } else {
                 $version->update(['status' => $data['decision'] === 'needs_info' ? 'needs_info' : 'rejected', 'review_notes' => $data['notes'] ?? null, 'reviewed_by' => $request->user('admin')->id, 'reviewed_at' => now()]);
-                $record->forceFill(['needs_review' => $data['decision'] === 'needs_info'])->save();
+                $record->forceFill(['needs_review' => FeedCatalog::hasPendingProductVersions($record)])->save();
             }
             AuditLogger::log('product_reviewed', $record, after: ['version_id' => $version->id, 'decision' => $data['decision']], reason: $data['notes'] ?? null);
         });
@@ -321,7 +338,7 @@ class FeedCatalogController extends Controller
                 $product = Product::lockForUpdate()->findOrFail($version->product_id);
                 abort_if($product->catalog_status === 'archived', 409, 'Dit product is gearchiveerd.');
                 $version->refresh();
-                abort_unless(in_array($version->status, ['draft', 'needs_info']) && FeedCatalog::latestProduct(Product::findOrFail($version->product_id))->id === $version->id, 409, 'Voeg etiketten toe aan het nieuwste concept.');
+                abort_unless(in_array($version->status, ['draft', 'needs_info']) && FeedCatalog::currentProductVersions($product)->whereKey($version->id)->exists(), 409, 'Voeg etiketten toe aan het nieuwste concept van dit product.');
                 $file = $request->file('file');
                 $path = $file->store('feed-labels', 'local');
                 $attachment = FeedLabelAttachment::create(['product_version_id' => $version->id, 'purpose' => $data['purpose'], 'disk' => 'local', 'path' => $path,

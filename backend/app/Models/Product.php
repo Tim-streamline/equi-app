@@ -18,6 +18,11 @@ class Product extends Model
         return ['needs_review' => 'boolean'];
     }
 
+    public function relatedProduct(): \Illuminate\Database\Eloquent\Relations\BelongsTo
+    {
+        return $this->belongsTo(self::class, 'related_product_id');
+    }
+
     public function scans(): HasMany
     {
         return $this->hasMany(ScanResult::class);

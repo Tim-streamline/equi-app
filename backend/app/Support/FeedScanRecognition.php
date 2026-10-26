@@ -18,7 +18,7 @@ class FeedScanRecognition
     {
         $token = DB::transaction(function () use ($submission) {
             $s = FeedScanSubmission::lockForUpdate()->findOrFail($submission->id);
-            if ($s->workflow_version !== 2 || $s->product_version_id || in_array($s->status, ['candidate', 'needs_photos', 'completed', 'review_required', 'processing']) ||
+            if ($s->workflow_version !== 2 || $s->product_id || in_array($s->status, ['candidate', 'needs_photos', 'completed', 'review_required', 'processing']) ||
                 ($s->status === 'checking' && $s->processing_started_at?->gt(now()->subMinutes(2)))) {
                 return null;
             }
@@ -50,7 +50,7 @@ class FeedScanRecognition
                 'reference_product_id' => $match['product_id'], 'reference_version_id' => $match['version_id'],
                 'status' => $match['decision'] === 'candidate' ? 'candidate' : 'needs_photos',
                 'message' => $match['decision'] === 'candidate' ? 'Deze samenstelling herkennen we. Controleer of dit jouw voer is.' :
-                    ($match['decision'] === 'changed' ? 'De samenstelling lijkt gewijzigd. Voeg de analyse en voorkant toe, zodat we de nieuwe versie kunnen beoordelen.' : 'We herkennen deze samenstelling nog niet met voldoende zekerheid. Voeg de analyse en voorkant toe.')]);
+                    ($match['decision'] === 'changed' ? 'De samenstelling lijkt gewijzigd. Voeg de analyse en voorkant toe, zodat we dit als apart product kunnen beoordelen.' : 'We herkennen deze samenstelling nog niet met voldoende zekerheid. Voeg de analyse en voorkant toe.')]);
             if ($s->status === 'needs_photos') {
                 $this->ensureDraft($s);
             }
@@ -114,28 +114,21 @@ class FeedScanRecognition
         });
     }
 
-    /** Own draft for this submission. Never replace the published recipe or borrow its analysis values. */
+    /** An unrecognised label gets its own product, never a draft of the reference recipe. */
     private function ensureDraft(FeedScanSubmission $s): void
     {
-        if ($s->product_version_id) {
+        if ($s->product_id) {
             return;
         }
-        $product = $s->reference_product_id ? Product::whereNotIn('catalog_status', ['archived', 'removed'])->lockForUpdate()->find($s->reference_product_id) : null;
-        if (! $product) {
-            $product = Product::create(['brand' => 'Nog te controleren', 'name' => $s->submitted_name ?: 'Onbekend voer', 'needs_review' => true]);
-            $product->forceFill(['catalog_status' => 'draft'])->save();
-        } else {
-            $product->forceFill(['needs_review' => true])->save();
-            if (! $s->reference_version_id) {
-                $s->reference_version_id = $product->published_version_id ?? FeedCatalog::latestProduct($product)?->id;
-            }
-        }
-        $data = ['brand' => $product->brand, 'name' => $s->submitted_name ?: $product->name, 'barcode' => null, 'category' => null,
-            'composition_text' => null, 'ingredients' => [], 'nutrients' => [], 'recognition_enabled' => false,
-            'source' => $s->reference_product_id ? 'Mogelijke receptwijziging uit gebruikersinzending; eerdere productversie blijft bewaard.' : 'Nieuwe gebruikersinzending; wacht op aanvullende etiketfoto’s.'];
-        $version = FeedCatalog::productDraft($product, $data, null, false, $s->id);
-        $s->update(['product_id' => $product->id, 'product_version_id' => $version->id, 'reference_version_id' => $s->reference_version_id]);
-        FeedLabelAttachment::where('submission_id', $s->id)->whereNull('product_version_id')->update(['product_version_id' => $version->id]);
-        AuditLogger::log('feed_recipe_review_requested', $product, after: ['submission_id' => $s->id, 'reference_version_id' => $s->reference_version_id, 'version_id' => $version->id]);
+        $reference = $s->reference_product_id ? Product::find($s->reference_product_id) : null;
+        $product = Product::create(['brand' => $reference?->brand ?? 'Nog te controleren',
+            'name' => $s->submitted_name ?: ($reference?->name ?? 'Onbekend voer'), 'needs_review' => true]);
+        $product->forceFill(['catalog_status' => 'draft', 'related_product_id' => $reference?->id])->save();
+        $s->update(['product_id' => $product->id,
+            'reference_version_id' => $s->reference_version_id ?? $reference?->published_version_id]);
+        // Photos belong to the submission. The first product revision is created
+        // only once label facts are available (automatically or through review).
+        AuditLogger::log('feed_recipe_review_requested', $product, after: ['submission_id' => $s->id,
+            'reference_product_id' => $reference?->id]);
     }
 }

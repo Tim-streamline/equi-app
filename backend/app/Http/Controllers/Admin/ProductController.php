@@ -68,7 +68,7 @@ class ProductController extends Controller
 
     public function destroy(Product $product): RedirectResponse
     {
-        if (ProductVersion::where('product_id', $product->id)->exists()) {
+        if (ProductVersion::where('product_id', $product->id)->exists() || \App\Models\FeedScanSubmission::where('product_id', $product->id)->exists()) {
             $product->forceFill(['catalog_status' => 'archived', 'needs_review' => false])->save();
             AuditLogger::log('archived', $product);
 
@@ -87,7 +87,7 @@ class ProductController extends Controller
         return $request->validate([
             'brand' => ['required', 'string', 'max:255'],
             'name' => ['required', 'string', 'max:255'],
-            'barcode' => ['nullable', 'string', 'max:64', 'unique:products,barcode'.($id ? ",{$id}" : '')],
+            'barcode' => ['nullable', 'string', 'max:64'],
             'category' => ['nullable', 'string', 'max:255'],
             'needs_review' => ['boolean'],
             'ingredients' => ['sometimes', 'array'],

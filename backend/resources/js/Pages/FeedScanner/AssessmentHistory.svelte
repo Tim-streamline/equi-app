@@ -35,7 +35,7 @@
             {#if !version.profile_id}<p class="text-sm text-muted-foreground">Kies eerst een categorie door een nieuw productconcept op te slaan.</p>{:else if !profile?.active_rule_version_id}<p class="text-sm text-muted-foreground"><a href="/admin/feed-scanner/settings" class="underline">Activeer eerst de scoreplafonds</a> voor dit profiel.</p>{/if}
             {#each version.assessments ?? [] as assessment, index (assessment.id)}
                 {@const manual = assessment.overrides[0]}
-                {@const isCurrent = versionIndex === 0 && index === 0 && assessment.rule_version_id === profile?.active_rule_version_id}
+                {@const isCurrent = version.is_current && index === 0 && assessment.rule_version_id === profile?.active_rule_version_id}
                 <article class="space-y-3 border-t pt-4">
                     <div class="flex flex-wrap items-center gap-2"><Badge variant="muted">Regelversie {assessment.rule_version?.number ?? '—'}</Badge>{#if assessment.is_preview}<Badge variant="muted">Voorlopig · product nog niet goedgekeurd bij berekening</Badge>{/if}{#if assessment.rule_version_id !== profile?.active_rule_version_id}<Badge variant="muted">Historisch beleid</Badge>{/if}<span class="text-xs text-muted-foreground">{new Date(assessment.created_at).toLocaleString('nl-NL')}</span></div>
                     {#if manual}<p class="text-lg font-semibold">Handmatige beoordeling: {format(manual.corrected_score)}/10</p>{:else if assessment.automatic_score != null}<p class="text-lg font-semibold">Automatische score: {format(assessment.automatic_score)}/10</p>{:else}<p class="font-semibold">Nog geen automatische eindscore</p>{/if}

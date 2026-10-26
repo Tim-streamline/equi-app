@@ -5,7 +5,6 @@ namespace App\Support;
 use App\Models\FeedAssessment;
 use App\Models\FeedScanSubmission;
 use App\Models\Product;
-use App\Models\ProductVersion;
 use App\Models\ScanResult;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
@@ -14,10 +13,8 @@ class FeedScanReviewCompletion
 {
     public function complete(FeedScanSubmission $submission): FeedScanSubmission
     {
-        // Completed scans are historical snapshots. Reconcile only pending work
-        // for which this submission has an approved version, never another user's.
-        if ($submission->status === 'completed' || ! $submission->product_id ||
-            ! ProductVersion::where('submission_id', $submission->id)->where('status', 'approved')->exists()) {
+        // Completed scans remain historical snapshots, including provisional results.
+        if ($submission->status === 'completed' || ! $submission->product_id) {
             return $submission;
         }
 
@@ -28,7 +25,7 @@ class FeedScanReviewCompletion
             }
             // Match the scanner's submission -> product -> profile lock order.
             $product = Product::lockForUpdate()->findOrFail($s->product_id);
-            $version = ProductVersion::where('product_id', $product->id)->where('submission_id', $s->id)->latest('number')->first();
+            $version = FeedCatalog::latestProduct($product);
             if ($product->catalog_status !== 'published' || $version?->status !== 'approved') {
                 return $s;
             }

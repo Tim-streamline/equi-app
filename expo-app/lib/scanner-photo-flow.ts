@@ -14,7 +14,7 @@ export function resumePhotoStep(submission: FeedSubmission | null): PhotoStep {
 }
 
 export function needsAdditionalPhotos(submission: FeedSubmission | null): boolean {
-  return !!submission && (submission.workflow_version === 1 || !!submission.product_version_id || submission.status === 'needs_photos');
+  return !!submission && (submission.workflow_version === 1 || !!submission.product_id || !!submission.product_version_id || submission.status === 'needs_photos');
 }
 
 export function requiredPhotoSlots(submission: FeedSubmission | null): string[] {

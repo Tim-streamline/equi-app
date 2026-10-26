@@ -80,12 +80,12 @@ class FeedScanController extends Controller
                 if (! $path) {
                     throw ValidationException::withMessages(['file' => 'De foto kon niet worden opgeslagen. Probeer opnieuw.']);
                 }
-                $a = FeedLabelAttachment::create(['product_version_id' => $s->product_version_id, 'submission_id' => $s->id,
+                $a = FeedLabelAttachment::create(['product_version_id' => null, 'submission_id' => $s->id,
                     'submitted_by' => $s->user_id, 'purpose' => in_array($data['slot'], ['composition', 'analysis']) ? $data['slot'] : 'packaging',
                     'disk' => 'local', 'path' => $path, 'original_name' => mb_substr($file->getClientOriginalName(), 0, 255),
                     'mime_type' => $file->getMimeType(), 'size_bytes' => $file->getSize(), 'checksum' => $checksum]);
                 $map[$data['slot']] = $a->id;
-                $s->update(['photo_ids' => $map, 'status' => $s->workflow_version === 2 ? ($s->product_version_id ? 'needs_photos' : 'awaiting_composition') : 'draft', 'error_code' => null]);
+                $s->update(['photo_ids' => $map, 'status' => $s->workflow_version === 2 ? ($s->product_id ? 'needs_photos' : 'awaiting_composition') : 'draft', 'error_code' => null]);
             });
         } catch (\Throwable $e) {
             if ($path) {

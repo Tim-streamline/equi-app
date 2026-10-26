@@ -36,3 +36,10 @@ test('resuming a submission retains uploaded evidence and legacy submissions kee
   assert.equal(missingPhotoCount({ workflow_version: 2, product_version_id: 'draft', photo_ids: { composition: 'a', analysis: 'b', front: 'c' } }, {}), 0);
   assert.deepEqual(requiredPhotoSlots({ workflow_version: 1, photo_ids: {} }), ['composition', 'analysis']);
 });
+
+
+test('a failed submission resumes additional photos before its first product revision exists', () => {
+  const pending = { status: 'failed', workflow_version: 2, product_id: 'new-product', photo_ids: { composition: 'a', analysis: 'b', front: 'c' } };
+  assert.equal(resumePhotoStep(pending), 'front');
+  assert.equal(missingPhotoCount(pending, {}), 0);
+});
