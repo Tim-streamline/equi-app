@@ -187,6 +187,7 @@ class FeedCatalogController extends Controller
             ->when($request->string('sort')->toString() === 'newest', fn ($q) => $q->orderByDesc('created_at'))
             ->orderBy('brand')->orderBy('name')->paginate(20)->withQueryString();
         $rows->through(function ($product) {
+            $product->setAttribute('submissions', \App\Models\FeedScanSubmission::where('product_id', $product->id)->orderByDesc('created_at')->get(['id', 'status', 'message', 'extraction', 'created_at']));
             $product->setAttribute('versions', ProductVersion::where('product_id', $product->id)->with(['attachments', 'assessments.overrides', 'assessments.ruleVersion:id,number,profile_id,status'])->orderByDesc('number')->get());
 
             return $product;
@@ -198,6 +199,12 @@ class FeedCatalogController extends Controller
             'ingredientOptions' => Ingredient::whereNotIn('catalog_status', ['archived', 'removed'])->orderBy('name')->get(['id', 'name', 'published_version_id']),
             'assessmentProfiles' => DB::table('feed_assessment_profiles')->get(['id', 'active_rule_version_id']),
         ]));
+    }
+
+    public function retrySubmission(Request $request, \App\Models\FeedScanSubmission $submission)
+    {
+        app(\App\Support\FeedScanProcessor::class)->analyse($submission);
+        return back()->with('success', 'Inzending verwerkt. Bekijk de actuele status bij het product.');
     }
 
     public function saveProduct(Request $request, ?Product $product = null)

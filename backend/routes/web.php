@@ -51,6 +51,14 @@ Route::middleware(AuthenticatePowerSyncJwt::class)
     ->post('/api/sync/upload', [SyncController::class, 'upload']);
 
 Route::middleware(AuthenticatePowerSyncJwt::class)->group(function () {
+    Route::prefix('api/feed-scanner')->controller(\App\Http\Controllers\FeedScanController::class)->group(function () {
+        Route::get('scans', 'scans');
+        Route::get('scans/{id}', 'result')->whereUuid('id');
+        Route::post('submissions', 'store')->middleware('throttle:20,60,feed-scan-create:');
+        Route::get('submissions/{id}', 'show')->whereUuid('id');
+        Route::post('submissions/{id}/photos', 'upload')->whereUuid('id')->middleware('throttle:60,1,feed-scan-upload:');
+        Route::post('submissions/{id}/analyse', 'analyse')->whereUuid('id')->middleware('throttle:10,60,feed-scan-analyse:');
+    });
     Route::post('/api/intakes/{booking}/activity', [IntakeActivityController::class, 'update'])->whereUuid('booking');
     Route::get('/api/intakes/{booking}/resume', [IntakeActivityController::class, 'resume'])->whereUuid('booking');
     Route::get('/api/subscription', [SubscriptionController::class, 'show']);

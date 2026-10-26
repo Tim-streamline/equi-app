@@ -155,6 +155,15 @@
         {#snippet footer()}<Button variant="outline" onclick={() => uploadOpen = false}>Annuleren</Button><Button form="feed-upload" type="submit" disabled={$uploadForm.processing || !$uploadForm.file}>Etiket toevoegen</Button>{/snippet}
     </Modal>
     <Modal bind:open={historyOpen} title="Productdetails & historie" size="xl">
+        {#each detail?.submissions ?? [] as submission}
+            <div class="mb-4 rounded-xl border p-4 space-y-2">
+                <h3 class="font-semibold">Gebruikersinzending · {new Date(submission.created_at).toLocaleDateString('nl-NL')}</h3>
+                <p class="text-sm">{({draft: 'Foto’s ontvangen / nog aan te vullen', processing: 'Etiket wordt uitgelezen', failed: 'Automatisch uitlezen niet gelukt', completed: 'Uitgelezen · ter beoordeling', review_required: 'Handmatige beoordeling nodig'})[submission.status] ?? submission.status}</p>
+                {#if submission.message}<p class="text-sm text-muted-foreground">{submission.message}</p>{/if}
+                {#if ['draft', 'failed'].includes(submission.status)}<Button size="sm" variant="outline" onclick={() => router.post(`/admin/feed-scanner/submissions/${submission.id}/retry`)}>Etiket opnieuw uitlezen</Button>{/if}
+                {#if submission.extraction}<details><summary class="cursor-pointer text-sm">Uitgelezen brongegevens controleren</summary><pre class="mt-2 whitespace-pre-wrap break-words text-xs">{JSON.stringify(submission.extraction, null, 2)}</pre></details>{/if}
+            </div>
+        {/each}
         {#if detail}<AssessmentHistory product={detail} {canPublish} profiles={assessmentProfiles} {errors} />{/if}
         <h3 class="mt-8 text-lg font-semibold">Productgegevens & versiehistorie</h3>
         {#if detail}{#each detail.versions as version}

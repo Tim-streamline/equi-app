@@ -6,6 +6,8 @@ import { useScanIngredients, useScanResult } from '@/db/hooks';
 import { legacyScanScore, scanScoreLabel } from '@/lib/scanner-presentation';
 import { C, FeedIcon, ScannerButton, ScannerFrame, ScanScore, s } from '@/components/scanner/ScannerUI';
 import { AnalyticalConstituents, MissingDataCard, SugarStarchCard } from '@/components/scanner/ScannerAnalysisStates';
+import { useFeedScanResult } from '@/hooks/useFeedScanResult';
+import { FeedScanResult } from '@/components/scanner/FeedScanResult';
 
 const DOT: Record<string, string> = { good: C.success, warn: C.warning, danger: C.danger };
 
@@ -15,7 +17,12 @@ export default function ScannerResultScreen() {
   const ingredients = useScanIngredients(id ?? '');
   const [expanded, setExpanded] = useState(false);
   const score = legacyScanScore(scan?.score);
+  const remote = useFeedScanResult(id ?? '');
+  if (remote.loading) return <ScannerFrame title="Voeranalyse"><Text style={s.body}>Beoordeling ophalen…</Text></ScannerFrame>;
+  if (remote.result) return <ScannerFrame title="Voeranalyse"><FeedScanResult result={remote.result} /><ScannerButton title="Ander voer bekijken" variant="outline" onPress={() => router.navigate('/(tabs)/scanner')} /></ScannerFrame>;
+  if (scan?.rating === 'Voorlopig') return <ScannerFrame title="Voeranalyse"><Text style={s.heading}>Voorlopige beoordeling ophalen</Text><Text style={s.body}>{remote.error || 'Maak verbinding om de volledige bevindingen bij deze inzending te bekijken.'}</Text><ScannerButton title="Naar scanhistorie" onPress={() => router.replace('/(tabs)/scanner/history')} /></ScannerFrame>;
   return <ScannerFrame title="Voeranalyse">
+    {!!remote.error && <Text accessibilityRole="alert" style={s.small}>{remote.error}</Text>}
     {!scan ? <><View style={[s.card, { marginTop: 12 }]}><Text style={s.heading}>Geen analyse gevonden</Text><Text style={s.body}>Deze analyse is nog niet beschikbaar. Open een eerdere scan vanuit je scanhistorie.</Text></View><ScannerButton title="Bekijk scanhistorie" onPress={() => router.replace('/(tabs)/scanner/history')} /></> : <>
       <View style={s.card}>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 14 }}><FeedIcon size={64} /><View style={{ flex: 1, gap: 3 }}><Text style={s.small}>{scan.brand}</Text><Text style={s.heading}>{scan.productName || 'Voeranalyse'}</Text></View></View>

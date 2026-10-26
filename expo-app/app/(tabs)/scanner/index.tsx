@@ -4,9 +4,11 @@ import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
 import * as ImagePicker from 'expo-image-picker';
 import { ArrowRight, Camera, CheckCircle2, ChevronRight, History, ImagePlus, Plus, ScanLine, Search, Sparkle, Upload, X } from 'lucide-react-native';
 import { PhotoReplacementSheet, ScannerPhotoCard } from '@/components/scanner/ScannerPhotoCard';
-import { useCurrentUserId, useScannerProducts, useScanResults } from '@/db/hooks';
+import { useCurrentUserId, useScannerProducts } from '@/db/hooks';
 import { C, FeedIcon, RoundButton, ScannerButton, ScannerFrame, ScannerNote, ScanRow, s } from '@/components/scanner/ScannerUI';
-import { feedCategory, matchesFeed, recentScans, type ScannerRow } from '@/lib/scanner-presentation';
+import { feedCategory, matchesFeed, type ScannerRow } from '@/lib/scanner-presentation';
+import { scannerRequest, scannerUuid, uploadFeedPhoto, type FeedSubmission } from '@/lib/feed-scanner-api';
+import { useScannerHistory } from '@/hooks/useScannerHistory';
 
 type Screen = 'start' | 'search' | 'found' | 'photos';
 type Photos = Record<string, ImagePicker.ImagePickerAsset>;
@@ -18,7 +20,7 @@ const PHOTO_FIELDS = [
 export default function ScannerScreen() {
   const params = useLocalSearchParams<{ mode?: string; productId?: string; designState?: string }>();
   const products = useScannerProducts();
-  const scans = recentScans(useScanResults());
+  const { scans } = useScannerHistory();
   const userId = useCurrentUserId();
   const [screen, setScreen] = useState<Screen>('start');
   const [unknownFeed, setUnknownFeed] = useState(false);
@@ -38,11 +40,17 @@ export default function ScannerScreen() {
   const [picking, setPicking] = useState(false);
   const [focused, setFocused] = useState(false);
   const pickingRef = useRef(false);
+  const submission = useRef<FeedSubmission | null>(null);
+  const clientId = useRef(scannerUuid());
+  const sendingRef = useRef(false);
+  const [sending, setSending] = useState(false);
+  const [uploadingKey, setUploadingKey] = useState<string | null>(null);
+  const [submitted, setSubmitted] = useState(false);
   const mounted = useRef(true);
   const currentUser = useRef(userId);
   currentUser.current = userId;
   useEffect(() => { mounted.current = true; return () => { mounted.current = false; }; }, []);
-  useEffect(() => { setPhotos({}); setName(''); setQuery(''); setSelected(null); setExtras([]); setUnknownFeed(false); setVariant(false); setReplaceKey(null); handledVariant.current = ''; handledDesignState.current = ''; setScreen('start'); }, [userId]);
+  useEffect(() => { submission.current = null; clientId.current = scannerUuid(); setSubmitted(false); setSending(false); setPhotos({}); setName(''); setQuery(''); setSelected(null); setExtras([]); setUnknownFeed(false); setVariant(false); setReplaceKey(null); handledVariant.current = ''; handledDesignState.current = ''; setScreen('start'); }, [userId]);
   useEffect(() => {
     if (!designPreview) return;
     const key = `${userId}:${params.designState}`;
@@ -101,14 +109,39 @@ export default function ScannerScreen() {
     } finally { pickingRef.current = false; if (mounted.current) { setPicking(false); setPickingKey(null); } }
   }
 
+  async function submit() {
+    if (sendingRef.current || designPreview) return;
+    sendingRef.current = true; setSending(true); setError(''); setSubmitted(true);
+    const owner = userId;
+    try {
+      if (!submission.current) {
+        const created = await scannerRequest<FeedSubmission>('/submissions', { client_id: clientId.current, name: name.trim() || 'Onbekend voer' });
+        if (currentUser.current !== owner) return;
+        submission.current = created;
+      }
+      if (currentUser.current !== owner) return;
+      const id = submission.current.id;
+      for (const [slot, asset] of Object.entries(photos)) {
+        if (currentUser.current !== owner) return;
+        setUploadingKey(slot);
+        const uploaded = await uploadFeedPhoto(id, slot, asset);
+        if (currentUser.current !== owner) return;
+        submission.current = uploaded;
+      }
+      if (mounted.current && currentUser.current === owner) {
+        submission.current = null; clientId.current = scannerUuid(); setSubmitted(false); setPhotos({}); setName(''); setExtras([]); setScreen('start');
+        router.push({ pathname: '/(tabs)/scanner/processing', params: { id, start: '1' } });
+      }
+    } catch (e) { if (mounted.current && currentUser.current === owner) setError(e instanceof Error ? e.message : 'Versturen is niet gelukt. Probeer opnieuw.'); }
+    finally { sendingRef.current = false; if (mounted.current && currentUser.current === owner) { setSending(false); setUploadingKey(null); } }
+  }
+
   const filtered = products.filter(product => matchesFeed(product, query));
   const previousScan = selected ? scans.find(scan => scan.productId === selected.id) : undefined;
   const fields = [...PHOTO_FIELDS, ...(photos.front ? [{ key: 'front', title: 'Voorkant', detail: 'Je foto van de voorkant.', required: false }] : []), ...extras.map((key, i) => ({ key, title: `Extra foto ${i + 1}`, detail: 'Bijvoorbeeld de achterkant of zijkant.', required: false }))];
   const missingPhotos = PHOTO_FIELDS.filter(field => !photos[field.key]).length;
   const photoActions = screen === 'photos' ? <View style={{ borderTopWidth: 1, borderColor: C.border, paddingTop: 0, paddingBottom: 12 }}>
-    <View accessibilityRole="button" accessibilityState={{ disabled: true }} style={{ minHeight: 56, borderRadius: 14, backgroundColor: 'rgba(27,42,42,0.08)', alignItems: 'center', justifyContent: 'center', paddingHorizontal: 12 }}>
-      <Text style={[s.buttonText, { color: C.muted }]}>{missingPhotos ? `Nog ${missingPhotos} ${missingPhotos === 1 ? 'foto' : "foto’s"} nodig` : 'Analyse nog niet beschikbaar'}</Text>
-    </View>
+    <ScannerButton disabled={!!missingPhotos || sending || picking || designPreview} title={sending ? 'Foto’s versturen…' : missingPhotos ? `Nog ${missingPhotos} ${missingPhotos === 1 ? 'foto' : 'foto’s'} nodig` : 'Versturen en beoordelen'} onPress={() => void submit()} />
   </View> : undefined;
   const searchInput = <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', borderWidth: 1.5, borderColor: focused ? C.mint : 'rgba(27,42,42,0.15)', borderRadius: 14, backgroundColor: '#fff', paddingLeft: 14 }}>
     <Search size={18} color={C.teal} /><TextInput autoFocus value={query} onChangeText={setQuery} placeholder="Merk of productnaam" accessibilityLabel="Merk of productnaam" placeholderTextColor={C.muted} onFocus={() => setFocused(true)} onBlur={() => setFocused(false)} style={[s.input, { fontSize: 17 }, Platform.OS === 'web' ? { outlineStyle: 'none' } as any : undefined]} />
@@ -123,6 +156,7 @@ export default function ScannerScreen() {
   return <ScannerFrame title="" header={screen !== 'start'} onBack={back} navigation={screen === 'start'} showHistory={false} headerContent={screen === 'search' ? searchInput : undefined} footer={foundActions ?? photoActions}>
     {designPreview && <Text style={[s.small, { color: C.teal }]}>Ontwerpstand · alleen lokale vormcontrole</Text>}
     {!!error && <Text accessibilityRole="alert" style={[s.body, { color: C.danger }]}>{error}</Text>}
+    {!!error && submitted && !sending && <ScannerButton title="Foto’s wijzigen en opnieuw beginnen" variant="outline" onPress={() => { submission.current = null; clientId.current = scannerUuid(); setSubmitted(false); setError(''); }} />}
     {screen === 'start' && <>
       <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingTop: 8, paddingLeft: 4 }}>
         <Text style={[s.eyebrow, { fontSize: 14, color: C.teal }]}>Voerscanner</Text>
@@ -175,15 +209,15 @@ export default function ScannerScreen() {
       </View>
       {!variant && <View style={{ marginBottom: 4 }}>
         <Text style={[s.small, { fontFamily: 'SourceSans3_700Bold', paddingHorizontal: 4, paddingBottom: 6 }]}>Merk en productnaam</Text>
-        <View style={{ backgroundColor: '#fff', borderWidth: 1, borderRadius: 14, borderColor: focused ? C.mint : 'rgba(27,42,42,0.15)' }}><TextInput value={name} onChangeText={setName} placeholder="Merk en productnaam" accessibilityLabel="Merk en productnaam" onFocus={() => setFocused(true)} onBlur={() => setFocused(false)} style={[s.input, Platform.OS === 'web' ? { outlineStyle: 'none' } as any : undefined]} /></View>
+        <View style={{ backgroundColor: '#fff', borderWidth: 1, borderRadius: 14, borderColor: focused ? C.mint : 'rgba(27,42,42,0.15)' }}><TextInput editable={!submitted} value={name} onChangeText={setName} placeholder="Merk en productnaam" accessibilityLabel="Merk en productnaam" onFocus={() => setFocused(true)} onBlur={() => setFocused(false)} style={[s.input, Platform.OS === 'web' ? { outlineStyle: 'none' } as any : undefined]} /></View>
       </View>}
       {fields.map(field => <ScannerPhotoCard key={field.key} title={field.title} detail={field.detail} required={field.required}
-        uri={photos[field.key]?.uri} phase={pickingKey === field.key ? 'selecting' : photos[field.key] ? 'selected' : 'empty'} disabled={picking}
+        uri={photos[field.key]?.uri} phase={uploadingKey === field.key ? 'uploading' : pickingKey === field.key ? 'selecting' : photos[field.key] ? 'selected' : 'empty'} disabled={picking || submitted}
         onCamera={() => void pick(field.key, true)} onUpload={() => void pick(field.key, false)} onReplace={() => setReplaceKey(field.key)}
-        onRemove={photos[field.key] || !field.required ? () => { setPhotos(old => { const next = { ...old }; delete next[field.key]; return next; }); if (!field.required) setExtras(old => old.filter(key => key !== field.key)); } : undefined} />)}
-      <Pressable accessibilityRole="button" onPress={() => setExtras(old => [...old, `extra-${extraSequence.current++}`])} style={[s.button, { borderWidth: 1, borderStyle: 'dashed', borderColor: 'rgba(27,42,42,0.3)', borderRadius: 16, marginTop: 12 }]}><Plus size={18} color={C.ink} /><Text style={[s.buttonText, { color: C.ink, fontSize: 15 }]}>Extra foto toevoegen</Text></Pressable>
+        onRemove={!submitted && (photos[field.key] || !field.required) ? () => { setPhotos(old => { const next = { ...old }; delete next[field.key]; return next; }); if (!field.required) setExtras(old => old.filter(key => key !== field.key)); } : undefined} />)}
+      <Pressable accessibilityRole="button" disabled={submitted || fields.length >= 10} onPress={() => setExtras(old => [...old, `extra-${extraSequence.current++}`])} style={[s.button, { borderWidth: 1, borderStyle: 'dashed', borderColor: 'rgba(27,42,42,0.3)', borderRadius: 16, marginTop: 12 }]}><Plus size={18} color={C.ink} /><Text style={[s.buttonText, { color: C.ink, fontSize: 15 }]}>Extra foto toevoegen</Text></Pressable>
       <Text style={[s.small, { textAlign: 'center', paddingHorizontal: 12 }]}>Staan de gegevens verspreid over de verpakking? Voeg dan extra foto’s toe.</Text>
-      <ScannerNote>Automatische etiketherkenning wordt nog aangesloten. Je foto’s zijn alleen geselecteerd op dit scherm en worden nog niet verstuurd of geanalyseerd.</ScannerNote>
+      <ScannerNote>Je foto’s worden verstuurd voor etiketherkenning. De gepubliceerde beoordelingsregels bepalen de uitkomst. Het product komt ook ter beoordeling bij ons binnen.</ScannerNote>
       <PhotoReplacementSheet visible={replaceKey !== null} onClose={() => setReplaceKey(null)}
         onCamera={() => { const key = replaceKey; setReplaceKey(null); if (key) void pick(key, true); }}
         onUpload={() => { const key = replaceKey; setReplaceKey(null); if (key) void pick(key, false); }} />

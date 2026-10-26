@@ -37,6 +37,8 @@ function renderScan(rows, id) {
     '@/lib/scanner-presentation': presentation,
     '@/components/scanner/ScannerUI': { C: {}, s: {}, ScanScore: 'ScanScore' },
     '@/components/scanner/ScannerAnalysisStates': {},
+    '@/hooks/useFeedScanResult': { useFeedScanResult: () => ({ loading: false, result: null }) },
+    '@/components/scanner/FeedScanResult': {},
   });
   const flatten = node => Array.isArray(node) ? node.flatMap(flatten)
     : node && typeof node === 'object' ? [node, ...flatten(node.props?.children)] : [node];
