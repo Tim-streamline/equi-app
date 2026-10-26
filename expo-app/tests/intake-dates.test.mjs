@@ -61,6 +61,19 @@ test('old free text is retained until explicitly replacing it; no month is inven
   assert.equal(dates.dateAnswered(form.value(), {}, now), false);
 });
 
+test('ownership date hides unknown and lets an existing unknown answer be corrected', () => {
+  const field = modules['./schema'].INTAKE_SCHEMA.flatMap(s => s.fields).find(f => f.id === 'sinds-bezit');
+  assert.equal(field.dateConfig.allow_unknown, false);
+  const form = setup({ version: 1, precision: 'unknown' }, field.dateConfig);
+  assert.equal(form.render().filter(n => n.props.accessibilityRole === 'checkbox').length, 0);
+  assert.equal(form.render().find(n => n.type === 'MonthSelect').props.disabled, false);
+  assert.equal(dates.dateAnswered(form.value(), field.dateConfig, now), false);
+  form.render().find(n => n.type === 'MonthSelect').props.onChange('8');
+  form.render().find(n => n.type === 'Input').props.onChangeText('2014');
+  assert.equal(dates.dateAnswered(form.value(), field.dateConfig, now), true);
+  assert.equal(dates.dateAnswered({ version: 1, precision: 'unknown' }, {}, now), true);
+});
+
 test('period controls preserve beginning and end and support ongoing periods', () => {
   const form = setup({ version: 1, precision: 'range', start: { version: 1, precision: 'month', month: 2, year: 2025 } }, { mode: 'range' });
   form.render().find(n => n.props.accessibilityLabel === 'Nog steeds').props.onPress();

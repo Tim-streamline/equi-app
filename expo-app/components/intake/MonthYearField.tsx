@@ -10,7 +10,7 @@ const emptyPoint = (point?: DatePoint) => !point || (point.precision === 'month'
 export function MonthYearField({ value: raw, onChange, config = {}, label }: { value: unknown; onChange: (value: DateAnswer | undefined) => void; config?: DateConfig; label: string }) {
   const value = normalizeDate(raw, config);
   const previous = useRef<DateAnswer | undefined>(undefined);
-  const unknown = value?.precision === 'unknown';
+  const unknown = value?.precision === 'unknown' && config.allow_unknown !== false;
   const legacy = value?.precision === 'legacy' || (config.mode === 'range' && value && !['range', 'unknown'].includes(value.precision));
   const point = value?.precision !== 'range' ? value as DatePoint | undefined : undefined;
   const updateRange = (patch: Partial<Extract<DateAnswer, { precision: 'range' }>>) => {
@@ -36,7 +36,7 @@ export function MonthYearField({ value: raw, onChange, config = {}, label }: { v
       {renderPoint(value?.precision === 'range' ? value.end : undefined, end => updateRange({ end }), 'Tot: ', unknown || (value?.precision === 'range' && value.ongoing === true))}
       {!unknown && checkbox(config.ongoing_label ?? 'Nog steeds', value?.precision === 'range' && value.ongoing === true, () => updateRange({ ongoing: !(value?.precision === 'range' && value.ongoing) }))}
     </View> : renderPoint(unknown ? undefined : point, next => onChange(emptyPoint(next) ? undefined : next))}
-    {checkbox(config.unknown_label ?? 'Weet ik niet', unknown, () => { if (unknown) onChange(previous.current); else { previous.current = value; onChange({ version: 1, precision: 'unknown' }); } })}
+    {config.allow_unknown !== false && checkbox(config.unknown_label ?? 'Weet ik niet', unknown, () => { if (unknown) onChange(previous.current); else { previous.current = value; onChange({ version: 1, precision: 'unknown' }); } })}
     {value?.precision === 'day' && <Text className="text-[12px] text-ink-70">Eerder ingevulde exacte datum: {formatDate(value)}</Text>}
     {value && !unknown && !dateAnswered(value, config) && <Text accessibilityRole="alert" className="text-[12px] text-danger">Vul een geldige maand en een jaartal van vier cijfers in.{!config.allow_future ? ' Kies een moment in het verleden of deze maand.' : ''}{config.mode === 'range' ? ' De eindperiode mag niet vóór de beginperiode liggen.' : ''}</Text>}
   </View>;

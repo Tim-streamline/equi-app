@@ -715,7 +715,7 @@ export const INTAKE_SCHEMA: Section[] = [
       {
         id: 'gewicht-methode-wanneer',
         answerSection: 'paard',
-        label: 'Wanneer is het gewicht bepaald?',
+        label: 'Wanneer was dat?',
         type: "month_year",
         required: true,        showIf: { 'paard.gewicht-methode': ['gewogen op weegbrug', 'gemeten met gewichts-lint', 'rapport dierenarts'] },
 
@@ -750,6 +750,7 @@ export const INTAKE_SCHEMA: Section[] = [
         dateConfig: {
   "mode": "single",
   "allow_future": false,
+  "allow_unknown": false,
   "allow_year_only": true
 },
       },
