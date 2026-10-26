@@ -21,7 +21,7 @@ export default function ScannerProcessingScreen() {
     async function run() {
       try {
         let current = await scannerRequest<FeedSubmission>(`/submissions/${id}`, undefined, controller.signal);
-        if (retry || (start === '1' && ['draft', 'needs_photos'].includes(current.status))) {
+        if (retry || (start === '1' && ['draft', 'needs_photos', 'failed'].includes(current.status))) {
           current = await scannerRequest<FeedSubmission>(`/submissions/${id}/${['awaiting_composition', 'checking'].includes(current.status) ? 'check' : 'analyse'}`, name ? { name } : {}, controller.signal);
         }
         if (!alive) return;
