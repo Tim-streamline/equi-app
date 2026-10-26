@@ -51,11 +51,11 @@ class FeedScanSubmissionTest extends TestCase
         });
     }
 
-    private function createSubmission(bool $photos = true): array
+    private function createSubmission(bool $photos = true, ?string $name = 'Testvoer'): array
     {
         $client = (string) Str::uuid();
-        $s = $this->postJson('/api/feed-scanner/submissions', ['client_id' => $client, 'name' => 'Testvoer'])->assertOk()->json();
-        $this->postJson('/api/feed-scanner/submissions', ['client_id' => $client, 'name' => 'Testvoer'])->assertJsonPath('id', $s['id']);
+        $s = $this->postJson('/api/feed-scanner/submissions', ['client_id' => $client, 'name' => $name])->assertOk()->json();
+        $this->postJson('/api/feed-scanner/submissions', ['client_id' => $client, 'name' => $name])->assertJsonPath('id', $s['id']);
         if ($photos) {
             $this->post('/api/feed-scanner/submissions/'.$s['id'].'/photos', ['slot' => 'composition', 'file' => UploadedFile::fake()->image('label.jpg')], ['Accept' => 'application/json'])->assertOk();
             $s = $this->postJson('/api/feed-scanner/submissions/'.$s['id'].'/check')->assertOk()->json();
@@ -67,9 +67,9 @@ class FeedScanSubmissionTest extends TestCase
         return $s;
     }
 
-    private function fakeReader(string $sugar = '6', string $starch = '14', string $basis = 'product'): void
+    private function fakeReader(string $sugar = '6', string $starch = '14', string $basis = 'product', ?string $name = 'Testvoer'): void
     {
-        $data = ['brand' => 'Merk', 'name' => 'Testvoer', 'barcode' => null, 'category' => 'complementary', 'category_confidence' => 'high',
+        $data = ['brand' => 'Merk', 'name' => $name, 'barcode' => null, 'category' => 'complementary', 'category_confidence' => 'high',
             'composition_text' => 'Timothee', 'composition_confidence' => 'high', 'unreadable_fields' => [],
             'ingredients' => [['label' => 'Timothee', 'amount' => null, 'evidence' => 'Timothee', 'confidence' => 'high', 'selenium_form' => 'unknown', 'added_selenium' => 'unknown']],
             'nutrients' => array_map(fn ($code, $value) => ['code' => $code, 'value' => $value, 'unit' => '%', 'basis' => $basis, 'source' => 'Analyse per kg product', 'confidence' => 'high', 'qualifier' => 'exact'], ['sugar', 'starch'], [$sugar, $starch])];
@@ -118,7 +118,8 @@ class FeedScanSubmissionTest extends TestCase
         $s = $this->createSubmission();
         $this->fakeReader();
         $url = '/api/feed-scanner/submissions/'.$s['id'].'/analyse';
-        $response = $this->postJson($url)->assertOk()->assertJsonPath('status', 'completed')->assertJsonPath('public_result.score', '0')
+        $response = $this->postJson($url, ['name' => 'Naam van gebruiker'])->assertOk()->assertJsonPath('status', 'completed')->assertJsonPath('public_result.score', '0')
+            ->assertJsonPath('public_result.name', 'Testvoer')
             ->assertJsonPath('public_result.ingredients.0.explanation', 'Gepubliceerde uitleg');
         $this->postJson($url)->assertOk()->assertJsonPath('scan_result_id', $response->json('scan_result_id'));
         Http::assertSentCount(1);
@@ -137,6 +138,19 @@ class FeedScanSubmissionTest extends TestCase
         $this->postJson('/api/feed-scanner/submissions/'.$s['id'].'/analyse')->assertOk()->assertJsonPath('status', 'completed')
             ->assertJsonPath('public_result.score', null)->assertJsonPath('public_result.score_cap', null)->assertJsonPath('public_result.ingredients.0.match_status', 'unknown');
         $this->assertNull(ScanResult::first()->score);
+    }
+
+    public function test_camera_first_submission_uses_final_entered_name_when_extraction_has_no_name(): void
+    {
+        $s = $this->createSubmission(name: null);
+        $this->assertSame('Onbekend voer', Product::findOrFail($s['product_id'])->name);
+        $this->fakeReader(name: null);
+        $result = $this->postJson('/api/feed-scanner/submissions/'.$s['id'].'/analyse', ['name' => '  Mijn merk Balans  '])
+            ->assertOk()->assertJsonPath('status', 'completed')->assertJsonPath('public_result.name', 'Mijn merk Balans')->json();
+        $this->assertSame('Mijn merk Balans', ScanResult::findOrFail($result['scan_result_id'])->product_name);
+        $this->assertSame('Mijn merk Balans', \App\Models\ProductVersion::findOrFail($result['product_version_id'])->data['name']);
+        $this->getJson('/api/feed-scanner/scans')->assertJsonPath('scans.0.product_name', 'Mijn merk Balans');
+        Http::assertSentCount(1);
     }
 
     public function test_provider_failure_and_processing_lease_are_retry_safe(): void

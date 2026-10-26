@@ -9,6 +9,7 @@ use App\Models\ScanResult;
 use App\Support\AuditLogger;
 use App\Support\FeedScanProcessor;
 use App\Support\FeedScanRecognition;
+use App\Support\FeedScanReviewCompletion;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
@@ -44,7 +45,7 @@ class FeedScanController extends Controller
 
     public function show(Request $request, string $id)
     {
-        return response()->json($this->owned($request, $id));
+        return response()->json(app(FeedScanReviewCompletion::class)->complete($this->owned($request, $id)));
     }
 
     public function upload(Request $request, string $id)
@@ -127,6 +128,11 @@ class FeedScanController extends Controller
     public function scans(Request $request)
     {
         $user = $request->attributes->get('powersync_user_id');
+
+        $pending = FeedScanSubmission::where('user_id', $user)->with('product:id,name,brand')->where('status', '!=', 'completed')->orderByDesc('created_at')->limit(20)->get();
+        foreach ($pending as $submission) {
+            app(FeedScanReviewCompletion::class)->complete($submission);
+        }
 
         return response()->json(['scans' => ScanResult::where('user_id', $user)->orderByDesc('scanned_at')->limit(100)->get(),
             'pending' => FeedScanSubmission::where('user_id', $user)->with('product:id,name,brand')->where('status', '!=', 'completed')->orderByDesc('created_at')->limit(20)->get()]);

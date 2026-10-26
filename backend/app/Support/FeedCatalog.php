@@ -135,5 +135,21 @@ class FeedCatalog
             }
         }
         $product->ingredients()->sync($links);
+        if ($version->submission_id) {
+            // Approval holds the product lock. Complete after commit so we never
+            // invert the scanner's submission -> product lock order.
+            $submissionId = $version->submission_id;
+            DB::afterCommit(function () use ($submissionId) {
+                try {
+                    $submission = \App\Models\FeedScanSubmission::find($submissionId);
+                    if ($submission) {
+                        app(FeedScanReviewCompletion::class)->complete($submission);
+                    }
+                } catch (\Throwable $e) {
+                    // Approval is committed; status/history reads can retry completion.
+                    report($e);
+                }
+            });
+        }
     }
 }

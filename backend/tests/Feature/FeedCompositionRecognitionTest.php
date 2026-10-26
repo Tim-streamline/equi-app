@@ -22,6 +22,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
+use PHPUnit\Framework\Attributes\DataProvider;
 use Tests\TestCase;
 
 class FeedCompositionRecognitionTest extends TestCase
@@ -216,6 +217,121 @@ class FeedCompositionRecognitionTest extends TestCase
         $this->assertNull(ProductVersion::findOrFail($product->published_version_id)->submission_id);
         $this->mock(FeedLabelReader::class, fn ($mock) => $mock->shouldReceive('read')->once()->andReturn($this->extractedLabel()));
         $this->postJson("/api/feed-scanner/submissions/$first/analyse")->assertOk()->assertJsonPath('status', 'completed');
+    }
+
+    public static function approvalActions(): array
+    {
+        return [['review'], ['save_and_approve']];
+    }
+
+    #[DataProvider('approvalActions')]
+    public function test_admin_approval_completes_only_its_waiting_submission_once(string $action): void
+    {
+        $product = $this->product();
+        $other = $this->pendingSubmission($product);
+        $id = $this->pendingSubmission($product);
+        $admin = AdminUser::create(['name' => 'Reviewer', 'email' => 'reviewer@example.com', 'password' => 'password', 'role' => 'admin', 'active' => true]);
+        $this->actingAs($admin, 'admin');
+        $data = array_replace(ProductVersion::findOrFail($product->published_version_id)->data, ['name' => 'Gecontroleerd voer']);
+        $this->put("/admin/feed-scanner/products/{$product->id}", $data + ['expected_number' => FeedCatalog::latestProduct($product)->number])
+            ->assertSessionHasNoErrors()->assertRedirect();
+        $this->mock(FeedLabelReader::class, fn ($mock) => $mock->shouldReceive('read')->once()->andReturn($this->extractedLabel()));
+        $this->postJson("/api/feed-scanner/submissions/$id/analyse")->assertJsonPath('status', 'review_required');
+        $version = FeedCatalog::latestProduct($product);
+        if ($action === 'review') {
+            $this->post("/admin/feed-scanner/products/{$product->id}/review", ['version_id' => $version->id, 'decision' => 'approve'])
+                ->assertSessionHasNoErrors()->assertRedirect();
+        } else {
+            $this->put("/admin/feed-scanner/products/{$product->id}", $data + ['expected_number' => $version->number, 'approve' => true])
+                ->assertSessionHasNoErrors()->assertRedirect();
+        }
+        // This assertion precedes any status read: approval itself must complete it.
+        $s = FeedScanSubmission::findOrFail($id);
+        $this->assertSame('completed', $s->status);
+        $this->assertSame($product->fresh()->published_version_id, $s->product_version_id);
+        $this->assertFalse($s->public_result['provisional']);
+        $this->assertSame('Gecontroleerd voer', $s->public_result['name']);
+        $this->assertSame('0', $s->public_result['score']);
+        $this->assertNotNull($s->assessment_id);
+        $this->assertSame('needs_photos', FeedScanSubmission::findOrFail($other)->status);
+        $this->getJson("/api/feed-scanner/submissions/$id")->assertJsonPath('scan_result_id', $s->scan_result_id);
+        $this->postJson("/api/feed-scanner/submissions/$id/analyse")->assertJsonPath('scan_result_id', $s->scan_result_id);
+        $this->getJson('/api/feed-scanner/scans')->assertJsonCount(1, 'scans')->assertJsonCount(1, 'pending');
+        $this->getJson('/api/feed-scanner/scans/'.$s->scan_result_id)->assertJsonPath('result.provisional', false);
+        $this->assertSame(1, ScanResult::count());
+        Http::assertNothingSent();
+    }
+
+    public function test_approval_during_extraction_cannot_be_overwritten_by_the_reader(): void
+    {
+        $product = $this->product();
+        $id = $this->pendingSubmission($product);
+        $admin = AdminUser::create(['name' => 'Reviewer', 'email' => 'reviewer@example.com', 'password' => 'password', 'role' => 'admin', 'active' => true]);
+        $data = array_replace(ProductVersion::findOrFail($product->published_version_id)->data, ['name' => 'Naam uit review']);
+        $this->mock(FeedLabelReader::class, function ($mock) use ($product, $admin, $data) {
+            $mock->shouldReceive('read')->once()->andReturnUsing(function () use ($product, $admin, $data) {
+                DB::transaction(function () use ($product, $admin, $data) {
+                    $version = FeedCatalog::productDraft($product, $data, $admin->id);
+                    FeedCatalog::approveProduct($product, $version, $admin->id, null);
+                });
+
+                return $this->extractedLabel();
+            });
+        });
+        $this->postJson("/api/feed-scanner/submissions/$id/analyse")->assertOk()->assertJsonPath('status', 'completed')
+            ->assertJsonPath('public_result.name', 'Naam uit review')->assertJsonPath('public_result.provisional', false)->assertJsonPath('processing_token', null);
+        $this->assertSame(1, ScanResult::count());
+    }
+
+    public static function recoveryReads(): array
+    {
+        return [['status'], ['history'], ['analyse']];
+    }
+
+    #[DataProvider('recoveryReads')]
+    public function test_previously_approved_waiting_submission_is_recovered_without_ai(string $entry): void
+    {
+        $product = $this->product();
+        $id = $this->pendingSubmission($product);
+        $s = FeedScanSubmission::findOrFail($id);
+        $s->update(['status' => 'review_required']);
+        $version = FeedCatalog::productDraft($product, ProductVersion::findOrFail($product->published_version_id)->data, null);
+        // Simulate approval before the completion hook existed.
+        $version->update(['status' => 'approved']);
+        $product->forceFill(['published_version_id' => $version->id])->save();
+        DB::table('feed_assessment_profiles')->where('id', $version->profile_id)->update(['active_rule_version_id' => null]);
+        $this->mock(FeedLabelReader::class, fn ($mock) => $mock->shouldNotReceive('read'));
+        if ($entry === 'history') {
+            $this->getJson('/api/feed-scanner/scans')->assertOk()->assertJsonCount(1, 'scans')->assertJsonCount(0, 'pending');
+        } elseif ($entry === 'analyse') {
+            $this->postJson("/api/feed-scanner/submissions/$id/analyse")->assertOk()->assertJsonPath('status', 'completed');
+        } else {
+            $this->getJson("/api/feed-scanner/submissions/$id")->assertOk()->assertJsonPath('status', 'completed');
+        }
+        $this->assertSame($version->id, $s->fresh()->product_version_id);
+        $this->assertNull($s->fresh()->public_result['score']);
+        $this->assertNotEmpty($s->fresh()->public_result['missing_data']);
+        $this->assertSame(1, ScanResult::count());
+        Http::assertNothingSent();
+    }
+
+    public function test_rolled_back_approval_does_not_complete_the_submission(): void
+    {
+        $product = $this->product();
+        $id = $this->pendingSubmission($product);
+        $admin = AdminUser::create(['name' => 'Reviewer', 'email' => 'reviewer@example.com', 'password' => 'password', 'role' => 'admin', 'active' => true]);
+        try {
+            DB::transaction(function () use ($product, $admin) {
+                $version = FeedCatalog::productDraft($product, ProductVersion::findOrFail($product->published_version_id)->data, $admin->id);
+                FeedCatalog::approveProduct($product, $version, $admin->id, null);
+                throw new \RuntimeException('rollback review');
+            });
+            $this->fail('Expected rollback');
+        } catch (\RuntimeException $e) {
+            $this->assertSame('rollback review', $e->getMessage());
+        }
+        $this->assertSame('needs_photos', FeedScanSubmission::findOrFail($id)->status);
+        $this->assertSame(0, ScanResult::count());
     }
 
     public function test_known_recipe_reuses_only_the_approved_current_assessment_without_ai_or_extra_photos(): void

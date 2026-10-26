@@ -34,9 +34,9 @@ export default function ScannerProcessingScreen() {
     void run();
     return () => { alive = false; controller.abort(); };
   }, [id, user, retry, start, name]);
-  // Read-only polling never starts another paid inference automatically.
+  // Status polling also picks up manual approval without another paid inference.
   useEffect(() => {
-    if (!['processing', 'checking'].includes(state?.status ?? '')) return;
+    if (!['processing', 'checking', 'review_required'].includes(state?.status ?? '')) return;
     const controller = new AbortController();
     const timer = setInterval(() => {
       void scannerRequest<FeedSubmission>(`/submissions/${id}`, undefined, controller.signal).then(current => {

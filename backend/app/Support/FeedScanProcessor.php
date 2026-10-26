@@ -18,6 +18,7 @@ class FeedScanProcessor
 {
     public function analyse(FeedScanSubmission $submission): FeedScanSubmission
     {
+        $submission = app(FeedScanReviewCompletion::class)->complete($submission->fresh());
         $token = DB::transaction(function () use ($submission) {
             $s = FeedScanSubmission::lockForUpdate()->findOrFail($submission->id);
             if (in_array($s->status, ['completed', 'review_required']) || ($s->status === 'processing' && $s->processing_started_at?->gt(now()->subMinutes(3)))) {
@@ -55,7 +56,7 @@ class FeedScanProcessor
 
                     return;
                 }
-                $data = $this->normalize($extraction, $product);
+                $data = $this->normalize($extraction, $product, $s->submitted_name);
                 $originalProduct = null;
                 // The first photo may contain no identity. The front label can later
                 // identify a possible revision of an existing product (never a known-score match).
@@ -133,7 +134,7 @@ class FeedScanProcessor
         return str_starts_with($name, $brand.' ') ? substr($name, strlen($brand) + 1) : $name;
     }
 
-    private function normalize(array $raw, Product $product): array
+    private function normalize(array $raw, Product $product, ?string $submittedName): array
     {
         $cards = Ingredient::where('catalog_status', 'published')->whereNotNull('published_version_id')->get();
         $revisions = IngredientRevision::whereIn('id', $cards->pluck('published_version_id'))->get()->keyBy('id');
@@ -163,7 +164,8 @@ class FeedScanProcessor
                 'assessment' => $revision?->data['assessment'] ?? 'unrated', 'exceptions' => $revision?->data['exceptions'] ?? null];
         }
 
-        return ['brand' => $raw['brand'] ?: $product->brand, 'name' => $raw['name'] ?: $product->name, 'barcode' => $raw['barcode'],
+        return ['brand' => $raw['brand'] ?: $product->brand,
+            'name' => filled($raw['name']) ? $raw['name'] : (filled($submittedName) ? trim($submittedName) : $product->name), 'barcode' => $raw['barcode'],
             'category' => $raw['category_confidence'] === 'high' && isset(FeedCatalog::CATEGORIES[$raw['category']]) ? $raw['category'] : null,
             'composition_text' => $raw['composition_confidence'] === 'high' ? $raw['composition_text'] : null, 'ingredients' => $ingredients,
             'nutrients' => array_values(array_filter($raw['nutrients'], fn ($n) => $n['confidence'] === 'high' && filled($n['source']) && $n['value'] !== null)),
