@@ -106,6 +106,7 @@ Route::middleware('auth:admin')->group(function () {
         Route::resource('library-filter-groups', LibraryFilterGroupController::class)->only(['store', 'update']);
         Route::resource('library-categories', LibraryCategoryController::class)->only(['index', 'store', 'update', 'destroy']);
         Route::resource('seasonal-tips', SeasonalTipController::class)->only(['index', 'store', 'update', 'destroy']);
+        Route::post('nova/test', [NovaController::class, 'test'])->middleware('throttle:30,1')->name('nova.test');
         Route::resource('nova', NovaController::class)->only(['index', 'store', 'update', 'destroy']);
     });
 

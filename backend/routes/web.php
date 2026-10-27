@@ -51,6 +51,7 @@ Route::middleware(AuthenticatePowerSyncJwt::class)
     ->post('/api/sync/upload', [SyncController::class, 'upload']);
 
 Route::middleware(AuthenticatePowerSyncJwt::class)->group(function () {
+    Route::post('api/shelby/messages', [\App\Http\Controllers\ShelbyChatController::class, 'store'])->middleware('throttle:shelby-message');
     Route::prefix('api/feed-scanner')->controller(\App\Http\Controllers\FeedScanController::class)->group(function () {
         Route::get('scans', 'scans');
         Route::get('scans/{id}', 'result')->whereUuid('id');
