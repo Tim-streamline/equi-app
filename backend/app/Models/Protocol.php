@@ -40,6 +40,7 @@ class Protocol extends Model
     {
         return DB::transaction(function () use ($options) {
             $new = ! $this->exists;
+            if ($new || $this->isDirty(['status', 'published_at', 'horse_id'])) \App\Support\LibrarySyncLock::acquire();
             if (! $new && $this->isDirty('horse_id')) {
                 throw ValidationException::withMessages(['horse_id' => 'Een protocol en zijn intake blijven bij hetzelfde paard.']);
             }
@@ -70,6 +71,7 @@ class Protocol extends Model
     public function delete()
     {
         return DB::transaction(function () {
+            \App\Support\LibrarySyncLock::acquire();
             static::whereKey($this->id)->lockForUpdate()->firstOrFail();
             $paths = IntakeAttachment::whereIn('booking_id', $this->intake()->select('id'))->pluck('path')->all();
             $deleted = parent::delete();

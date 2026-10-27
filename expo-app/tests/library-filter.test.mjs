@@ -91,7 +91,7 @@ test('credit bands compose with saved, category, format and search without hidin
   ];
   const ids = options => filterLibraryItems(catalog, [], [], '', options).map(item => item.id);
   assert.equal(ids({}).length, 7);
-  assert.deepEqual(ids({ credits: ['free'] }), ['free']);
+  assert.deepEqual(ids({ credits: ['free'] }), ['free', 'plus']);
   assert.deepEqual(ids({ credits: ['1', '3', '4+'] }), ['paid1', 'paid3', 'paid4', 'paid7']);
   assert.deepEqual(ids({ savedOnly: true, savedIds: ['free', 'paid2'], formats: ['video'], credits: ['2'] }), ['paid2']);
   assert.deepEqual(filterLibraryItems(catalog, [{ itemId: 'paid2', categoryId: 'hay' }], ['hay'], 'Hooi', {

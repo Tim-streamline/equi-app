@@ -30,7 +30,7 @@ class HorseDashboard
         $itemData = fn ($item) => [
             'id' => $item->id, 'title' => $item->title, 'format' => $item->format, 'heroImageUrl' => $item->hero_image_url,
             'description' => Str::limit(strip_tags($item->description ?? ''), 100), 'durationLabel' => $item->duration_label,
-            'creditCost' => (int) $item->credit_cost, 'isPlus' => (bool) $item->is_plus, 'unlocked' => in_array($item->id, $unlocked, true),
+            'creditCost' => (int) $item->credit_cost, 'isPlus' => (bool) $item->is_plus, 'equiboostAccess' => $item->equiboost_access, 'unlocked' => in_array($item->id, $unlocked, true),
         ];
         if ($data) {
             $data['nutrition'] += $this->nutritionLinks($protocol, $items, $itemData);

@@ -55,8 +55,8 @@ class LibraryDiscoveryTest extends TestCase
     public function test_related_items_prioritize_pins_then_category_overlap_then_text_and_exclude_unpublished(): void
     {
         $this->customer();
-        $a = LibraryCategory::create(['label' => 'Darmen', 'slug' => 'darmen']);
-        $b = LibraryCategory::create(['label' => 'Voeding', 'slug' => 'voeding']);
+        $a = LibraryCategory::firstOrCreate(['slug' => 'darmen'], ['label' => 'Darmen']);
+        $b = LibraryCategory::firstOrCreate(['slug' => 'voeding'], ['label' => 'Voeding']);
         $source = $this->item('Darmen kruiden advies'); $source->categories()->sync([$a->id, $b->id]);
         $partial = $this->item('Darmen kruiden gedeeltelijk'); $partial->categories()->sync([$a->id]);
         $weak = $this->item('Andere voeding'); $weak->categories()->sync([$a->id, $b->id]);
@@ -156,7 +156,7 @@ class LibraryDiscoveryTest extends TestCase
         foreach ([
             ['title' => 'Unrelated lesson'],
             ['format' => 'video'],
-            ['is_plus' => false],
+            ['is_plus' => false, 'credit_cost' => 1],
             [],
         ] as $offset => $attributes) {
             $excluded = $this->item('Boundary excluded '.$offset, $attributes + [

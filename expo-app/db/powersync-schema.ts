@@ -268,6 +268,7 @@ const library_items = new Table({
   credit_cost: column.integer,
   published_at: column.text,
   is_plus: column.integer,
+  equiboost_access: column.text,
   is_featured: column.integer,
   order: column.integer,
 });
@@ -494,6 +495,7 @@ const chat_messages = new Table({
   role: column.text,
   body: column.text,
   order: column.integer,
+  meta: column.text,
   created_at: column.text,
   updated_at: column.text,
 }, { indexes: { bySession: ['session_id'] } });

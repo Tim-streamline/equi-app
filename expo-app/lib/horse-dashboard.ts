@@ -7,6 +7,7 @@ export type LibraryRecommendation = {
   heroImageUrl?: string | null;
   creditCost: number;
   isPlus?: boolean;
+  equiboostAccess?: 'only' | 'included' | null;
   unlocked: boolean;
   phaseContext?: string;
 };

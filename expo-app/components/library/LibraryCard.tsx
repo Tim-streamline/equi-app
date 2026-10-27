@@ -10,9 +10,9 @@ export function LibraryCard({ item, access, compact = false, showBookmark = fals
 }) {
   const Icon = item.format === 'video' ? Play : ['audio', 'podcast'].includes(item.format ?? '') ? Headphones : BookOpen;
   const state = libraryAccessLabel(item, access);
-  const creditLocked = state.locked && !item.isPlus;
+  const creditLocked = state.locked && !item.isPlus && item.equiboostAccess !== 'only';
   const unlocked = access?.unlockedIds.includes(item.id);
-  const free = !item.isPlus && (Number(item.creditCost) || 0) === 0;
+  const free = !item.equiboostAccess && (item.isPlus || (Number(item.creditCost) || 0) === 0);
   return <View style={{ width: '48.5%' }} className="overflow-hidden rounded-2xl border border-ink-8 bg-white">
     <Pressable accessibilityRole="link" accessibilityLabel={`${item.title}, ${libraryFormat(item.format)}${state.locked ? ', Vergrendeld' : ''}${state.label ? `, ${state.label}` : ''}`}
       onPress={() => router.push(libraryPath(item) as any)} className="flex-1 p-2">

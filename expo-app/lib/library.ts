@@ -1,8 +1,15 @@
-export type LibraryAccess = { hasPlus: boolean; hasBasic?: boolean; unlockedIds: string[]; allowedIds?: string[]; credits?: number };
+export type LibraryAccess = { hasPlus: boolean; hasEquiBoost?: boolean; equiBoostExpiresAt?: string | null; hasBasic?: boolean; unlockedIds: string[]; allowedIds?: string[]; credits?: number };
 export type LibraryCardItem = {
   id: string; title?: string; description?: string; format?: string;
-  heroImageUrl?: string | null; durationLabel?: string | null; authorName?: string | null; creditCost?: number; isPlus?: boolean;
+  heroImageUrl?: string | null; durationLabel?: string | null; authorName?: string | null; creditCost?: number; isPlus?: boolean; equiboostAccess?: 'only' | 'included' | null;
 };
+
+export function libraryCanRead(item: LibraryCardItem, access?: LibraryAccess | null): boolean {
+  if (access?.allowedIds) return access.allowedIds.includes(item.id);
+  if (access?.unlockedIds.includes(item.id)) return true;
+  if (item.equiboostAccess) return !!access?.hasEquiBoost && (!access.equiBoostExpiresAt || Date.parse(access.equiBoostExpiresAt) > Date.now());
+  return item.isPlus ? !!access?.hasPlus : (Number(item.creditCost) || 0) === 0;
+}
 
 export function libraryFormat(format?: string) {
   return ({ video: 'Video', article: 'Artikel', audio: 'Audio', podcast: 'Podcast', course: 'Cursus', program: 'Programma' } as Record<string, string>)[format ?? 'article'] ?? 'Artikel';
@@ -10,7 +17,12 @@ export function libraryFormat(format?: string) {
 
 export function libraryAccessLabel(item: LibraryCardItem, access?: LibraryAccess | null): { label: string; locked: boolean } {
   if (access?.unlockedIds.includes(item.id)) return { label: 'Ontgrendeld', locked: false };
-  if (item.isPlus) return { label: 'Inbegrepen bij je abonnement', locked: !(access?.allowedIds ? access.allowedIds.includes(item.id) : access?.hasPlus) };
+  if (item.equiboostAccess) {
+    const allowed = libraryCanRead(item, access);
+    const cost = Number(item.creditCost) || 0;
+    return { label: allowed ? 'Inbegrepen bij EquiBoost' : item.equiboostAccess === 'only' ? 'Plus only · EquiBoost' : `${cost} ${cost === 1 ? 'credit' : 'credits'} · gratis tijdens EquiBoost`, locked: !allowed };
+  }
+  if (item.isPlus) return { label: 'Gratis', locked: !(access?.allowedIds ? access.allowedIds.includes(item.id) : access?.hasPlus) };
   const credits = Number(item.creditCost) || 0;
   return credits > 0 ? { label: `${credits} ${credits === 1 ? 'credit' : 'credits'}`, locked: true } : { label: 'Gratis', locked: false };
 }

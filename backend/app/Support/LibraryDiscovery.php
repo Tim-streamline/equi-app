@@ -34,7 +34,10 @@ class LibraryDiscovery
 
     public function access(User $user): array
     {
+        $expires = app(EquiBoostAccess::class)->expiresAt($user->id);
         return [
+            'hasEquiBoost' => $expires !== null,
+            'equiBoostExpiresAt' => $expires?->toISOString(),
             'hasPlus' => app(SubscriptionAccess::class)->active($user->id) !== null,
             'credits' => app(CreditLedger::class)->summary($user)['balance'],
             'hasBasic' => (bool) app(CreditLedger::class)->basic($user),
@@ -45,7 +48,7 @@ class LibraryDiscovery
     public function canRead(LibraryItem $item, array $access): bool
     {
         return in_array($item->id, $access['unlockedIds'], true)
-            || ($item->is_plus ? $access['hasPlus'] : (int) $item->credit_cost === 0);
+            || ($item->equiboost_access ? ($access['hasEquiBoost'] ?? false) : ($item->is_plus ? $access['hasPlus'] : (int) $item->credit_cost === 0));
     }
 
     public function summary(LibraryItem $item): array
@@ -54,7 +57,7 @@ class LibraryDiscovery
             'id' => $item->id, 'title' => $item->title, 'description' => $item->description,
             'format' => $item->format, 'heroImageUrl' => $item->hero_image_url,
             'durationLabel' => $item->duration_label, 'creditCost' => (int) $item->credit_cost,
-            'isPlus' => $item->is_plus, 'authorName' => $item->author?->name,
+            'isPlus' => $item->is_plus, 'equiboostAccess' => $item->equiboost_access, 'authorName' => $item->author?->name,
         ];
     }
 

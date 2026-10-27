@@ -2,7 +2,7 @@ import { useQuery } from '@powersync/react';
 import { useDb } from '@/db/provider';
 import { useLibraryAccessRecords } from './useLibraryAccessRecords';
 import { useLibraryResource } from './useLibraryResource';
-import type { LibraryAccess, LibraryCardItem } from '@/lib/library';
+import { libraryCanRead, type LibraryAccess, type LibraryCardItem } from '@/lib/library';
 import type { LibraryAttachment } from '@/components/library/LibraryAttachments';
 
 type Chapter = { id: string; title: string; startLabel: string };
@@ -13,6 +13,7 @@ export type LibraryContentData = {
 type Row = {
   id: string; title: string; description: string; format: string; heroImageUrl: string;
   authorName: string; durationLabel: string; creditCost: number; isPlus: number;
+  equiboostAccess: LibraryCardItem['equiboostAccess'];
   content_id: string | null; body: string | null; chapters: string | null; attachments: string | null;
 };
 export function useLibraryContent(itemId: string) {
@@ -21,7 +22,7 @@ export function useLibraryContent(itemId: string) {
   const grant = grants.find(row => row.item_id === itemId);
   const { data: rows, isLoading: itemLoading } = useQuery<Row>(`
     SELECT i.id, i.title, i.description, i.format, i.hero_image_url AS heroImageUrl,
-           i.duration_label AS durationLabel, i.credit_cost AS creditCost, i.is_plus AS isPlus,
+           i.duration_label AS durationLabel, i.credit_cost AS creditCost, i.is_plus AS isPlus, i.equiboost_access AS equiboostAccess,
            t.name AS authorName, c.id AS content_id, c.body, c.chapters, c.attachments
     FROM library_items i
     LEFT JOIN therapists t ON t.id = i.author_therapist_id
@@ -35,13 +36,13 @@ export function useLibraryContent(itemId: string) {
   const row = rows.find(row => row.id === itemId);
   const canRead = !!(isLoggedIn && grant && row?.content_id);
   const localAccess: LibraryAccess = {
-    hasPlus: grant?.reason === 'plus', unlockedIds: grants.filter(g => g.reason === 'unlocked').map(g => g.item_id),
+    hasPlus: grant?.reason === 'plus', hasEquiBoost: grant?.reason === 'equiboost', unlockedIds: grants.filter(g => g.reason === 'unlocked').map(g => g.item_id),
     allowedIds: grants.map(g => g.item_id),
   };
   const data: LibraryContentData | null = row && (grant || account.data) ? {
     item: { id: row.id, title: row.title, description: row.description, format: row.format,
       heroImageUrl: row.heroImageUrl, durationLabel: row.durationLabel, authorName: row.authorName,
-      creditCost: row.creditCost, isPlus: !!row.isPlus },
+      creditCost: row.creditCost, isPlus: !!row.isPlus, equiboostAccess: row.equiboostAccess },
     access: account.data ?? localAccess, canRead,
     body: canRead ? row.body : null,
     chapters: canRead ? JSON.parse(row.chapters ?? '[]') : [],
@@ -52,7 +53,7 @@ export function useLibraryContent(itemId: string) {
     unavailable: !itemLoading && !row,
     update: (result: LibraryContentData) => account.update(result.access),
     pendingContent: !canRead && !!row && (!!grant || (!!account.data && (
-      account.data.unlockedIds.includes(itemId) || (row.isPlus ? account.data.hasPlus : row.creditCost === 0)
+      libraryCanRead({ id: itemId, isPlus: !!row.isPlus, creditCost: row.creditCost, equiboostAccess: row.equiboostAccess }, account.data)
     ))),
     isConnected,
   };

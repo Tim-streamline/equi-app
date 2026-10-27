@@ -103,7 +103,7 @@
                 ]} />
                 <Select class="w-40" bind:value={gate} onchange={apply} options={[
                     { value: '', label: 'All' }, { value: 'featured', label: 'Featured' },
-                    { value: 'plus', label: 'Inbegrepen bij abonnement' }, { value: 'credits', label: 'Met credits' }, { value: 'draft', label: 'Drafts' },
+                    { value: 'plus', label: 'Gratis' }, { value: 'equiboost', label: 'EquiBoost' }, { value: 'credits', label: 'Met credits' }, { value: 'draft', label: 'Drafts' },
                 ]} />
                 <details class="relative">
                     <summary class="cursor-pointer rounded-md border px-3 py-2 text-sm">Categorieën {selectedCategories.length ? `(${selectedCategories.length})` : ''}</summary>
@@ -166,7 +166,7 @@
                             <TableCell>
                                 <div class="flex gap-1">
                                     {#if i.is_featured}<Badge>featured</Badge>{/if}
-                                    {#if i.is_plus}<Badge variant="warning">Inbegrepen bij abonnement</Badge>{:else if i.credit_cost > 0}<Badge variant="warning">{i.credit_cost} credits</Badge>{/if}
+                                    {#if i.equiboost_access}<Badge variant="warning">{i.equiboost_access === 'only' ? 'Plus only · EquiBoost' : `${i.credit_cost} ${i.credit_cost === 1 ? 'credit' : 'credits'} Basic · gratis EquiBoost`}</Badge>{:else if i.is_plus || !i.credit_cost}<Badge>Gratis</Badge>{:else}<Badge variant="warning">{i.credit_cost} credits</Badge>{/if}
                                 </div>
                             </TableCell>
                             <TableCell class="text-muted-foreground">{i.author ?? '—'}</TableCell>
