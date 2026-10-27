@@ -102,7 +102,8 @@ class IntakeFeedTrainingRefinementsTest extends TestCase
         }
         $this->assertFalse($rows->firstWhere('key', 'stress-symptomen')['flagged']);
         $html = app(IntakeAnswersPdf::class)->html($booking->fresh());
-        $this->assertStringNotContainsString('HIDDEN-', $html);
+        // Hidden answers are kept, but only under "Eerder ingevuld", never as a current answer.
+        $this->assertStringNotContainsString('HIDDEN-', explode('Eerder ingevuld · ', $html)[0]);
         $booking->answers()->where('section_id', 'voer')->where('field_id', 'bijvoeding-nu')->update(['value' => json_encode('Ja')]);
         $review = app(IntakeReview::class)->forBooking($booking->fresh());
         $rows = collect($review['sections'])->flatMap(fn ($section) => $section['rows']);

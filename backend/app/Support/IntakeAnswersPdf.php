@@ -26,7 +26,9 @@ class IntakeAnswersPdf
     {
         $booking->loadMissing('horse', 'user');
         $review = app(IntakeReview::class)->forBooking($booking);
-        $sections = [...$review['sections'], ...array_map(fn ($section) => [...$section, 'title' => 'Eerder ingevuld · '.$section['title']], $review['historical_sections'] ?? [])];
+        // Current answers first; answers to questions that are now hidden or archived follow under their own heading.
+        $sections = [...array_filter($review['sections'], fn ($section) => $section['rows']),
+            ...array_map(fn ($section) => [...$section, 'title' => 'Eerder ingevuld · '.$section['title']], $review['historical_sections'] ?? [])];
         if (! $review['sections']) {
             throw new RuntimeException('De intakevragen zijn niet beschikbaar voor de PDF.');
         }

@@ -18,6 +18,18 @@ class LibraryLockOrderTest extends TestCase
     // Committed fixtures are essential: a wrapping test transaction would
     // already hold the advisory lock acquired by the fixture insert triggers.
     use DatabaseMigrations;
+
+    /**
+     * Rebuild instead of rolling back afterwards: some migrations refuse a rollback once data
+     * exists, which used to leave a partial schema for every test that ran after this class.
+     */
+    public function runDatabaseMigrations(): void
+    {
+        $this->beforeRefreshingDatabase();
+        $this->refreshTestDatabase();
+        $this->afterRefreshingDatabase();
+        $this->beforeApplicationDestroyed(fn () => \Illuminate\Foundation\Testing\RefreshDatabaseState::$migrated = false);
+    }
     use HasSubscription;
 
     public function test_library_mutations_hold_the_sync_lock_before_locking_source_rows(): void

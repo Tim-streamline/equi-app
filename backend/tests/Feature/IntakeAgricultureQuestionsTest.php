@@ -20,12 +20,15 @@ class IntakeAgricultureQuestionsTest extends TestCase
         $section = IntakeQuestionnaire::query()->where('slug', 'protocol-intake')->firstOrFail()
             ->sections()->where('key', 'huisvesting')->firstOrFail();
         $fields = $section->fields()->orderBy('order')->get();
+        // The optional overview photo of the living area closes the section; the questions end with the environment block.
+        $this->assertSame('leefomgeving-overzicht', $fields->last()->key);
+        $questions = $fields->where('type', '!=', 'photo')->values();
 
-        $this->assertSame('omgeving-overig', $fields->last()->key);
-        $this->assertSame('Omgeving & landbouwpercelen', $fields->slice(-12)->first()->label);
+        $this->assertSame('omgeving-overig', $questions->last()->key);
+        $this->assertSame('Omgeving & landbouwpercelen', $questions->slice(-12)->first()->label);
         $this->assertSame(['landbouw-nabij' => 'Ja', 'landbouw-bespoten' => 'Ja'], $fields->firstWhere('key', 'landbouw-middelen')->show_if);
         $this->assertSame('multi', $fields->firstWhere('key', 'landbouw-middelen')->type);
-        $this->assertNull($fields->last()->show_if);
+        $this->assertNull($questions->last()->show_if);
 
         $admin = AdminUser::query()->create([
             'name' => 'Admin', 'email' => 'agriculture@example.com', 'password' => 'password', 'role' => 'admin', 'active' => true,

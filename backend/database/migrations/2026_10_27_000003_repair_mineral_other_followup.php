@@ -17,12 +17,18 @@ return new class extends Migration
                 $options = array_values(array_filter($parent->options ?? [], fn ($option) => preg_match('/^anders(?:$|[,\s.])/iu', trim($option))));
                 $options = array_values(array_unique(['anders', 'Anders', 'anders, namelijk', 'Anders, namelijk', ...$options]));
                 $source = $parent->answer_section_key ?? $section->key;
-                if (! $field) {
-                    $section->fields()->where('order', '>', $parent->order)->increment('order');
-                    $field = $section->fields()->make(['key' => 'mineralen-toegang-anders', 'type' => 'text', 'order' => $parent->order + 1]);
+                $showIf = [$source.'.'.$parent->key => $options];
+                if ($field) {
+                    // Repair only a rule that can never match the current options; keep the
+                    // wording, requirement and other settings an administrator chose.
+                    $rule = $field->show_if ?? [];
+                    $current = (array) ($rule[$source.'.'.$parent->key] ?? $rule[$parent->key] ?? []);
+                    if (! array_intersect($current, $parent->options ?? [])) $field->update(['show_if' => $showIf]);
+                    continue;
                 }
-                $field->fill(['label' => 'Licht je antwoord toe.', 'required' => true, 'optional' => false, 'active' => true,
-                    'show_if' => [$source.'.'.$parent->key => $options]])->save();
+                $section->fields()->where('order', '>', $parent->order)->increment('order');
+                $section->fields()->create(['key' => 'mineralen-toegang-anders', 'type' => 'text', 'order' => $parent->order + 1,
+                    'label' => 'Licht je antwoord toe.', 'required' => true, 'optional' => false, 'active' => true, 'show_if' => $showIf]);
             }
         });
     }

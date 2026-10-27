@@ -119,7 +119,8 @@ class IntakeWeightDateQuestionTest extends TestCase
         $methodAnswer->update(['value' => '"geschat op zicht"']);
         $review = app(IntakeReview::class)->forBooking($booking->fresh());
         $this->assertFalse(collect($review['sections'])->flatMap(fn ($s) => $s['rows'])->contains('key', $date->key));
-        $this->assertStringNotContainsString('mei 2026', app(IntakeAnswersPdf::class)->html($booking->fresh()));
+        // The hidden date stays available, but only under "Eerder ingevuld".
+        $this->assertStringNotContainsString('mei 2026', explode('Eerder ingevuld · ', app(IntakeAnswersPdf::class)->html($booking->fresh()))[0]);
         $this->assertSame('"mei 2026"', $booking->answers()->where('field_id', $date->key)->sole()->value);
     }
 

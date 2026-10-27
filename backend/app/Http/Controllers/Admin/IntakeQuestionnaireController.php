@@ -398,24 +398,6 @@ class IntakeQuestionnaireController extends Controller
         return $value === null || is_string($value) || $this->isStringListOrNull($value);
     }
 
-    private function isTriggerMapOrNull(mixed $value): bool
-    {
-        if ($value === null) {
-            return true;
-        }
-        if (! is_array($value) || array_is_list($value)) {
-            return false;
-        }
-
-        foreach ($value as $trigger) {
-            if (! $this->isTriggerOrNull($trigger) || $trigger === null) {
-                return false;
-            }
-        }
-
-        return true;
-    }
-
     private function decodeJson(mixed $value, string $field): mixed
     {
         if ($value === null || $value === '') {

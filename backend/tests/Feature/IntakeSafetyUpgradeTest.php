@@ -19,6 +19,18 @@ class IntakeSafetyUpgradeTest extends TestCase
 {
     use DatabaseMigrations;
 
+    /**
+     * Rebuild instead of rolling back afterwards: some migrations refuse a rollback once data
+     * exists, which used to leave a partial schema for every test that ran after this class.
+     */
+    public function runDatabaseMigrations(): void
+    {
+        $this->beforeRefreshingDatabase();
+        $this->refreshTestDatabase();
+        $this->afterRefreshingDatabase();
+        $this->beforeApplicationDestroyed(fn () => \Illuminate\Foundation\Testing\RefreshDatabaseState::$migrated = false);
+    }
+
     // Last migration on origin/master at 25575b37. Unlike RefreshDatabase,
     // these tests insert customer data BEFORE any migration under review runs.
     private const BASE = '2026_10_20_000002_add_weight_measurement_date_question.php';
