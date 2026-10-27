@@ -70,7 +70,12 @@ class ShelbyTriage
                     if (preg_match(self::HISTORY, $this->clause($sentence, $offset, strlen($found)))) {
                         continue;
                     }
-                    $before = mb_substr(substr($sentence, 0, $offset), -40);
+                    // A denial in an earlier clause must not cancel this signal.
+                    // Keep "en" within shared denials such as "zonder koorts en benauwdheid".
+                    // A comma directly before the signal can join a negated symptom list.
+                    // Keep commas followed by words (e.g. "wel" or "loopt") as clause boundaries.
+                    $prefix = preg_replace('/,\s*$/u', ' ', substr($sentence, 0, $offset));
+                    $before = mb_substr($this->clause($prefix, strlen($prefix), 0, splitAnd: false), -40);
                     // A signal that itself contains a denial ("kan niet opstaan") is never cancelled.
                     if (! preg_match('/\b(?:geen|niet|nauwelijks)\b/u', $found) && preg_match(self::DENIAL, $before)) {
                         continue;
@@ -85,9 +90,9 @@ class ShelbyTriage
     }
 
     /** The part of a sentence around a match, bounded by punctuation and joining words. */
-    private function clause(string $sentence, int $offset, int $length): string
+    private function clause(string $sentence, int $offset, int $length, bool $splitAnd = true): string
     {
-        $boundary = '/[,;:]|\b(?:en|maar|nu|terwijl|sinds|daarom|want)\b/u';
+        $boundary = '/[,;:]|\b(?:'.($splitAnd ? 'en|' : '').'maar|nu|terwijl|sinds|daarom|want)\b/u';
         $start = 0;
         if (preg_match_all($boundary, substr($sentence, 0, $offset), $before, PREG_OFFSET_CAPTURE)) {
             $last = end($before[0]);

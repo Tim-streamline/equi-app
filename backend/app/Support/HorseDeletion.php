@@ -46,6 +46,8 @@ class HorseDeletion
     public function delete(Horse $horse): void
     {
         DB::transaction(function () use ($horse) {
+            // Match archive/restore: library access triggers must not reverse the row lock order.
+            LibrarySyncLock::acquire();
             // Lock before checking links: concurrent FK writes must wait for this deletion.
             $locked = Horse::query()->lockForUpdate()->findOrFail($horse->id);
             $links = $this->preview($locked);

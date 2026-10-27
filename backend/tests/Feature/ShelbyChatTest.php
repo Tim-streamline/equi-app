@@ -14,6 +14,7 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\Client\Request as ClientRequest;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Str;
+use PHPUnit\Framework\Attributes\TestWith;
 use Tests\TestCase;
 
 class ShelbyChatTest extends TestCase
@@ -98,10 +99,14 @@ class ShelbyChatTest extends TestCase
         Http::assertSent(fn (ClientRequest $r) => $r['input'] === [['role' => 'user', 'content' => 'Goedemorgen!']]);
     }
 
-    public function test_an_acute_question_is_answered_with_the_vet_even_when_the_ai_is_down(): void
+    #[TestWith(['Mijn paard rolt steeds en kijkt naar zijn buik.'])]
+    #[TestWith(['Hij heeft geen koorts maar koliek.'])]
+    #[TestWith(['Geen koorts, wel kreupel.'])]
+    #[TestWith(['Geen koorts, loopt kreupel.'])]
+    public function test_an_acute_question_is_answered_with_the_vet_even_when_the_ai_is_down(string $question): void
     {
         Http::fake(['api.openai.com/*' => Http::response([], 500)]);
-        $response = $this->send('Mijn paard rolt steeds en kijkt naar zijn buik.')->assertOk();
+        $response = $this->send($question)->assertOk()->assertJsonPath('messages.1.plus_cta', false);
 
         $this->assertStringContainsString('dierenarts', $response->json('messages.1.body'));
         $meta = ChatMessage::where('role', 'assistant')->sole()->meta;
@@ -116,10 +121,14 @@ class ShelbyChatTest extends TestCase
         Http::assertSent(fn (ClientRequest $r) => str_contains($r['instructions'], 'mogelijk een acuut signaal'));
     }
 
-    public function test_a_failed_answer_keeps_nothing_so_the_owner_can_retry(): void
+    #[TestWith(['Waarom heeft hij mok?'])]
+    #[TestWith(['Hij is zonder koorts en benauwdheid.'])]
+    #[TestWith(['Hij heeft geen koorts en koliek.'])]
+    #[TestWith(['Hij heeft geen koorts, benauwdheid of hoesten.'])]
+    public function test_a_failed_answer_keeps_nothing_so_the_owner_can_retry(string $question): void
     {
         Http::fake(['api.openai.com/*' => Http::response([], 500)]);
-        $this->send('Waarom heeft hij mok?')->assertStatus(503)->assertJsonPath('message', 'Shelby is even niet bereikbaar. Probeer het zo opnieuw.');
+        $this->send($question)->assertStatus(503)->assertJsonPath('message', 'Shelby is even niet bereikbaar. Probeer het zo opnieuw.');
         $this->assertSame(0, ChatMessage::count());
     }
 

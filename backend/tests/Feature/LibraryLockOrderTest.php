@@ -4,9 +4,12 @@ namespace Tests\Feature;
 
 use App\Http\Middleware\AuthenticatePowerSyncJwt;
 use App\Models\AdminUser;
+use App\Models\Horse;
 use App\Models\LibraryItem;
+use App\Models\Protocol;
 use App\Models\User;
 use App\Support\CreditLedger;
+use App\Support\HorseDeletion;
 use Illuminate\Foundation\Testing\DatabaseMigrations;
 use Illuminate\Support\Facades\DB;
 use Symfony\Component\Process\Process;
@@ -31,6 +34,39 @@ class LibraryLockOrderTest extends TestCase
         $this->beforeApplicationDestroyed(fn () => \Illuminate\Foundation\Testing\RefreshDatabaseState::$migrated = false);
     }
     use HasSubscription;
+
+    public function test_horse_deletion_holds_the_sync_lock_before_locking_the_horse(): void
+    {
+        $user = User::factory()->create();
+        $horse = Horse::create(['owner_id' => $user->id, 'name' => 'Deletion lock test', 'status' => 'active']);
+        $protocol = Protocol::create(['horse_id' => $horse->id, 'title' => 'Draft protocol', 'status' => 'draft']);
+        $bookingId = $protocol->intake->id;
+
+        config(['database.connections.library_lock_probe' => config('database.connections.'.config('database.default'))]);
+        $probe = DB::connection('library_lock_probe');
+        $canAcquire = fn () => $probe->selectOne('SELECT pg_try_advisory_xact_lock(724119301) AS acquired')->acquired;
+        $this->assertTrue($canAcquire(), 'Fixture transactions must release their locks.');
+        $checked = false;
+        $checking = true;
+        DB::connection()->beforeExecuting(function (string $sql) use (&$checked, &$checking, $canAcquire): void {
+            if ($checking && preg_match('/from "horses".*for update/is', $sql)) {
+                $this->assertFalse($canAcquire(), 'Horse deletion must hold the library lock before locking the horse.');
+                $checked = true;
+            }
+        });
+
+        try {
+            app(HorseDeletion::class)->delete($horse);
+            $this->assertTrue($checked, 'Deletion must exercise the horse row lock.');
+            $this->assertTrue($canAcquire(), 'Deletion must release the advisory lock on commit.');
+            $this->assertDatabaseMissing('horses', ['id' => $horse->id]);
+            $this->assertDatabaseMissing('protocols', ['id' => $protocol->id]);
+            $this->assertDatabaseMissing('intake_bookings', ['id' => $bookingId]);
+        } finally {
+            $checking = false;
+            DB::purge('library_lock_probe');
+        }
+    }
 
     public function test_library_mutations_hold_the_sync_lock_before_locking_source_rows(): void
     {
