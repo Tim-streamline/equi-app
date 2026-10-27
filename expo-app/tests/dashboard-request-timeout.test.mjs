@@ -47,6 +47,8 @@ function harness(fetch) {
   const auth = load('../db/auth.ts');
   modules['./auth'] = modules['@/db/auth'] = auth;
   modules['@/lib/intake/attachments/sync'] = { uploadIntakeAttachments: async () => {} };
+  // The connector prepares queued intake answers; use the real helper so the test covers it.
+  modules['@/lib/intake/sync-operations'] = load('../lib/intake/sync-operations.ts');
   const connector = load('../db/connector.ts');
   modules['@/db/connector'] = connector;
   const { dashboardRequest } = load('../hooks/useHorseDashboard.ts');

@@ -60,7 +60,7 @@ class SaveProtocolRequest extends FormRequest
 
             'analysis' => ['nullable', 'array'],
             'analysis.cause' => ['nullable', 'string', 'max:10000'],
-            'analysis.summary' => ['nullable', 'string', 'max:600', new ShortProtocolText(4)],
+            'analysis.summary' => ['nullable', 'string', 'max:2100'],
             'analysis.focus_points' => ['sometimes', 'array', 'max:4'],
             'analysis.focus_points.*' => ['array:title,body'],
             'analysis.focus_points.*.title' => ['required', 'string', 'max:48', 'not_regex:/^(voeding|management|training|beweging|verzorging|zorg|nutrition|movement)$/iu'],
@@ -103,7 +103,7 @@ class SaveProtocolRequest extends FormRequest
     {
         return [
             'analysis.focus_points.*.title.not_regex' => 'Kies een inhoudelijk focuspunt, geen algemene adviescategorie.',
-            'analysis.summary.max' => 'Houd de persoonlijke analyse kort: maximaal 600 tekens.',
+            'analysis.summary.max' => 'Gebruik maximaal 2100 tekens voor de persoonlijke analyse.',
             'analysis.focus_points.max' => 'Gebruik maximaal 4 focuspunten.',
             'analysis.focus_points.*.title.max' => 'Gebruik een korte titel van maximaal 48 tekens.',
             'analysis.focus_points.*.body.max' => 'Gebruik één korte doelzin van maximaal 160 tekens.',
@@ -130,7 +130,7 @@ class SaveProtocolRequest extends FormRequest
                 || filled($this->input('analysis.observations'));
             if ($this->boolean('published') && $hasCompactAnalysis) {
                 if (! filled($this->input('analysis.summary'))) {
-                    $validator->errors()->add('analysis.summary', 'Vul een korte persoonlijke analyse in voordat je publiceert.');
+                    $validator->errors()->add('analysis.summary', 'Vul een persoonlijke analyse in voordat je publiceert.');
                 }
                 if (! filled($this->input('analysis.observations'))) {
                     $validator->errors()->add('analysis.observations', 'Vul minimaal één observatiepunt in voordat je publiceert.');

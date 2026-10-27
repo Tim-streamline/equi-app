@@ -1,3 +1,4 @@
+import { libraryCanRead } from '../lib/library.ts';
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { readFile } from 'node:fs/promises';
@@ -46,11 +47,11 @@ function load(code, modules) {
 }
 function reader() {
   const db = new DatabaseSync(':memory:');
-  db.exec(`CREATE TABLE library_items (id TEXT, title TEXT, description TEXT, format TEXT, hero_image_url TEXT, duration_label TEXT, credit_cost INTEGER, is_plus INTEGER, author_therapist_id TEXT, published_at TEXT);
+  db.exec(`CREATE TABLE library_items (id TEXT, title TEXT, description TEXT, format TEXT, hero_image_url TEXT, duration_label TEXT, credit_cost INTEGER, is_plus INTEGER, author_therapist_id TEXT, published_at TEXT, equiboost_access TEXT);
     CREATE TABLE therapists (id TEXT, name TEXT);
     CREATE TABLE library_contents (id TEXT, body TEXT, chapters TEXT, attachments TEXT);
     CREATE TABLE library_item_access (id TEXT, user_id TEXT, item_id TEXT, reason TEXT, expires_at TEXT);
-    INSERT INTO library_items VALUES ('lesson', 'Lesson', 'Preview', 'article', NULL, NULL, 2, 0, 'author', '2020-01-01');
+    INSERT INTO library_items VALUES ('lesson', 'Lesson', 'Preview', 'article', NULL, NULL, 2, 0, 'author', '2020-01-01', NULL);
     INSERT INTO therapists VALUES ('author', 'Teacher');
     INSERT INTO library_contents VALUES ('lesson', 'Offline article body', '[{"id":"chapter","title":"Chapter","startLabel":"00:00"}]', '[{"id":"file","title":"Worksheet","name":"file.pdf"}]');
     INSERT INTO library_item_access VALUES ('grant', 'alice', 'lesson', 'unlocked', NULL);`);
@@ -61,7 +62,7 @@ function reader() {
   const common = {
     react, 'react-native': { AppState: { addEventListener() { return { remove() {} }; } } },
     '@powersync/react': { useQuery: (sql, params) => ({ data: db.prepare(sql).all(...params), isLoading: false }) },
-    '@/db/provider': { useDb: () => session }, '@/lib/library-sync': { activeLibraryGrants },
+    '@/lib/library': { libraryCanRead }, '@/db/provider': { useDb: () => session }, '@/lib/library-sync': { activeLibraryGrants },
   };
   const { useLibraryAccessRecords } = load(grantsCode, common);
   const { useLibraryContent } = load(hookCode, { ...common,

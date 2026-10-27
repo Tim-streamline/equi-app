@@ -44,7 +44,7 @@ test('the measurement date is a normal required question using the existing save
   setField('paard', 'gewicht-methode-wanneer', 'mei 2026');
   assert.equal(render(methodField).some(node => node.type === 'Input'), false);
   const nodes = render(dateField);
-  assert.equal(nodes.find(node => node.type === 'FieldLabel').props.label, 'Wanneer was dat?');
+  assert.equal(nodes.find(node => node.type === 'FieldLabel').props.label, 'Wanneer is het gewicht bepaald?');
   assert.equal(nodes.find(node => node.type === 'FieldLabel').props.n, 8);
   assert.equal(nodes.find(node => node.type === 'FieldLabel').props.required, true);
   const input = nodes.find(node => node.type === 'MonthYearField');

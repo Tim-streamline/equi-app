@@ -1,62 +1,109 @@
 import { KeyboardViewport, KeyboardScrollView as ScrollView, KeyboardTextInput as TextInput } from '@/components/ui/KeyboardForm';
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, type ReactNode } from 'react';
 import {
-  View, Text, Pressable,
+  View, Text, Pressable, Animated, Easing,
 } from 'react-native';
 import { router } from 'expo-router';
-import { LinearGradient } from 'expo-linear-gradient';
-import { Sparkles, Send } from 'lucide-react-native';
+import { Send } from 'lucide-react-native';
+import { useQuery } from '@powersync/react';
+import { ShelbyAvatar } from '@/components/shelby/ShelbyAvatar';
+import {
+  SHELBY_AI_NOTICE, SHELBY_NAME, SHELBY_SUBTITLE, SHELBY_TYPING_MS, SHELBY_WELCOME,
+  isSameLocalDay, mergeShelbyMessages, receiveShelbyMessages, questionId, type FailedQuestion, type ShelbyChatMessage,
+} from '@/lib/shelby';
+import { askShelby } from '@/lib/shelby-api';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useHorseDashboard } from '@/hooks/useHorseDashboard';
-import {
-  useCurrentUserId,
-  useChatMessages,
-  useNovaFallbackReplies,
-  useStoreMutations,
-  useValue,
-} from '@/db/hooks';
+import { useCurrentUserId, useChatMessages } from '@/db/hooks';
+
+const newId = () => typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function'
+  ? crypto.randomUUID()
+  : 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => { const r = Math.random() * 16 | 0; return (c === 'x' ? r : (r & 3) | 8).toString(16); });
+const wait = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+
+/** One of Shelby's messages: her avatar beside the bubble, optionally with her name above it. */
+function ShelbyMessage({ children, named = false }: { children: ReactNode; named?: boolean }) {
+  return <View className="max-w-[88%] flex-row items-end gap-2 self-start">
+    <ShelbyAvatar size={28} />
+    <View className="min-w-0 flex-shrink">
+      {named && <Text className="mb-1 ml-1 font-semi text-[12px] text-mint-800">{SHELBY_NAME}</Text>}
+      <View className="rounded-2xl rounded-bl-md bg-mint-50 px-3.5 py-2.5">{children}</View>
+    </View>
+  </View>;
+}
+
+/** Three dots that pulse one after another while Shelby is "typing". */
+function TypingDots() {
+  const dots = useRef([0, 1, 2].map(() => new Animated.Value(0.3))).current;
+  useEffect(() => {
+    const loop = Animated.loop(Animated.stagger(180, dots.map(dot => Animated.sequence([
+      Animated.timing(dot, { toValue: 1, duration: 300, easing: Easing.out(Easing.quad), useNativeDriver: true }),
+      Animated.timing(dot, { toValue: 0.3, duration: 300, easing: Easing.in(Easing.quad), useNativeDriver: true }),
+    ]))));
+    loop.start();
+    return () => loop.stop();
+  }, [dots]);
+  return <View accessibilityLabel={`${SHELBY_NAME} is aan het typen`} className="flex-row gap-1 py-1">
+    {dots.map((opacity, i) => <Animated.View key={i} style={{ opacity, width: 7, height: 7, borderRadius: 4, backgroundColor: 'rgba(27,42,42,0.55)' }} />)}
+  </View>;
+}
 
 export default function NovaChatModal() {
   const insets = useSafeAreaInsets();
   const { data, horseId } = useHorseDashboard();
   const userId = useCurrentUserId();
-  const [sessionId, setSessionId] = useState('');
-  const [sessionError, setSessionError] = useState(false);
-  const messages = useChatMessages(sessionId);
-  const fallbacks = useNovaFallbackReplies();
-  const subtitle = useValue('novaSubtitle') as string;
-  const { addChatMessage, ensureChatSession } = useStoreMutations();
-  useEffect(() => {
-    let active = true;
-    setSessionId('');
-    setSessionError(false);
-    if (userId && horseId) void ensureChatSession(userId, horseId)
-      .then((id) => { if (active) setSessionId(id); })
-      .catch(() => { if (active) setSessionError(true); });
-    return () => { active = false; };
-  }, [userId, horseId, ensureChatSession]);
+  // Shelby starts a fresh chat per horse each day; the server creates it with the first question.
+  const { data: sessions } = useQuery<{ id: string; started_at: string }>(
+    'SELECT id, started_at FROM chat_sessions WHERE user_id = ? AND horse_id = ? ORDER BY started_at DESC LIMIT 1', [userId, horseId ?? '']);
+  const [answeredSession, setAnsweredSession] = useState('');
+  const today = sessions?.[0] && isSameLocalDay(sessions[0].started_at) ? sessions[0].id : '';
+  const sessionId = answeredSession || today;
+  const synced = useChatMessages(sessionId);
+  const [pending, setPending] = useState<ShelbyChatMessage[]>([]);
+  useEffect(() => { setPending([]); setAnsweredSession(''); }, [horseId]);
+  const messages = mergeShelbyMessages(sessionId ? synced : [], pending);
+  const [error, setError] = useState('');
 
   const [input, setInput] = useState('');
   const [busy, setBusy] = useState(false);
   const scrollRef = useRef<ScrollView>(null);
+  const mounted = useRef(true);
+  useEffect(() => { mounted.current = true; return () => { mounted.current = false; }; }, []);
 
   useEffect(() => {
     setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 100);
   }, [messages.length, busy]);
 
-  const ask = () => {
-    if (!input.trim() || busy || !sessionId) return;
-    const q = input.trim();
+  // A question that failed keeps its id: if the server did answer before the connection dropped,
+  // sending it again returns that answer instead of asking Shelby twice.
+  const failed = useRef<FailedQuestion | null>(null);
+  const ask = async () => {
+    const question = input.trim();
+    if (!question || busy || !horseId) return;
+    const clientId = questionId(failed.current, question, horseId, newId);
+    failed.current = null;
     setInput('');
-    addChatMessage(sessionId, 'user', q);
+    setError('');
+    setPending(old => [...old, { id: clientId, role: 'user', body: question, plusCta: false }]);
     setBusy(true);
-    setTimeout(() => {
-      if (fallbacks.length > 0) {
-        const reply = fallbacks[Math.floor(Math.random() * fallbacks.length)] as any;
-        addChatMessage(sessionId, 'assistant', reply.body);
-      }
-      setBusy(false);
-    }, 900);
+    const started = Date.now();
+    try {
+      const result = await askShelby({ horseId, clientId, body: question });
+      // Shelby "types" for at least a few seconds, even when the answer is ready sooner.
+      await wait(Math.max(0, SHELBY_TYPING_MS - (Date.now() - started)));
+      if (!mounted.current) return;
+      setAnsweredSession(result.sessionId);
+      setPending(old => receiveShelbyMessages(old, sessionId, result.sessionId, clientId, result.messages));
+    } catch (failure) {
+      if (!mounted.current) return;
+      // Give the question back so the owner can send it again with the same id.
+      failed.current = { id: clientId, body: question, horseId };
+      setPending(old => old.filter(m => m.id !== clientId));
+      setInput(current => current || question);
+      setError(failure instanceof Error ? failure.message : 'Shelby is even niet bereikbaar. Probeer het zo opnieuw.');
+    } finally {
+      if (mounted.current) setBusy(false);
+    }
   };
 
   return (
@@ -79,58 +126,51 @@ export default function NovaChatModal() {
       >
         <View className="mx-auto mb-3 h-1 w-9 rounded-pill bg-ink-15" />
         <ScrollView ref={scrollRef} style={{ flexGrow: 0 }} contentContainerStyle={{ paddingBottom: 8 }}>
-          <View className="flex-row items-center gap-2.5 mb-3">
-            <LinearGradient
-              colors={['#30C7BA', '#0D5C5B']}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 1 }}
-              style={{ width: 38, height: 38, borderRadius: 19, alignItems: 'center', justifyContent: 'center' }}
-            >
-              <Sparkles size={18} color="#fff" />
-            </LinearGradient>
-            <View>
-              <Text className="font-bold text-ink" style={{ fontSize: 17 }}>Shelby</Text>
-              <Text className="text-[11px] text-ink-50">{data?.horse.name ?? subtitle}{data?.protocol?.phaseLabel ? ` · ${data.protocol.phaseLabel}` : ''}</Text>
+          <View className="mb-4 flex-row items-center gap-3">
+            <ShelbyAvatar size={48} />
+            <View className="min-w-0 flex-1">
+              <Text accessibilityRole="header" className="font-bold text-ink" style={{ fontSize: 18 }}>{SHELBY_NAME}</Text>
+              <Text className="text-[13px] text-ink-70">{SHELBY_SUBTITLE}</Text>
             </View>
           </View>
 
-          <View style={{ gap: 8, paddingVertical: 4 }}>
-            {messages.map((m: any) => (
-              <View
-                key={m.id}
-                className={`max-w-[85%] rounded-2xl px-3.5 py-2.5 ${
-                  m.role === 'assistant' ? 'bg-mint-50 self-start' : 'bg-teal-700 self-end'
-                }`}
-              >
-                <Text
-                  className={`text-[14px] leading-[20px] ${m.role === 'assistant' ? 'text-ink' : 'text-white'}`}
-                >
-                  {m.body}
-                </Text>
+          <View style={{ gap: 10, paddingVertical: 4 }}>
+            <ShelbyMessage named>
+              <Text className="text-[14px] leading-[21px] text-ink">{SHELBY_WELCOME}</Text>
+            </ShelbyMessage>
+            <Text className="ml-9 text-[11px] leading-[16px] text-ink-50">{SHELBY_AI_NOTICE}</Text>
+            {messages.map((m) => m.role === 'assistant' ? (
+              <ShelbyMessage key={m.id}>
+                <Text className="text-[14px] leading-[21px] text-ink">{m.body}</Text>
+                {m.plusCta && (
+                  <Pressable accessibilityRole="button" onPress={() => router.push('/protocol-purchase')}
+                    className="mt-2.5 self-start rounded-pill bg-teal-700 px-4 py-2">
+                    <Text className="font-semi text-[13px] text-white">Bekijk EquiBoost</Text>
+                  </Pressable>
+                )}
+              </ShelbyMessage>
+            ) : (
+              <View key={m.id} className="max-w-[85%] self-end rounded-2xl rounded-br-md bg-teal-700 px-3.5 py-2.5">
+                <Text className="text-[14px] leading-[21px] text-white">{m.body}</Text>
               </View>
             ))}
-            {busy && (
-              <View className="max-w-[85%] self-start rounded-2xl bg-mint-50 px-3.5 py-3 flex-row gap-1">
-                <View className="h-1.5 w-1.5 rounded-full bg-ink-50" />
-                <View className="h-1.5 w-1.5 rounded-full bg-ink-50" />
-                <View className="h-1.5 w-1.5 rounded-full bg-ink-50" />
-              </View>
-            )}
+            {busy && <ShelbyMessage><TypingDots /></ShelbyMessage>}
           </View>
 
-          {sessionError && <Text className="text-[12px] text-ink-50">Het gesprek kon niet worden geopend. Sluit dit venster en probeer opnieuw.</Text>}
+          {!!error && <Text accessibilityLiveRegion="polite" className="mt-2 text-[13px] leading-[19px] text-danger">{error}</Text>}
           <View className="mt-3 flex-row items-center gap-2">
             <TextInput
               value={input}
               onChangeText={setInput}
-              onSubmitEditing={ask}
+              onSubmitEditing={() => void ask()}
               placeholder={`Vraag iets over ${data?.horse.name ?? 'je paard'}...`}
               placeholderTextColor="rgba(27,42,42,0.4)"
               className="flex-1 rounded-pill bg-canvas-2 px-4 py-3 font-sans text-[14px] text-ink"
             />
             <Pressable
-              onPress={ask}
-              disabled={busy || !sessionId}
+              onPress={() => void ask()}
+              accessibilityRole="button" accessibilityLabel={`Verstuur je vraag aan ${SHELBY_NAME}`}
+              disabled={busy || !horseId || !input.trim()}
               className={`h-10 w-10 items-center justify-center rounded-full ${busy ? 'bg-ink-15' : 'bg-mint-500'}`}
             >
               <Send size={16} color="#fff" />

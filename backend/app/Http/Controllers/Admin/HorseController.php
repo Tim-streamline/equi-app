@@ -98,6 +98,7 @@ class HorseController extends Controller
     {
         try {
             DB::transaction(function () use ($horse, $archived) {
+                \App\Support\LibrarySyncLock::acquire();
                 $locked = Horse::query()->lockForUpdate()->findOrFail($horse->id);
                 $status = $archived ? 'archived' : 'active';
                 if ($locked->status === $status) {

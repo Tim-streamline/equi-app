@@ -26,7 +26,7 @@ streams:
             - |
                 SELECT id, slug, format, title, description, hero_image_url,
                        duration_label, duration_sec, author_therapist_id, views_label,
-                       published_at, credit_cost, is_plus, is_featured, "order",
+                         published_at, credit_cost, is_plus, equiboost_access, is_featured, "order",
                        created_at, updated_at
                 FROM library_items
                 WHERE auth.parameter('subscribed') = 1 AND ( published_at IS NOT NULL)

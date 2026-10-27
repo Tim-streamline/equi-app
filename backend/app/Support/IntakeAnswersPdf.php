@@ -26,12 +26,15 @@ class IntakeAnswersPdf
     {
         $booking->loadMissing('horse', 'user');
         $review = app(IntakeReview::class)->forBooking($booking);
+        // Current answers first; answers to questions that are now hidden or archived follow under their own heading.
+        $sections = [...array_filter($review['sections'], fn ($section) => $section['rows']),
+            ...array_map(fn ($section) => [...$section, 'title' => 'Eerder ingevuld · '.$section['title']], $review['historical_sections'] ?? [])];
         if (! $review['sections']) {
             throw new RuntimeException('De intakevragen zijn niet beschikbaar voor de PDF.');
         }
         $images = [];
         $files = IntakeAttachment::where('booking_id', $booking->id)->get()->keyBy('id');
-        foreach ($review['sections'] as $section) {
+        foreach ($sections as $section) {
             foreach ($section['rows'] as $row) {
                 if (! in_array($row['type'], ['photo', 'file'], true)) {
                     continue;
@@ -51,7 +54,7 @@ class IntakeAnswersPdf
             }
         }
 
-        return view('intake.answers-pdf', ['booking' => $booking, 'sections' => $review['sections'], 'images' => $images])->render();
+        return view('intake.answers-pdf', ['booking' => $booking, 'sections' => $sections, 'images' => $images])->render();
     }
 
     public function render(IntakeBooking $booking): string

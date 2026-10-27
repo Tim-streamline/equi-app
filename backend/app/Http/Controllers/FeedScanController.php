@@ -96,6 +96,21 @@ class FeedScanController extends Controller
         return response()->json($s->fresh());
     }
 
+    public function photo(Request $request, string $id, string $photo)
+    {
+        $submission = $this->owned($request, $id);
+        abort_unless(in_array($photo, array_values($submission->photo_ids ?? []), true), 404);
+        $attachment = FeedLabelAttachment::where('submission_id', $submission->id)->findOrFail($photo);
+        abort_unless(in_array($attachment->mime_type, ['image/jpeg', 'image/png', 'image/webp'], true), 404);
+        $disk = Storage::disk($attachment->disk);
+        abort_unless($disk->exists($attachment->path), 404);
+
+        return $disk->response($attachment->path, null, [
+            'Content-Type' => $attachment->mime_type, 'Cache-Control' => 'private, no-store',
+            'X-Content-Type-Options' => 'nosniff',
+        ], 'inline');
+    }
+
     public function analyse(Request $request, string $id)
     {
         $data = $request->validate(['name' => 'nullable|string|max:255']);

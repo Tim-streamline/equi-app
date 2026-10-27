@@ -54,7 +54,7 @@ export const navSections = [
             { label: 'Library', href: '/admin/library', icon: BookOpen },
             { label: 'Bibliotheekfilters', href: '/admin/library-categories', icon: FolderTree },
             { label: 'Seasonal tips', href: '/admin/seasonal-tips', icon: CalendarHeart },
-            { label: 'Nova chat', href: '/admin/nova', icon: Bot },
+            { label: 'Shelby chat', href: '/admin/nova', icon: Bot },
         ],
     },
     {

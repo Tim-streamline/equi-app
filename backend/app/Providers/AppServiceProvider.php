@@ -24,6 +24,8 @@ class AppServiceProvider extends ServiceProvider
     {
         RateLimiter::for('community-write', fn (Request $request) => Limit::perMinute(60)
             ->by($request->attributes->get('powersync_user_id') ?? $request->ip()));
+        RateLimiter::for('shelby-message', fn (Request $request) => Limit::perMinute(6)
+            ->by($request->attributes->get('powersync_user_id')));
         RateLimiter::for('feed-scan-create', fn (Request $request) => Limit::perHour(20)
             ->by($request->attributes->get('powersync_user_id')));
         RateLimiter::for('feed-scan-upload', fn (Request $request) => Limit::perMinute(60)

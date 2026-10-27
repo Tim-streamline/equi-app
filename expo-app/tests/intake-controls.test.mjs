@@ -294,7 +294,7 @@ test('submitted intakes allow read-only viewing but cannot revisit submission or
   let loaded = false, submittedAt = null, route = 'welcome', horseId = 'horse', horsesLoading = true, hasSynced = false, horses = [];
   const { default: Layout } = load('../app/intake/_layout.tsx', {
     'react/jsx-runtime': runtime,
-    react: { useEffect: () => {}, useState: initial => [initial === undefined ? { horseId: 'horse', value: { intakeAvailable: true } } : initial, () => {}] },
+    react: { useEffect: () => {}, useRef: value => ({ current: value }), useState: initial => [initial === undefined ? { horseId: 'horse', value: { intakeAvailable: true } } : initial, () => {}] },
     'react-native': { Text: 'Text', View: 'View' },
     '@/components/ui/Button': { Button: 'Button' },
     '@/hooks/useHorseDashboard': { dashboardRequest: async () => ({}) },
@@ -324,7 +324,7 @@ test('a hydrated existing draft opens offline without requesting Plus access', a
   let effects = [];
   const { default: Layout } = load('../app/intake/_layout.tsx', {
     'react/jsx-runtime': runtime,
-    react: { useEffect: effect => effects.push(effect), useState: initial => [initial, () => {}] },
+    react: { useEffect: effect => effects.push(effect), useRef: value => ({ current: value }), useState: initial => [initial, () => {}] },
     'react-native': native,
     '@/components/ui/Button': { Button: 'Button' },
     '@/hooks/useHorseDashboard': { dashboardRequest: async () => { requests++; throw new Error('offline'); } },

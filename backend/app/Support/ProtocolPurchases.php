@@ -18,6 +18,7 @@ class ProtocolPurchases
 
         return DB::transaction(function () use ($userId, $horseId) {
             User::whereKey($userId)->lockForUpdate()->firstOrFail();
+            LibrarySyncLock::acquire();
             Horse::whereKey($horseId)->where('owner_id', $userId)->where('status', 'active')->lockForUpdate()->firstOrFail();
             // Repeat clicks and retries after a lost response reuse the unfinished pair.
             $existing = Protocol::where('horse_id', $horseId)->whereNotIn('status', ['completed', 'archived'])->oldest()->first();
@@ -41,6 +42,7 @@ class ProtocolPurchases
 
         return DB::transaction(function () use ($userId, $horseId, $requestKey) {
             User::whereKey($userId)->lockForUpdate()->firstOrFail();
+            LibrarySyncLock::acquire();
             $existing = DB::table('protocol_purchases')->where('user_id', $userId)->where('request_key', $requestKey)->first();
             if ($existing) {
                 abort_unless($existing->horse_id === $horseId, 409);
@@ -66,6 +68,7 @@ class ProtocolPurchases
 
         return DB::transaction(function () use ($purchaseId, $purchase, $paymentReference, $amountCents, $currency) {
             User::whereKey($purchase->user_id)->lockForUpdate()->firstOrFail();
+            LibrarySyncLock::acquire();
             $receipt = DB::table('protocol_purchases')->where('id', $purchaseId)->lockForUpdate()->first();
             abort_unless((int) $receipt->amount_cents === $amountCents && $receipt->currency === $currency, 409);
             if ($receipt->fulfilled_at) {

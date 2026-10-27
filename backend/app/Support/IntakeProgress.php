@@ -21,6 +21,8 @@ class IntakeProgress
         $review = app(IntakeReview::class);
         $photos = app(IntakePhotoRules::class);
         $attachments = IntakeAttachment::where('booking_id', $booking->id)->get()->keyBy('id');
+        $conditions = app(IntakeConditions::class);
+        $requireGrouped = (bool) config('intake.require_grouped_conditions', false);
         foreach ($questionnaire?->sections ?? [] as $section) {
             $sectionAnswers = $review->sectionAnswers($section, $answers);
             foreach ($section->fields as $field) {
@@ -29,6 +31,10 @@ class IntakeProgress
                     continue;
                 }
                 if (! $review->visible($field->show_if, $sectionAnswers, $answers, $questionnaire->none_options ?? [])) {
+                    continue;
+                }
+                // Older app versions hide these questions, so they must not block those owners.
+                if (! $requireGrouped && $conditions->grouped($field->show_if)) {
                     continue;
                 }
                 if (($field->photo_config['existing_only'] ?? false) && ! $photos->references($value)) {

@@ -20,7 +20,7 @@ const flatten = node => Array.isArray(node) ? node.flatMap(flatten) : node && ty
 
 // Preserve hook instances by element type and key, matching React reconciliation.
 // This deliberately reuses the old row's refs if the component uses index keys.
-function form(initial, dateConfig = {}) {
+function form(initial, dateConfig = {}, extraSub = []) {
   let rows = initial;
   const instances = new Map();
   let hooks, cursor, active;
@@ -41,7 +41,7 @@ function form(initial, dateConfig = {}) {
     './PhotoInstructions': {}, './AttachmentField': {}, './ConfiguredPhotoField': {}, './FieldLabel': {}, './AgeField': {},
   });
   const field = { id: 'rows', type: 'repeater', label: 'Rows', sub: [
-    { id: 'name', type: 'text', label: 'Name' }, { id: 'date', type: 'month_year', label: 'Date', dateConfig },
+    { id: 'name', type: 'text', label: 'Name' }, { id: 'date', type: 'month_year', label: 'Date', dateConfig }, ...extraSub,
   ] };
   function render(node, path) {
     if (Array.isArray(node)) return node.map((child, index) => render(child, `${path}/${child?.key ?? index}`));
@@ -63,6 +63,7 @@ function form(initial, dateConfig = {}) {
   };
   return {
     rows: () => rows,
+    input: label => flatten(draw()).find(node => node.props?.accessibilityLabel === label),
     rowKeys: () => draw().map(n => n.key),
     toggle: index => flatten(draw()[index]).find(n => n.props.accessibilityLabel === 'Weet ik niet').props.onPress(),
     remove: index => flatten(draw()[index]).find(n => n.type === 'Pressable' && flatten(n).some(c => c.type === 'Trash2')).props.onPress(),
@@ -125,4 +126,24 @@ test('normal answer persistence retains IDs and all historical values on reload'
   await saveAnswer({ writeTransaction: callback => callback(tx) }, 'booking', 'test', 'rows', rows, () => 'unused');
   assert.deepEqual(JSON.parse(stored), rows);
   assert.deepEqual(repeater.withRepeaterRowIds(JSON.parse(stored)), rows);
+});
+
+test('numeric feed portions accept decimal commas and preserve legacy answers on viewing', () => {
+  const original = [{ name: 'Feed', amount: '1kg' }];
+  const ui = form(original, {}, [{ id: 'amount', type: 'number', label: 'Hoeveelheid', unit: 'kg' }]);
+  const input = () => ui.input('Hoeveelheid #1');
+  assert.equal(input().props.value, '1');
+  assert.equal(input().props.keyboardType, 'decimal-pad');
+  assert.equal(original[0].amount, '1kg');
+  input().props.onChangeText('0,5');
+  assert.equal(ui.rows()[0].amount, '0,5');
+  input().props.onChangeText('500g');
+  assert.equal(ui.rows()[0].amount, '0,5');
+  input().props.onChangeText('0.75');
+  assert.equal(ui.rows()[0].amount, '0.75');
+  input().props.onChangeText('1.2.3');
+  assert.equal(ui.rows()[0].amount, '0.75');
+  input().props.onChangeText('');
+  assert.equal(ui.rows()[0].amount, '');
+  assert.equal(repeater.repeaterNumberText('500 g', 'kg'), '', 'never guess that a legacy quantity is in kg');
 });

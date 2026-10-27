@@ -101,7 +101,9 @@ class IntakeComplaintPhysicalRefinementsTest extends TestCase
         $this->assertFalse($rows->firstWhere('key', 'foto-huid')['required']);
         $this->assertTrue($rows->firstWhere('key', 'foto-hoeven')['required']);
         $html = app(IntakeAnswersPdf::class)->html($booking->fresh());
-        $this->assertStringNotContainsString('HIDDEN-', $html);
+        // Hidden answers are kept, but only under "Eerder ingevuld", never as a current answer.
+        $this->assertStringNotContainsString('HIDDEN-', explode('Eerder ingevuld · ', $html)[0]);
+        $this->assertStringContainsString('Geen actuele bevinding', $html);
         $this->assertStringContainsString('Zichtbare hoofdklacht', $html);
         $this->answers($booking, ['fysiek' => ['bespiering' => 'Plaatselijk spierverlies zichtbaar'], 'klacht' => ['klacht-onderzocht' => 'Ja']]);
         $review = app(IntakeReview::class)->forBooking($booking->fresh());

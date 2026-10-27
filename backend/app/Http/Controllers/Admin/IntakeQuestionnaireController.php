@@ -279,7 +279,8 @@ class IntakeQuestionnaireController extends Controller
         $this->validateFieldJsonShapes($data);
         if ($data['photo_config'] !== null) {
             $validator = Validator::make(['photo' => $data['photo_config']], [
-                'photo' => ['array:max,year_required,allow_na,na_key,slots,grouped_hooves,legacy_field,existing_only,example_url,example_caption,example_after,caption,instruction_label,instructions'],
+                'photo' => ['array:max,year_required,allow_na,na_key,slots,grouped_hooves,legacy_field,existing_only,example_url,example_caption,example_after,caption,instruction_label,instructions,document_layout'],
+                'photo.document_layout' => ['sometimes', 'in:full_page'],
                 'photo.max' => ['sometimes', 'integer', 'min:1', 'max:100'],
                 'photo.year_required' => ['sometimes', 'boolean'],
                 'photo.allow_na' => ['sometimes', 'boolean'],
@@ -320,7 +321,18 @@ class IntakeQuestionnaireController extends Controller
         // Moving a question frees its presentation key, not its stored answer
         // namespace. Do not let a new question reuse those historical answers.
         $section = IntakeSection::findOrFail($data['section_id']);
-        $answerSection = $field?->answer_section_key ?? $section->key;
+        $answerSection = $field ? ($field->answer_section_key ?? $field->section->key) : $section->key;
+        if ($field && $field->section_id !== $section->id) {
+            if ($field->section->questionnaire_id !== $section->questionnaire_id) {
+                throw ValidationException::withMessages(['section_id' => 'Verplaats de vraag binnen dezelfde intake.']);
+            }
+            $data['answer_section_key'] = $answerSection;
+            $parents = $field->section->fields->keyBy('key');
+            $origin = $field->section->key;
+            $data['show_if'] = app(\App\Support\IntakeConditions::class)->qualify($data['show_if'],
+                fn ($key) => $parents->get($key)?->answer_section_key ?? $origin,
+                fn ($key) => $parents->get($key)?->answer_aliases ?? []);
+        }
         if (IntakeField::where('key', $data['key'])->when($field, fn ($q) => $q->whereKeyNot($field->id))
             ->whereHas('section', fn ($q) => $q->where('questionnaire_id', $section->questionnaire_id))
             ->where(fn ($q) => $q->where('answer_section_key', $answerSection)
@@ -346,8 +358,8 @@ class IntakeQuestionnaireController extends Controller
         if (! $this->isStringListOrNull($data['options'])) {
             $errors['options_json'] = 'Vul een JSON-array met antwoordteksten in.';
         }
-        if (! $this->isTriggerMapOrNull($data['show_if'])) {
-            $errors['show_if_json'] = 'Vul een JSON-object in met per veldsleutel één antwoord of een lijst antwoorden.';
+        if (! app(\App\Support\IntakeConditions::class)->valid($data['show_if'])) {
+            $errors['show_if_json'] = 'Gebruik veldsleutels met antwoorden, of groepen $all (alles), $any (minstens één) en $not (niet).';
         }
         foreach (['flag_if' => 'flag_if_json', 'critical_if' => 'critical_if_json'] as $column => $input) {
             if (! $this->isTriggerOrNull($data[$column])) {
@@ -386,24 +398,6 @@ class IntakeQuestionnaireController extends Controller
     private function isTriggerOrNull(mixed $value): bool
     {
         return $value === null || is_string($value) || $this->isStringListOrNull($value);
-    }
-
-    private function isTriggerMapOrNull(mixed $value): bool
-    {
-        if ($value === null) {
-            return true;
-        }
-        if (! is_array($value) || array_is_list($value)) {
-            return false;
-        }
-
-        foreach ($value as $trigger) {
-            if (! $this->isTriggerOrNull($trigger) || $trigger === null) {
-                return false;
-            }
-        }
-
-        return true;
     }
 
     private function decodeJson(mixed $value, string $field): mixed

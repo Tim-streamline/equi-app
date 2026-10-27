@@ -23,19 +23,40 @@ class IntakeRoughageGapsTest extends TestCase
         return IntakeBooking::create(['user_id' => $user->id, 'horse_id' => $horse->id]);
     }
 
-    public function test_hidden_followups_never_block_and_variable_gaps_require_both_followups(): void
+    public function test_hidden_followups_never_block_and_variable_gaps_require_only_explanation(): void
     {
         $booking = $this->booking();
         $main = 'hooi-zonder-ruwvoer-langste';
         $answer = $booking->answers()->create(['section_id' => 'voer', 'field_id' => $main, 'value' => json_encode('Wisselend')]);
         $missing = fn () => collect(app(IntakeProgress::class)->forBooking($booking->load('answers'))['missing'])->where('section', 'voer')->pluck('field')->filter(fn ($key) => str_starts_with($key, 'hooi-zonder-ruwvoer'))->values()->all();
-        $this->assertSame(['hooi-zonder-ruwvoer-toelichting', 'hooi-zonder-ruwvoer-frequentie'], $missing());
+        $this->assertSame(['hooi-zonder-ruwvoer-toelichting'], $missing());
+        $booking->answers()->create(['section_id' => 'voer', 'field_id' => 'hooi-zonder-ruwvoer-toelichting', 'value' => json_encode('Dit verschilt per dag.')]);
+        $this->assertSame([], $missing());
         $answer->update(['value' => json_encode('2 tot 4 uur')]);
         $this->assertSame(['hooi-zonder-ruwvoer-frequentie'], $missing());
         foreach (['Nooit, er is altijd ruwvoer beschikbaar', 'Weet ik niet'] as $value) {
             $answer->update(['value' => json_encode($value)]);
             $this->assertSame([], $missing());
         }
+    }
+
+    public function test_variable_gap_migration_preserves_existing_answers_and_other_configuration(): void
+    {
+        $booking = $this->booking();
+        $section = IntakeQuestionnaire::firstOrFail()->sections()->where('key', 'voer')->firstOrFail();
+        $field = $section->fields()->where('key', 'hooi-zonder-ruwvoer-frequentie')->firstOrFail();
+        $conditions = $field->show_if;
+        $conditions['hooi-zonder-ruwvoer-langste'][] = 'Wisselend';
+        $field->update(['show_if' => $conditions, 'label' => 'Eigen vraagtekst']);
+        $answer = $booking->answers()->create(['section_id' => 'voer', 'field_id' => $field->key, 'value' => json_encode('Dagelijks')]);
+        $before = $answer->fresh()->getAttributes();
+        $migration = require database_path('migrations/2026_10_27_000001_hide_roughage_frequency_for_variable_gaps.php');
+        $migration->up();
+        $migration->up();
+        $this->assertNotContains('Wisselend', $field->fresh()->show_if['hooi-zonder-ruwvoer-langste']);
+        $this->assertContains('2 tot 4 uur', $field->fresh()->show_if['hooi-zonder-ruwvoer-langste']);
+        $this->assertSame('Eigen vraagtekst', $field->fresh()->label);
+        $this->assertSame($before, $answer->fresh()->getAttributes());
     }
 
     public function test_migration_preserves_originals_and_maps_only_the_longest_duration_without_inventing_frequency(): void

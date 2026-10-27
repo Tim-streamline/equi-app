@@ -1108,10 +1108,10 @@
                                 <div class="mb-6 space-y-3"><h3 class="font-bold">Weekupdates van de eigenaar</h3>{#each weeklyUpdates as update (update.id)}<div class="rounded-xl bg-[#EAFBF9] p-4"><strong>Week {update.week_number}</strong><p class="mt-2 whitespace-pre-wrap text-sm">{update.note}</p></div>{/each}</div>
                             {/if}
                             <div class="rounded-2xl bg-[#EAFBF9] p-5">
-                                <Field label="Persoonlijke analyse" error={$form.errors['analysis.summary']} hint="Maximaal 4 korte zinnen (600 tekens). Benoem opvallende intakesignalen, mogelijke samenhang en de gekozen focus. Formuleer voorzichtig; vermijd onbewezen oorzaak-gevolgclaims.">
-                                    <Textarea aria-label="Persoonlijke analyse" bind:value={$form.analysis.summary} rows="4" maxlength="600" />
+                                <Field label="Persoonlijke analyse" error={$form.errors['analysis.summary']} hint="Maximaal 2100 tekens. Gebruik alinea’s om de tekst leesbaar te houden. Benoem opvallende intakesignalen, mogelijke samenhang en de gekozen focus. Formuleer voorzichtig; vermijd onbewezen oorzaak-gevolgclaims.">
+                                    <Textarea aria-label="Persoonlijke analyse" bind:value={$form.analysis.summary} rows="10" maxlength="2100" class="min-h-[260px] resize-y text-base leading-7" />
                                 </Field>
-                                <p class="mt-2 text-right text-xs text-[#1B2A2A]/50">{$form.analysis.summary.length}/600</p>
+                                <p class="mt-2 text-right text-xs text-[#1B2A2A]/50">{$form.analysis.summary.length}/2100</p>
                             </div>
                             <div class="mt-8">
                                 <div class="mb-4 flex items-center justify-between gap-3">
@@ -1153,7 +1153,7 @@
                             </div>
                             <div class="space-y-8 px-6 py-7 md:px-8">
                                 {#if $form.analysis.summary}
-                                    <section class="rounded-2xl bg-[#EAFBF9] p-4"><h3 class="text-xs font-bold uppercase tracking-wider text-[#0E6F69]">Persoonlijke analyse</h3><p class="mt-2 text-sm leading-5">{$form.analysis.summary}</p></section>
+                                    <section class="rounded-2xl bg-[#EAFBF9] p-5"><h3 class="text-xs font-bold uppercase tracking-wider text-[#0E6F69]">Persoonlijke analyse</h3><p class="mt-3 max-w-[72ch] whitespace-pre-wrap break-words text-base leading-7">{$form.analysis.summary}</p></section>
                                     <section><h3 class="text-xs font-bold uppercase tracking-wider text-[#1B2A2A]/70">Waar letten we op?</h3><ul class="mt-3 list-disc space-y-2 pl-4 text-sm">{#each $form.analysis.observations as observation}<li>{observation}</li>{/each}</ul></section>
                                 {/if}
                                 <section>

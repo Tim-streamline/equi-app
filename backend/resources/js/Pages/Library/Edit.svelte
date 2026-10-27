@@ -75,6 +75,7 @@
         published_at: isNew ? publishDate : (item.published_at ? item.published_at.slice(0, 10) : ''),
         credit_cost: isNew ? 1 : (item.credit_cost ?? 0),
         is_plus: item?.is_plus ?? false,
+        equiboost_access: item?.equiboost_access ?? null,
         attachments_present: true,
         attachments: (item?.attachments ?? []).map(file => ({ id: file.id, title: file.title, name: file.name, file: null })),
         is_featured: item?.is_featured ?? false,
@@ -86,6 +87,14 @@
     });
 
     const publication = useForm({});
+    const accessMode = $derived($form.equiboost_access ?? ($form.is_plus || Number($form.credit_cost) === 0 ? 'free' : 'credits'));
+    function setAccessMode(mode) {
+        $form.equiboost_access = ['only', 'included'].includes(mode) ? mode : null;
+        $form.is_plus = false;
+        if (mode === 'included') $form.credit_cost = Math.max(1, Number($form.credit_cost) || 1);
+        else if (mode !== 'credits') $form.credit_cost = 0;
+        else $form.credit_cost = Math.max(1, Number($form.credit_cost) || 1);
+    }
     function unpublish() {
         if (!item?.published_at || $publication.processing || $form.processing || mediaBusy || thumbnailBusy) return;
         if (!confirm('Dit item terugzetten naar concept? Het verdwijnt uit de bibliotheek en is niet meer toegankelijk voor gebruikers. Alle opgeslagen inhoud en instellingen blijven behouden.')) return;
@@ -175,11 +184,21 @@
                     <Field label="Reeksnaam" hint="Gebruik bij alle delen exact dezelfde naam. Dit bepaalt welke delen samen op de homepage verschijnen." error={$form.errors.series_name}><Input bind:value={$form.series_name} placeholder="Bijv. Artrose" /></Field>
                     <Field label="Deelnummer" hint="De homepage toont het eerste nog niet ontgrendelde deel van deze reeks." error={$form.errors.series_part}><Input type="number" min="1" max="999" step="1" bind:value={$form.series_part} placeholder="1" /></Field>
                     <label class="flex items-center gap-2 text-sm"><input type="checkbox" bind:checked={$form.is_featured} class="size-4 rounded border-input" /> Featured</label>
-                    <label class="flex items-center gap-2 text-sm"><input type="checkbox" bind:checked={$form.is_plus} class="size-4 rounded border-input" /> Inbegrepen bij abonnement</label>
-                    {#if $form.is_plus}
-                        <p class="text-sm text-muted-foreground">Inbegrepen bij een actief abonnement. Geen credits nodig. Eerder met credits ontgrendelde items blijven toegankelijk.</p>
+                    <Field label="Toegang" error={$form.errors.equiboost_access}>
+                        <select class="w-full rounded-lg border border-input bg-background px-3 py-2" value={accessMode} onchange={event => setAccessMode(event.currentTarget.value)}>
+                            <option value="free">Gratis voor alle abonnees</option>
+                            <option value="credits">Met credits</option>
+                            <option value="only">EquiBoost Only: alleen tijdens het EquiBoost-traject</option>
+                            <option value="included">Credits voor Basic — gratis tijdens EquiBoost</option>
+                        </select>
+                    </Field>
+                    {#if accessMode === 'free'}
+                        <p class="text-sm text-muted-foreground">Gratis voor iedereen met een actief abonnement, dus voor Basic én EquiBoost. Geen credits nodig.</p>
+                    {:else if accessMode === 'only' || accessMode === 'included'}
+                        <p class="text-sm text-muted-foreground">{accessMode === 'only' ? 'Alleen beschikbaar tijdens een actief EquiBoost-traject.' : 'Basic-abonnees ontgrendelen dit item voor het aantal credits dat je hieronder instelt. Tijdens EquiBoost is het gratis.'} De EquiBoost-toegang geldt drie maanden vanaf de eerste publicatie en activatie van het persoonlijke protocol. Eerder met credits ontgrendelde toegang blijft behouden.</p>
+                        {#if accessMode === 'included'}<Field label="Aantal credits voor Basic" error={$form.errors.credit_cost}><Input type="number" min="1" step="1" bind:value={$form.credit_cost} /></Field>{/if}
                     {:else}
-                        <Field label="Credits (0 = gratis)" error={$form.errors.credit_cost}><Input type="number" min="0" bind:value={$form.credit_cost} /></Field>
+                        <Field label="Aantal credits" hint="Deze creditprijs geldt voor Basic én EquiBoost." error={$form.errors.credit_cost}><Input type="number" min="1" bind:value={$form.credit_cost} /></Field>
                     {/if}
                 </CardContent>
             </Card>

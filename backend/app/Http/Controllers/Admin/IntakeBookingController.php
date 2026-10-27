@@ -8,6 +8,7 @@ use App\Models\Therapist;
 use App\Support\AuditLogger;
 use App\Support\IntakeAnswersPdf;
 use App\Support\IntakeReview;
+use App\Support\LibrarySyncLock;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -90,6 +91,8 @@ class IntakeBookingController extends Controller
 
         try {
             DB::transaction(function () use ($booking) {
+                // Horse and protocol deletion also acquire this lock before row locks.
+                LibrarySyncLock::acquire();
                 $locked = IntakeBooking::query()->lockForUpdate()->findOrFail($booking->id);
                 $locked->delete();
                 AuditLogger::deleted($locked);

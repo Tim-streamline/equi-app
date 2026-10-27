@@ -16,7 +16,6 @@ import { router, useLocalSearchParams } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
 import {
   ChevronDown,
-  Sparkles,
   UserRound,
 } from "lucide-react-native";
 import { useTabBarPadding } from "@/hooks/useTabBarPadding";
@@ -29,6 +28,7 @@ import { useHomePreferences } from "@/hooks/useHomePreferences";
 import { seasonalTipVisible } from "@/lib/home-preferences";
 import { ConnectionStatus } from "@/components/ui/ConnectionStatus";
 import { BRAND_NAME } from "@/constants/brand";
+import { ShelbyChatButton } from "@/components/shelby/ShelbyChatButton";
 
 export default function HomeScreen() {
   const { data, error, refresh, loading } = useHorseDashboard();
@@ -183,13 +183,8 @@ export default function HomeScreen() {
           </>
         )}
       </ScrollView>
-      <Pressable accessibilityRole="button" accessibilityLabel="Vraag het Shelby"
-        onPress={() => router.push({ pathname: "/nova-chat", params: { horseId: horse.id, protocolId: data?.protocol?.id ?? "" } })}
-        style={{ position: 'absolute', right: 20, bottom: padBottom, width: 56, height: 56,
-          alignItems: 'center', justifyContent: 'center', borderRadius: 28, backgroundColor: '#127A79',
-          elevation: 4, shadowColor: '#105C5B', shadowOpacity: 0.18, shadowRadius: 8, shadowOffset: { width: 0, height: 3 } }}>
-        <Sparkles size={24} color="#FFFFFF" />
-      </Pressable>
+      <ShelbyChatButton bottom={padBottom}
+        onPress={() => router.push({ pathname: "/nova-chat", params: { horseId: horse.id, protocolId: data?.protocol?.id ?? "" } })} />
       <Modal
         visible={hasHorse && pickerOpen}
         transparent

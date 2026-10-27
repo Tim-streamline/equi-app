@@ -128,7 +128,7 @@ class LibraryDeployment
         }
         unset($file);
 
-        $manifest = ['version' => 3, 'exported_at' => now()->toIso8601String(), 'records' => $records, 'files' => array_values($files)];
+        $manifest = ['version' => 4, 'exported_at' => now()->toIso8601String(), 'records' => $records, 'files' => array_values($files)];
         $temporary = $directory.'/.manifest-'.Str::uuid();
         try {
             $json = json_encode($manifest, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR).PHP_EOL;
@@ -326,7 +326,7 @@ class LibraryDeployment
 
     private function validateManifest(mixed $manifest): void
     {
-        if (! is_array($manifest) || ! in_array($manifest['version'] ?? null, [1, 2, 3], true) || ! is_array($manifest['files'] ?? null)) {
+        if (! is_array($manifest) || ! in_array($manifest['version'] ?? null, [1, 2, 3, 4], true) || ! is_array($manifest['files'] ?? null)) {
             throw new RuntimeException('Unsupported or invalid library bundle.');
         }
         $ids = [];
@@ -343,6 +343,7 @@ class LibraryDeployment
             $ids[$table] = [];
             foreach ($manifest['records'][$table] as $row) {
                 $fields = $this->fields($table);
+                if ($table === 'library_items' && $manifest['version'] < 4 && is_array($row) && ! array_key_exists('equiboost_access', $row)) $fields = array_diff($fields, ['equiboost_access']);
                 if ($table === 'library_categories' && $manifest['version'] < 3 && is_array($row) && ! array_key_exists('group_id', $row)) {
                     $fields = array_diff($fields, ['group_id', 'active']);
                 }

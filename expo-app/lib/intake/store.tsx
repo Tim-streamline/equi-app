@@ -32,7 +32,12 @@ function decode(raw: string | null): FieldValue { try { return JSON.parse(raw ??
 
 export function IntakeProvider({ children }: { children: ReactNode }) {
   const userId = useCurrentUserId();
-  const horseId = useCurrentHorseId();
+  const current = useCurrentHorseId();
+  // While the horses list refreshes during a sync it can be empty for a moment. Keep the
+  // horse the owner is working on, so the intake is not rebuilt and she keeps her place.
+  const lastHorse = useRef<{ userId: string; horseId: string }>({ userId, horseId: current });
+  if (current || lastHorse.current.userId !== userId) lastHorse.current = { userId, horseId: current };
+  const horseId = lastHorse.current.horseId;
   // An account/horse switch must never leave another horse's answers in the form.
   return <IntakeSelection key={`${userId}:${horseId}`} userId={userId} horseId={horseId}>{children}</IntakeSelection>;
 }

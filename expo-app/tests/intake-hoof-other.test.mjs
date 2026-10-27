@@ -32,3 +32,18 @@ test('Anders at the hoof question opens a required explanation that closes when 
   const seed = JSON.parse(readFileSync(new URL('../../backend/database/data/intake-questionnaire.json', import.meta.url), 'utf8'));
   check(seed.sections.find(section => section.id === 'medisch'));
 });
+
+test('other mineral sources open the existing short explanation for both label capitalisations', () => {
+  const seed = JSON.parse(readFileSync(new URL('../../backend/database/data/intake-questionnaire.json', import.meta.url), 'utf8'));
+  for (const section of [schema.INTAKE_SCHEMA, seed.sections].map(sections => sections.find(s => s.id === 'voer'))) {
+    const field = section.fields.find(f => f.id === 'mineralen-toegang-anders');
+    assert.equal(field.type, 'text');
+    assert.equal(field.label, 'Licht je antwoord toe.');
+    for (const option of ['anders', 'Anders', 'anders, namelijk', 'Anders, namelijk']) {
+      const answers = { voer: { 'mineralen-toegang': ['MSM (zwavel)', option] } };
+      assert.equal(logic.showField(field, answers.voer, answers), true);
+    }
+    assert.equal(logic.showField(field, { 'mineralen-toegang': ['geen'] }, { voer: { 'mineralen-toegang': ['geen'] } }), false);
+    assert.equal(logic.showField(field, { 'mineralen-toegang': ['MSM (zwavel)'] }, { voer: { 'mineralen-toegang': ['MSM (zwavel)'] } }), false);
+  }
+});

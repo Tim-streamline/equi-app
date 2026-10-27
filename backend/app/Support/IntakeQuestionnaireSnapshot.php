@@ -91,6 +91,7 @@ class IntakeQuestionnaireSnapshot
                 $this->requireColumns($field, array_diff(self::FIELD, ['signal_config', 'date_config', 'answer_aliases', 'submission_blocks']));
                 app(IntakeSafetySettings::class)->validateAliases($field['answer_aliases'] ?? null);
                 app(IntakeSubmissionBlocks::class)->validate($field['submission_blocks'] ?? null);
+                if (! app(IntakeConditions::class)->valid($field['show_if'] ?? null)) throw new RuntimeException('Invalid intake visibility rule.');
                 app(IntakeSignalPreparation::class)->validateConfig($field['signal_config'] ?? null);
                 app(IntakeDates::class)->validateConfig($field['date_config'] ?? null);
                 foreach ($field['repeater_sub'] ?? [] as $sub) app(IntakeDates::class)->validateConfig($sub['dateConfig'] ?? null);

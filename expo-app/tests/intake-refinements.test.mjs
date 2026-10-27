@@ -60,7 +60,7 @@ for (const [name, schema] of [['offline', INTAKE_SCHEMA], ['synced', synced]]) {
       }
       assert.ok(!missingRequired(section('voer'), { [gate]: 'Ja', [detail]: [{ product: 'Product A' }, { product: 'Product B' }] }).some(f => f.id === detail));
     }
-    assert.deepEqual(field('voer', 'bijvoeding-historie').sub.map(f => f.id), ['merk', 'product', 'wanneer', 'hoelang', 'hoeveelheid', 'voerbeurten']);
+    assert.deepEqual(field('voer', 'bijvoeding-historie').sub.map(f => f.id), ['merk', 'product', 'wanneer', 'hoelang', 'hoeveelheid', 'eenheid', 'voerbeurten']);
   });
   test(`${name}: blood upload is optional and conditional; duplicate water question is retired (OPT-89/90)`, () => {
     const gate = field('klacht', 'bloedonderzoek-gedaan');

@@ -29,7 +29,7 @@ export function LibraryContent({ itemId, preview }: { itemId: string; preview?: 
   const credits = (value: number) => `${value} ${value === 1 ? 'credit' : 'credits'}`;
 
   async function unlock() {
-    if (!data || data.canRead || data.item.isPlus || insufficient || pending.current || confirmedCost === null) return;
+    if (!data || data.canRead || data.item.isPlus || data.item.equiboostAccess === 'only' || insufficient || pending.current || confirmedCost === null) return;
     pending.current = true; setBusy(true); setPurchaseError('');
     try {
       update(await libraryRequest<Content>(`/${encodeURIComponent(itemId)}/unlock`, 'POST', undefined, { credits: confirmedCost }));
@@ -59,12 +59,17 @@ export function LibraryContent({ itemId, preview }: { itemId: string; preview?: 
       : pendingContent ? <View className="p-5 gap-3">
         {isConnected && <ActivityIndicator accessibilityLabel="Inhoud downloaden" color="#127A79" />}
         <Text className="text-ink-70">{isConnected ? 'Inhoud wordt gedownload…' : 'Deze inhoud is nog niet gedownload. Maak verbinding om het item offline te kunnen lezen.'}</Text>
+      </View> : !data.canRead && data.item.equiboostAccess === 'only' ? <View className="mx-5 mt-5 gap-3 rounded-2xl bg-mint-50 p-5">
+        <Text className="font-bold text-[20px] text-ink">EquiBoost Only</Text>
+        <Text className="text-[15px] text-ink-70">Dit item is inbegrepen tijdens je actieve EquiBoost-traject, tot drie maanden na de eerste publicatie en activatie van je persoonlijke protocol.</Text>
+        <Button title="Bekijk EquiBoost" onPress={() => router.push('/(tabs)/(pager)/protocol')} />
       </View> : !data.canRead && data.item.isPlus ? <View className="mx-5 mt-5 gap-3 rounded-2xl bg-mint-50 p-5">
-        <Text className="font-bold text-[20px] text-ink">Inbegrepen bij je abonnement</Text>
-        <Text className="text-[15px] text-ink-70">Dit item is beschikbaar met een actief abonnement.</Text>
+        <Text className="font-bold text-[20px] text-ink">Gratis voor alle abonnees</Text>
+        <Text className="text-[15px] text-ink-70">Dit item is gratis beschikbaar met een actief Basic-abonnement of EquiBoost-traject.</Text>
         <Button title="Bekijk abonnement" onPress={() => router.push('/(tabs)/account/subscription')} />
       </View> : !data.canRead ? <View className="mx-5 mt-5 gap-3 rounded-2xl bg-mint-50 p-5">
         <Text className="font-bold text-[20px] text-ink">Ontgrendel dit item</Text>
+          {data.item.equiboostAccess === 'included' && <Text className="text-[15px] text-ink-70">Voor Basic-abonnees kost dit item {credits(cost)}. Het is gratis tijdens de eerste drie maanden van je actieve EquiBoost-traject.</Text>}
           <Text className="text-[15px] text-ink-70">{insufficient ? `Je hebt nog ${credits(cost - balance)} nodig` : `Je hebt ${credits(balance)}`}</Text>
           {insufficient && <TemporaryCreditButton disabled={busy} onAdded={() => refresh()} />}
           {!insufficient && (confirmedCost !== null ? <>

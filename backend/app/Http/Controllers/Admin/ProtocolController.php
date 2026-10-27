@@ -70,6 +70,7 @@ class ProtocolController extends Controller
             'confirmed' => ['required_if:action,delete', 'accepted_if:action,delete'],
         ]);
         DB::transaction(function () use ($data) {
+            \App\Support\LibrarySyncLock::acquire();
             $protocols = Protocol::whereIn('id', $data['ids'])->orderBy('id')->lockForUpdate()->get();
             abort_unless($protocols->count() === count($data['ids']), 409, 'De selectie is gewijzigd. Vernieuw het overzicht.');
             foreach ($protocols as $protocol) {
@@ -125,6 +126,7 @@ class ProtocolController extends Controller
 
         try {
             $protocol = DB::transaction(function () use ($data, $protocolTemplate) {
+                \App\Support\LibrarySyncLock::acquire();
                 Horse::whereKey($data['horse_id'])->lockForUpdate()->firstOrFail();
                 $drafts = Protocol::where('horse_id', $data['horse_id'])->where('status', 'draft')->whereNull('protocol_template_id')->lockForUpdate()->get();
                 if ($drafts->count() > 1) {
@@ -170,6 +172,7 @@ class ProtocolController extends Controller
 
         try {
             DB::transaction(function () use ($data, $protocol) {
+                \App\Support\LibrarySyncLock::acquire();
                 $protocol = Protocol::query()->lockForUpdate()->findOrFail($protocol->id);
                 if ($protocol->status === 'archived') {
                     $data['status'] = 'archived';
@@ -218,6 +221,7 @@ class ProtocolController extends Controller
     {
         $status = $request->validate(['status' => ['required', 'in:draft,active,paused,completed']])['status'];
         DB::transaction(function () use ($protocol, $status, $request) {
+            \App\Support\LibrarySyncLock::acquire();
             $protocol = Protocol::whereKey($protocol->id)->lockForUpdate()->firstOrFail();
             abort_if($protocol->status === 'archived', 422, 'Herstel het protocol eerst vanuit het archief.');
             if ($status === 'active') $protocol->assertIntakeSubmitted();

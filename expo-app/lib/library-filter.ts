@@ -1,4 +1,4 @@
-import type { LibraryAccess } from './library';
+import { libraryCanRead, type LibraryAccess } from './library.ts';
 export type LibraryFilterItem = {
   id: string;
   title?: string | null;
@@ -6,6 +6,7 @@ export type LibraryFilterItem = {
   format?: string;
   creditCost?: number;
   isPlus?: boolean | number;
+  equiboostAccess?: 'only' | 'included' | null;
 };
 
 export type LibraryItemCategoryLink = {
@@ -98,11 +99,11 @@ export function filterLibraryItems<T extends LibraryFilterItem>(
     })) return false;
     if (filters.savedOnly && !filters.savedIds?.includes(item.id)) return false;
     if (filters.formats?.length && !filters.formats.includes(item.format ?? 'article')) return false;
-    const price = Number(item.creditCost) || 0;
-    if (filters.excludeFree && !item.isPlus && price === 0) return false;
-    if (filters.credits?.length && (item.isPlus || !filters.credits.some(band =>
+    const price = item.isPlus ? 0 : Number(item.creditCost) || 0;
+    if (filters.excludeFree && !item.equiboostAccess && price === 0) return false;
+    if (filters.credits?.length && (item.equiboostAccess === 'only' || !filters.credits.some(band =>
       band === 'free' ? price === 0 : band === '4+' ? price >= 4 : price === Number(band)))) return false;
-    if (filters.accessibleOnly && (!filters.access || !(filters.access.allowedIds ? filters.access.allowedIds.includes(item.id) : filters.access.unlockedIds.includes(item.id) || (item.isPlus ? filters.access.hasPlus : price === 0)))) return false;
+    if (filters.accessibleOnly && (!filters.access || !libraryCanRead({ ...item, title: item.title ?? undefined, description: item.description ?? undefined, isPlus: !!item.isPlus }, filters.access))) return false;
     if (!normalizedQuery) return true;
 
     return normalizeSearchText(`${item.title ?? ''} ${item.description ?? ''}`)

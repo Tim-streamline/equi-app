@@ -116,8 +116,16 @@ export function isFieldAnswered(field: Field, value: unknown, allAnswers?: Intak
     // no real answer — require at least one row with a non-empty sub-value.
     if (!Array.isArray(value)) return false;
     const dateSubs = (field.sub ?? []).filter(sub => sub.type === 'month_year');
+    const unitSubs = (field.sub ?? []).filter(sub => sub.type === 'number' && sub.unitField);
     for (const row of value) {
       if (!row || typeof row !== 'object') continue;
+      // A new numeric quantity needs its chosen unit; legacy free text ("2 scheppen") stays valid.
+      for (const sub of unitSubs) {
+        const amount = (row as Record<string, unknown>)[sub.id];
+        const unit = (row as Record<string, unknown>)[sub.unitField!];
+        if ((typeof amount === 'string' || typeof amount === 'number') && /^\d+(?:[.,]\d*)?$/.test(String(amount).trim())
+          && !(typeof unit === 'string' && unit.trim())) return false;
+      }
       for (const sub of dateSubs) {
         const v = row[sub.id];
         if (v !== undefined && v !== null && v !== '' && !dateAnswered(v, sub.dateConfig)) return false;
@@ -218,13 +226,26 @@ export function showField(
   if (field.photoConfig?.existing_only && !photoReferences(sectionAnswers[field.id]).length) return false;
   if (!field.showIf) return true;
   for (const [k, trigger] of Object.entries(field.showIf)) {
+    if (k === '$all' || k === '$any') {
+      const results = (trigger as NonNullable<Field['showIf']>[]).map(showIf => showField({ ...field, photoConfig: undefined, showIf }, sectionAnswers, allAnswers, noneOptions));
+      if (k === '$all' ? !results.every(Boolean) : !results.some(Boolean)) return false;
+      continue;
+    }
+    if (k === '$not') {
+      if (showField({ ...field, photoConfig: undefined, showIf: trigger as Field['showIf'] }, sectionAnswers, allAnswers, noneOptions)) return false;
+      continue;
+    }
     const value = k.includes('.')
       ? (() => {
           const [sid, fid] = k.split('.');
           return allAnswers?.[sid]?.[fid];
         })()
       : sectionAnswers[k];
-    const set = Array.isArray(trigger) ? trigger : [trigger];
+    if (trigger && typeof trigger === 'object' && !Array.isArray(trigger) && 'gte' in trigger) {
+      if (value === null || value === undefined || value === '' || !Number.isFinite(Number(value)) || Number(value) < Number(trigger.gte)) return false;
+      continue;
+    }
+    const set = (Array.isArray(trigger) ? trigger : [trigger]) as string[];
     // Special marker: show when the referenced multi field has at least one
     // non-"geen" option selected (used for "describe what you picked" follow-ups).
     if (set.includes('any-checked')) {
@@ -238,7 +259,7 @@ export function showField(
       if (checkedCount(value, noneOptions) < 2) return false;
       continue;
     }
-    if (!matches(value, trigger)) return false;
+    if (!matches(value, trigger as Trigger)) return false;
   }
   return true;
 }

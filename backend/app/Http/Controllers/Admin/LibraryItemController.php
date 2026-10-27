@@ -35,7 +35,8 @@ class LibraryItemController extends Controller
             ->when($request->string('gate')->toString(), function ($query, $g) {
                 match ($g) {
                     'credits' => $query->where('is_plus', false)->where('credit_cost', '>', 0),
-                    'plus' => $query->where('is_plus', true),
+                    'equiboost' => $query->whereNotNull('equiboost_access'),
+                    'plus' => $query->whereNull('equiboost_access')->where(fn ($q) => $q->where('is_plus', true)->orWhere('credit_cost', 0)),
                     'featured' => $query->where('is_featured', true),
                     'draft' => $query->whereNull('published_at'),
                     default => null,
@@ -64,6 +65,7 @@ class LibraryItemController extends Controller
             'author' => $i->author?->name,
             'credit_cost' => $i->credit_cost,
             'is_plus' => $i->is_plus,
+            'equiboost_access' => $i->equiboost_access,
             'is_featured' => $i->is_featured,
             'order' => $i->order,
             'published' => (bool) $i->published_at,
@@ -301,6 +303,7 @@ class LibraryItemController extends Controller
             'published_at' => ['nullable', 'date'],
             'credit_cost' => ['sometimes', 'integer', 'min:0', 'max:10000'],
             'is_plus' => ['boolean'],
+            'equiboost_access' => ['sometimes', 'nullable', 'in:only,included'],
             'is_featured' => ['boolean'],
             'order' => ['nullable', 'integer', 'min:0', 'max:'.LibraryItem::MAX_ORDER],
             'series_name' => ['nullable', 'required_with:series_part', 'string', 'max:255'],
@@ -333,7 +336,11 @@ class LibraryItemController extends Controller
             $validated['thumbnail_mode'] = 'manual';
         }
 
-        if ($validated['is_plus'] ?? ($id ? LibraryItem::find($id)?->is_plus : false)) {
+        $equiboost = array_key_exists('equiboost_access', $validated) ? $validated['equiboost_access'] : ($id ? LibraryItem::find($id)?->equiboost_access : null);
+        if ($equiboost) {
+            $validated['is_plus'] = false;
+            $validated['credit_cost'] = $equiboost === 'only' ? 0 : max(1, (int) ($validated['credit_cost'] ?? ($id ? LibraryItem::find($id)?->credit_cost : 1)));
+        } elseif ($validated['is_plus'] ?? ($id ? LibraryItem::find($id)?->is_plus : false)) {
             $validated['credit_cost'] = 0;
         }
 

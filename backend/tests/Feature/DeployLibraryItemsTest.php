@@ -222,7 +222,7 @@ class DeployLibraryItemsTest extends TestCase
         Storage::disk('local')->put('library-attachments/checklist.pdf', '%PDF-private');
         $attachment = $item->attachments()->create(['title' => 'Checklist', 'name' => 'checklist.pdf', 'path' => 'library-attachments/checklist.pdf', 'size_bytes' => 12, 'order' => 2]);
         $manifest = app(LibraryDeployment::class)->export($this->bundle);
-        $this->assertSame(3, $manifest['version']);
+        $this->assertSame(4, $manifest['version']);
         $this->assertSame([], collect($manifest['files'])->firstWhere('disk', 'local')['urls']);
         $this->emptyCatalog();
         Storage::fake('local');

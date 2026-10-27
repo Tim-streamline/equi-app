@@ -10,7 +10,7 @@ import { IntakeInputFrame, IntakeTextInput as TextInput } from './IntakeScrollVi
 import { Field, FieldValue, RepeaterSub, RepeaterRow } from '@/lib/intake/schema';
 import { formatDate } from '@/lib/intake/dates';
 import type { DateAnswer } from '@/lib/intake/dates';
-import { createRepeaterRow, withRepeaterRowIds } from '@/lib/intake/repeater';
+import { createRepeaterRow, withRepeaterRowIds, isRepeaterNumberInput, repeaterNumberText, repeaterUnitColumns, repeaterUnitMissing, repeaterValueText } from '@/lib/intake/repeater';
 import { MonthYearField } from './MonthYearField';
 import { normalizeAnswer, isFieldRequired, isNoneOption, repeaterNotApplicable, repeaterNaKey, photoNotApplicable, photoReferences, photoSlotReferences } from '@/lib/intake/logic';
 import { useIntake } from '@/lib/intake/store';
@@ -117,9 +117,10 @@ export function IntakeField({ field, sectionId, n, noneOptions }: Props) {
 function ReadOnlyAnswer({ field, value, answers }: { field: Field; value: FieldValue; answers: Record<string, FieldValue> }) {
   let text = '';
   if (field.type === 'repeater' && Array.isArray(value)) {
-    text = value.map(row => (field.sub ?? []).map(sub => {
+    const unitColumns = repeaterUnitColumns(field.sub ?? []);
+    text = value.map(row => (field.sub ?? []).filter(sub => !unitColumns.has(sub.id)).map(sub => {
       const entry = row && typeof row === 'object' ? (row as RepeaterRow)[sub.id] : null;
-      return entry ? `${sub.label}: ${sub.type === 'month_year' ? formatDate(entry) : entry}` : '';
+      return entry ? `${sub.label}: ${sub.type === 'month_year' ? formatDate(entry) : repeaterValueText(row as RepeaterRow, sub)}` : '';
     }).filter(Boolean).join('\n')).filter(Boolean).join('\n\n');
   } else text = field.type === 'month_year' ? formatDate(value) : Array.isArray(value) ? value.join(' · ') : value == null ? '' : String(value);
   if (field.unit && text) text += ` ${field.unit}`;
@@ -524,38 +525,38 @@ function RepeaterField({
         {rows.map((row, i) => (
           <View
             key={row._rowId as string}
-            className="gap-2 rounded-xl border border-ink-8 bg-white p-3"
+            className="gap-5 rounded-xl border border-ink-8 bg-white p-4"
           >
             <View className="flex-row items-center justify-between">
-              <Text className="font-semi text-[11px] uppercase tracking-eyebrow text-ink-50">
+              <Text className="font-semi text-[13px] leading-[20px] text-ink-70">
                 #{i + 1}
               </Text>
-              <Pressable onPress={() => remove(row._rowId as string)} hitSlop={8}>
-                <Trash2 size={14} color="rgba(27,42,42,0.5)" />
+              <Pressable accessibilityRole="button" accessibilityLabel={`Verwijder item ${i + 1}`} onPress={() => remove(row._rowId as string)} hitSlop={8} className="h-11 w-11 items-center justify-center">
+                <Trash2 size={20} color="rgba(27,42,42,0.7)" />
               </Pressable>
             </View>
             {sub.map((s) => (
               <View key={s.id}>
-                <Text className="mb-1 text-[11px] font-semi tracking-display text-ink-70">
+                <Text className="mb-2 text-[14.5px] leading-[20px] font-semi text-ink">
                   {s.label}
                 </Text>
                 {s.hint && (
-                  <Text className="mb-1.5 text-[11px] leading-[15px] text-ink-50">{s.hint}</Text>
+                  <Text className="mb-2 text-[12px] leading-[16px] text-ink-70">{s.hint}</Text>
                 )}
                 {s.type === 'month_year' ? <MonthYearField value={row[s.id]} onChange={v => update(row._rowId as string, s.id, v)} config={s.dateConfig} label={`${s.label} #${i + 1}`} /> : s.type === 'radio' && s.options ? (
-                  <View className="flex-row flex-wrap gap-1.5">
+                  <View className="flex-row flex-wrap gap-2">
                     {s.options.map((o) => {
                       const active = row[s.id] === o;
                       return (
                         <Pressable
                           key={o}
                           onPress={() => update(row._rowId as string, s.id, o)}
-                          className={`rounded-pill border px-3 py-1.5 ${
+                          className={`min-h-12 items-center justify-center rounded-pill border px-4 py-3 ${
                             active ? 'border-mint-500 bg-mint-500' : 'border-ink-8 bg-canvas'
                           }`}
                         >
                           <Text
-                            className={`font-semi text-[12.5px] ${
+                            className={`font-semi text-[15px] leading-[22px] ${
                               active ? 'text-white' : 'text-ink-70'
                             }`}
                           >
@@ -566,14 +567,20 @@ function RepeaterField({
                     })}
                   </View>
                 ) : (
-                  <IntakeInputFrame radius={8} className="rounded-lg border border-ink-8 bg-canvas"><TextInput
-                    value={typeof row[s.id] === 'string' ? row[s.id] as string : ''}
-                    onChangeText={(v) => update(row._rowId as string, s.id, v)}
+                  <View>
+                  <IntakeInputFrame radius={8} className="flex-row items-center rounded-lg border border-ink-8 bg-canvas"><TextInput
+                    accessibilityLabel={`${s.label} #${i + 1}`}
+                    value={s.type === 'number' ? repeaterNumberText(row[s.id], s.unit) : typeof row[s.id] === 'string' ? row[s.id] as string : ''}
+                    onChangeText={(v) => { if (s.type !== 'number' || isRepeaterNumberInput(v)) update(row._rowId as string, s.id, v); }}
                     multiline={s.type === 'textarea'}
                     keyboardType={s.type === 'number' ? 'decimal-pad' : 'default'}
                     placeholderTextColor="rgba(27,42,42,0.4)"
-                    className="px-3 py-2 font-sans text-[13.5px] text-ink"
-                  /></IntakeInputFrame>
+                    className="min-w-0 flex-1 px-4 py-3.5 font-sans text-[15px] leading-[22px] text-ink"
+                    style={s.type === 'textarea' ? { minHeight: 112, textAlignVertical: 'top' } : { minHeight: 48 }}
+                  />{s.unit && <Text className="pr-4 font-semi text-[15px] text-ink-70">{s.unit}</Text>}</IntakeInputFrame>
+                  {s.type === 'number' && !!row[s.id] && !repeaterNumberText(row[s.id], s.unit) && <Text className="mt-2 text-[13px] leading-[20px] text-ink-70">Eerder ingevuld: {String(row[s.id])}. Vul hierboven alleen het getal{s.unit ? ` in ${s.unit}` : ''} in.</Text>}
+                  {repeaterUnitMissing(row as RepeaterRow, s) && <Text className="mt-2 text-[13px] leading-[20px] text-ink-70">Kies hieronder de eenheid.</Text>}
+                  </View>
                 )}
               </View>
             ))}
@@ -582,10 +589,10 @@ function RepeaterField({
       </View>
       <Pressable
         onPress={add}
-        className="mt-3 flex-row items-center justify-center gap-2 rounded-xl border border-dashed border-ink-15 bg-white py-3"
+        className="mt-3 min-h-12 flex-row items-center justify-center gap-2 rounded-xl border border-dashed border-ink-15 bg-white px-4 py-3.5"
       >
-        <Plus size={16} color="#108A82" />
-        <Text className="font-semi text-[13px] text-mint-700">
+        <Plus size={20} color="#108A82" />
+        <Text className="font-semi text-[15px] leading-[22px] text-mint-700">
           {addLabel ?? (value.length === 0 ? (firstAddLabel ?? 'Eerste toevoegen') : 'Nog één toevoegen')}
         </Text>
       </Pressable>

@@ -25,6 +25,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
     'published_at',
     'credit_cost',
     'is_plus',
+    'equiboost_access',
     'is_featured',
     'order',
     'series_name',
@@ -33,6 +34,16 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 class LibraryItem extends Model
 {
     use HasUuids;
+
+    protected static function booted(): void
+    {
+        static::saving(function (self $item): void {
+            if ($item->equiboost_access) {
+                $item->is_plus = false;
+                $item->credit_cost = $item->equiboost_access === 'only' ? 0 : max(1, (int) $item->credit_cost);
+            }
+        });
+    }
 
     public const MAX_ORDER = 2147483647;
 

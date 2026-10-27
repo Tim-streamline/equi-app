@@ -47,6 +47,8 @@ class IntakeBooking extends Model
     {
         // A configured protocol must retain its intake. Delete the protocol explicitly instead.
         return DB::transaction(function () {
+            // Same lock order as Protocol::delete() and library sync: library lock before row locks.
+            \App\Support\LibrarySyncLock::acquire();
             $protocol = $this->protocol()->lockForUpdate()->firstOrFail();
             if ($protocol->status !== 'draft' || $protocol->protocol_template_id || $protocol->published_at) {
                 throw ValidationException::withMessages(['booking_delete' => 'Deze intake hoort bij een protocol. Verwijder het protocol om ook de intake te verwijderen.']);

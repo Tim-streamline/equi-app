@@ -33,6 +33,22 @@ class ProtocolIntakeIntegrityTest extends TestCase
         DB::statement('SET CONSTRAINTS ALL IMMEDIATE');
     }
 
+    public function test_deleting_a_draft_intake_takes_the_library_lock_before_locking_rows(): void
+    {
+        $horse = $this->horse();
+        $intake = IntakeBooking::create(['user_id' => $horse->owner_id, 'horse_id' => $horse->id]);
+        $queries = [];
+        DB::listen(function ($query) use (&$queries) {
+            if (str_contains($query->sql, 'pg_advisory_xact_lock(724119301)')) $queries[] = 'library';
+            elseif (str_contains(strtolower($query->sql), 'for update')) $queries[] = 'row';
+        });
+
+        $intake->delete();
+
+        $this->assertSame('library', $queries[0] ?? null);
+        $this->assertContains('row', $queries);
+    }
+
     public function test_protocol_history_keeps_separate_intakes_and_nutrition_answers(): void
     {
         $horse = $this->horse();

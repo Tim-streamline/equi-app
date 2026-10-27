@@ -206,7 +206,8 @@ class IntakeSubmissionMailTest extends TestCase
         $document = new \DOMDocument;
         $document->loadHTML('<?xml encoding="UTF-8">'.$html);
         $xpath = new \DOMXPath($document);
-        $this->assertCount(13, $xpath->query('//h2'));
+        // Thirteen current sections; answers to hidden questions follow under "Eerder ingevuld".
+        $this->assertCount(13, $xpath->query('//h2[not(contains(., "Eerder ingevuld"))]'));
         $this->assertCount(11, $xpath->query('//li[text()="Geselecteerd A"]'));
         $this->assertCount(11, $xpath->query('//li[text()="Geselecteerd B"]'));
         foreach (range(3, 13) as $number) {

@@ -5,7 +5,7 @@ import test from 'node:test';
 const source = readFileSync(new URL('../../resources/js/Pages/FeedScanner/Products.svelte', import.meta.url), 'utf8');
 const script = source.match(/<script>([\s\S]*?)<\/script>/)[1].replace(/^\s*import .*;$/gm, '');
 
-function setup() {
+function setup(fetch = () => { throw new Error('Unexpected request'); }) {
     const requests = [];
     let defaults;
     const form = {
@@ -16,10 +16,12 @@ function setup() {
     };
     const uploadForm = { reset() {}, clearErrors() {}, post(url) { requests.push({ url }); } };
     const props = { products: { data: [] }, filters: {}, categories: { complementary: 'Aanvullend' }, ingredientOptions: [] };
-    const run = new Function('$props', '$state', '$derived', 'useForm', '$form', '$uploadForm', 'router', 'prompt', `${script}
-        return { edit, newRecipe, save, reviewProduct, beginUpload, upload, modalState: () => ({ open, historyOpen, uploadOpen }) };`);
+    const run = new Function('$props', '$state', '$derived', 'useForm', '$form', '$uploadForm', 'router', 'prompt', 'fetch', 'csrfHeaders', `${script}
+        return { edit, save, reviewProduct, beginUpload, upload, prefill, setProductOpen,
+            setLabel: text => aiText = text, aiState: () => ({ aiBusy, aiError, aiNotes }),
+            modalState: () => ({ open, historyOpen, uploadOpen }) };`);
     const actions = run(() => props, value => value, value => value, () => ({}), form, uploadForm,
-        { post: (url, data) => requests.push({ url, data }) }, () => 'Meer informatie over dit etiket');
+        { post: (url, data) => requests.push({ url, data }) }, () => 'Meer informatie over dit etiket', fetch, () => ({}));
     return { actions, form, requests };
 }
 
@@ -58,15 +60,80 @@ test('review and attachment actions target the chosen revision', () => {
 });
 
 
-test('another recipe starts a separate product without copying composition or evidence', () => {
+test('adding a product starts a blank draft without a recipe relationship', () => {
     const { actions, form } = setup();
-    actions.newRecipe({ id: 'original', brand: 'Merk', name: 'Voer', barcode: '123', versions: [newer] });
-    assert.equal(form.related_product_id, 'original');
+    actions.edit();
+    assert.equal(form.related_product_id, null);
     assert.equal(form.source_version_id, null);
     assert.equal(form.expected_number, null);
-    assert.equal(form.brand, 'Merk');
-    assert.equal(form.barcode, '123');
+    assert.equal(form.brand, '');
+    assert.equal(form.barcode, '');
     assert.deepEqual(form.ingredients, []);
     assert.deepEqual(form.nutrients, []);
     assert.equal(form.composition_text, '');
+});
+
+const deferred = () => {
+    let resolve, reject;
+    const promise = new Promise((yes, no) => { resolve = yes; reject = no; });
+    return { promise, resolve, reject };
+};
+const extraction = name => ({ ok: true, json: async () => ({
+    data: { name, ingredients: [{ label: `${name} ingredient` }], nutrients: [{ code: 'sugar', value: '3' }] }, notes: [`Check ${name}`],
+}) });
+
+test('an extraction from a closed product cannot overwrite the next product or finish its loading state', async () => {
+    const first = deferred(), second = deferred();
+    const replies = [first, second];
+    const { actions, form } = setup(() => replies.shift().promise);
+    actions.edit(product, older);
+    actions.setLabel('Alice label');
+    const pendingFirst = actions.prefill();
+    actions.setProductOpen(false);
+    actions.edit({ id: 'other-product', versions: [newer] });
+    actions.setLabel('Bob label');
+    const pendingSecond = actions.prefill();
+    first.resolve(extraction('Alice'));
+    await pendingFirst;
+    assert.equal(form.name, 'Bob');
+    assert.equal(form.source_version_id, newer.id);
+    assert.deepEqual(form.ingredients, []);
+    assert.deepEqual(form.nutrients, []);
+    assert.deepEqual(actions.aiState(), { aiBusy: true, aiError: '', aiNotes: null });
+    second.resolve(extraction('Bob extracted'));
+    await pendingSecond;
+    assert.equal(form.name, 'Bob extracted');
+    assert.deepEqual(form.ingredients, [{ label: 'Bob extracted ingredient' }]);
+    assert.deepEqual(actions.aiState(), { aiBusy: false, aiError: '', aiNotes: ['Check Bob extracted'] });
+});
+
+test('closing the product discards its extraction even without opening another form', async () => {
+    const response = deferred();
+    const { actions, form } = setup(() => response.promise);
+    actions.edit(product, older);
+    actions.setLabel('Alice label');
+    const pending = actions.prefill();
+    actions.setProductOpen(false);
+    response.resolve(extraction('Changed'));
+    await pending;
+    assert.equal(form.name, 'Alice');
+    assert.deepEqual(actions.aiState(), { aiBusy: false, aiError: '', aiNotes: null });
+});
+
+for (const failure of ['network', 'server']) test(`a stale ${failure} error does not affect another extraction`, async () => {
+    const first = deferred(), second = deferred();
+    const replies = [first, second];
+    const { actions } = setup(() => replies.shift().promise);
+    actions.edit(product, older);
+    actions.setLabel('Alice label');
+    const pendingFirst = actions.prefill();
+    actions.edit(product, newer);
+    actions.setLabel('Bob label');
+    const pendingSecond = actions.prefill();
+    if (failure === 'network') first.reject(new Error('Offline'));
+    else first.resolve({ ok: false, json: async () => ({ message: 'Old error' }) });
+    await pendingFirst;
+    assert.deepEqual(actions.aiState(), { aiBusy: true, aiError: '', aiNotes: null });
+    second.resolve(extraction('Bob'));
+    await pendingSecond;
 });

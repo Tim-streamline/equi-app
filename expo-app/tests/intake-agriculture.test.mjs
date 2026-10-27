@@ -32,8 +32,10 @@ const block = (section) => ({ ...section, fields: section.fields.filter((field) 
 
 test('backend and fallback append the same complete agriculture block to housing', () => {
   assert.deepEqual(fallback.fields, definition.fields);
-  assert.equal(fallback.fields.at(-1).id, 'omgeving-overig');
-  assert.equal(fallback.fields.at(-12).label, 'Omgeving & landbouwpercelen');
+  assert.equal(fallback.fields.at(-1).id, 'leefomgeving-overzicht');
+  const environment = fallback.fields.filter(field => field.id !== 'leefomgeving-overzicht');
+  assert.equal(environment.at(-1).id, 'omgeving-overig');
+  assert.equal(environment.at(-12).label, 'Omgeving & landbouwpercelen');
   assert.equal(block(fallback).fields.length, 11);
 });
 

@@ -4,11 +4,15 @@ namespace Tests\Feature;
 
 use App\Http\Middleware\AuthenticatePowerSyncJwt;
 use App\Models\AdminUser;
+use App\Models\Horse;
 use App\Models\LibraryItem;
+use App\Models\Protocol;
 use App\Models\User;
 use App\Support\CreditLedger;
+use App\Support\HorseDeletion;
 use Illuminate\Foundation\Testing\DatabaseMigrations;
 use Illuminate\Support\Facades\DB;
+use PHPUnit\Framework\Attributes\TestWith;
 use Symfony\Component\Process\Process;
 use Tests\Concerns\HasSubscription;
 use Tests\TestCase;
@@ -18,7 +22,97 @@ class LibraryLockOrderTest extends TestCase
     // Committed fixtures are essential: a wrapping test transaction would
     // already hold the advisory lock acquired by the fixture insert triggers.
     use DatabaseMigrations;
+
+    /**
+     * Rebuild instead of rolling back afterwards: some migrations refuse a rollback once data
+     * exists, which used to leave a partial schema for every test that ran after this class.
+     */
+    public function runDatabaseMigrations(): void
+    {
+        $this->beforeRefreshingDatabase();
+        $this->refreshTestDatabase();
+        $this->afterRefreshingDatabase();
+        $this->beforeApplicationDestroyed(fn () => \Illuminate\Foundation\Testing\RefreshDatabaseState::$migrated = false);
+    }
     use HasSubscription;
+
+    #[TestWith(['draft', true])]
+    #[TestWith(['paused', false])]
+    public function test_admin_booking_deletion_holds_the_sync_lock_before_locking_the_booking(string $status, bool $deletable): void
+    {
+        $admin = AdminUser::create(['name' => 'Admin', 'email' => 'booking-lock@example.test',
+            'password' => 'password', 'role' => 'owner', 'active' => true]);
+        $user = User::factory()->create();
+        $horse = Horse::create(['owner_id' => $user->id, 'name' => 'Booking lock test', 'status' => 'active']);
+        $protocol = Protocol::create(['horse_id' => $horse->id, 'title' => 'Booking protocol', 'status' => $status]);
+        $bookingId = $protocol->intake->id;
+
+        config(['database.connections.library_lock_probe' => config('database.connections.'.config('database.default'))]);
+        $probe = DB::connection('library_lock_probe');
+        $canAcquire = fn () => $probe->selectOne('SELECT pg_try_advisory_xact_lock(724119301) AS acquired')->acquired;
+        $this->assertTrue($canAcquire(), 'Fixture transactions must release their locks.');
+        $heldBeforeBookingLock = [];
+        $checking = true;
+        DB::connection()->beforeExecuting(function (string $sql) use (&$heldBeforeBookingLock, &$checking, $canAcquire): void {
+            if ($checking && preg_match('/from "intake_bookings".*for update/is', $sql)) {
+                // Observe from another connection before the endpoint takes its first row lock.
+                $heldBeforeBookingLock[] = ! $canAcquire();
+            }
+        });
+
+        try {
+            $response = $this->actingAs($admin, 'admin')->delete('/admin/bookings/'.$bookingId, ['confirm_delete' => true]);
+            $this->assertNotEmpty($heldBeforeBookingLock, 'The endpoint must exercise the booking row lock.');
+            $this->assertNotContains(false, $heldBeforeBookingLock, 'Booking deletion must hold the library lock before locking the booking.');
+            $this->assertTrue($canAcquire(), 'Deletion must release the advisory lock on commit or rollback.');
+            if ($deletable) {
+                $response->assertRedirect(route('admin.bookings.index'))->assertSessionHasNoErrors();
+                $this->assertDatabaseMissing('intake_bookings', ['id' => $bookingId]);
+                $this->assertDatabaseMissing('protocols', ['id' => $protocol->id]);
+            } else {
+                $response->assertSessionHasErrors('booking_delete');
+                $this->assertDatabaseHas('intake_bookings', ['id' => $bookingId]);
+                $this->assertDatabaseHas('protocols', ['id' => $protocol->id]);
+            }
+            $this->assertDatabaseHas('horses', ['id' => $horse->id]);
+        } finally {
+            $checking = false;
+            DB::purge('library_lock_probe');
+        }
+    }
+
+    public function test_horse_deletion_holds_the_sync_lock_before_locking_the_horse(): void
+    {
+        $user = User::factory()->create();
+        $horse = Horse::create(['owner_id' => $user->id, 'name' => 'Deletion lock test', 'status' => 'active']);
+        $protocol = Protocol::create(['horse_id' => $horse->id, 'title' => 'Draft protocol', 'status' => 'draft']);
+        $bookingId = $protocol->intake->id;
+
+        config(['database.connections.library_lock_probe' => config('database.connections.'.config('database.default'))]);
+        $probe = DB::connection('library_lock_probe');
+        $canAcquire = fn () => $probe->selectOne('SELECT pg_try_advisory_xact_lock(724119301) AS acquired')->acquired;
+        $this->assertTrue($canAcquire(), 'Fixture transactions must release their locks.');
+        $checked = false;
+        $checking = true;
+        DB::connection()->beforeExecuting(function (string $sql) use (&$checked, &$checking, $canAcquire): void {
+            if ($checking && preg_match('/from "horses".*for update/is', $sql)) {
+                $this->assertFalse($canAcquire(), 'Horse deletion must hold the library lock before locking the horse.');
+                $checked = true;
+            }
+        });
+
+        try {
+            app(HorseDeletion::class)->delete($horse);
+            $this->assertTrue($checked, 'Deletion must exercise the horse row lock.');
+            $this->assertTrue($canAcquire(), 'Deletion must release the advisory lock on commit.');
+            $this->assertDatabaseMissing('horses', ['id' => $horse->id]);
+            $this->assertDatabaseMissing('protocols', ['id' => $protocol->id]);
+            $this->assertDatabaseMissing('intake_bookings', ['id' => $bookingId]);
+        } finally {
+            $checking = false;
+            DB::purge('library_lock_probe');
+        }
+    }
 
     public function test_library_mutations_hold_the_sync_lock_before_locking_source_rows(): void
     {

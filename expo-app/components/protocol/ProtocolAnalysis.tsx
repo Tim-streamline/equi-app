@@ -15,13 +15,17 @@ export function ProtocolAnalysis({ analysis }: {
 
   return (
     <View className="gap-6">
-      <View className="rounded-[22px] bg-mint-50 p-4">
+      <View className="rounded-[22px] bg-mint-50 p-5">
         <Text accessibilityRole="header" className="font-semi text-[12px] uppercase tracking-[0.8px] text-mint-800">
           Persoonlijke analyse
         </Text>
-        <Text className="mt-2 text-[14px] leading-[21px] text-ink">
-          {analysis.summary}
-        </Text>
+        <View className="mt-3 gap-4" style={{ width: '100%', maxWidth: 720 }}>
+          {analysis.summary.trim().split(/\r?\n\s*\r?\n/).map((paragraph, index) => (
+            <Text key={index} selectable className="text-[16px] leading-[26px] text-ink">
+              {paragraph}
+            </Text>
+          ))}
+        </View>
       </View>
 
       {analysis.priorities.length > 0 && (

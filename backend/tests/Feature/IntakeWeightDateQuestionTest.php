@@ -119,8 +119,22 @@ class IntakeWeightDateQuestionTest extends TestCase
         $methodAnswer->update(['value' => '"geschat op zicht"']);
         $review = app(IntakeReview::class)->forBooking($booking->fresh());
         $this->assertFalse(collect($review['sections'])->flatMap(fn ($s) => $s['rows'])->contains('key', $date->key));
-        $this->assertStringNotContainsString('mei 2026', app(IntakeAnswersPdf::class)->html($booking->fresh()));
+        // The hidden date stays available, but only under "Eerder ingevuld".
+        $this->assertStringNotContainsString('mei 2026', explode('Eerder ingevuld · ', app(IntakeAnswersPdf::class)->html($booking->fresh()))[0]);
         $this->assertSame('"mei 2026"', $booking->answers()->where('field_id', $date->key)->sole()->value);
+    }
+
+    public function test_label_migration_restores_the_preferred_wording_without_touching_custom_labels(): void
+    {
+        $q = IntakeQuestionnaire::create(['slug' => 'protocol-intake', 'name' => 'Test', 'active' => true]);
+        $section = $q->sections()->create(['key' => 'paard', 'title' => 'Over je paard', 'active' => true]);
+        $date = $section->fields()->create(['key' => 'gewicht-methode-wanneer', 'type' => 'month_year', 'label' => 'Wanneer was dat?', 'order' => 8, 'active' => true]);
+        $migration = require database_path('migrations/2026_10_27_000006_restore_weight_date_label.php');
+        $migration->up();
+        $this->assertSame('Wanneer is het gewicht bepaald?', $date->fresh()->label);
+        $date->update(['label' => 'Eigen tekst van de beheerder']);
+        $migration->up();
+        $this->assertSame('Eigen tekst van de beheerder', $date->fresh()->label);
     }
 
     public function test_seed_and_sync_snapshot_define_the_same_conditional_date_question(): void
@@ -133,8 +147,8 @@ class IntakeWeightDateQuestionTest extends TestCase
         $snapshot = json_decode(file_get_contents(database_path('data/intake-questionnaire-local.json')), true);
         $fields = collect(collect($snapshot['sections'])->firstWhere('key', 'paard')['fields']);
         $definition = $fields->firstWhere('key', $date->key);
-        // The historical snapshot preserves its original label; current wording is checked separately.
-        $this->assertSame('Wanneer was dat?', $date->label);
+        $this->assertSame('Wanneer is het gewicht bepaald?', $date->label);
+        $this->assertSame($definition['label'], $date->label);
         foreach (['answer_section_key', 'type', 'placeholder', 'show_if', 'required', 'optional', 'active'] as $key) {
             $this->assertSame($definition[$key], $date->$key, $key);
         }
