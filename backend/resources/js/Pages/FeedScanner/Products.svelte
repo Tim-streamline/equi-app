@@ -58,7 +58,8 @@
             const result = await response.json().catch(() => ({}));
             if (!response.ok) { aiError = result.message ?? 'Uitlezen is niet gelukt. Probeer het opnieuw.'; return; }
             const { ingredients, nutrients, ...fields } = result.data;
-            Object.assign($form, fields);
+            // Assign per key so the form store notices each change; Object.assign would bypass it.
+            for (const [key, value] of Object.entries(fields)) $form[key] = value;
             if (ingredients.length) $form.ingredients = ingredients;
             if (nutrients.length) $form.nutrients = nutrients;
             if (!$form.source) $form.source = aiPhotos?.length ? 'Etiket, uitgelezen met AI' : 'Geplakte fabrikanttekst, uitgelezen met AI';
