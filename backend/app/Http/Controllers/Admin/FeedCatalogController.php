@@ -198,6 +198,7 @@ class FeedCatalogController extends Controller
                 ->each(fn ($version) => $version->setAttribute('is_current', $currentVersionIds->contains($version->id))));
 
             $product->load('relatedProduct:id,brand,name');
+            $product->setAttribute('delete_blockers', $this->deleteBlockers($product));
 
             return $product;
         });
@@ -319,6 +320,27 @@ class FeedCatalogController extends Controller
         return back()->with('success', 'Controle opgeslagen.');
     }
 
+    /** Read a label with AI and return a draft for the product form. Nothing is stored. */
+    public function prefillProduct(Request $request, \App\Support\FeedLabelReader $reader, \App\Support\FeedProductPrefill $prefill)
+    {
+        $data = $request->validate([
+            'text' => ['nullable', 'string', 'max:30000', 'required_without:photos'],
+            'photos' => ['nullable', 'array', 'max:4', 'required_without:text'],
+            'photos.*' => ['file', 'mimes:jpg,jpeg,png,webp', 'max:15360'],
+        ], ['text.required_without' => 'Voeg een foto toe of plak de tekst van het etiket.', 'photos.required_without' => 'Voeg een foto toe of plak de tekst van het etiket.']);
+        if (! $reader->configured()) {
+            return response()->json(['message' => 'Uitlezen met AI is niet ingesteld op deze server.'], 503);
+        }
+        $images = array_map(fn ($file) => ['mime' => $file->getMimeType(), 'bytes' => $file->get(), 'purpose' => 'etiket'], $request->file('photos', []));
+        try {
+            $raw = $reader->read($images, $data['text'] ?? null);
+        } catch (\Throwable) {
+            return response()->json(['message' => 'Het etiket kon niet worden uitgelezen. Probeer een scherpere foto of plak de tekst.'], 422);
+        }
+
+        return response()->json($prefill->fromExtraction($raw));
+    }
+
     public function archiveProduct(Request $request, Product $product)
     {
         abort_unless($this->canPublish($request), 403);
@@ -326,6 +348,51 @@ class FeedCatalogController extends Controller
         AuditLogger::log('archived', $product);
 
         return back()->with('success', 'Product gearchiveerd. De historie blijft bewaard.');
+    }
+
+    /**
+     * Permanently delete a product that nobody has used yet, such as a placeholder.
+     * Anything with scans, submissions, assessments, label photos or later recipes is archived instead.
+     */
+    public function deleteProduct(Request $request, Product $product)
+    {
+        abort_unless($this->canPublish($request), 403);
+        $label = trim($product->brand.' · '.$product->name, ' ·');
+        $blocked = DB::transaction(function () use ($product) {
+            $record = Product::lockForUpdate()->findOrFail($product->id);
+            if ($blockers = $this->deleteBlockers($record)) {
+                return $blockers;
+            }
+            $before = $record->only('brand', 'name', 'barcode', 'category', 'catalog_status');
+            $record->forceFill(['published_version_id' => null])->save();
+            $record->ingredients()->detach();
+            ProductVersion::where('product_id', $record->id)->delete();
+            $record->delete();
+            AuditLogger::log('deleted', $record, before: $before);
+
+            return [];
+        });
+        if ($blocked) {
+            return back()->withErrors(['product' => 'Dit product kan niet worden verwijderd, want het heeft '.implode(', ', $blocked).'. Archiveer het in plaats daarvan.']);
+        }
+
+        return back()->with('success', "Product {$label} verwijderd.");
+    }
+
+    /** @return list<string> Reasons, in Dutch, why deleting would lose history. */
+    private function deleteBlockers(Product $product): array
+    {
+        $versions = ProductVersion::where('product_id', $product->id)->pluck('id');
+        $checks = [
+            'scans' => DB::table('scan_results')->where('product_id', $product->id)->exists(),
+            'inzendingen uit de app' => DB::table('feed_scan_submissions')->where('product_id', $product->id)
+                ->orWhere('reference_product_id', $product->id)->orWhereIn('reference_version_id', $versions)->orWhereIn('product_version_id', $versions)->exists(),
+            'beoordelingen' => DB::table('feed_assessments')->whereIn('product_version_id', $versions)->exists(),
+            'etiketfoto\'s' => DB::table('feed_label_attachments')->whereIn('product_version_id', $versions)->exists(),
+            'een vervolgrecept' => ProductVersion::where('superseded_by_product_id', $product->id)->exists(),
+        ];
+
+        return array_keys(array_filter($checks));
     }
 
     public function upload(Request $request, ProductVersion $version)

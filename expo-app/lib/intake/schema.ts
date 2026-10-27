@@ -4410,7 +4410,8 @@ export const INTAKE_SCHEMA: Section[] = [
                 "Niet altijd tijdens warme of zonnige dagen",
                 "Nee",
                 "Alleen in bepaalde delen van het jaar",
-                "Wisselend per seizoen"
+                "Wisselend per seizoen",
+                "Nee / vaak nat, modderig of oncomfortabel"
               ]
             },
             {

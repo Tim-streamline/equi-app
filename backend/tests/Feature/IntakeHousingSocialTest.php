@@ -107,6 +107,27 @@ class IntakeHousingSocialTest extends TestCase
         $this->assertTrue(Storage::disk('local')->exists($path));
     }
 
+    public function test_an_old_wet_lying_answer_still_shows_the_shelter_question(): void
+    {
+        $booking = $this->booking();
+        $field = IntakeField::where('key', 'schuilplaats-inrichting')->sole();
+        // Simulate a database where the shelter condition was created before the legacy answer was listed.
+        $old = $field->show_if;
+        $old['$any'][1]['huisvesting.buiten-droog-liggen'] = array_values(array_diff($old['$any'][1]['huisvesting.buiten-droog-liggen'], ['Nee / vaak nat, modderig of oncomfortabel']));
+        $field->update(['show_if' => $old]);
+        $this->answer($booking, 'huisvesting', 'schuilmogelijkheden', ['Geen']);
+        $this->answer($booking, 'huisvesting', 'buiten-droog-liggen', 'Nee / vaak nat, modderig of oncomfortabel');
+        $ids = fn () => collect(app(IntakeReview::class)->forBooking($booking)['sections'])->flatMap(fn ($s) => $s['rows'])->pluck('key')->all();
+        $this->assertNotContains('schuilplaats-inrichting', $ids());
+
+        $migration = require database_path('migrations/2026_10_27_000010_match_legacy_answer_in_shelter_condition.php');
+        $migration->up();
+        $migration->up();
+
+        $this->assertContains('schuilplaats-inrichting', $ids());
+        $this->assertSame(1, collect($field->fresh()->show_if['$any'][1]['huisvesting.buiten-droog-liggen'])->filter(fn ($v) => $v === 'Nee / vaak nat, modderig of oncomfortabel')->count());
+    }
+
     public function test_targeted_migration_keeps_old_answers_and_does_not_duplicate_questions(): void
     {
         $booking = $this->booking();

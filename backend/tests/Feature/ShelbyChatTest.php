@@ -133,6 +133,20 @@ class ShelbyChatTest extends TestCase
         $this->assertSame(2, ChatMessage::count());
     }
 
+    public function test_an_overlapping_question_waits_for_the_one_in_progress(): void
+    {
+        config(['shelby.busy_wait' => 1]);
+        Http::fake();
+        $lock = \Illuminate\Support\Facades\Cache::lock('shelby-chat:'.$this->owner->id, 30);
+        $this->assertTrue($lock->get());
+
+        $this->send('Hij heeft mok.')->assertStatus(429)->assertJsonPath('message', 'Shelby is nog bezig met je vorige vraag. Probeer het zo opnieuw.');
+
+        $lock->release();
+        Http::assertNothingSent();
+        $this->assertSame(0, ChatMessage::count());
+    }
+
     public function test_equiboost_is_offered_once_and_never_to_an_owner_who_has_it(): void
     {
         $this->openAiSays('Dit is precies een situatie waarin EquiBoost handig is.');

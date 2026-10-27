@@ -124,10 +124,12 @@ Route::middleware('auth:admin')->group(function () {
         Route::delete('ingredients/{ingredient}', 'removeIngredient');
         Route::post('ingredients/{ingredient}/restore', 'restoreIngredient');
         Route::get('products', 'products')->name('products');
+        Route::post('products/prefill', 'prefillProduct')->middleware('throttle:20,1');
         Route::post('products', 'saveProduct');
         Route::put('products/{product}', 'saveProduct');
         Route::post('products/{product}/review', 'reviewProduct');
         Route::post('products/{product}/archive', 'archiveProduct');
+        Route::delete('products/{product}', 'deleteProduct');
         Route::post('versions/{version}/attachments', 'upload');
         Route::get('attachments/{attachment}', 'attachment');
         Route::get('rules', 'rules')->name('rules');

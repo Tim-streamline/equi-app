@@ -16,6 +16,8 @@ return [
     ],
 
     'timeout' => (int) env('SHELBY_TIMEOUT', 45),
+    // How long an overlapping question (usually a retry) waits for the one already in progress.
+    'busy_wait' => (int) env('SHELBY_BUSY_WAIT', 50),
     'max_output_tokens' => 700,
     /* Earlier messages from today's chat that are sent along for context. Older chats are never used as memory. */
     'history_messages' => 16,

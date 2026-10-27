@@ -8,8 +8,10 @@ use App\Models\Horse;
 use App\Support\ProtocolAccess;
 use App\Support\Shelby\ShelbyAssistant;
 use App\Support\SubscriptionAccess;
+use Illuminate\Contracts\Cache\LockTimeoutException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Throwable;
 
@@ -26,6 +28,18 @@ class ShelbyChatController extends Controller
         $horse = Horse::where('owner_id', $userId)->findOrFail($data['horse_id']);
         abort_unless(app(SubscriptionAccess::class)->active($userId), 403, 'Shelby is beschikbaar met een EquiApp-abonnement.');
 
+        // One question per owner at a time: a retry that overlaps the original waits for it
+        // instead of asking the AI twice, and the daily limit and message order stay exact.
+        try {
+            return Cache::lock('shelby-chat:'.$userId, (int) config('shelby.timeout') + 30)
+                ->block((int) config('shelby.busy_wait'), fn () => $this->answer($shelby, $userId, $horse, $data));
+        } catch (LockTimeoutException) {
+            return response()->json(['message' => 'Shelby is nog bezig met je vorige vraag. Probeer het zo opnieuw.'], 429);
+        }
+    }
+
+    private function answer(ShelbyAssistant $shelby, string $userId, Horse $horse, array $data): JsonResponse
+    {
         // A retried request returns the answer that was already given.
         if ($existing = ChatMessage::whereKey($data['client_id'])->first()) {
             $session = ChatSession::where('user_id', $userId)->findOrFail($existing->session_id);

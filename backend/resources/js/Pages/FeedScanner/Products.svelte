@@ -6,6 +6,7 @@
     import Field from '$lib/components/Field.svelte';
     import AssessmentHistory from './AssessmentHistory.svelte';
     import { router, useForm } from '@inertiajs/svelte';
+    import { csrfHeaders } from '$lib/csrf.js';
     import { Card, CardContent, Button, Input, Textarea, Select, Badge } from '$lib/components/ui';
 
     let { products, filters, reviewCount, ingredientOptions, categories, nutrientOptions, canPublish, assessmentProfiles = [], errors = {} } = $props();
@@ -22,6 +23,11 @@
     let timer;
     let uploadVersion = $state(null);
     let uploadOpen = $state(false);
+    let aiPhotos = $state(null);
+    let aiText = $state('');
+    let aiBusy = $state(false);
+    let aiError = $state('');
+    let aiNotes = $state(null);
     const labels = { draft: 'Concept', approved: 'Goedgekeurd', needs_info: 'Informatie ontbreekt', rejected: 'Afgewezen', legacy: 'Bestaand · nog te controleren' };
     const purposes = { packaging: 'Verpakking', composition: 'Samenstelling', analysis: 'Analyse' };
     const bases = { product: 'Productbasis', dry_matter: 'Droge-stofbasis', unknown: 'Onbekend' };
@@ -38,6 +44,30 @@
             nutrients: (data.nutrients ?? []).map(row => ({ qualifier: 'exact', ...row })),
             internal_notes: record?.internal_notes ?? '', source_version_id: version?.id ?? null, expected_number: version?.number ?? null, approve: false });
         $form.reset(); $form.clearErrors(); historyOpen = false; open = true;
+        aiPhotos = null; aiText = ''; aiError = ''; aiNotes = null;
+    }
+    async function prefill() {
+        aiError = ''; aiNotes = null;
+        const body = new FormData();
+        for (const file of aiPhotos ?? []) body.append('photos[]', file);
+        if (aiText.trim()) body.append('text', aiText.trim());
+        if (!body.has('text') && !body.has('photos[]')) { aiError = 'Voeg een foto toe of plak de tekst van het etiket.'; return; }
+        aiBusy = true;
+        try {
+            const response = await fetch('/admin/feed-scanner/products/prefill', { method: 'POST', body, headers: { Accept: 'application/json', ...csrfHeaders() } });
+            const result = await response.json().catch(() => ({}));
+            if (!response.ok) { aiError = result.message ?? 'Uitlezen is niet gelukt. Probeer het opnieuw.'; return; }
+            const { ingredients, nutrients, ...fields } = result.data;
+            Object.assign($form, fields);
+            if (ingredients.length) $form.ingredients = ingredients;
+            if (nutrients.length) $form.nutrients = nutrients;
+            if (!$form.source) $form.source = aiPhotos?.length ? 'Etiket, uitgelezen met AI' : 'Geplakte fabrikanttekst, uitgelezen met AI';
+            aiNotes = result.notes;
+        } catch {
+            aiError = 'Geen verbinding. Probeer het opnieuw.';
+        } finally {
+            aiBusy = false;
+        }
     }
     function newRecipe(record) {
         edit();
@@ -55,6 +85,9 @@
         const notes = decision === 'approve' ? '' : prompt('Welke informatie ontbreekt of waarom wijs je dit af?');
         if (notes === null) return;
         router.post(`/admin/feed-scanner/products/${record.id}/review`, { version_id: version.id, decision, notes });
+    }
+    function remove(record) {
+        if (confirm(`${record.brand} · ${record.name} definitief verwijderen? Dit kan niet ongedaan worden gemaakt.`)) router.delete(`/admin/feed-scanner/products/${record.id}`, { preserveScroll: true });
     }
     function archive(record) { if (confirm('Dit product archiveren? De historie blijft bewaard.')) router.post(`/admin/feed-scanner/products/${record.id}/archive`); }
     function move(index, step) { const rows = [...$form.ingredients]; [rows[index], rows[index + step]] = [rows[index + step], rows[index]]; $form.ingredients = rows; }
@@ -101,6 +134,7 @@
                             {#if canPublish}<Button size="sm" onclick={() => reviewProduct(product, 'approve')}>Goedkeuren</Button><Button size="sm" variant="ghost" onclick={() => reviewProduct(product, 'needs_info')}>Meer informatie nodig</Button><Button size="sm" variant="ghost" onclick={() => reviewProduct(product, 'reject')}>Afwijzen</Button>{/if}
                         {/if}
                         {#if canPublish && product.catalog_status !== 'archived'}<Button size="sm" variant="ghost" onclick={() => archive(product)}>Archiveren</Button>{/if}
+                        {#if canPublish && !product.delete_blockers?.length}<Button size="sm" variant="ghost" class="text-destructive" onclick={() => remove(product)}>Verwijderen</Button>{/if}
                     </div>
                 </div>
                 {#if latest?.review_notes}<p class="text-sm text-muted-foreground">Controle: {latest.review_notes}</p>{/if}
@@ -111,6 +145,22 @@
     <Modal bind:open title={editing ? 'Product bewerken' : 'Product toevoegen'} size="xl">
         {#if $form.source_version_id}<p class="mb-4 text-sm text-muted-foreground">Je corrigeert de productgegevens. De vorige gegevens en beoordelingen blijven in de historie. Een werkelijk gewijzigd recept voeg je toe als apart product.</p>{/if}
         {#if $form.related_product_id}<p class="mb-4 text-sm text-muted-foreground">Dit recept wordt een apart product. Het oorspronkelijke product blijft bestaan. Voeg de nieuwe samenstelling en analyse toe.</p>{/if}
+        <details class="mb-4 rounded-lg border p-3" open={!editing}>
+            <summary class="cursor-pointer font-medium">Invullen met AI</summary>
+            <div class="mt-3 space-y-3">
+                <p class="text-sm text-muted-foreground">Upload foto's van het etiket of plak de tekst van de fabrikantwebsite. De AI vult Algemeen, Samenstelling en Analyse in. Er wordt nog niets opgeslagen: controleer alles en sla daarna zelf op.</p>
+                <Field label="Etiketfoto's (maximaal 4)"><input type="file" accept="image/jpeg,image/png,image/webp" multiple bind:files={aiPhotos} class="block w-full text-sm" /></Field>
+                <Field label="Of plak de tekst"><Textarea bind:value={aiText} rows={4} placeholder="Samenstelling, analytische bestanddelen, toevoegingen…" /></Field>
+                <Button type="button" variant="outline" disabled={aiBusy} onclick={prefill}>{aiBusy ? 'Bezig met uitlezen…' : 'Invullen met AI'}</Button>
+                {#if aiError}<p role="alert" class="text-sm text-destructive">{aiError}</p>{/if}
+                {#if aiNotes}
+                    <div class="rounded-lg border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900 dark:border-amber-700 dark:bg-amber-950 dark:text-amber-100">
+                        <p class="font-medium">Ingevuld. Controleer dit:</p>
+                        {#if aiNotes.length}<ul class="mt-1 list-disc pl-5">{#each aiNotes as note}<li>{note}</li>{/each}</ul>{:else}<p>Geen twijfelpunten gevonden. Loop de tabbladen toch even na.</p>{/if}
+                    </div>
+                {/if}
+            </div>
+        </details>
         <div class="mb-4 flex flex-wrap gap-2">{#each [['general', 'Algemeen'], ['ingredients', 'Samenstelling'], ['analysis', 'Analyse']] as [value, label]}<Button size="sm" variant={tab === value ? 'default' : 'outline'} onclick={() => tab = value}>{label}</Button>{/each}</div>
         <form id="feed-product" onsubmit={save} class="space-y-4">
             {#each Object.entries($form.errors) as [key, error]}<p role="alert" class="text-sm text-destructive">{error}</p>{/each}
