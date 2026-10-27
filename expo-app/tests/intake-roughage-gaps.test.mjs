@@ -23,10 +23,10 @@ for (const [name, schema] of [['fallback', modules['./schema'].INTAKE_SCHEMA], [
       const answers = { [main]: option, [detail]: 'Een eerder antwoord', [frequency]: 'Dagelijks' };
       const visible = modules['./logic'].visibleFields(section, answers).map(f => f.id);
       assert.equal(visible.includes(detail), option === 'Wisselend');
-      assert.equal(visible.includes(frequency), ![field.options[0], 'Weet ik niet'].includes(option));
+      assert.equal(visible.includes(frequency), ![field.options[0], 'Weet ik niet', 'Wisselend'].includes(option));
       const missing = modules['./logic'].missingRequired(section, { [main]: option }).map(f => f.id);
       assert.equal(missing.includes(detail), option === 'Wisselend');
-      assert.equal(missing.includes(frequency), ![field.options[0], 'Weet ik niet'].includes(option));
+      assert.equal(missing.includes(frequency), ![field.options[0], 'Weet ik niet', 'Wisselend'].includes(option));
       assert.ok(!missing.includes(main));
     }
     assert.deepEqual(section.fields.filter(f => f.id.startsWith('hooi-zonder-ruwvoer')).map(f => f.id), [main, detail, frequency]);

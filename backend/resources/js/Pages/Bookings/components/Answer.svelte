@@ -2,6 +2,10 @@
     import { FileText, Download } from '@lucide/svelte';
     let { row, openPhoto = () => {}, printMode = false } = $props();
     const text = (value) => Array.isArray(value) ? value.join('\n') : String(value ?? '');
+    const subText = (entry, col) => {
+        const value = text(entry[col.id] ?? entry[col.key]);
+        return value && col.unit && /^\d+(?:[.,]\d+)?$/.test(value) ? `${value} ${col.unit}` : value;
+    };
 </script>
 
 {#if row.not_applicable}
@@ -30,7 +34,7 @@
 {:else if row.type === 'repeater'}
     <div class="overflow-x-auto">
         <table><thead><tr>{#each row.sub as col}<th>{col.label}</th>{/each}</tr></thead>
-            <tbody>{#each Array.isArray(row.value) ? row.value : [] as entry}<tr>{#each row.sub as col}<td>{text(entry[col.id] ?? entry[col.key]) || 'Niet ingevuld'}</td>{/each}</tr>{/each}</tbody>
+            <tbody>{#each Array.isArray(row.value) ? row.value : [] as entry}<tr>{#each row.sub as col}<td>{subText(entry, col) || 'Niet ingevuld'}</td>{/each}</tr>{/each}</tbody>
         </table>
     </div>
 {:else}

@@ -10,6 +10,9 @@ const framework = {
   'react-native': { View: 'View', Text: 'Text', Pressable: 'Pressable', Platform: { OS: 'web' } },
   'lucide-react-native': {},
   './ScannerUI': { C: {}, s: {}, ScannerButton: 'ScannerButton' },
+  '@/db/auth': {},
+  '@/db/connector': {},
+  '@/lib/account-session': { accountSession: { revision: 0 } },
 };
 function load(file, modules = framework) {
   const exports = {};
@@ -70,5 +73,50 @@ test('the design inspector redirects without loading data unless explicitly enab
   } finally {
     if (previous === undefined) delete process.env.EXPO_PUBLIC_SCANNER_DESIGN_PREVIEW;
     else process.env.EXPO_PUBLIC_SCANNER_DESIGN_PREVIEW = previous;
+  }
+});
+
+test('resumed scanner photos load the real private image and revoke their browser preview on unmount', async () => {
+  const nativeFetch = globalThis.fetch;
+  const createUrl = URL.createObjectURL;
+  const revokeUrl = URL.revokeObjectURL;
+  const requests = [], revoked = [], effects = [], states = [];
+  let cursor = 0;
+  const modules = {
+    ...framework,
+    react: {
+      useEffect: effect => effects.push(effect),
+      useState: initial => { const index = cursor++; if (!(index in states)) states[index] = initial; return [states[index], next => states[index] = typeof next === 'function' ? next(states[index]) : next]; },
+    },
+    'react-native': { ...framework['react-native'], Image: 'Image', ActivityIndicator: 'ActivityIndicator' },
+    '@/db/auth': { getApiBaseUrl: () => 'https://api.example.test' },
+    '@/db/connector': { getOrMintToken: async () => 'test-token' },
+  };
+  try {
+    globalThis.fetch = async (url, options) => { requests.push({url, options}); return { ok: true, status: 200, blob: async () => new Blob(['actual photo'], {type:'image/jpeg'}) }; };
+    URL.createObjectURL = () => 'blob:uploaded-photo';
+    URL.revokeObjectURL = url => revoked.push(url);
+    const { ScannerPhotoCard } = load('../components/scanner/ScannerPhotoCard.tsx', modules);
+    const preview = flatten(ScannerPhotoCard({ title: 'Voorkant', detail: '', submissionId: 'submission', photoId: 'saved-photo' })).find(node => typeof node?.type === 'function' && node.type.name === 'ScannerPhotoPreview');
+    const draw = () => { cursor = 0; return preview.type(preview.props); };
+    draw();
+    const cleanup = effects.shift()();
+    await new Promise(resolve => setImmediate(resolve));
+    const image = draw();
+    assert.equal(image.type, 'Image');
+    assert.equal(image.props.source.uri, 'blob:uploaded-photo');
+    assert.equal(image.props.style.width, 96);
+    assert.equal(image.props.style.height, 96);
+    assert.equal(requests[0].url, 'https://api.example.test/api/feed-scanner/submissions/submission/photos/saved-photo');
+    assert.equal(requests[0].options.headers.Authorization, 'Bearer test-token');
+    cleanup();
+    assert.deepEqual(revoked, ['blob:uploaded-photo']);
+    const local = { ...preview.props, uri: 'file:///selected-photo.jpg' };
+    cursor = 0;
+    assert.equal(preview.type(local).props.source.uri, local.uri, 'a newly selected photo takes priority over a saved preview');
+  } finally {
+    globalThis.fetch = nativeFetch;
+    URL.createObjectURL = createUrl;
+    URL.revokeObjectURL = revokeUrl;
   }
 });

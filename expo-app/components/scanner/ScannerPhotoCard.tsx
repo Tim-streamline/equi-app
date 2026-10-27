@@ -1,12 +1,16 @@
-import { Image, Modal, Pressable, Text, View } from 'react-native';
-import { Camera, Check, CircleAlert, FileImage, Upload, X } from 'lucide-react-native';
+import { useEffect, useState } from 'react';
+import { ActivityIndicator, Image, Modal, Platform, Pressable, Text, View } from 'react-native';
+import { Camera, Check, CircleAlert, Upload, X } from 'lucide-react-native';
+import { getApiBaseUrl } from '@/db/auth';
+import { getOrMintToken } from '@/db/connector';
+import { accountSession } from '@/lib/account-session';
 import { C, RoundButton, ScannerButton, s } from './ScannerUI';
 
 export type PhotoPhase = 'empty' | 'selecting' | 'selected' | 'uploading' | 'blurry' | 'error';
 
-export function ScannerPhotoCard({ title, detail, required = false, uri, phase = uri ? 'selected' : 'empty', progress,
+export function ScannerPhotoCard({ title, detail, required = false, uri, submissionId, photoId, phase = uri || photoId ? 'selected' : 'empty', progress,
   onCamera, onUpload, onReplace, onRemove, onRetry, onUseAnyway, disabled = false }: {
-  title: string; detail: string; required?: boolean; uri?: string; phase?: PhotoPhase; progress?: number;
+  title: string; detail: string; required?: boolean; uri?: string; submissionId?: string; photoId?: string; phase?: PhotoPhase; progress?: number;
   onCamera?: () => void; onUpload?: () => void; onReplace?: () => void; onRemove?: () => void;
   onRetry?: () => void; onUseAnyway?: () => void; disabled?: boolean;
 }) {
@@ -24,8 +28,7 @@ export function ScannerPhotoCard({ title, detail, required = false, uri, phase =
       <View style={{ flex: 1 }}><ScannerButton title="Camera" variant="light" disabled={disabled || !onCamera} icon={<Camera size={19} color={C.deep} />} onPress={onCamera} /></View>
       <View style={{ flex: 1 }}><ScannerButton title="Uploaden" variant="outline" disabled={disabled || !onUpload} icon={<Upload size={18} color={C.ink} />} onPress={onUpload} /></View>
     </View> : <View style={{ flexDirection: 'row', gap: 12, alignItems: 'center' }}>
-      {uri ? <Image accessibilityLabel={`Geselecteerde foto: ${title}`} source={{ uri }} resizeMode="contain" style={{ height: 64, width: 64, borderRadius: 12, backgroundColor: '#F4EFE7' }} />
-        : <View style={{ height: 64, width: 64, borderRadius: 12, backgroundColor: '#F4EFE7', alignItems: 'center', justifyContent: 'center' }}><FileImage size={28} color={C.muted} /></View>}
+      <ScannerPhotoPreview title={title} uri={uri} submissionId={submissionId} photoId={photoId} />
       <View style={{ flex: 1, gap: 4 }}>
         <View style={{ flexDirection: 'row', gap: 6, alignItems: 'center' }}>
           {warning ? <CircleAlert size={18} color={color} /> : !busy && <Check size={18} color={color} />}
@@ -43,6 +46,51 @@ export function ScannerPhotoCard({ title, detail, required = false, uri, phase =
     {phase === 'blurry' && <View style={{ flexDirection: 'row', gap: 8 }}><View style={{ flex: 1.3 }}><ScannerButton title="Opnieuw maken" disabled={!onCamera} onPress={onCamera} /></View><View style={{ flex: 1 }}><ScannerButton title="Toch gebruiken" variant="outline" disabled={!onUseAnyway} onPress={onUseAnyway} /></View></View>}
     {phase === 'error' && <ScannerButton title="Opnieuw proberen" disabled={!onRetry} onPress={onRetry} />}
   </View>;
+}
+
+function ScannerPhotoPreview({ title, uri, submissionId, photoId }: { title: string; uri?: string; submissionId?: string; photoId?: string }) {
+  const [remote, setRemote] = useState<{ key: string; source: { uri: string; headers?: Record<string, string> } }>();
+  const [failed, setFailed] = useState(false);
+  const [attempt, setAttempt] = useState(0);
+  const key = `${submissionId}:${photoId}`;
+  useEffect(() => {
+    let active = true;
+    let objectUrl: string | undefined;
+    const controller = new AbortController();
+    const revision = accountSession.revision;
+    setFailed(false);
+    setRemote(undefined);
+    if (!uri && submissionId && photoId) void (async () => {
+      const url = `${getApiBaseUrl()}/api/feed-scanner/submissions/${encodeURIComponent(submissionId)}/photos/${encodeURIComponent(photoId)}`;
+      let token = await getOrMintToken(controller.signal, attempt > 0);
+      if (!token || !active || revision !== accountSession.revision) return;
+      let headers = { Authorization: `Bearer ${token}` };
+      if (Platform.OS !== 'web') {
+        setRemote({ key, source: { uri: url, headers } });
+        return;
+      }
+      let response = await fetch(url, { headers, signal: controller.signal, cache: 'no-store' });
+      if (response.status === 401) {
+        token = await getOrMintToken(controller.signal, true);
+        if (!token || !active || revision !== accountSession.revision) return;
+        headers = { Authorization: `Bearer ${token}` };
+        response = await fetch(url, { headers, signal: controller.signal, cache: 'no-store' });
+      }
+      if (!response.ok) throw new Error('Photo unavailable');
+      const blob = await response.blob();
+      if (!active || revision !== accountSession.revision) return;
+      objectUrl = URL.createObjectURL(blob);
+      setRemote({ key, source: { uri: objectUrl } });
+    })().catch(() => { if (active && revision === accountSession.revision) setFailed(true); });
+    return () => { active = false; controller.abort(); if (objectUrl) URL.revokeObjectURL(objectUrl); };
+  }, [uri, submissionId, photoId, key, attempt]);
+  const source = uri ? { uri } : remote?.key === key ? remote.source : undefined;
+  const style = { height: 96, width: 96, borderRadius: 12, backgroundColor: '#F4EFE7' };
+  return source && !failed ? <Image key={`${uri ?? key}:${attempt}`} accessibilityLabel={`Geselecteerde foto: ${title}`} source={source} resizeMode="contain" style={style} onError={() => setFailed(true)} />
+    : <View style={[style, { alignItems: 'center', justifyContent: 'center', padding: 6 }]}>
+      {failed ? <Pressable accessibilityRole="button" accessibilityLabel={`Preview opnieuw laden: ${title}`} onPress={() => setAttempt(value => value + 1)}><Text style={[s.small, { textAlign: 'center', fontSize: 12 }]}>Foto niet geladen. Tik om opnieuw te proberen.</Text></Pressable>
+        : uri || photoId ? <ActivityIndicator color={C.teal} accessibilityLabel="Foto laden" /> : <Text style={s.small}>Foto</Text>}
+    </View>;
 }
 
 export function PhotoReplacementSheet({ visible, onClose, onCamera, onUpload }: {

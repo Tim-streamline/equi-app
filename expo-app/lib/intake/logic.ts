@@ -218,13 +218,26 @@ export function showField(
   if (field.photoConfig?.existing_only && !photoReferences(sectionAnswers[field.id]).length) return false;
   if (!field.showIf) return true;
   for (const [k, trigger] of Object.entries(field.showIf)) {
+    if (k === '$all' || k === '$any') {
+      const results = (trigger as NonNullable<Field['showIf']>[]).map(showIf => showField({ ...field, photoConfig: undefined, showIf }, sectionAnswers, allAnswers, noneOptions));
+      if (k === '$all' ? !results.every(Boolean) : !results.some(Boolean)) return false;
+      continue;
+    }
+    if (k === '$not') {
+      if (showField({ ...field, photoConfig: undefined, showIf: trigger as Field['showIf'] }, sectionAnswers, allAnswers, noneOptions)) return false;
+      continue;
+    }
     const value = k.includes('.')
       ? (() => {
           const [sid, fid] = k.split('.');
           return allAnswers?.[sid]?.[fid];
         })()
       : sectionAnswers[k];
-    const set = Array.isArray(trigger) ? trigger : [trigger];
+    if (trigger && typeof trigger === 'object' && !Array.isArray(trigger) && 'gte' in trigger) {
+      if (value === null || value === undefined || value === '' || !Number.isFinite(Number(value)) || Number(value) < Number(trigger.gte)) return false;
+      continue;
+    }
+    const set = (Array.isArray(trigger) ? trigger : [trigger]) as string[];
     // Special marker: show when the referenced multi field has at least one
     // non-"geen" option selected (used for "describe what you picked" follow-ups).
     if (set.includes('any-checked')) {
@@ -238,7 +251,7 @@ export function showField(
       if (checkedCount(value, noneOptions) < 2) return false;
       continue;
     }
-    if (!matches(value, trigger)) return false;
+    if (!matches(value, trigger as Trigger)) return false;
   }
   return true;
 }

@@ -647,7 +647,7 @@ class AdminProtocolManagementTest extends TestCase
         $payload = $this->payload();
         $payload['published'] = true;
         $payload['analysis'] += [
-            'summary' => 'De intake noemt wisselende signalen. Een samenhang is mogelijk, maar nog niet vastgesteld. Daarom kiezen we deze focus.',
+            'summary' => str_repeat("De intake noemt wisselende signalen. Een samenhang is nog niet vastgesteld.\n\n", 28),
             'focus_points' => [
                 ['title' => 'Persoonlijk aandachtspunt', 'body' => 'Het individueel afgesproken doel ondersteunen.'],
                 ['title' => 'Tweede aandachtspunt', 'body' => 'Werken aan het tweede afgesproken doel.'],
@@ -655,6 +655,8 @@ class AdminProtocolManagementTest extends TestCase
             ],
             'observations' => ['Vergelijk de afgesproken signalen bij de evaluatie.'],
         ];
+        $payload['analysis']['summary'] = mb_substr($payload['analysis']['summary'], 0, 2100);
+        $this->assertSame(2100, mb_strlen($payload['analysis']['summary']));
         $this->actingAs($this->admin, 'admin')->post('/admin/protocols', $payload)->assertSessionHasNoErrors();
         $protocol = Protocol::where('title', $payload['title'])->firstOrFail();
         $this->assertSame($payload['analysis']['summary'], $protocol->analysis->summary);
@@ -703,7 +705,7 @@ class AdminProtocolManagementTest extends TestCase
     {
         $payload = $this->payload();
         $payload['analysis'] += [
-            'summary' => 'Eerste zin. Tweede zin. Derde zin. Vierde zin. Vijfde zin.',
+            'summary' => str_repeat('a', 2101),
             'focus_points' => array_fill(0, 5, ['title' => 'Management', 'body' => 'Eerste doel. Tweede doel.']),
             'observations' => [str_repeat('x', 161)],
         ];

@@ -153,6 +153,18 @@
             </section>
         </aside>
     </div>
+    {#if review.historical_sections?.length}
+        <details class="surface p-6 mt-6">
+            <summary class="cursor-pointer font-semibold">Eerder ingevulde antwoorden</summary>
+            <p class="muted mt-2">Deze vragen zijn nu verborgen of gearchiveerd. De antwoorden blijven bewaard en tellen niet mee als actuele bevindingen.</p>
+            {#each review.historical_sections as section}
+                <h2 class="mt-6">{section.title}</h2>
+                {#each section.rows as row}
+                    <div class="answer-row"><div>{row.label}</div><Answer {row} {printMode} openPhoto={file => photo = file} /></div>
+                {/each}
+            {/each}
+        </details>
+    {/if}
 </div>
 {#if photo}
     <dialog use:openDialog class="lightbox" aria-label={photo.name} oncancel={() => photo = null} onclick={e => { if (e.target === e.currentTarget) photo = null; }}>

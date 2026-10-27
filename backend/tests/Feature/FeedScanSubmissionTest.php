@@ -97,6 +97,29 @@ class FeedScanSubmissionTest extends TestCase
         $this->postJson('/api/feed-scanner/submissions/'.$s['id'].'/analyse')->assertNotFound();
     }
 
+    public function test_saved_photo_previews_return_the_actual_image_only_to_the_submission_owner(): void
+    {
+        $submission = $this->createSubmission(false);
+        $base = '/api/feed-scanner/submissions/'.$submission['id'].'/photos';
+        $saved = $this->post($base, ['slot' => 'composition', 'file' => UploadedFile::fake()->image('ingredients.jpg', 120, 80)])
+            ->assertOk()->json();
+        $photo = \App\Models\FeedLabelAttachment::findOrFail($saved['photo_ids']['composition']);
+        $response = $this->get($base.'/'.$photo->id)->assertOk()->assertHeader('Content-Type', 'image/jpeg')->assertHeader('X-Content-Type-Options', 'nosniff');
+        $this->assertStringContainsString('private', $response->headers->get('Cache-Control'));
+        $this->assertStringContainsString('no-store', $response->headers->get('Cache-Control'));
+        $this->assertSame(Storage::disk('local')->get($photo->path), $response->streamedContent());
+        $this->get($base.'/'.Str::uuid())->assertNotFound();
+        $this->asOwner(User::factory()->create());
+        $this->get($base.'/'.$photo->id)->assertNotFound();
+        $this->asOwner($this->owner);
+        $new = $this->post($base, ['slot' => 'composition', 'file' => UploadedFile::fake()->image('replacement.jpg', 160, 100)])->assertOk()->json();
+        $this->get($base.'/'.$photo->id)->assertNotFound();
+        $replacement = \App\Models\FeedLabelAttachment::findOrFail($new['photo_ids']['composition']);
+        Storage::disk('local')->delete($replacement->path);
+        $this->get($base.'/'.$replacement->id)->assertNotFound();
+        Http::assertNothingSent();
+    }
+
     public function test_required_photos_and_missing_key_preserve_review_submission(): void
     {
         $s = $this->createSubmission(false);

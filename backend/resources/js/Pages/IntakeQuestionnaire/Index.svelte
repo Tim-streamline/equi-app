@@ -3,6 +3,7 @@
     import PageHeader from '$lib/components/PageHeader.svelte';
     import Modal from '$lib/components/Modal.svelte';
     import Field from '$lib/components/Field.svelte';
+    import IntakeConditionEditor from '$lib/components/IntakeConditionEditor.svelte';
     import { router, useForm } from '@inertiajs/svelte';
     import { Card, CardContent, Button, Input, Textarea, Select, Badge, Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '$lib/components/ui';
     import { Plus, Pencil, Archive, Save, Settings2 } from '@lucide/svelte';
@@ -35,6 +36,12 @@
         active: true,
     });
     const fieldForm = useForm(emptyField());
+    const conditionQuestions = $derived([
+        ...(selectedSection?.fields ?? []).filter(f => f.active && ['radio', 'multi', 'number', 'text'].includes(f.type)).map(f => ({ key: f.key, label: `Deze sectie · ${f.label}`, options: f.options, type: f.type })),
+        ...questionnaire.sections.flatMap(section => section.fields.filter(f => f.active && ['radio', 'multi', 'number', 'text'].includes(f.type)).map(f => ({ key: `${f.answer_section_key ?? section.key}.${f.key}`, label: `${section.title} · ${f.label}`, options: f.options, type: f.type }))),
+    ]);
+    function parsedConditions() { try { return JSON.parse($fieldForm.show_if_json || 'null'); } catch { return null; } }
+    function parsedOptions() { try { const options = JSON.parse($fieldForm.options_json || '[]'); return Array.isArray(options) ? options : []; } catch { return []; } }
 
     function emptyField() {
         return {
@@ -153,6 +160,10 @@
 
     function submitField(event) {
         event.preventDefault();
+        try {
+            const options = JSON.parse($fieldForm.options_json || 'null');
+            if (Array.isArray(options) && options.every(option => typeof option === 'string')) $fieldForm.options_json = JSON.stringify(options.map(option => option.trim()).filter(Boolean));
+        } catch { /* Keep invalid advanced JSON so the server can show its validation error. */ }
         const options = { onSuccess: () => (fieldOpen = false) };
         editingField
             ? $fieldForm.put(`/admin/intake-questionnaire/fields/${editingField.id}`, options)
@@ -272,6 +283,7 @@
 
     <Modal bind:open={fieldOpen} title={editingField ? 'Vraag wijzigen' : 'Vraag toevoegen'} description="Alle JSON-velden ondersteunen dezelfde logica als het oorspronkelijke app-schema." size="xl">
         <form id="intake-field-form" onsubmit={submitField} class="space-y-5">
+            <Field label="Sectie" error={$fieldForm.errors.section_id} hint="Bij verplaatsen blijven bestaande antwoorden en uploads gekoppeld aan deze vraag."><Select bind:value={$fieldForm.section_id} options={questionnaire.sections.filter(section => section.active).map(section => ({ value: section.id, label: section.title }))} /></Field>
             <div class="grid gap-4 md:grid-cols-3">
                 <Field label="Technische sleutel" hint="Niet wijzigen nadat antwoorden zijn opgeslagen." error={$fieldForm.errors.key}><Input bind:value={$fieldForm.key} /></Field>
                 <Field label="Type" error={$fieldForm.errors.type}><Select bind:value={$fieldForm.type} options={fieldTypes.map(type => ({ value: type, label: type === 'month_year' ? 'Maand en jaar / periode' : type }))} /></Field>
@@ -309,10 +321,16 @@
                 <div class="md:col-span-2"><Field label="Maand/jaar-instellingen (JSON)" error={$fieldForm.errors.date_config_json} hint="Type month_year: mode single of range, allow_future, allow_year_only, min_year. allow_unknown: false verbergt ‘Weet ik niet’. month_label, year_label, unknown_label en ongoing_label bepalen de teksten. Ook via dateConfig bij herhaal-subvelden."><Textarea rows="3" bind:value={$fieldForm.date_config_json} placeholder={'{"mode":"single","allow_future":false,"allow_year_only":true}'} /></Field></div>
                 <div class="md:col-span-2"><Field label="Leeftijd-instellingen (JSON)" error={$fieldForm.errors.age_config_json} hint="Type number: date_field is de opslagsleutel van de geboortedatum. date_label, toggle_label en estimate_label bepalen de teksten. calculated_hint is een verouderd optioneel veld en wordt niet meer getoond."><Textarea rows="6" bind:value={$fieldForm.age_config_json} /></Field></div>
                 <div class="md:col-span-2"><Field label="Foto-instellingen (JSON)" error={$fieldForm.errors.photo_config_json} hint="instruction_label en instructions: bewerkbaar instructiekopje en fotoinstructies; de Helptekst bevat de uitleg waarom. max: maximum aantal foto’s; year_required: jaartal verplicht per foto; allow_na: Niet van toepassing toestaan; slots: afzonderlijke aanzichten met id en label; optioneel answer_field bewaart een bestaande antwoordsleutel binnen dezelfde antwoordsectie. caption: toelichting per foto met label en placeholder (verwijder caption om te verbergen). example_url en example_caption: voorbeeldafbeelding; example_after: tekst onder het voorbeeld. na_key verbindt een gedeelde keuze; existing_only toont alleen eerder opgeslagen foto’s."><Textarea rows="8" bind:value={$fieldForm.photo_config_json} placeholder={'{"max":10,"year_required":true,"allow_na":false}'} /></Field></div>
-                <Field label="Antwoordopties (JSON-array)" hint="Ook voor een getalvraag met ‘Weet ik niet’, of een herhaalvraag met ‘Niet van toepassing’." error={$fieldForm.errors.options_json}><Textarea rows="5" bind:value={$fieldForm.options_json} placeholder='["Ja", "Nee"]' /></Field>
+                <Field label="Antwoordopties" hint="Eén antwoord per regel. Ook voor een getalvraag met ‘Weet ik niet’ of een herhaalvraag met ‘Niet van toepassing’." error={$fieldForm.errors.options_json}>
+                    <Textarea rows="6" value={parsedOptions().join('\n')} oninput={event => $fieldForm.options_json = JSON.stringify(event.currentTarget.value.split('\n'))} placeholder={'Ja\nNee\nWeet ik niet'} />
+                    <details class="mt-2 text-sm"><summary class="cursor-pointer">Geavanceerd: antwoordopties als JSON</summary><Textarea rows="4" bind:value={$fieldForm.options_json} /></details>
+                </Field>
                 <Field label="Oude antwoordwaarden (JSON)" hint="Koppel een oude opgeslagen waarde aan een huidige optie. Opgeslagen antwoorden blijven ongewijzigd." error={$fieldForm.errors.answer_aliases_json}><Textarea rows="4" bind:value={$fieldForm.answer_aliases_json} /></Field>
                 <Field label="Eigenaarssignalen voorbereiden (JSON)" hint="Alleen open tekst. condition is de context; signals bevat bewerkbare signaalcodes en omschrijvingen. De bron blijft altijd eigenaar-gerapporteerd en niet bevestigd. Dit activeert geen AI-aanroep of protocoladvies." error={$fieldForm.errors.signal_config_json}><Textarea rows="5" bind:value={$fieldForm.signal_config_json} placeholder={'{"condition":"IR","signals":{"vetkam":"Een vetkam genoemd door de eigenaar"}}'} /></Field>
-                <Field label="Zichtbaarheidsregel showIf (JSON-object)" error={$fieldForm.errors.show_if_json}><Textarea rows="5" bind:value={$fieldForm.show_if_json} placeholder={'{"paard.geslacht":"merrie"}'} /></Field>
+                <div class="md:col-span-2"><Field label="Wanneer verschijnt deze vraag?" error={$fieldForm.errors.show_if_json} hint="Combineer voorwaarden met ‘alle’ of ‘minstens één’. Gebruik een omgekeerde voorwaarde om een antwoord uit te sluiten.">
+                    <IntakeConditionEditor value={parsedConditions()} questions={conditionQuestions} onchange={rule => $fieldForm.show_if_json = rule ? JSON.stringify(rule, null, 2) : ''} />
+                    <details class="mt-3 text-sm"><summary class="cursor-pointer">Geavanceerd: zichtbaarheidsregel bewerken</summary><Textarea rows="5" bind:value={$fieldForm.show_if_json} placeholder={'{"paard.geslacht":"merrie"}'} /></details>
+                </Field></div>
                 <Field label="Signaleringsregel flagIf (JSON)" error={$fieldForm.errors.flag_if_json}><Textarea rows="4" bind:value={$fieldForm.flag_if_json} placeholder='["Ja"] of "non-empty"' /></Field>
                 <Field label="Kritieke regel criticalIf (JSON)" error={$fieldForm.errors.critical_if_json}><Textarea rows="4" bind:value={$fieldForm.critical_if_json} placeholder='["Ja"]' /></Field>
                 <Field label="Protocollogica protocolIf (JSON-object)" error={$fieldForm.errors.protocol_if_json}><Textarea rows="4" bind:value={$fieldForm.protocol_if_json} /></Field>

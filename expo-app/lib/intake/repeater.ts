@@ -1,5 +1,17 @@
 import type { RepeaterRow } from './schema';
 
+/** Allow a decimal comma or dot while typing, without turning pasted text into a quantity. */
+export const isRepeaterNumberInput = (value: string) => /^\d*(?:[.,]\d*)?$/.test(value);
+
+/** Display legacy kg values without rewriting the saved answer or guessing other units. */
+export function repeaterNumberText(value: unknown, unit?: string): string {
+  const raw = typeof value === 'string' || typeof value === 'number' ? String(value).trim() : '';
+  if (/^\d+(?:[.,]\d*)?$/.test(raw)) return raw;
+  if (!unit) return '';
+  const escaped = unit.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  return new RegExp(`^(\\d+(?:[.,]\\d+)?)\\s*${escaped}$`, 'i').exec(raw)?.[1] ?? '';
+}
+
 // Legacy rows receive an identity without rewriting answers merely by viewing them.
 // Their next edit persists the identity alongside the unchanged answer properties.
 const legacyIds = new WeakMap<RepeaterRow, string>();

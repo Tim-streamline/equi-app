@@ -13,7 +13,7 @@ class IntakeReview
     public function forBooking(IntakeBooking $booking): array
     {
         $questionnaire = IntakeQuestionnaire::where('slug', 'protocol-intake')->where('active', true)
-            ->with(['sections' => fn ($q) => $q->where('active', true), 'sections.fields' => fn ($q) => $q->where('active', true)])->first();
+            ->with('sections.fields')->first();
         $answers = [];
         foreach ($booking->answers as $answer) {
             $decoded = json_decode($answer->value ?? 'null', true);
@@ -22,6 +22,7 @@ class IntakeReview
         $none = $questionnaire?->none_options ?? ['geen'];
         $submissionBlocks = app(IntakeSubmissionBlocks::class)->forBooking($booking);
         $sections = [];
+        $historicalSections = [];
         $photos = app(IntakePhotoRules::class);
         $usedMetadata = [];
         $safety = [];
@@ -30,12 +31,12 @@ class IntakeReview
         $attachments = IntakeAttachment::where('booking_id', $booking->id)->get()->keyBy('id');
         foreach ($questionnaire?->sections ?? [] as $section) {
             $rows = [];
+            $historicalRows = [];
             $sectionAnswers = $this->sectionAnswers($section, $answers);
             foreach ($section->fields as $field) {
-                if (! $this->visible($field->show_if, $sectionAnswers, $answers, $none)) {
-                    continue;
-                }
                 $value = $sectionAnswers[$field->key] ?? null;
+                $historical = ! $section->active || ! $field->active || ! $this->visible($field->show_if, $sectionAnswers, $answers, $none);
+                if ($historical && ($field->type === 'sectionhead' || $this->empty($value))) continue;
                 if (($field->photo_config['existing_only'] ?? false) && ! $photos->references($value)) {
                     continue;
                 }
@@ -45,15 +46,15 @@ class IntakeReview
                 if ($repeaterNa) {
                     $value = null;
                 }
-                $critical = $this->matches($value, $field->critical_if);
-                $flag = $critical || $this->flagged($value, $field->flag_if, $none);
+                $critical = ! $historical && $this->matches($value, $field->critical_if);
+                $flag = ! $historical && ($critical || $this->flagged($value, $field->flag_if, $none));
                 $hits = [];
-                $signalInput = app(IntakeSignalPreparation::class)->input($field, $value, $answerSection);
+                $signalInput = $historical ? null : app(IntakeSignalPreparation::class)->input($field, $value, $answerSection);
                 if ($signalInput) {
                     $signalInputs[] = $signalInput;
                 }
                 // Owner suspicions remain review information, never automatic protocol diagnoses.
-                foreach ($field->signal_config ? [] : ($field->protocol_if ?? []) as $option => $text) {
+                foreach (($historical || $field->signal_config) ? [] : ($field->protocol_if ?? []) as $option => $text) {
                     if (($option === 'veiligheid' && $critical) || ($option === 'non-empty' && ! $this->empty($value))
                         || (! in_array($option, ['veiligheid', 'non-empty'], true) && $this->matches($value, $option))) {
                         $hits[] = $text;
@@ -63,10 +64,12 @@ class IntakeReview
                     'id' => $answerSection.'.'.$field->key, 'key' => $field->key, 'section' => $section->key,
                     'label' => $field->label, 'type' => $field->type, 'unit' => $field->unit,
                     'sub' => $field->repeater_sub ?? [], 'value' => $value,
-                    'empty' => $this->empty($value), 'required' => ! $field->optional,
+                    'empty' => $this->empty($value), 'required' => ! $historical && ! $field->optional,
+                    'historical' => $historical,
                     'flagged' => $flag, 'critical' => $critical, 'protocol' => $hits,
                     'flagged_options' => array_values(array_filter(is_array($value) ? $value : [], fn ($v) => is_scalar($v) && ($this->matches($v, $field->critical_if) || $this->flagged($v, $field->flag_if, $none)))),
                     'attachments' => [],
+                    'large_attachments' => ($field->photo_config['document_layout'] ?? null) === 'full_page',
                     'owner_reported' => (bool) $field->signal_config,
                 ];
                 if ($field->type === 'month_year') {
@@ -141,6 +144,11 @@ class IntakeReview
                     }
                     unset($photo);
                 }
+                if ($historical) {
+                    $row['flagged_options'] = [];
+                    $historicalRows[] = $row;
+                    continue;
+                }
                 $rows[] = $row;
                 if ($field->critical_if) {
                     $safety[] = $row;
@@ -150,7 +158,9 @@ class IntakeReview
                 }
             }
             $questions = array_values(array_filter($rows, fn ($r) => $r['type'] !== 'sectionhead'));
-            $sections[] = ['id' => $section->key, 'nr' => $section->order, 'title' => $section->title,
+            if ($historicalRows) $historicalSections[] = ['id' => $section->key, 'nr' => $section->order, 'title' => $section->title,
+                'rows' => $historicalRows, 'intro' => 'Eerder ingevuld, nu verborgen of gearchiveerd. Niet als actuele bevinding gebruiken.', 'count' => count($historicalRows), 'flags' => 0];
+            if ($section->active) $sections[] = ['id' => $section->key, 'nr' => $section->order, 'title' => $section->title,
                 'intro' => $section->intro, 'rows' => $rows, 'count' => count($questions),
                 'flags' => count(array_filter($questions, fn ($r) => $r['flagged']))];
         }
@@ -173,7 +183,7 @@ class IntakeReview
         $rows = array_merge([], ...array_column($sections, 'rows'));
         $questions = array_values(array_filter($rows, fn ($r) => $r['type'] !== 'sectionhead'));
 
-        return ['sections' => $sections, 'safety' => $safety, 'triggers' => $triggers, 'answers' => $answers,
+        return ['sections' => $sections, 'historical_sections' => $historicalSections, 'safety' => $safety, 'triggers' => $triggers, 'answers' => $answers,
             'counts' => ['all' => count($questions), 'flags' => count(array_filter($questions, fn ($r) => $r['flagged'])),
                 'protocol' => count($triggers), 'empty' => count(array_filter($questions, fn ($r) => $r['empty']))],
             'blocked' => (bool) $submissionBlocks || count(array_filter($safety, fn ($r) => $r['critical'])) > 0,
@@ -239,7 +249,20 @@ class IntakeReview
     public function visible(?array $conditions, array $section, array $answers, array $none): bool
     {
         foreach ($conditions ?? [] as $key => $condition) {
+            if ($key === '$all' || $key === '$any') {
+                $results = array_map(fn ($rule) => $this->visible($rule, $section, $answers, $none), $condition);
+                if ($key === '$all' ? in_array(false, $results, true) : ! in_array(true, $results, true)) return false;
+                continue;
+            }
+            if ($key === '$not') {
+                if ($this->visible($condition, $section, $answers, $none)) return false;
+                continue;
+            }
             $value = str_contains($key, '.') ? data_get($answers, $key) : ($section[$key] ?? null);
+            if (is_array($condition) && array_key_exists('gte', $condition)) {
+                if (! is_numeric($value) || (float) $value < (float) $condition['gte']) return false;
+                continue;
+            }
             $options = is_array($condition) ? $condition : [$condition];
             if (in_array('any-checked', $options, true) || in_array('multi-checked', $options, true)) {
                 if (count($this->realOptions($value, $none)) < (in_array('multi-checked', $options, true) ? 2 : 1)) {

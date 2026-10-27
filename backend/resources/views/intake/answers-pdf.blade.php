@@ -24,6 +24,7 @@
     .critical .flagged-option { color: #a12d2d; }
     img { max-width: 440px; max-height: 250px; }
     .photo { page-break-inside: avoid; margin-bottom: 10px; }
+    .photo.overview img { max-width: 640px; max-height: 760px; }
     ul { margin: 0 0 12px; padding-left: 18px; }
 </style>
 </head>
@@ -38,6 +39,7 @@
 @foreach ($section['rows'] as $row)
 <div class="review-answer{{ !empty($row['critical']) ? ' critical' : (!empty($row['flagged']) ? ' attention' : '') }}">
 <h3>{{ $row['label'] }}</h3>
+@if(!empty($row['historical']))<p class="meta">Eerder ingevuld, nu niet van toepassing. Geen actuele bevinding.</p>@endif
 @if (!empty($row['critical']))
 <p class="review-label">Aandachtspunt · Blokkeert protocol</p>
 @elseif (!empty($row['flagged']))
@@ -51,7 +53,7 @@
 <p class="empty">Niet ingevuld</p>
 @elseif (in_array($row['type'], ['photo', 'file'], true))
 @foreach ($row['attachments'] as $file)
-<div class="photo">
+<div class="photo{{ !empty($row['large_attachments']) ? ' overview' : '' }}">
 @if (isset($images[$file['id']]))<img src="{{ $images[$file['id']] }}" alt="{{ $file['name'] }}"><br>@endif
 {{ $file['name'] }}
 @if(!empty($file['year']))<br>Jaartal: {{ $file['year'] }}@endif
@@ -64,7 +66,7 @@
 <div class="entry">
 @foreach ($row['sub'] as $column)
 @php($value = $entry[$column['id'] ?? $column['key']] ?? '')
-<p><strong>{{ $column['label'] }}:</strong> <span class="answer">{{ is_array($value) ? implode(', ', $value) : $value }}</span></p>
+<p><strong>{{ $column['label'] }}:</strong> <span class="answer">{{ is_array($value) ? implode(', ', $value) : $value }}{{ !empty($column['unit']) && is_scalar($value) && preg_match('/^\d+(?:[.,]\d+)?$/', (string) $value) ? ' '.$column['unit'] : '' }}</span></p>
 @endforeach
 </div>
 @endforeach

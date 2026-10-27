@@ -3300,8 +3300,7 @@
               "Minder dan 2 uur",
               "2 tot 4 uur",
               "4 tot 6 uur",
-              "Meer dan 6 uur",
-              "Wisselend"
+              "Meer dan 6 uur"
             ]
           }
         },
@@ -3649,7 +3648,8 @@
             {
               "id": "hoeveelheid",
               "label": "Hoeveelheid per voerbeurt",
-              "type": "text"
+              "type": "number",
+              "unit": "kg"
             },
             {
               "id": "voerbeurten",
@@ -3720,7 +3720,8 @@
             {
               "id": "hoeveelheid",
               "label": "Hoeveelheid per voerbeurt",
-              "type": "text"
+              "type": "number",
+              "unit": "kg"
             },
             {
               "id": "voerbeurten",
@@ -3752,11 +3753,18 @@
         },
         {
           "id": "mineralen-toegang-anders",
-          "label": "Anders, namelijk",
+          "label": "Licht je antwoord toe.",
           "type": "text",
           "showIf": {
-            "mineralen-toegang": "anders"
-          }
+            "voer.mineralen-toegang": [
+              "anders",
+              "Anders",
+              "anders, namelijk",
+              "Anders, namelijk"
+            ]
+          },
+          "required": true,
+          "optional": false
         },
         {
           "id": "sec-supp",
@@ -4401,6 +4409,193 @@
           ]
         },
         {
+          "id": "leefruimte-paarden",
+          "label": "Hoeveel paarden delen dezelfde leefruimte?",
+          "type": "number",
+          "required": true,
+          "step": 1,
+          "hint": "Tel jouw eigen paard mee. Staat je paard alleen in deze leefruimte? Vul dan 1 in."
+        },
+        {
+          "id": "leefruimte-oppervlakte",
+          "label": "Hoe groot is deze leefruimte ongeveer?",
+          "type": "number",
+          "required": true,
+          "unit": "m²",
+          "step": 1,
+          "placeholder": "Geef een schatting in m². Ter vergelijking: een gemiddeld voetbalveld is ongeveer 7.000 m² groot.",
+          "hint": "Vul de totale leefruimte in die je paard nu gebruikt. Een schatting is goed."
+        },
+        {
+          "id": "ruwvoerplekken-aantal",
+          "label": "Hoeveel afzonderlijke ruwvoerplekken zijn er beschikbaar?",
+          "type": "number",
+          "required": true,
+          "step": 1,
+          "showIf": {
+            "$all": [
+              {
+                "$not": {
+                  "sociaal.sociaal-leven": "Individueel zonder zicht/neuscontact met andere paarden"
+                }
+              },
+              {
+                "$any": [
+                  {
+                    "sociaal.sociaal-leven": [
+                      "Samen met 1 ander paard",
+                      "Kleine groep (2–5 paarden)",
+                      "Grotere groep (>5 paarden)"
+                    ]
+                  },
+                  {
+                    "huisvesting.woonvorm": "groepshuisvesting"
+                  },
+                  {
+                    "huisvesting.leefruimte-paarden": {
+                      "gte": 2
+                    }
+                  }
+                ]
+              }
+            ]
+          },
+          "hint": "Tel het aantal plekken waar paarden tegelijkertijd rustig en ongestoord kunnen eten. Eén grote hooiruif kan dus meerdere voerplekken bieden, mits ieder paard voldoende ruimte heeft om te eten zonder door andere paarden te worden gehinderd of weggejaagd."
+        },
+        {
+          "id": "ruwvoerplekken-verdeling",
+          "label": "Hoe zijn de ruwvoerplekken over het terrein verdeeld?",
+          "type": "multi",
+          "required": true,
+          "options": [
+            "Ruim verspreid over het terrein",
+            "Meerdere voerplekken dicht bij elkaar",
+            "In of nabij smalle doorgangen",
+            "In hoeken of doodlopende gedeelten",
+            "Anders, namelijk..."
+          ],
+          "showIf": {
+            "$all": [
+              {
+                "$not": {
+                  "sociaal.sociaal-leven": "Individueel zonder zicht/neuscontact met andere paarden"
+                }
+              },
+              {
+                "$any": [
+                  {
+                    "sociaal.sociaal-leven": [
+                      "Samen met 1 ander paard",
+                      "Kleine groep (2–5 paarden)",
+                      "Grotere groep (>5 paarden)"
+                    ]
+                  },
+                  {
+                    "huisvesting.woonvorm": "groepshuisvesting"
+                  },
+                  {
+                    "huisvesting.leefruimte-paarden": {
+                      "gte": 2
+                    }
+                  }
+                ]
+              }
+            ]
+          },
+          "flagIf": [
+            "In of nabij smalle doorgangen",
+            "In hoeken of doodlopende gedeelten"
+          ],
+          "hint": "Meerdere antwoorden mogelijk."
+        },
+        {
+          "id": "ruwvoerplekken-anders",
+          "label": "Licht je antwoord toe.",
+          "type": "textarea",
+          "lines": 2,
+          "required": true,
+          "showIf": {
+            "$all": [
+              {
+                "$all": [
+                  {
+                    "$not": {
+                      "sociaal.sociaal-leven": "Individueel zonder zicht/neuscontact met andere paarden"
+                    }
+                  },
+                  {
+                    "$any": [
+                      {
+                        "sociaal.sociaal-leven": [
+                          "Samen met 1 ander paard",
+                          "Kleine groep (2–5 paarden)",
+                          "Grotere groep (>5 paarden)"
+                        ]
+                      },
+                      {
+                        "huisvesting.woonvorm": "groepshuisvesting"
+                      },
+                      {
+                        "huisvesting.leefruimte-paarden": {
+                          "gte": 2
+                        }
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "huisvesting.ruwvoerplekken-verdeling": "Anders, namelijk..."
+              }
+            ]
+          }
+        },
+        {
+          "id": "ruwvoer-ongestoord",
+          "label": "Kan jouw paard altijd ongestoord ruwvoer eten, zonder te moeten wijken voor andere paarden?",
+          "type": "radio",
+          "required": true,
+          "options": [
+            "Ja, altijd",
+            "Meestal wel",
+            "Regelmatig niet",
+            "Zelden",
+            "Weet ik niet"
+          ],
+          "showIf": {
+            "$all": [
+              {
+                "$not": {
+                  "sociaal.sociaal-leven": "Individueel zonder zicht/neuscontact met andere paarden"
+                }
+              },
+              {
+                "$any": [
+                  {
+                    "sociaal.sociaal-leven": [
+                      "Samen met 1 ander paard",
+                      "Kleine groep (2–5 paarden)",
+                      "Grotere groep (>5 paarden)"
+                    ]
+                  },
+                  {
+                    "huisvesting.woonvorm": "groepshuisvesting"
+                  },
+                  {
+                    "huisvesting.leefruimte-paarden": {
+                      "gte": 2
+                    }
+                  }
+                ]
+              }
+            ]
+          },
+          "flagIf": [
+            "Regelmatig niet",
+            "Zelden"
+          ]
+        },
+        {
           "id": "paddock-schuilplek",
           "label": "Heeft jouw paard buiten toegang tot een schuilplek?",
           "type": "radio",
@@ -4449,26 +4644,143 @@
         },
         {
           "id": "buiten-droog-liggen",
-          "label": "Kan jouw paard buiten droog en comfortabel liggen?",
+          "label": "Heeft jouw paard in alle seizoenen toegang tot een droge, comfortabele en veilige ligplaats waar hij volledig plat kan liggen?",
           "type": "radio",
           "required": true,
           "options": [
-            "Ja, het hele jaar door",
+            "Ja, altijd",
             "Meestal wel",
+            "Niet altijd bij langdurige regenval of natte omstandigheden",
+            "Niet altijd tijdens warme of zonnige dagen",
+            "Nee",
+            "Weet ik niet",
             "Alleen in bepaalde delen van het jaar",
-            "Nee / vaak nat, modderig of oncomfortabel",
-            "Wisselend per seizoen",
-            "Weet ik niet"
+            "Wisselend per seizoen"
           ],
           "flagIf": [
-            "Nee / vaak nat, modderig of oncomfortabel"
-          ]
+            "Niet altijd bij langdurige regenval of natte omstandigheden",
+            "Niet altijd tijdens warme of zonnige dagen",
+            "Nee",
+            "Alleen in bepaalde delen van het jaar",
+            "Wisselend per seizoen"
+          ],
+          "answerAliases": {
+            "Ja, het hele jaar door": "Ja, altijd",
+            "Nee / vaak nat, modderig of oncomfortabel": "Nee"
+          }
         },
         {
           "id": "buiten-droog-liggen-toelichting",
           "label": "Korte toelichting indien nodig",
           "type": "textarea",
           "optional": true
+        },
+        {
+          "id": "ontspannen-slapen",
+          "label": "Zie je jouw paard regelmatig ontspannen liggen en slapen?",
+          "type": "radio",
+          "required": true,
+          "options": [
+            "Ja, ook volledig plat",
+            "Ja, maar zelden volledig plat",
+            "Af en toe",
+            "Zelden of nooit",
+            "Weet ik niet"
+          ],
+          "flagIf": [
+            "Zelden of nooit"
+          ]
+        },
+        {
+          "id": "rust-weggejaagd",
+          "label": "Wordt jouw paard weleens weggejaagd of gedwongen op te staan wanneer hij wil rusten of schuilen?",
+          "type": "radio",
+          "required": true,
+          "options": [
+            "Nee, nooit",
+            "Af en toe",
+            "Regelmatig",
+            "Weet ik niet"
+          ],
+          "showIf": {
+            "$all": [
+              {
+                "$not": {
+                  "sociaal.sociaal-leven": "Individueel zonder zicht/neuscontact met andere paarden"
+                }
+              },
+              {
+                "$any": [
+                  {
+                    "sociaal.sociaal-leven": [
+                      "Samen met 1 ander paard",
+                      "Kleine groep (2–5 paarden)",
+                      "Grotere groep (>5 paarden)"
+                    ]
+                  },
+                  {
+                    "huisvesting.woonvorm": "groepshuisvesting"
+                  },
+                  {
+                    "huisvesting.leefruimte-paarden": {
+                      "gte": 2
+                    }
+                  }
+                ]
+              }
+            ]
+          },
+          "flagIf": [
+            "Af en toe",
+            "Regelmatig"
+          ]
+        },
+        {
+          "id": "schuilplaats-inrichting",
+          "label": "Hoe zijn de schuilplaatsen ingericht?",
+          "type": "multi",
+          "required": true,
+          "options": [
+            "Eén in- en uitgang",
+            "Meerdere ruime in- en uitgangen",
+            "Vanuit de schuilplaats is er goed overzicht over de omgeving",
+            "Vanuit de schuilplaats is het overzicht beperkt",
+            "Andere paarden kunnen de doorgang blokkeren",
+            "Niet van toepassing",
+            "Weet ik niet"
+          ],
+          "showIf": {
+            "$any": [
+              {
+                "huisvesting.schuilmogelijkheden": [
+                  "Schuilstal / inloopstal",
+                  "Overkapping"
+                ]
+              },
+              {
+                "huisvesting.buiten-droog-liggen": [
+                  "Meestal wel",
+                  "Niet altijd bij langdurige regenval of natte omstandigheden",
+                  "Niet altijd tijdens warme of zonnige dagen",
+                  "Nee",
+                  "Alleen in bepaalde delen van het jaar",
+                  "Wisselend per seizoen"
+                ]
+              },
+              {
+                "huisvesting.rust-weggejaagd": [
+                  "Af en toe",
+                  "Regelmatig"
+                ]
+              }
+            ]
+          },
+          "flagIf": [
+            "Eén in- en uitgang",
+            "Vanuit de schuilplaats is het overzicht beperkt",
+            "Andere paarden kunnen de doorgang blokkeren"
+          ],
+          "hint": "Meerdere antwoorden mogelijk."
         },
         {
           "id": "bodem-leefomgeving",
@@ -5074,6 +5386,18 @@
           "type": "textarea",
           "optional": true,
           "hint": "Denk bijvoorbeeld aan intensieve landbouw, kassen, boomgaard of wijngaard, mestopslag, compostering, industrie, een drukke weg, regelmatige verbranding of andere opvallende omgevingsfactoren?"
+        },
+        {
+          "id": "leefomgeving-overzicht",
+          "label": "Overzicht van de leefomgeving",
+          "type": "photo",
+          "optional": true,
+          "hint": "Upload indien mogelijk een eenvoudige plattegrond/tekening van de leefomgeving. Geef hierop aan waar de voerplekken, waterpunten, schuilplaatsen en belangrijke doorgangen zich bevinden. Zo kan ik beter beoordelen of de inrichting voldoende rust, overzicht en bewegingsvrijheid biedt.",
+          "photoConfig": {
+            "max": 1,
+            "allow_na": false,
+            "document_layout": "full_page"
+          }
         }
       ]
     },
@@ -5228,11 +5552,39 @@
             "Competitie rond voer",
             "Competitie rond water",
             "Competitie rond schuilplek / favoriete plekken"
-          ]
+          ],
+          "showIf": {
+            "$all": [
+              {
+                "$not": {
+                  "sociaal.sociaal-leven": "Individueel zonder zicht/neuscontact met andere paarden"
+                }
+              },
+              {
+                "$any": [
+                  {
+                    "sociaal.sociaal-leven": [
+                      "Samen met 1 ander paard",
+                      "Kleine groep (2–5 paarden)",
+                      "Grotere groep (>5 paarden)"
+                    ]
+                  },
+                  {
+                    "huisvesting.woonvorm": "groepshuisvesting"
+                  },
+                  {
+                    "huisvesting.leefruimte-paarden": {
+                      "gte": 2
+                    }
+                  }
+                ]
+              }
+            ]
+          }
         },
         {
           "id": "sociaal-functioneren",
-          "label": "Kan jouw paard sociaal gezien rustig functioneren in de groep?",
+          "label": "Kan jouw paard ongestoord eten, drinken, rusten en schuilen, zonder regelmatig te moeten wijken voor andere paarden?",
           "type": "radio",
           "required": true,
           "options": [
@@ -5244,7 +5596,35 @@
           ],
           "flagIf": [
             "Regelmatig sociale spanning / stress"
-          ]
+          ],
+          "showIf": {
+            "$all": [
+              {
+                "$not": {
+                  "sociaal.sociaal-leven": "Individueel zonder zicht/neuscontact met andere paarden"
+                }
+              },
+              {
+                "$any": [
+                  {
+                    "sociaal.sociaal-leven": [
+                      "Samen met 1 ander paard",
+                      "Kleine groep (2–5 paarden)",
+                      "Grotere groep (>5 paarden)"
+                    ]
+                  },
+                  {
+                    "huisvesting.woonvorm": "groepshuisvesting"
+                  },
+                  {
+                    "huisvesting.leefruimte-paarden": {
+                      "gte": 2
+                    }
+                  }
+                ]
+              }
+            ]
+          }
         },
         {
           "id": "sociaal-positie",
@@ -5260,7 +5640,680 @@
           ],
           "flagIf": [
             "…zelf wordt weggejaagd"
+          ],
+          "showIf": {
+            "$all": [
+              {
+                "$not": {
+                  "sociaal.sociaal-leven": "Individueel zonder zicht/neuscontact met andere paarden"
+                }
+              },
+              {
+                "$any": [
+                  {
+                    "sociaal.sociaal-leven": [
+                      "Samen met 1 ander paard",
+                      "Kleine groep (2–5 paarden)",
+                      "Grotere groep (>5 paarden)"
+                    ]
+                  },
+                  {
+                    "huisvesting.woonvorm": "groepshuisvesting"
+                  },
+                  {
+                    "huisvesting.leefruimte-paarden": {
+                      "gte": 2
+                    }
+                  }
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "id": "wegjagen-frequentie",
+          "label": "Hoe vaak wordt jouw paard weggejaagd of bedreigd door andere paarden?",
+          "type": "radio",
+          "required": true,
+          "options": [
+            "Zelden (minder dan één keer per week)",
+            "Enkele keren per week",
+            "Dagelijks",
+            "Meerdere keren per dag",
+            "Weet ik niet"
+          ],
+          "showIf": {
+            "$all": [
+              {
+                "$all": [
+                  {
+                    "$not": {
+                      "sociaal.sociaal-leven": "Individueel zonder zicht/neuscontact met andere paarden"
+                    }
+                  },
+                  {
+                    "$any": [
+                      {
+                        "sociaal.sociaal-leven": [
+                          "Samen met 1 ander paard",
+                          "Kleine groep (2–5 paarden)",
+                          "Grotere groep (>5 paarden)"
+                        ]
+                      },
+                      {
+                        "huisvesting.woonvorm": "groepshuisvesting"
+                      },
+                      {
+                        "huisvesting.leefruimte-paarden": {
+                          "gte": 2
+                        }
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "$any": [
+                  {
+                    "sociaal.sociaal-spanning": [
+                      "Wegjagen bij voer",
+                      "Wegjagen in het algemeen",
+                      "Competitie rond voer",
+                      "Competitie rond water",
+                      "Competitie rond schuilplek / favoriete plekken",
+                      "Mijn paard wordt regelmatig weggejaagd / gepest",
+                      "Bijten / trappen / dreigen",
+                      "Achtervolgen / opjagen"
+                    ]
+                  },
+                  {
+                    "sociaal.sociaal-positie": [
+                      "…zelf wordt weggejaagd",
+                      "…soms wegjaagt en soms wordt weggejaagd"
+                    ]
+                  },
+                  {
+                    "huisvesting.ruwvoer-ongestoord": [
+                      "Meestal wel",
+                      "Regelmatig niet",
+                      "Zelden"
+                    ]
+                  },
+                  {
+                    "huisvesting.rust-weggejaagd": [
+                      "Af en toe",
+                      "Regelmatig"
+                    ]
+                  },
+                  {
+                    "sociaal.sociaal-functioneren": [
+                      "Meestal wel",
+                      "Wisselend",
+                      "Regelmatig sociale spanning / stress"
+                    ]
+                  }
+                ]
+              }
+            ]
+          },
+          "flagIf": [
+            "Dagelijks",
+            "Meerdere keren per dag"
           ]
+        },
+        {
+          "id": "wegjagen-gedrag",
+          "label": "Wat gebeurt er wanneer jouw paard wordt weggejaagd?",
+          "type": "multi",
+          "required": true,
+          "options": [
+            "Een ander paard dreigt met zijn oren of lichaamshouding",
+            "Mijn paard wordt fysiek weggeduwd",
+            "Mijn paard wordt achtervolgd",
+            "Er wordt gebeten of geschopt",
+            "Andere paarden blokkeren de doorgang",
+            "Anders, namelijk..."
+          ],
+          "showIf": {
+            "$all": [
+              {
+                "$all": [
+                  {
+                    "$not": {
+                      "sociaal.sociaal-leven": "Individueel zonder zicht/neuscontact met andere paarden"
+                    }
+                  },
+                  {
+                    "$any": [
+                      {
+                        "sociaal.sociaal-leven": [
+                          "Samen met 1 ander paard",
+                          "Kleine groep (2–5 paarden)",
+                          "Grotere groep (>5 paarden)"
+                        ]
+                      },
+                      {
+                        "huisvesting.woonvorm": "groepshuisvesting"
+                      },
+                      {
+                        "huisvesting.leefruimte-paarden": {
+                          "gte": 2
+                        }
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "$any": [
+                  {
+                    "sociaal.sociaal-spanning": [
+                      "Wegjagen bij voer",
+                      "Wegjagen in het algemeen",
+                      "Competitie rond voer",
+                      "Competitie rond water",
+                      "Competitie rond schuilplek / favoriete plekken",
+                      "Mijn paard wordt regelmatig weggejaagd / gepest",
+                      "Bijten / trappen / dreigen",
+                      "Achtervolgen / opjagen"
+                    ]
+                  },
+                  {
+                    "sociaal.sociaal-positie": [
+                      "…zelf wordt weggejaagd",
+                      "…soms wegjaagt en soms wordt weggejaagd"
+                    ]
+                  },
+                  {
+                    "huisvesting.ruwvoer-ongestoord": [
+                      "Meestal wel",
+                      "Regelmatig niet",
+                      "Zelden"
+                    ]
+                  },
+                  {
+                    "huisvesting.rust-weggejaagd": [
+                      "Af en toe",
+                      "Regelmatig"
+                    ]
+                  },
+                  {
+                    "sociaal.sociaal-functioneren": [
+                      "Meestal wel",
+                      "Wisselend",
+                      "Regelmatig sociale spanning / stress"
+                    ]
+                  }
+                ]
+              }
+            ]
+          },
+          "flagIf": [
+            "Mijn paard wordt fysiek weggeduwd",
+            "Mijn paard wordt achtervolgd",
+            "Er wordt gebeten of geschopt",
+            "Andere paarden blokkeren de doorgang"
+          ],
+          "hint": "Meerdere antwoorden mogelijk."
+        },
+        {
+          "id": "wegjagen-gedrag-anders",
+          "label": "Licht je antwoord toe.",
+          "type": "textarea",
+          "lines": 2,
+          "required": true,
+          "showIf": {
+            "$all": [
+              {
+                "$all": [
+                  {
+                    "$all": [
+                      {
+                        "$not": {
+                          "sociaal.sociaal-leven": "Individueel zonder zicht/neuscontact met andere paarden"
+                        }
+                      },
+                      {
+                        "$any": [
+                          {
+                            "sociaal.sociaal-leven": [
+                              "Samen met 1 ander paard",
+                              "Kleine groep (2–5 paarden)",
+                              "Grotere groep (>5 paarden)"
+                            ]
+                          },
+                          {
+                            "huisvesting.woonvorm": "groepshuisvesting"
+                          },
+                          {
+                            "huisvesting.leefruimte-paarden": {
+                              "gte": 2
+                            }
+                          }
+                        ]
+                      }
+                    ]
+                  },
+                  {
+                    "$any": [
+                      {
+                        "sociaal.sociaal-spanning": [
+                          "Wegjagen bij voer",
+                          "Wegjagen in het algemeen",
+                          "Competitie rond voer",
+                          "Competitie rond water",
+                          "Competitie rond schuilplek / favoriete plekken",
+                          "Mijn paard wordt regelmatig weggejaagd / gepest",
+                          "Bijten / trappen / dreigen",
+                          "Achtervolgen / opjagen"
+                        ]
+                      },
+                      {
+                        "sociaal.sociaal-positie": [
+                          "…zelf wordt weggejaagd",
+                          "…soms wegjaagt en soms wordt weggejaagd"
+                        ]
+                      },
+                      {
+                        "huisvesting.ruwvoer-ongestoord": [
+                          "Meestal wel",
+                          "Regelmatig niet",
+                          "Zelden"
+                        ]
+                      },
+                      {
+                        "huisvesting.rust-weggejaagd": [
+                          "Af en toe",
+                          "Regelmatig"
+                        ]
+                      },
+                      {
+                        "sociaal.sociaal-functioneren": [
+                          "Meestal wel",
+                          "Wisselend",
+                          "Regelmatig sociale spanning / stress"
+                        ]
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "sociaal.wegjagen-gedrag": "Anders, namelijk..."
+              }
+            ]
+          }
+        },
+        {
+          "id": "wegjagen-reactie",
+          "label": "Hoe reageert jouw paard nadat hij is weggejaagd?",
+          "type": "multi",
+          "required": true,
+          "options": [
+            "Loopt rustig naar een andere plek",
+            "Gaat ergens anders verder met eten",
+            "Stopt tijdelijk met eten of rusten",
+            "Blijft op afstand wachten",
+            "Wordt op een andere plek opnieuw weggejaagd",
+            "Blijft zichtbaar alert op de andere paarden",
+            "Anders, namelijk...",
+            "Weet ik niet"
+          ],
+          "showIf": {
+            "$all": [
+              {
+                "$all": [
+                  {
+                    "$not": {
+                      "sociaal.sociaal-leven": "Individueel zonder zicht/neuscontact met andere paarden"
+                    }
+                  },
+                  {
+                    "$any": [
+                      {
+                        "sociaal.sociaal-leven": [
+                          "Samen met 1 ander paard",
+                          "Kleine groep (2–5 paarden)",
+                          "Grotere groep (>5 paarden)"
+                        ]
+                      },
+                      {
+                        "huisvesting.woonvorm": "groepshuisvesting"
+                      },
+                      {
+                        "huisvesting.leefruimte-paarden": {
+                          "gte": 2
+                        }
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "$any": [
+                  {
+                    "sociaal.sociaal-spanning": [
+                      "Wegjagen bij voer",
+                      "Wegjagen in het algemeen",
+                      "Competitie rond voer",
+                      "Competitie rond water",
+                      "Competitie rond schuilplek / favoriete plekken",
+                      "Mijn paard wordt regelmatig weggejaagd / gepest",
+                      "Bijten / trappen / dreigen",
+                      "Achtervolgen / opjagen"
+                    ]
+                  },
+                  {
+                    "sociaal.sociaal-positie": [
+                      "…zelf wordt weggejaagd",
+                      "…soms wegjaagt en soms wordt weggejaagd"
+                    ]
+                  },
+                  {
+                    "huisvesting.ruwvoer-ongestoord": [
+                      "Meestal wel",
+                      "Regelmatig niet",
+                      "Zelden"
+                    ]
+                  },
+                  {
+                    "huisvesting.rust-weggejaagd": [
+                      "Af en toe",
+                      "Regelmatig"
+                    ]
+                  },
+                  {
+                    "sociaal.sociaal-functioneren": [
+                      "Meestal wel",
+                      "Wisselend",
+                      "Regelmatig sociale spanning / stress"
+                    ]
+                  }
+                ]
+              }
+            ]
+          },
+          "flagIf": [
+            "Stopt tijdelijk met eten of rusten",
+            "Blijft op afstand wachten",
+            "Wordt op een andere plek opnieuw weggejaagd",
+            "Blijft zichtbaar alert op de andere paarden"
+          ],
+          "hint": "Meerdere antwoorden mogelijk."
+        },
+        {
+          "id": "wegjagen-reactie-anders",
+          "label": "Licht je antwoord toe.",
+          "type": "textarea",
+          "lines": 2,
+          "required": true,
+          "showIf": {
+            "$all": [
+              {
+                "$all": [
+                  {
+                    "$all": [
+                      {
+                        "$not": {
+                          "sociaal.sociaal-leven": "Individueel zonder zicht/neuscontact met andere paarden"
+                        }
+                      },
+                      {
+                        "$any": [
+                          {
+                            "sociaal.sociaal-leven": [
+                              "Samen met 1 ander paard",
+                              "Kleine groep (2–5 paarden)",
+                              "Grotere groep (>5 paarden)"
+                            ]
+                          },
+                          {
+                            "huisvesting.woonvorm": "groepshuisvesting"
+                          },
+                          {
+                            "huisvesting.leefruimte-paarden": {
+                              "gte": 2
+                            }
+                          }
+                        ]
+                      }
+                    ]
+                  },
+                  {
+                    "$any": [
+                      {
+                        "sociaal.sociaal-spanning": [
+                          "Wegjagen bij voer",
+                          "Wegjagen in het algemeen",
+                          "Competitie rond voer",
+                          "Competitie rond water",
+                          "Competitie rond schuilplek / favoriete plekken",
+                          "Mijn paard wordt regelmatig weggejaagd / gepest",
+                          "Bijten / trappen / dreigen",
+                          "Achtervolgen / opjagen"
+                        ]
+                      },
+                      {
+                        "sociaal.sociaal-positie": [
+                          "…zelf wordt weggejaagd",
+                          "…soms wegjaagt en soms wordt weggejaagd"
+                        ]
+                      },
+                      {
+                        "huisvesting.ruwvoer-ongestoord": [
+                          "Meestal wel",
+                          "Regelmatig niet",
+                          "Zelden"
+                        ]
+                      },
+                      {
+                        "huisvesting.rust-weggejaagd": [
+                          "Af en toe",
+                          "Regelmatig"
+                        ]
+                      },
+                      {
+                        "sociaal.sociaal-functioneren": [
+                          "Meestal wel",
+                          "Wisselend",
+                          "Regelmatig sociale spanning / stress"
+                        ]
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "sociaal.wegjagen-reactie": "Anders, namelijk..."
+              }
+            ]
+          }
+        },
+        {
+          "id": "wegjagen-momenten",
+          "label": "Op welke momenten wordt jouw paard weggejaagd?",
+          "type": "multi",
+          "required": true,
+          "options": [
+            "Bij het eten",
+            "Bij het drinken",
+            "Bij schuilplaatsen",
+            "Bij rust- of ligplaatsen",
+            "In doorgangen of smalle gedeelten",
+            "Tijdens andere sociale interacties",
+            "Zonder duidelijke aanleiding",
+            "Anders, namelijk..."
+          ],
+          "showIf": {
+            "$all": [
+              {
+                "$all": [
+                  {
+                    "$not": {
+                      "sociaal.sociaal-leven": "Individueel zonder zicht/neuscontact met andere paarden"
+                    }
+                  },
+                  {
+                    "$any": [
+                      {
+                        "sociaal.sociaal-leven": [
+                          "Samen met 1 ander paard",
+                          "Kleine groep (2–5 paarden)",
+                          "Grotere groep (>5 paarden)"
+                        ]
+                      },
+                      {
+                        "huisvesting.woonvorm": "groepshuisvesting"
+                      },
+                      {
+                        "huisvesting.leefruimte-paarden": {
+                          "gte": 2
+                        }
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "$any": [
+                  {
+                    "sociaal.sociaal-spanning": [
+                      "Wegjagen bij voer",
+                      "Wegjagen in het algemeen",
+                      "Competitie rond voer",
+                      "Competitie rond water",
+                      "Competitie rond schuilplek / favoriete plekken",
+                      "Mijn paard wordt regelmatig weggejaagd / gepest",
+                      "Bijten / trappen / dreigen",
+                      "Achtervolgen / opjagen"
+                    ]
+                  },
+                  {
+                    "sociaal.sociaal-positie": [
+                      "…zelf wordt weggejaagd",
+                      "…soms wegjaagt en soms wordt weggejaagd"
+                    ]
+                  },
+                  {
+                    "huisvesting.ruwvoer-ongestoord": [
+                      "Meestal wel",
+                      "Regelmatig niet",
+                      "Zelden"
+                    ]
+                  },
+                  {
+                    "huisvesting.rust-weggejaagd": [
+                      "Af en toe",
+                      "Regelmatig"
+                    ]
+                  },
+                  {
+                    "sociaal.sociaal-functioneren": [
+                      "Meestal wel",
+                      "Wisselend",
+                      "Regelmatig sociale spanning / stress"
+                    ]
+                  }
+                ]
+              }
+            ]
+          },
+          "flagIf": [
+            "Bij het eten",
+            "Bij het drinken",
+            "Bij schuilplaatsen",
+            "Bij rust- of ligplaatsen",
+            "In doorgangen of smalle gedeelten"
+          ],
+          "hint": "Meerdere antwoorden mogelijk."
+        },
+        {
+          "id": "wegjagen-momenten-anders",
+          "label": "Licht je antwoord toe.",
+          "type": "textarea",
+          "lines": 2,
+          "required": true,
+          "showIf": {
+            "$all": [
+              {
+                "$all": [
+                  {
+                    "$all": [
+                      {
+                        "$not": {
+                          "sociaal.sociaal-leven": "Individueel zonder zicht/neuscontact met andere paarden"
+                        }
+                      },
+                      {
+                        "$any": [
+                          {
+                            "sociaal.sociaal-leven": [
+                              "Samen met 1 ander paard",
+                              "Kleine groep (2–5 paarden)",
+                              "Grotere groep (>5 paarden)"
+                            ]
+                          },
+                          {
+                            "huisvesting.woonvorm": "groepshuisvesting"
+                          },
+                          {
+                            "huisvesting.leefruimte-paarden": {
+                              "gte": 2
+                            }
+                          }
+                        ]
+                      }
+                    ]
+                  },
+                  {
+                    "$any": [
+                      {
+                        "sociaal.sociaal-spanning": [
+                          "Wegjagen bij voer",
+                          "Wegjagen in het algemeen",
+                          "Competitie rond voer",
+                          "Competitie rond water",
+                          "Competitie rond schuilplek / favoriete plekken",
+                          "Mijn paard wordt regelmatig weggejaagd / gepest",
+                          "Bijten / trappen / dreigen",
+                          "Achtervolgen / opjagen"
+                        ]
+                      },
+                      {
+                        "sociaal.sociaal-positie": [
+                          "…zelf wordt weggejaagd",
+                          "…soms wegjaagt en soms wordt weggejaagd"
+                        ]
+                      },
+                      {
+                        "huisvesting.ruwvoer-ongestoord": [
+                          "Meestal wel",
+                          "Regelmatig niet",
+                          "Zelden"
+                        ]
+                      },
+                      {
+                        "huisvesting.rust-weggejaagd": [
+                          "Af en toe",
+                          "Regelmatig"
+                        ]
+                      },
+                      {
+                        "sociaal.sociaal-functioneren": [
+                          "Meestal wel",
+                          "Wisselend",
+                          "Regelmatig sociale spanning / stress"
+                        ]
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "sociaal.wegjagen-momenten": "Anders, namelijk..."
+              }
+            ]
+          }
         },
         {
           "id": "sociaal-toelichting",
@@ -5282,7 +6335,35 @@
           ],
           "flagIf": [
             "Nee, weinig mogelijkheid om uit sociale druk te gaan"
-          ]
+          ],
+          "showIf": {
+            "$all": [
+              {
+                "$not": {
+                  "sociaal.sociaal-leven": "Individueel zonder zicht/neuscontact met andere paarden"
+                }
+              },
+              {
+                "$any": [
+                  {
+                    "sociaal.sociaal-leven": [
+                      "Samen met 1 ander paard",
+                      "Kleine groep (2–5 paarden)",
+                      "Grotere groep (>5 paarden)"
+                    ]
+                  },
+                  {
+                    "huisvesting.woonvorm": "groepshuisvesting"
+                  },
+                  {
+                    "huisvesting.leefruimte-paarden": {
+                      "gte": 2
+                    }
+                  }
+                ]
+              }
+            ]
+          }
         },
         {
           "id": "andere-diersoorten",
