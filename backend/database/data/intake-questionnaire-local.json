@@ -13310,7 +13310,17 @@
                             "id": "hoeveelheid",
                             "type": "number",
                             "label": "Hoeveelheid per voerbeurt",
-                            "unit": "kg"
+                            "unitField": "eenheid",
+                            "hint": "Weet je het alleen in scheppen? Weeg één schep een keer af."
+                        },
+                        {
+                            "id": "eenheid",
+                            "type": "radio",
+                            "label": "Eenheid",
+                            "options": [
+                                "gram",
+                                "kilo"
+                            ]
                         },
                         {
                             "id": "voerbeurten",
@@ -14374,7 +14384,17 @@
                             "id": "hoeveelheid",
                             "type": "number",
                             "label": "Hoeveelheid per voerbeurt",
-                            "unit": "kg"
+                            "unitField": "eenheid",
+                            "hint": "Weet je het alleen in scheppen? Weeg één schep een keer af."
+                        },
+                        {
+                            "id": "eenheid",
+                            "type": "radio",
+                            "label": "Eenheid",
+                            "options": [
+                                "gram",
+                                "kilo"
+                            ]
                         },
                         {
                             "id": "voerbeurten",

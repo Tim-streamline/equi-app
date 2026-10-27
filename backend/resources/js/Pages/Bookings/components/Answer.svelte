@@ -4,8 +4,11 @@
     const text = (value) => Array.isArray(value) ? value.join('\n') : String(value ?? '');
     const subText = (entry, col) => {
         const value = text(entry[col.id] ?? entry[col.key]);
-        return value && col.unit && /^\d+(?:[.,]\d+)?$/.test(value) ? `${value} ${col.unit}` : value;
+        const unit = col.unitField ? text(entry[col.unitField]).trim() : col.unit;
+        return value && unit && /^\d+(?:[.,]\d*)?$/.test(value.trim()) ? `${value.trim()} ${unit}` : value;
     };
+    // A unit column (gram/kilo) is shown together with its quantity.
+    const columns = (sub) => sub.filter(col => !sub.some(other => other.unitField === col.id));
 </script>
 
 {#if row.not_applicable}
@@ -33,8 +36,8 @@
     </div>
 {:else if row.type === 'repeater'}
     <div class="overflow-x-auto">
-        <table><thead><tr>{#each row.sub as col}<th>{col.label}</th>{/each}</tr></thead>
-            <tbody>{#each Array.isArray(row.value) ? row.value : [] as entry}<tr>{#each row.sub as col}<td>{subText(entry, col) || 'Niet ingevuld'}</td>{/each}</tr>{/each}</tbody>
+        <table><thead><tr>{#each columns(row.sub) as col}<th>{col.label}</th>{/each}</tr></thead>
+            <tbody>{#each Array.isArray(row.value) ? row.value : [] as entry}<tr>{#each columns(row.sub) as col}<td>{subText(entry, col) || 'Niet ingevuld'}</td>{/each}</tr>{/each}</tbody>
         </table>
     </div>
 {:else}

@@ -111,6 +111,9 @@ class ProtocolNutrition
                     continue;
                 }
                 $amount = $text('hoeveelheid') ?: $text('dosering') ?: $text('hoeveel');
+                if ($amount !== '' && $text('eenheid') !== '' && preg_match('/^\d+(?:[.,]\d*)?$/', $amount)) {
+                    $amount .= ' '.$text('eenheid');
+                }
                 $frequency = $text('voerbeurten') !== '' ? $text('voerbeurten').' voerbeurten per dag'
                     : ($text('hoevaak') ?: ($text('frequentie') ?: ($field === 'huidig-extra' && $amount !== '' ? 'per dag' : '')));
                 $source = $field === 'huidige-bijvoeding' && ($row['_source'] ?? null) === 'balancer' ? 'balancer' : $field;

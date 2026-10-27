@@ -1,4 +1,22 @@
-import type { RepeaterRow } from './schema';
+import type { RepeaterRow, RepeaterSub } from './schema';
+
+const PLAIN_NUMBER = /^\d+(?:[.,]\d*)?$/;
+const text = (value: unknown) => typeof value === 'string' || typeof value === 'number' ? String(value).trim() : '';
+
+/** Radio columns that only hold the unit of another column; they are shown together with that number. */
+export const repeaterUnitColumns = (subs: readonly RepeaterSub[]) => new Set(subs.map(sub => sub.unitField).filter((id): id is string => !!id));
+
+/** A plain number was entered, but its per-row unit (e.g. gram or kilo) is still open. */
+export function repeaterUnitMissing(row: RepeaterRow | null | undefined, sub: RepeaterSub): boolean {
+  return !!row && sub.type === 'number' && !!sub.unitField && PLAIN_NUMBER.test(text(row[sub.id])) && !text(row[sub.unitField]);
+}
+
+/** Read-only text for one value, with its fixed or chosen unit. Legacy free text is shown as saved. */
+export function repeaterValueText(row: RepeaterRow, sub: RepeaterSub): string {
+  const raw = text(row[sub.id]);
+  const unit = sub.unitField ? text(row[sub.unitField]) : sub.unit ?? '';
+  return unit && PLAIN_NUMBER.test(raw) ? `${raw} ${unit}` : raw;
+}
 
 /** Allow a decimal comma or dot while typing, without turning pasted text into a quantity. */
 export const isRepeaterNumberInput = (value: string) => /^\d*(?:[.,]\d*)?$/.test(value);

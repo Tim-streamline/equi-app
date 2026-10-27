@@ -49,6 +49,8 @@ export type ShowIf = {
 
 export type RepeaterSub = {
   unit?: string;
+  /** Id of a sibling radio sub-field whose chosen answer is this number's unit (e.g. gram or kilo). */
+  unitField?: string;
   id: string;
   label: string;
   type: 'text' | 'number' | 'textarea' | 'date' | 'month_year' | 'radio';
@@ -722,7 +724,7 @@ export const INTAKE_SCHEMA: Section[] = [
       {
         id: 'gewicht-methode-wanneer',
         answerSection: 'paard',
-        label: 'Wanneer was dat?',
+        label: 'Wanneer is het gewicht bepaald?',
         type: "month_year",
         required: true,        showIf: { 'paard.gewicht-methode': ['gewogen op weegbrug', 'gemeten met gewichts-lint', 'rapport dierenarts'] },
 
@@ -3346,7 +3348,17 @@ export const INTAKE_SCHEMA: Section[] = [
     "id": "hoeveelheid",
     "label": "Hoeveelheid per voerbeurt",
     "type": "number",
-    "unit": "kg"
+    "unitField": "eenheid",
+    "hint": "Weet je het alleen in scheppen? Weeg één schep een keer af."
+  },
+  {
+    "id": "eenheid",
+    "label": "Eenheid",
+    "type": "radio",
+    "options": [
+      "gram",
+      "kilo"
+    ]
   },
   {
     "id": "voerbeurten",
@@ -3418,7 +3430,17 @@ export const INTAKE_SCHEMA: Section[] = [
     "id": "hoeveelheid",
     "label": "Hoeveelheid per voerbeurt",
     "type": "number",
-    "unit": "kg"
+    "unitField": "eenheid",
+    "hint": "Weet je het alleen in scheppen? Weeg één schep een keer af."
+  },
+  {
+    "id": "eenheid",
+    "label": "Eenheid",
+    "type": "radio",
+    "options": [
+      "gram",
+      "kilo"
+    ]
   },
   {
     "id": "voerbeurten",

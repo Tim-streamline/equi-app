@@ -564,7 +564,7 @@
         {
           "id": "gewicht-methode-wanneer",
           "answerSection": "paard",
-          "label": "Wanneer was dat?",
+          "label": "Wanneer is het gewicht bepaald?",
           "type": "month_year",
           "required": true,
           "showIf": {
@@ -3649,7 +3649,17 @@
               "id": "hoeveelheid",
               "label": "Hoeveelheid per voerbeurt",
               "type": "number",
-              "unit": "kg"
+              "unitField": "eenheid",
+              "hint": "Weet je het alleen in scheppen? Weeg één schep een keer af."
+            },
+            {
+              "id": "eenheid",
+              "label": "Eenheid",
+              "type": "radio",
+              "options": [
+                "gram",
+                "kilo"
+              ]
             },
             {
               "id": "voerbeurten",
@@ -3721,7 +3731,17 @@
               "id": "hoeveelheid",
               "label": "Hoeveelheid per voerbeurt",
               "type": "number",
-              "unit": "kg"
+              "unitField": "eenheid",
+              "hint": "Weet je het alleen in scheppen? Weeg één schep een keer af."
+            },
+            {
+              "id": "eenheid",
+              "label": "Eenheid",
+              "type": "radio",
+              "options": [
+                "gram",
+                "kilo"
+              ]
             },
             {
               "id": "voerbeurten",

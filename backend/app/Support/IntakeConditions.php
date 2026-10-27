@@ -18,6 +18,17 @@ class IntakeConditions
         return $result;
     }
 
+    /** Whether a rule uses syntax that app versions before 27 October 2026 cannot evaluate. */
+    public function grouped(mixed $rule): bool
+    {
+        if (! is_array($rule)) return false;
+        foreach ($rule as $key => $value) {
+            if (in_array($key, ['$all', '$any', '$not'], true)) return true;
+            if (is_array($value) && ! array_is_list($value) && array_key_exists('gte', $value)) return true;
+        }
+        return false;
+    }
+
     public function valid(mixed $rule, int $depth = 0): bool
     {
         if ($rule === null) return true;

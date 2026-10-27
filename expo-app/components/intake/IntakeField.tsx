@@ -10,7 +10,7 @@ import { IntakeInputFrame, IntakeTextInput as TextInput } from './IntakeScrollVi
 import { Field, FieldValue, RepeaterSub, RepeaterRow } from '@/lib/intake/schema';
 import { formatDate } from '@/lib/intake/dates';
 import type { DateAnswer } from '@/lib/intake/dates';
-import { createRepeaterRow, withRepeaterRowIds, isRepeaterNumberInput, repeaterNumberText } from '@/lib/intake/repeater';
+import { createRepeaterRow, withRepeaterRowIds, isRepeaterNumberInput, repeaterNumberText, repeaterUnitColumns, repeaterUnitMissing, repeaterValueText } from '@/lib/intake/repeater';
 import { MonthYearField } from './MonthYearField';
 import { normalizeAnswer, isFieldRequired, isNoneOption, repeaterNotApplicable, repeaterNaKey, photoNotApplicable, photoReferences, photoSlotReferences } from '@/lib/intake/logic';
 import { useIntake } from '@/lib/intake/store';
@@ -117,10 +117,10 @@ export function IntakeField({ field, sectionId, n, noneOptions }: Props) {
 function ReadOnlyAnswer({ field, value, answers }: { field: Field; value: FieldValue; answers: Record<string, FieldValue> }) {
   let text = '';
   if (field.type === 'repeater' && Array.isArray(value)) {
-    text = value.map(row => (field.sub ?? []).map(sub => {
+    const unitColumns = repeaterUnitColumns(field.sub ?? []);
+    text = value.map(row => (field.sub ?? []).filter(sub => !unitColumns.has(sub.id)).map(sub => {
       const entry = row && typeof row === 'object' ? (row as RepeaterRow)[sub.id] : null;
-      const suffix = sub.unit && /^\d+(?:[.,]\d+)?$/.test(String(entry)) ? ` ${sub.unit}` : '';
-      return entry ? `${sub.label}: ${sub.type === 'month_year' ? formatDate(entry) : `${entry}${suffix}`}` : '';
+      return entry ? `${sub.label}: ${sub.type === 'month_year' ? formatDate(entry) : repeaterValueText(row as RepeaterRow, sub)}` : '';
     }).filter(Boolean).join('\n')).filter(Boolean).join('\n\n');
   } else text = field.type === 'month_year' ? formatDate(value) : Array.isArray(value) ? value.join(' · ') : value == null ? '' : String(value);
   if (field.unit && text) text += ` ${field.unit}`;
@@ -579,6 +579,7 @@ function RepeaterField({
                     style={s.type === 'textarea' ? { minHeight: 112, textAlignVertical: 'top' } : { minHeight: 48 }}
                   />{s.unit && <Text className="pr-4 font-semi text-[15px] text-ink-70">{s.unit}</Text>}</IntakeInputFrame>
                   {s.type === 'number' && !!row[s.id] && !repeaterNumberText(row[s.id], s.unit) && <Text className="mt-2 text-[13px] leading-[20px] text-ink-70">Eerder ingevuld: {String(row[s.id])}. Vul hierboven alleen het getal{s.unit ? ` in ${s.unit}` : ''} in.</Text>}
+                  {repeaterUnitMissing(row as RepeaterRow, s) && <Text className="mt-2 text-[13px] leading-[20px] text-ink-70">Kies hieronder de eenheid.</Text>}
                   </View>
                 )}
               </View>

@@ -64,9 +64,12 @@
 @elseif ($row['type'] === 'repeater')
 @foreach (is_array($row['value']) ? $row['value'] : [] as $entry)
 <div class="entry">
+@php($unitColumns = array_filter(array_column($row['sub'], 'unitField')))
 @foreach ($row['sub'] as $column)
+@continue(in_array($column['id'] ?? null, $unitColumns, true))
 @php($value = $entry[$column['id'] ?? $column['key']] ?? '')
-<p><strong>{{ $column['label'] }}:</strong> <span class="answer">{{ is_array($value) ? implode(', ', $value) : $value }}{{ !empty($column['unit']) && is_scalar($value) && preg_match('/^\d+(?:[.,]\d+)?$/', (string) $value) ? ' '.$column['unit'] : '' }}</span></p>
+@php($unit = !empty($column['unitField']) ? trim((string) (is_scalar($entry[$column['unitField']] ?? null) ? $entry[$column['unitField']] : '')) : ($column['unit'] ?? ''))
+<p><strong>{{ $column['label'] }}:</strong> <span class="answer">{{ is_array($value) ? implode(', ', $value) : $value }}{{ $unit !== '' && is_scalar($value) && preg_match('/^\d+(?:[.,]\d*)?$/', trim((string) $value)) ? ' '.$unit : '' }}</span></p>
 @endforeach
 </div>
 @endforeach

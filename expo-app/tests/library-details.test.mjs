@@ -7,6 +7,7 @@ const compile = async path => ts.transpileModule(await readFile(new URL(path, im
 const contentCode = await compile('../components/library/LibraryContent.tsx');
 const requestCode = await compile('../hooks/useLibraryResource.ts');
 const connectorCode = await compile('../db/connector.ts');
+const syncOperationsCode = await compile('../lib/intake/sync-operations.ts');
 function load(code, modules) {
   const exports = {}; new Function('require', 'exports', code)(name => { assert.ok(name in modules, name); return modules[name]; }, exports); return exports;
 }
@@ -116,6 +117,7 @@ test('native token renewal preserves credentials offline and clears only rejecte
   let clears = 0, fail = new Error('Network request failed');
   const connector = load(connectorCode, {
     '@/lib/intake/attachments/sync': { uploadIntakeAttachments: async () => {} },
+    '@/lib/intake/sync-operations': load(syncOperationsCode, {}),
     './auth': { loadCredentials: async () => ({ userId: 'owner' }), getApiBaseUrl: () => 'https://example.test', login: async () => { throw fail; }, clearCredentials: async () => { clears++; } },
     '@/lib/library-events': { notifyLibraryUnlock() {} },
     '@/lib/account-session': { accountSession: { revision: 0, forSession: async (_revision, action) => action() } },

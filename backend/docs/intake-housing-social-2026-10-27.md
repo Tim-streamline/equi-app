@@ -30,7 +30,13 @@ Dezelfde evaluatie geldt in de app, voortgangscontrole, adminreview en PDF. Bij 
 
 De gerichte migratie `2026_10_27_000002_expand_housing_and_social_intake` leest het vaste configuratiebestand `housing-social-2026-10-27.json`. Gebruik hiervoor geen volledige reseed: die kan andere CMS-aanpassingen overschrijven. De migratie voegt definities toe en wijzigt alleen de aangewezen instellingen; geen antwoord- of uploadtabellen worden gewijzigd.
 
-Rol backend en de bijgewerkte web/native client gezamenlijk uit: oudere clients kennen de nieuwe voorwaardegroepen nog niet. Lokale migratie is uitgevoerd; deze taak publiceert niets naar staging/productie.
+Rol backend en de bijgewerkte web/native client gezamenlijk uit: oudere clients kennen de nieuwe voorwaardegroepen nog niet.
+
+Oudere app-versies verbergen vragen met `$all`, `$any`, `$not` of `gte`. Zolang `INTAKE_REQUIRE_GROUPED_CONDITIONS=false` (standaard) blokkeren deze vragen het insturen daarom niet op de server; de huidige app blijft ze wel verplicht stellen. Zet de waarde op `true` zodra alle eigenaren de update hebben.
+
+## Hoeveelheid bijvoeding
+
+`huidige-bijvoeding` en `bijvoeding-historie` vragen de hoeveelheid als getal met per product een keuze gram of kilo (`eenheid`, gekoppeld via `unitField`). Migratie `2026_10_27_000005_add_feed_portion_unit_choice` past bestaande definities aan zonder antwoorden te wijzigen. Oude tekstantwoorden zoals "2 scheppen" blijven geldig en zichtbaar; een nieuw getal zonder eenheid telt in de app als onvolledig. Lokale migratie is uitgevoerd; deze taak publiceert niets naar staging/productie.
 
 ## Validatie
 

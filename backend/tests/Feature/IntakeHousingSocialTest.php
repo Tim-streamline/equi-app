@@ -38,6 +38,7 @@ class IntakeHousingSocialTest extends TestCase
 
     public function test_cross_section_followups_and_hidden_answers_use_the_same_rules_for_progress_review_and_pdf(): void
     {
+        config(['intake.require_grouped_conditions' => true]);
         $booking = $this->booking();
         $this->answer($booking, 'huisvesting', 'leefruimte-paarden', 3);
         $this->answer($booking, 'huisvesting', 'ruwvoer-ongestoord', 'Regelmatig niet');
@@ -68,7 +69,23 @@ class IntakeHousingSocialTest extends TestCase
         $this->assertNotContains('wegjagen-frequentie', $ids());
     }
 
-    public function test_optional_map_and_archived_answers_remain_accessible_in_review_and_export(): void
+    public function test_grouped_questions_do_not_block_submission_from_older_apps_until_enabled(): void
+    {
+        $booking = $this->booking();
+        $this->answer($booking, 'huisvesting', 'leefruimte-paarden', 3);
+        $this->answer($booking, 'huisvesting', 'ruwvoer-ongestoord', 'Regelmatig niet');
+        $ids = collect(app(IntakeReview::class)->forBooking($booking)['sections'])->flatMap(fn ($s) => $s['rows'])->pluck('key')->all();
+        $this->assertContains('wegjagen-frequentie', $ids, 'the question is still shown and reviewed');
+        $missing = fn () => array_column(app(IntakeProgress::class)->forBooking($booking->load('answers'))['missing'], 'field');
+        $this->assertNotContains('wegjagen-frequentie', $missing());
+        $this->assertNotContains('ruwvoer-ongestoord', $missing());
+        $this->assertTrue(app(IntakeConditions::class)->grouped(IntakeField::where('key', 'wegjagen-frequentie')->sole()->show_if));
+        $this->assertFalse(app(IntakeConditions::class)->grouped(['huisvesting.leefruimte-paarden' => 'Ja']));
+        config(['intake.require_grouped_conditions' => true]);
+        $this->assertContains('wegjagen-frequentie', $missing());
+    }
+
+        public function test_optional_map_and_archived_answers_remain_accessible_in_review_and_export(): void
     {
         Storage::fake('local');
         $booking = $this->booking();

@@ -116,8 +116,16 @@ export function isFieldAnswered(field: Field, value: unknown, allAnswers?: Intak
     // no real answer — require at least one row with a non-empty sub-value.
     if (!Array.isArray(value)) return false;
     const dateSubs = (field.sub ?? []).filter(sub => sub.type === 'month_year');
+    const unitSubs = (field.sub ?? []).filter(sub => sub.type === 'number' && sub.unitField);
     for (const row of value) {
       if (!row || typeof row !== 'object') continue;
+      // A new numeric quantity needs its chosen unit; legacy free text ("2 scheppen") stays valid.
+      for (const sub of unitSubs) {
+        const amount = (row as Record<string, unknown>)[sub.id];
+        const unit = (row as Record<string, unknown>)[sub.unitField!];
+        if ((typeof amount === 'string' || typeof amount === 'number') && /^\d+(?:[.,]\d*)?$/.test(String(amount).trim())
+          && !(typeof unit === 'string' && unit.trim())) return false;
+      }
       for (const sub of dateSubs) {
         const v = row[sub.id];
         if (v !== undefined && v !== null && v !== '' && !dateAnswered(v, sub.dateConfig)) return false;
