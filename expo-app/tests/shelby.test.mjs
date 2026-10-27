@@ -53,6 +53,15 @@ function api(fetch) {
   return exports;
 }
 
+test('a new daily session drops yesterday\'s pending messages while preserving the new exchange', () => {
+  const previous = [{ id: 'old', role: 'assistant', body: 'Gisteren', plusCta: false }];
+  const question = { id: 'q', role: 'user', body: 'Vandaag', plusCta: false };
+  const received = [question, { id: 'a', role: 'assistant', body: 'Nieuw antwoord', plusCta: false }];
+  assert.deepEqual(shelby.receiveShelbyMessages([...previous, question], 'yesterday', 'today', 'q', received), received);
+  assert.deepEqual(shelby.receiveShelbyMessages([...previous, question], 'today', 'today', 'q', received), [...previous, ...received]);
+  assert.deepEqual(shelby.receiveShelbyMessages([], '', 'first-session', 'q', received), received);
+});
+
 test('asking Shelby posts the question and returns both messages', async () => {
   let sent;
   const { askShelby } = api(async (url, init) => {

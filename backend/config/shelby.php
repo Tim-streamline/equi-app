@@ -6,7 +6,7 @@ return [
 
     'openai' => [
         // Falls back to the feed scanner key, so Shelby works with the existing OpenAI account.
-        'api_key' => env('SHELBY_OPENAI_API_KEY', env('FEED_SCANNER_OPENAI_API_KEY')),
+        'api_key' => trim((string) env('SHELBY_OPENAI_API_KEY')) ?: env('FEED_SCANNER_OPENAI_API_KEY'),
         'model' => env('SHELBY_OPENAI_MODEL', 'gpt-4.1'),
     ],
 

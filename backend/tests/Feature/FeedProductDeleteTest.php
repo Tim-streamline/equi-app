@@ -61,4 +61,19 @@ class FeedProductDeleteTest extends TestCase
         $this->actingAs($editor, 'admin')->delete("/admin/feed-scanner/products/{$product->id}")->assertForbidden();
         $this->assertNotNull(Product::find($product->id));
     }
+
+    public function test_incoming_recipe_relationship_prevents_deletion(): void
+    {
+        $original = $this->product('Oorspronkelijk recept');
+        $related = $this->product('Nieuw recept');
+        $related->forceFill(['related_product_id' => $original->id])->save();
+
+        $this->delete("/admin/feed-scanner/products/{$original->id}")->assertSessionHasErrors([
+            'product' => 'Dit product hoort bij de receptgeschiedenis van een ander product. Je kunt het archiveren.',
+        ]);
+
+        $this->assertNotNull(Product::find($original->id));
+        $this->assertSame($original->id, $related->fresh()->related_product_id);
+        $this->assertSame(1, ProductVersion::where('product_id', $original->id)->count());
+    }
 }

@@ -17,7 +17,7 @@ function setup() {
     const uploadForm = { reset() {}, clearErrors() {}, post(url) { requests.push({ url }); } };
     const props = { products: { data: [] }, filters: {}, categories: { complementary: 'Aanvullend' }, ingredientOptions: [] };
     const run = new Function('$props', '$state', '$derived', 'useForm', '$form', '$uploadForm', 'router', 'prompt', `${script}
-        return { edit, newRecipe, save, reviewProduct, beginUpload, upload, modalState: () => ({ open, historyOpen, uploadOpen }) };`);
+        return { edit, save, reviewProduct, beginUpload, upload, modalState: () => ({ open, historyOpen, uploadOpen }) };`);
     const actions = run(() => props, value => value, value => value, () => ({}), form, uploadForm,
         { post: (url, data) => requests.push({ url, data }) }, () => 'Meer informatie over dit etiket');
     return { actions, form, requests };
@@ -58,14 +58,14 @@ test('review and attachment actions target the chosen revision', () => {
 });
 
 
-test('another recipe starts a separate product without copying composition or evidence', () => {
+test('adding a product starts a blank draft without a recipe relationship', () => {
     const { actions, form } = setup();
-    actions.newRecipe({ id: 'original', brand: 'Merk', name: 'Voer', barcode: '123', versions: [newer] });
-    assert.equal(form.related_product_id, 'original');
+    actions.edit();
+    assert.equal(form.related_product_id, null);
     assert.equal(form.source_version_id, null);
     assert.equal(form.expected_number, null);
-    assert.equal(form.brand, 'Merk');
-    assert.equal(form.barcode, '123');
+    assert.equal(form.brand, '');
+    assert.equal(form.barcode, '');
     assert.deepEqual(form.ingredients, []);
     assert.deepEqual(form.nutrients, []);
     assert.equal(form.composition_text, '');

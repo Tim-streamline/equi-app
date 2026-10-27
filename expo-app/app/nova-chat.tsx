@@ -9,7 +9,7 @@ import { useQuery } from '@powersync/react';
 import { ShelbyAvatar } from '@/components/shelby/ShelbyAvatar';
 import {
   SHELBY_AI_NOTICE, SHELBY_NAME, SHELBY_SUBTITLE, SHELBY_TYPING_MS, SHELBY_WELCOME,
-  isSameLocalDay, mergeShelbyMessages, questionId, type FailedQuestion, type ShelbyChatMessage,
+  isSameLocalDay, mergeShelbyMessages, receiveShelbyMessages, questionId, type FailedQuestion, type ShelbyChatMessage,
 } from '@/lib/shelby';
 import { askShelby } from '@/lib/shelby-api';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -93,7 +93,7 @@ export default function NovaChatModal() {
       await wait(Math.max(0, SHELBY_TYPING_MS - (Date.now() - started)));
       if (!mounted.current) return;
       setAnsweredSession(result.sessionId);
-      setPending(old => [...old.filter(m => m.id !== clientId), ...result.messages]);
+      setPending(old => receiveShelbyMessages(old, sessionId, result.sessionId, clientId, result.messages));
     } catch (failure) {
       if (!mounted.current) return;
       // Give the question back so the owner can send it again with the same id.

@@ -373,6 +373,9 @@ class FeedCatalogController extends Controller
             return [];
         });
         if ($blocked) {
+            if (in_array('een vervolgrecept', $blocked, true)) {
+                return back()->withErrors(['product' => 'Dit product hoort bij de receptgeschiedenis van een ander product. Je kunt het archiveren.']);
+            }
             return back()->withErrors(['product' => 'Dit product kan niet worden verwijderd, want het heeft '.implode(', ', $blocked).'. Archiveer het in plaats daarvan.']);
         }
 
@@ -389,7 +392,8 @@ class FeedCatalogController extends Controller
                 ->orWhere('reference_product_id', $product->id)->orWhereIn('reference_version_id', $versions)->orWhereIn('product_version_id', $versions)->exists(),
             'beoordelingen' => DB::table('feed_assessments')->whereIn('product_version_id', $versions)->exists(),
             'etiketfoto\'s' => DB::table('feed_label_attachments')->whereIn('product_version_id', $versions)->exists(),
-            'een vervolgrecept' => ProductVersion::where('superseded_by_product_id', $product->id)->exists(),
+            'een vervolgrecept' => ProductVersion::where('superseded_by_product_id', $product->id)->exists()
+                || Product::where('related_product_id', $product->id)->exists(),
         ];
 
         return array_keys(array_filter($checks));

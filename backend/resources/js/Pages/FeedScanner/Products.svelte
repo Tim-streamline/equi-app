@@ -69,13 +69,6 @@
             aiBusy = false;
         }
     }
-    function newRecipe(record) {
-        edit();
-        $form.brand = record.brand;
-        $form.name = record.name;
-        $form.barcode = record.barcode ?? '';
-        $form.related_product_id = record.id;
-    }
     function save(e) {
         e.preventDefault();
         const options = { onSuccess: () => open = false };
@@ -125,7 +118,7 @@
                         {#if product.published_version_id && latest?.id !== product.published_version_id}<p class="mt-1 text-xs text-muted-foreground">De eerder goedgekeurde versie blijft beschikbaar tot het nieuwe concept is goedgekeurd.</p>{/if}
                     </div>
                     <div class="flex flex-wrap gap-2">
-                        <Button size="sm" variant="outline" onclick={() => edit(product)}>Gegevens corrigeren</Button><Button size="sm" variant="outline" onclick={() => newRecipe(product)}>Ander recept toevoegen</Button>
+                        <Button size="sm" variant="outline" onclick={() => edit(product)}>Bewerken</Button>
                         {#if pendingSubmissions.length}<Button size="sm" variant="outline" onclick={() => { detailId = product.id; historyOpen = true; }}>Ingezonden etiketten ({pendingSubmissions.length})</Button>{/if}
                         {#if ['draft', 'needs_info', 'legacy'].includes(latest?.status)}<Button size="sm" variant="outline" onclick={() => { detailId = product.id; historyOpen = true; }}>Product bekijken</Button>{/if}
                         <Button size="sm" variant="ghost" onclick={() => { detailId = product.id; historyOpen = true; }}>Beoordelingen & historie</Button>
@@ -143,8 +136,7 @@
         <Pagination paginator={products} />
     </CardContent></Card>
     <Modal bind:open title={editing ? 'Product bewerken' : 'Product toevoegen'} size="xl">
-        {#if $form.source_version_id}<p class="mb-4 text-sm text-muted-foreground">Je corrigeert de productgegevens. De vorige gegevens en beoordelingen blijven in de historie. Een werkelijk gewijzigd recept voeg je toe als apart product.</p>{/if}
-        {#if $form.related_product_id}<p class="mb-4 text-sm text-muted-foreground">Dit recept wordt een apart product. Het oorspronkelijke product blijft bestaan. Voeg de nieuwe samenstelling en analyse toe.</p>{/if}
+        {#if $form.source_version_id}<p class="mb-4 text-sm text-muted-foreground">Wijzigingen worden opgeslagen als een nieuwe versie. De vorige samenstelling en beoordelingen blijven bewaard in de historie.</p>{/if}
         <details class="mb-4 rounded-lg border p-3" open={!editing}>
             <summary class="cursor-pointer font-medium">Invullen met AI</summary>
             <div class="mt-3 space-y-3">

@@ -59,6 +59,12 @@ export function mergeShelbyMessages(synced: readonly Record<string, unknown>[], 
 
 export type FailedQuestion = { id: string; body: string; horseId: string };
 
+/** A response from a new daily session replaces the previous session's local messages. */
+export function receiveShelbyMessages(pending: readonly ShelbyChatMessage[], previousSession: string, nextSession: string, clientId: string, received: readonly ShelbyChatMessage[]): ShelbyChatMessage[] {
+  const receivedIds = new Set([clientId, ...received.map(message => message.id)]);
+  return [...(previousSession === nextSession ? pending.filter(message => !receivedIds.has(message.id)) : []), ...received];
+}
+
 /** Resending the same failed question for the same horse reuses its id, so the server can return an answer it already gave. */
 export function questionId(failed: FailedQuestion | null, body: string, horseId: string, make: () => string): string {
   return failed && failed.body === body && failed.horseId === horseId ? failed.id : make();
