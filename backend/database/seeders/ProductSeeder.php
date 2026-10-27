@@ -3,7 +3,9 @@
 namespace Database\Seeders;
 
 use App\Models\Product;
+use App\Support\AuditLogger;
 use Illuminate\Database\Seeder;
+use Illuminate\Support\Facades\DB;
 
 class ProductSeeder extends Seeder
 {
@@ -34,12 +36,16 @@ class ProductSeeder extends Seeder
             ['Equilin', 'Equilin Hoefsupport', 'supplement'],
         ];
         foreach ($catalog as [$brand, $name, $category]) {
-            Product::create([
-                'brand' => $brand,
-                'name' => $name,
-                'barcode' => fake()->unique()->ean13(),
-                'category' => $category,
-            ]);
+            DB::transaction(function () use ($brand, $name, $category): void {
+                $product = Product::create([
+                    'brand' => $brand,
+                    'name' => $name,
+                    'barcode' => fake()->unique()->ean13(),
+                    'category' => $category,
+                ]);
+                AuditLogger::log('demo_seeded', $product, after: $product->only('brand', 'name', 'barcode', 'category'),
+                    reason: 'ProductSeeder: voorbeeldproduct met een verzonnen barcode.');
+            });
         }
     }
 }
