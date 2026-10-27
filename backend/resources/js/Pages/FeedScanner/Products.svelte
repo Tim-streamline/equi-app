@@ -28,6 +28,12 @@
     let aiBusy = $state(false);
     let aiError = $state('');
     let aiNotes = $state(null);
+    let formGeneration = 0;
+    function setProductOpen(value) {
+        formGeneration++;
+        aiBusy = false;
+        open = value;
+    }
     const labels = { draft: 'Concept', approved: 'Goedgekeurd', needs_info: 'Informatie ontbreekt', rejected: 'Afgewezen', legacy: 'Bestaand · nog te controleren' };
     const purposes = { packaging: 'Verpakking', composition: 'Samenstelling', analysis: 'Analyse' };
     const bases = { product: 'Productbasis', dry_matter: 'Droge-stofbasis', unknown: 'Onbekend' };
@@ -43,7 +49,7 @@
             ingredients: (data.ingredients ?? []).map(row => ({ ingredient_id: '', label: ingredientOptions.find(i => i.id === row.ingredient_id)?.name ?? '', amount: '', match_status: row.ingredient_id ? 'confirmed' : 'unknown', added_selenium: 'unknown', selenium_form: '', evidence: '', ...row })),
             nutrients: (data.nutrients ?? []).map(row => ({ qualifier: 'exact', ...row })),
             internal_notes: record?.internal_notes ?? '', source_version_id: version?.id ?? null, expected_number: version?.number ?? null, approve: false });
-        $form.reset(); $form.clearErrors(); historyOpen = false; open = true;
+        $form.reset(); $form.clearErrors(); historyOpen = false; setProductOpen(true);
         aiPhotos = null; aiText = ''; aiError = ''; aiNotes = null;
     }
     async function prefill() {
@@ -52,10 +58,12 @@
         for (const file of aiPhotos ?? []) body.append('photos[]', file);
         if (aiText.trim()) body.append('text', aiText.trim());
         if (!body.has('text') && !body.has('photos[]')) { aiError = 'Voeg een foto toe of plak de tekst van het etiket.'; return; }
+        const generation = formGeneration;
         aiBusy = true;
         try {
             const response = await fetch('/admin/feed-scanner/products/prefill', { method: 'POST', body, headers: { Accept: 'application/json', ...csrfHeaders() } });
             const result = await response.json().catch(() => ({}));
+            if (generation !== formGeneration) return;
             if (!response.ok) { aiError = result.message ?? 'Uitlezen is niet gelukt. Probeer het opnieuw.'; return; }
             const { ingredients, nutrients, ...fields } = result.data;
             // Assign per key so the form store notices each change; Object.assign would bypass it.
@@ -65,14 +73,14 @@
             if (!$form.source) $form.source = aiPhotos?.length ? 'Etiket, uitgelezen met AI' : 'Geplakte fabrikanttekst, uitgelezen met AI';
             aiNotes = result.notes;
         } catch {
-            aiError = 'Geen verbinding. Probeer het opnieuw.';
+            if (generation === formGeneration) aiError = 'Geen verbinding. Probeer het opnieuw.';
         } finally {
-            aiBusy = false;
+            if (generation === formGeneration) aiBusy = false;
         }
     }
     function save(e) {
         e.preventDefault();
-        const options = { onSuccess: () => open = false };
+        const options = { onSuccess: () => setProductOpen(false) };
         editing ? $form.put(`/admin/feed-scanner/products/${editing.id}`, options) : $form.post('/admin/feed-scanner/products', options);
     }
     function reviewProduct(record, decision, version = record.versions.find(v => v.is_current)) {
@@ -136,7 +144,7 @@
         {:else}<p class="py-8 text-center text-muted-foreground">Geen producten gevonden.</p>{/each}
         <Pagination paginator={products} />
     </CardContent></Card>
-    <Modal bind:open title={editing ? 'Product bewerken' : 'Product toevoegen'} size="xl">
+    <Modal bind:open={() => open, setProductOpen} title={editing ? 'Product bewerken' : 'Product toevoegen'} size="xl">
         {#if $form.source_version_id}<p class="mb-4 text-sm text-muted-foreground">Wijzigingen worden opgeslagen als een nieuwe versie. De vorige samenstelling en beoordelingen blijven bewaard in de historie.</p>{/if}
         <details class="mb-4 rounded-lg border p-3" open={!editing}>
             <summary class="cursor-pointer font-medium">Invullen met AI</summary>
@@ -197,7 +205,7 @@
             {/if}
             <p class="text-sm text-muted-foreground">Elke wijziging wordt een nieuw concept. Etiketten voeg je na het opslaan toe vanuit het overzicht.</p>
         </form>
-        {#snippet footer()}<Button variant="outline" onclick={() => open = false}>Annuleren</Button><Button form="feed-product" type="submit" disabled={$form.processing} onclick={() => $form.approve = false}>Concept opslaan</Button>{#if canPublish}<Button form="feed-product" type="submit" disabled={$form.processing} onclick={() => $form.approve = true}>Opslaan en goedkeuren</Button>{/if}{/snippet}
+        {#snippet footer()}<Button variant="outline" onclick={() => setProductOpen(false)}>Annuleren</Button><Button form="feed-product" type="submit" disabled={$form.processing} onclick={() => $form.approve = false}>Concept opslaan</Button>{#if canPublish}<Button form="feed-product" type="submit" disabled={$form.processing} onclick={() => $form.approve = true}>Opslaan en goedkeuren</Button>{/if}{/snippet}
     </Modal>
     <Modal bind:open={uploadOpen} title="Etiket toevoegen">
         <form id="feed-upload" onsubmit={upload} class="space-y-4">

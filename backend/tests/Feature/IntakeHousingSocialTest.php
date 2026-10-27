@@ -149,6 +149,34 @@ class IntakeHousingSocialTest extends TestCase
         $this->assertContains('Alleen in bepaalde delen van het jaar', IntakeField::where('key', 'buiten-droog-liggen')->sole()->options);
     }
 
+    public function test_moving_a_followup_preserves_visibility_for_legacy_parent_answers(): void
+    {
+        $booking = $this->booking();
+        $field = IntakeField::where('key', 'ontworming-laatst')->sole();
+        $destination = IntakeField::where('key', 'leefruimte-paarden')->sole()->section_id;
+        $admin = AdminUser::create(['name' => 'Admin', 'email' => 'move-alias@example.test', 'password' => 'password', 'role' => 'owner', 'active' => true]);
+        $visible = fn () => collect(app(IntakeReview::class)->forBooking($booking)['sections'])
+            ->flatMap(fn ($section) => $section['rows'])->contains('key', $field->key);
+        $answers = ['Combinatie van beide' => true, 'Een combinatie van beide' => true, 'Mijn paard wordt niet ontwormd' => false];
+        foreach ($answers as $answer => $expected) {
+            $this->answer($booking, 'medisch', 'ontworming-methode', $answer);
+            $this->assertSame($expected, $visible(), $answer.' before move');
+        }
+        $this->answer($booking, 'medisch', 'ontworming-methode', 'Combinatie van beide');
+        $this->actingAs($admin, 'admin')->put('/admin/intake-questionnaire/fields/'.$field->id, [
+            'section_id' => $destination, 'key' => $field->key, 'label' => $field->label,
+            'type' => $field->type, 'order' => $field->order, 'required' => true,
+            'optional' => false, 'tall' => false, 'active' => true, 'show_if_json' => json_encode($field->show_if),
+        ])->assertSessionHasNoErrors();
+        $this->assertSame('medisch', $field->fresh()->answer_section_key);
+        $this->assertContains('Combinatie van beide', $field->fresh()->show_if['medisch.ontworming-methode']);
+        $this->assertSame('"Combinatie van beide"', $booking->answers()->where('field_id', 'ontworming-methode')->value('value'));
+        foreach ($answers as $answer => $expected) {
+            $this->answer($booking, 'medisch', 'ontworming-methode', $answer);
+            $this->assertSame($expected, $visible(), $answer.' after move');
+        }
+    }
+
     public function test_admin_can_edit_nested_visibility_and_invalid_conditions_are_rejected(): void
     {
         $this->booking();

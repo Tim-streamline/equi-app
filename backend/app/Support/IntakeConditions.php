@@ -6,14 +6,27 @@ namespace App\Support;
 class IntakeConditions
 {
     /** Moving a question must not change where its existing parent answers are read. */
-    public function qualify(?array $rule, callable $source): ?array
+    public function qualify(?array $rule, callable $source, ?callable $aliases = null): ?array
     {
         if ($rule === null) return null;
         $result = [];
         foreach ($rule as $key => $value) {
-            if ($key === '$all' || $key === '$any') $result[$key] = array_map(fn ($child) => $this->qualify($child, $source), $value);
-            elseif ($key === '$not') $result[$key] = $this->qualify($value, $source);
-            else $result[str_contains($key, '.') ? $key : $source($key).'.'.$key] = $value;
+            if ($key === '$all' || $key === '$any') $result[$key] = array_map(fn ($child) => $this->qualify($child, $source, $aliases), $value);
+            elseif ($key === '$not') $result[$key] = $this->qualify($value, $source, $aliases);
+            elseif (str_contains($key, '.')) $result[$key] = $value;
+            else {
+                // Qualified references read raw answers instead of the section's alias-normalized values.
+                if ($aliases && (is_string($value) || array_is_list($value))) {
+                    $options = (array) $value;
+                    if (! array_intersect($options, ['any-checked', 'multi-checked'])) {
+                        foreach ($aliases($key) as $legacy => $canonical) {
+                            if (in_array($canonical, (array) $value, true) && ! in_array($legacy, $options, true)) $options[] = $legacy;
+                        }
+                        if ($options !== (array) $value) $value = $options;
+                    }
+                }
+                $result[$source($key).'.'.$key] = $value;
+            }
         }
         return $result;
     }

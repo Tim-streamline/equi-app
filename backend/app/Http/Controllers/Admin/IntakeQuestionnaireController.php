@@ -329,7 +329,9 @@ class IntakeQuestionnaireController extends Controller
             $data['answer_section_key'] = $answerSection;
             $parents = $field->section->fields->keyBy('key');
             $origin = $field->section->key;
-            $data['show_if'] = app(\App\Support\IntakeConditions::class)->qualify($data['show_if'], fn ($key) => $parents->get($key)?->answer_section_key ?? $origin);
+            $data['show_if'] = app(\App\Support\IntakeConditions::class)->qualify($data['show_if'],
+                fn ($key) => $parents->get($key)?->answer_section_key ?? $origin,
+                fn ($key) => $parents->get($key)?->answer_aliases ?? []);
         }
         if (IntakeField::where('key', $data['key'])->when($field, fn ($q) => $q->whereKeyNot($field->id))
             ->whereHas('section', fn ($q) => $q->where('questionnaire_id', $section->questionnaire_id))
