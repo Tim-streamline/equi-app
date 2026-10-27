@@ -20,7 +20,7 @@ export function libraryAccessLabel(item: LibraryCardItem, access?: LibraryAccess
   if (item.equiboostAccess) {
     const allowed = libraryCanRead(item, access);
     const cost = Number(item.creditCost) || 0;
-    return { label: allowed ? 'Inbegrepen bij EquiBoost' : item.equiboostAccess === 'only' ? 'Plus only · EquiBoost' : `${cost} ${cost === 1 ? 'credit' : 'credits'} · gratis tijdens EquiBoost`, locked: !allowed };
+    return { label: allowed ? 'Inbegrepen bij EquiBoost' : item.equiboostAccess === 'only' ? 'EquiBoost Only' : `${cost} ${cost === 1 ? 'credit' : 'credits'} · gratis tijdens EquiBoost`, locked: !allowed };
   }
   if (item.isPlus) return { label: 'Gratis', locked: !(access?.allowedIds ? access.allowedIds.includes(item.id) : access?.hasPlus) };
   const credits = Number(item.creditCost) || 0;

@@ -23,7 +23,7 @@
     "id": "hoefbevangenheid-waarschuwing",
     "label": "Belangrijk bij acute hoefbevangenheid",
     "type": "sectionhead",
-    "hint": "Hoefbevangenheid is een spoedeisende aandoening. Neem direct contact op met je dierenarts als dat nog niet is gebeurd. Het persoonlijke Plus-protocol kan pas worden opgesteld wanneer de acute fase voorbij is en je dierenarts aangeeft dat je paard voldoende stabiel is.",
+    "hint": "Hoefbevangenheid is een spoedeisende aandoening. Neem direct contact op met je dierenarts als dat nog niet is gebeurd. Het persoonlijke EquiBoost-protocol kan pas worden opgesteld wanneer de acute fase voorbij is en je dierenarts aangeeft dat je paard voldoende stabiel is.",
     "showIf": {
       "hoefbevangenheid": "Ja, mijn paard is momenteel hoefbevangen"
     }
@@ -132,7 +132,7 @@
     "id": "hoefbevangenheid-herstel-uitleg",
     "label": "Herstelstatus bijwerken",
     "type": "sectionhead",
-    "hint": "Je antwoorden worden opgeslagen. Versturen en het opstellen van een Plus-protocol zijn geblokkeerd totdat je beide vragen met Ja beantwoordt en je herstelstatus bevestigt. Hiermee verklaar je als eigenaar wat de dierenarts heeft aangegeven.",
+    "hint": "Je antwoorden worden opgeslagen. Versturen en het opstellen van een EquiBoost-protocol zijn geblokkeerd totdat je beide vragen met Ja beantwoordt en je herstelstatus bevestigt. Hiermee verklaar je als eigenaar wat de dierenarts heeft aangegeven.",
     "showIf": {
       "_laminitis_recovery_required": "Ja"
     }

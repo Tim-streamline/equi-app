@@ -74,7 +74,7 @@
     "after": "hoefbevangenheid-stabiel"
   },
   "messages": {
-    "blocked": "Je antwoorden blijven opgeslagen. Intake versturen en Plus-protocol opstellen zijn geblokkeerd totdat de herstelstatus is bevestigd.",
+    "blocked": "Je antwoorden blijven opgeslagen. Intake versturen en EquiBoost-protocol opstellen zijn geblokkeerd totdat de herstelstatus is bevestigd.",
     "confirm": "Herstelstatus bevestigen",
     "update": "Herstelstatus bijwerken",
     "acknowledge": "Begrepen, verder invullen",

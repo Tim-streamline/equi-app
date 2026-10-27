@@ -188,7 +188,7 @@
                         <select class="w-full rounded-lg border border-input bg-background px-3 py-2" value={accessMode} onchange={event => setAccessMode(event.currentTarget.value)}>
                             <option value="free">Gratis voor alle abonnees</option>
                             <option value="credits">Met credits</option>
-                            <option value="only">Plus only — alleen tijdens EquiBoost</option>
+                            <option value="only">EquiBoost Only: alleen tijdens het EquiBoost-traject</option>
                             <option value="included">Credits voor Basic — gratis tijdens EquiBoost</option>
                         </select>
                     </Field>

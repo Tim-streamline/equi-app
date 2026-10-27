@@ -4,10 +4,10 @@ De admin kiest per item één toegangsvorm:
 
 - **Gratis voor alle abonnees**: geen credits nodig.
 - **Met credits**: de ingestelde creditprijs geldt voor Basic en EquiBoost.
-- **Plus only — alleen tijdens EquiBoost**: alleen tijdelijke EquiBoost-toegang; geen nieuwe creditverkoop aan Basic.
+- **EquiBoost Only: alleen tijdens EquiBoost**: alleen tijdelijke EquiBoost-toegang; geen nieuwe creditverkoop aan Basic.
 - **Credits voor Basic — gratis tijdens EquiBoost**: de beheerder stelt een positieve gehele creditprijs in. Deze is niet vastgezet op één credit.
 
-Eerder met credits ontgrendelde items blijven toegankelijk, ook na een beleidswijziging naar Plus only. Tijdelijke gratis toegang maakt geen permanente aankoop aan. Een actief regulier abonnement blijft vereist.
+Eerder met credits ontgrendelde items blijven toegankelijk, ook na een beleidswijziging naar EquiBoost Only. Tijdelijke gratis toegang maakt geen permanente aankoop aan. Een actief regulier abonnement blijft vereist.
 
 ## EquiBoost-periode
 

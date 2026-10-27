@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, Text, View } from 'react-native';
 import { useQuery, useStatus } from '@powersync/react';
 import { useCurrentUserId } from '@/db/hooks';
@@ -21,6 +21,19 @@ export default function IntakeLayout() {
   const [access, setAccess] = useState<{ horseId: string; value: PlusAccess }>();
   const [error, setError] = useState('');
   const [retry, setRetry] = useState(0);
+  // A sync can briefly hide the booking. Keep the open intake on screen for a few seconds
+  // instead of replacing it, which would throw the owner back to the top of her page.
+  const ready = !!horseId && loaded && !!bookingId;
+  const shown = useRef<string | null>(null);
+  const [graceOver, setGraceOver] = useState(false);
+  useEffect(() => {
+    if (ready) { setGraceOver(false); return; }
+    if (!shown.current) return;
+    const timer = setTimeout(() => setGraceOver(true), 4000);
+    return () => clearTimeout(timer);
+  }, [ready]);
+  if (ready) shown.current = horseId;
+  const holding = !ready && !graceOver && !!horseId && shown.current === horseId;
   useEffect(() => {
     let active = true; setError('');
     if (!horseId || !loaded || bookingId) return;
@@ -29,6 +42,7 @@ export default function IntakeLayout() {
     return () => { active = false; };
   }, [horseId, loaded, bookingId, retry]);
   if (segments.at(-1) === 'reminder') return <Stack screenOptions={{ headerShown: false }} />;
+  if (holding) return <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: '#FBF8F3' } }} />;
   if (!horseId) {
     if (horsesLoading || !sync.hasSynced || horses.length) return <View className="flex-1 items-center justify-center gap-4 p-6"><ActivityIndicator accessibilityLabel="Je paarden laden" /><Text>Je paarden worden geladen…</Text><Button title="Naar Home" onPress={() => router.replace('/(tabs)/(pager)/home')} /></View>;
     return <Redirect href="/onboarding/add-horse" />;

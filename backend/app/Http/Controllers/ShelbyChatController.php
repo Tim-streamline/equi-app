@@ -79,7 +79,7 @@ class ShelbyChatController extends Controller
             'messages' => array_values(array_map(fn (ChatMessage $m) => [
                 'id' => $m->id, 'role' => $m->role, 'body' => $m->body, 'order' => $m->order,
                 'created_at' => $m->created_at?->toIso8601String(),
-                // The app only needs to know whether to show the Plus button under this answer.
+                // The app only needs to know whether to show the EquiBoost button under this answer.
                 'plus_cta' => (bool) ($m->meta['plus_cta'] ?? false),
             ], array_filter($messages))),
         ]);

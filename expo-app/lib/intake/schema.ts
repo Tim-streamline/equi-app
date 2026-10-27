@@ -2389,11 +2389,11 @@ export const INTAKE_SCHEMA: Section[] = [
         submissionBlocks: [
           {
             "answer": "nu acuut",
-            "message": "Hoefbevangenheid is een spoedeisende aandoening. Neem direct contact op met je dierenarts als dat nog niet is gebeurd. Het persoonlijke Plus-protocol kan pas worden opgesteld wanneer de acute fase voorbij is en je dierenarts aangeeft dat je paard voldoende stabiel is."
+            "message": "Hoefbevangenheid is een spoedeisende aandoening. Neem direct contact op met je dierenarts als dat nog niet is gebeurd. Het persoonlijke EquiBoost-protocol kan pas worden opgesteld wanneer de acute fase voorbij is en je dierenarts aangeeft dat je paard voldoende stabiel is."
           },
           {
             "answer": "Ja, mijn paard is momenteel hoefbevangen",
-            "message": "Hoefbevangenheid is een spoedeisende aandoening. Neem direct contact op met je dierenarts als dat nog niet is gebeurd. Het persoonlijke Plus-protocol kan pas worden opgesteld wanneer de acute fase voorbij is en je dierenarts aangeeft dat je paard voldoende stabiel is."
+            "message": "Hoefbevangenheid is een spoedeisende aandoening. Neem direct contact op met je dierenarts als dat nog niet is gebeurd. Het persoonlijke EquiBoost-protocol kan pas worden opgesteld wanneer de acute fase voorbij is en je dierenarts aangeeft dat je paard voldoende stabiel is."
           }
         ]
       },
@@ -2401,7 +2401,7 @@ export const INTAKE_SCHEMA: Section[] = [
         "id": "hoefbevangenheid-waarschuwing",
         "label": "Belangrijk bij acute hoefbevangenheid",
         "type": "sectionhead",
-        "hint": "Hoefbevangenheid is een spoedeisende aandoening. Neem direct contact op met je dierenarts als dat nog niet is gebeurd. Het persoonlijke Plus-protocol kan pas worden opgesteld wanneer de acute fase voorbij is en je dierenarts aangeeft dat je paard voldoende stabiel is.",
+        "hint": "Hoefbevangenheid is een spoedeisende aandoening. Neem direct contact op met je dierenarts als dat nog niet is gebeurd. Het persoonlijke EquiBoost-protocol kan pas worden opgesteld wanneer de acute fase voorbij is en je dierenarts aangeeft dat je paard voldoende stabiel is.",
         "showIf": {
           "hoefbevangenheid": "Ja, mijn paard is momenteel hoefbevangen"
         }

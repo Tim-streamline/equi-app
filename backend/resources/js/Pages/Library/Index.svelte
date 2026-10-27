@@ -166,7 +166,7 @@
                             <TableCell>
                                 <div class="flex gap-1">
                                     {#if i.is_featured}<Badge>featured</Badge>{/if}
-                                    {#if i.equiboost_access}<Badge variant="warning">{i.equiboost_access === 'only' ? 'Plus only · EquiBoost' : `${i.credit_cost} ${i.credit_cost === 1 ? 'credit' : 'credits'} Basic · gratis EquiBoost`}</Badge>{:else if i.is_plus || !i.credit_cost}<Badge>Gratis</Badge>{:else}<Badge variant="warning">{i.credit_cost} credits</Badge>{/if}
+                                    {#if i.equiboost_access}<Badge variant="warning">{i.equiboost_access === 'only' ? 'EquiBoost Only' : `${i.credit_cost} ${i.credit_cost === 1 ? 'credit' : 'credits'} Basic · gratis EquiBoost`}</Badge>{:else if i.is_plus || !i.credit_cost}<Badge>Gratis</Badge>{:else}<Badge variant="warning">{i.credit_cost} credits</Badge>{/if}
                                 </div>
                             </TableCell>
                             <TableCell class="text-muted-foreground">{i.author ?? '—'}</TableCell>

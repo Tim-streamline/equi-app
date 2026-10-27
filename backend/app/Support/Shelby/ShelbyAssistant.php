@@ -5,7 +5,7 @@ namespace App\Support\Shelby;
 use App\Models\Horse;
 use Throwable;
 
-/** Builds Shelby's instructions and context, asks the AI and applies the safety and Plus rules. */
+/** Builds Shelby's instructions and context, asks the AI and applies the safety and EquiBoost rules. */
 class ShelbyAssistant
 {
     public function __construct(private ShelbyTriage $triage, private ShelbyModel $model) {}
@@ -48,7 +48,7 @@ class ShelbyAssistant
 
         return [
             'body' => $body, 'acute' => $acute, 'fallback' => $fallback,
-            // The app shows a button to Plus only for the first logical mention, never with an acute signal.
+            // The app shows a button to EquiBoost only for the first logical mention, never with an acute signal.
             'plus_cta' => ! $acute && ! $hasPlus && ! $plusMentioned && $this->mentionsPlus($body),
             'provider' => $provider, 'model' => $this->model->model($provider),
             'ms' => (int) round((microtime(true) - $started) * 1000),
@@ -57,7 +57,8 @@ class ShelbyAssistant
 
     public function mentionsPlus(string $text): bool
     {
-        return (bool) preg_match('/\bPlus\b/u', $text);
+        // "Plus" is the former name; older answers in today's chat still count as a mention.
+        return (bool) preg_match('/\bEquiBoost\b|\bPlus\b/iu', $text);
     }
 
     private function context(?Horse $horse, bool $hasPlus, bool $plusMentioned, bool $acute): string
@@ -68,13 +69,13 @@ class ShelbyAssistant
             $lines[] = 'Het gesprek gaat over het paard: '.implode(', ', $about).'.';
         }
         $lines[] = $hasPlus
-            ? 'Deze gebruiker heeft voor dit paard al Plus. Raad Plus niet aan; verwijs bij vragen over een plan naar het protocol in de app.'
-            : 'Deze gebruiker heeft voor dit paard nog geen Plus.';
+            ? 'Deze gebruiker heeft voor dit paard al EquiBoost. Raad EquiBoost niet aan; verwijs bij vragen over een plan naar het protocol in de app.'
+            : 'Deze gebruiker heeft voor dit paard nog geen EquiBoost.';
         if ($plusMentioned) {
-            $lines[] = 'Je hebt Plus in dit gesprek al genoemd. Noem het niet opnieuw, tenzij de gebruiker er zelf naar vraagt.';
+            $lines[] = 'Je hebt EquiBoost in dit gesprek al genoemd. Noem het niet opnieuw, tenzij de gebruiker er zelf naar vraagt.';
         }
         if ($acute) {
-            $lines[] = 'LET OP: dit bericht bevat mogelijk een acuut signaal. Begin met de dierenarts, houd het kort en noem Plus niet.';
+            $lines[] = 'LET OP: dit bericht bevat mogelijk een acuut signaal. Begin met de dierenarts, houd het kort en noem EquiBoost niet.';
         }
 
         return implode("\n", $lines);

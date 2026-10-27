@@ -31,7 +31,7 @@ export default function IntakeSectionScreen() {
   const insets = useSafeAreaInsets();
   const { schema, noneOptions } = useIntakeSchema();
   const section = id ? schema.find((candidate) => candidate.id === id) : undefined;
-  const { state, trackActivity } = useIntake();
+  const { state, trackActivity, bookingId } = useIntake();
   useEffect(() => { if (id) trackActivity(id); }, [id, trackActivity]);
   const answers = useMemo(
     () => section ? answersForSection(section, state.answers) : {},
@@ -122,7 +122,7 @@ export default function IntakeSectionScreen() {
           </View>
         </View>}
 
-        <IntakeScrollView scrollRef={scroll} footer={
+        <IntakeScrollView scrollRef={scroll} memoryKey={requestedField ? undefined : `${bookingId ?? ''}:${section.id}`} footer={
         <View
           className="gap-2 px-5 pt-3"
           style={{

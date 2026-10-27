@@ -9,7 +9,7 @@ const combo = { id:'combo', equiboostAccess:'included', creditCost:1 };
 
 test('a normal subscription does not unlock either EquiBoost mode or label Plus-only as free', () => {
   assert.equal(libraryCanRead(only, access), false);
-  assert.deepEqual(libraryAccessLabel(only, access), {label:'Plus only · EquiBoost', locked:true});
+  assert.deepEqual(libraryAccessLabel(only, access), {label:'EquiBoost Only', locked:true});
   assert.equal(libraryCanRead(combo, access), false);
   assert.equal(libraryAccessLabel(combo, access).label, '1 credit · gratis tijdens EquiBoost');
   assert.equal(libraryAccessLabel({...combo, creditCost: 3}, access).label, '3 credits · gratis tijdens EquiBoost');

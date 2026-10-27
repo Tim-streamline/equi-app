@@ -9,7 +9,7 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('chat_messages', function (Blueprint $table) {
-            // Which AI answered, safety flags and whether the app shows a Plus button.
+            // Which AI answered, safety flags and whether the app shows an EquiBoost button.
             $table->jsonb('meta')->nullable();
         });
     }

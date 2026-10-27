@@ -140,7 +140,7 @@ export default function NovaChatModal() {
                 {m.plusCta && (
                   <Pressable accessibilityRole="button" onPress={() => router.push('/protocol-purchase')}
                     className="mt-2.5 self-start rounded-pill bg-teal-700 px-4 py-2">
-                    <Text className="font-semi text-[13px] text-white">Bekijk Plus</Text>
+                    <Text className="font-semi text-[13px] text-white">Bekijk EquiBoost</Text>
                   </Pressable>
                 )}
               </ShelbyMessage>

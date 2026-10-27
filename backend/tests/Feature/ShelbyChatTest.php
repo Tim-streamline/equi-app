@@ -74,7 +74,7 @@ class ShelbyChatTest extends TestCase
         Http::assertSent(function (ClientRequest $request) {
             return $request->url() === 'https://api.openai.com/v1/responses' && $request['store'] === false
                 && str_contains($request['instructions'], 'Je bent Shelby') && str_contains($request['instructions'], 'Luna, Fjord')
-                && str_contains($request['instructions'], 'nog geen Plus')
+                && str_contains($request['instructions'], 'nog geen EquiBoost')
                 && $request['input'] === [['role' => 'user', 'content' => 'Mijn merrie schuurt haar manen kapot.']];
         });
         $session = ChatSession::sole();
@@ -111,7 +111,7 @@ class ShelbyChatTest extends TestCase
 
     public function test_an_acute_question_tells_the_ai_to_lead_with_the_vet_and_never_offers_plus(): void
     {
-        $this->openAiSays('Bel nu je dierenarts. Daarna kun je met Plus verder.');
+        $this->openAiSays('Bel nu je dierenarts. Daarna kun je met EquiBoost verder.');
         $this->send('Hij is ineens kreupel.')->assertOk()->assertJsonPath('messages.1.plus_cta', false);
         Http::assertSent(fn (ClientRequest $r) => str_contains($r['instructions'], 'mogelijk een acuut signaal'));
     }
@@ -133,12 +133,12 @@ class ShelbyChatTest extends TestCase
         $this->assertSame(2, ChatMessage::count());
     }
 
-    public function test_plus_is_offered_once_and_never_to_an_owner_who_has_it(): void
+    public function test_equiboost_is_offered_once_and_never_to_an_owner_who_has_it(): void
     {
-        $this->openAiSays('Dit is precies een situatie waarin Plus handig is.');
+        $this->openAiSays('Dit is precies een situatie waarin EquiBoost handig is.');
         $this->send('Welke stappen in welke volgorde?')->assertOk()->assertJsonPath('messages.1.plus_cta', true);
         $this->send('En wat nog meer?')->assertOk()->assertJsonPath('messages.1.plus_cta', false);
-        Http::assertSent(fn (ClientRequest $r) => str_contains($r['instructions'], 'Plus in dit gesprek al genoemd'));
+        Http::assertSent(fn (ClientRequest $r) => str_contains($r['instructions'], 'EquiBoost in dit gesprek al genoemd'));
     }
 
     public function test_only_the_owner_with_a_subscription_can_chat_and_daily_use_is_capped(): void

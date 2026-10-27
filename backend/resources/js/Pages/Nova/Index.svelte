@@ -71,7 +71,7 @@
             <form class="flex flex-col gap-3 sm:flex-row sm:items-end" onsubmit={(e) => { e.preventDefault(); ask(); }}>
                 <div class="flex-1"><Field label="Eigen testvraag"><Textarea class="min-h-20" bind:value={question} placeholder="Typ een vraag zoals een eigenaar die zou stellen" /></Field></div>
                 <div class="flex items-center gap-4">
-                    <label class="flex items-center gap-2 text-sm"><input type="checkbox" bind:checked={hasPlus} /> Gebruiker heeft Plus</label>
+                    <label class="flex items-center gap-2 text-sm"><input type="checkbox" bind:checked={hasPlus} /> Gebruiker heeft EquiBoost</label>
                     <Button type="submit" disabled={testing || !question.trim()}><Send class="size-4" /> {testing ? 'Shelby denkt na…' : 'Vraag Shelby'}</Button>
                 </div>
             </form>
@@ -92,7 +92,7 @@
                                 <div class="flex flex-wrap gap-2 text-xs">
                                     {#if result.acute}<span class="rounded bg-red-100 px-2 py-0.5 text-red-800">Acuut signaal herkend</span>{/if}
                                     {#if result.fallback}<span class="rounded bg-amber-100 px-2 py-0.5 text-amber-900">Vast veiligheidsantwoord</span>{/if}
-                                    {#if result.plus_cta}<span class="rounded bg-teal-100 px-2 py-0.5 text-teal-900">Knop "Bekijk Plus" zichtbaar</span>{/if}
+                                    {#if result.plus_cta}<span class="rounded bg-teal-100 px-2 py-0.5 text-teal-900">Knop "Bekijk EquiBoost" zichtbaar</span>{/if}
                                 </div>
                             {/if}
                         </div>
