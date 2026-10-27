@@ -141,6 +141,19 @@ class ShelbyChatTest extends TestCase
         Http::assertSent(fn (ClientRequest $r) => str_contains($r['instructions'], 'EquiBoost in dit gesprek al genoemd'));
     }
 
+    public function test_equiboost_stays_offered_once_in_a_chat_longer_than_the_history_sent_to_the_ai(): void
+    {
+        config(['shelby.history_messages' => 2]);
+        $this->openAiSays('Dit is precies een situatie waarin EquiBoost handig is.');
+        $this->send('Welke stappen in welke volgorde?')->assertOk()->assertJsonPath('messages.1.plus_cta', true);
+        $this->openAiSays('Wat krijgt hij nu aan ruwvoer?');
+        $this->send('Hij staat op stro.')->assertOk();
+        $this->send('En hooi in een net.')->assertOk();
+        $this->openAiSays('Met EquiBoost kun je dit gericht aanpakken.');
+        $this->send('Wat nu?')->assertOk()->assertJsonPath('messages.1.plus_cta', false);
+        Http::assertSent(fn (ClientRequest $r) => count($r['input']) === 3 && str_contains($r['instructions'], 'EquiBoost in dit gesprek al genoemd'));
+    }
+
     public function test_only_the_owner_with_a_subscription_can_chat_and_daily_use_is_capped(): void
     {
         $this->openAiSays('Prima.');

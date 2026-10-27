@@ -9,7 +9,7 @@ import { useQuery } from '@powersync/react';
 import { ShelbyAvatar } from '@/components/shelby/ShelbyAvatar';
 import {
   SHELBY_AI_NOTICE, SHELBY_NAME, SHELBY_SUBTITLE, SHELBY_TYPING_MS, SHELBY_WELCOME,
-  isSameLocalDay, mergeShelbyMessages, type ShelbyChatMessage,
+  isSameLocalDay, mergeShelbyMessages, questionId, type FailedQuestion, type ShelbyChatMessage,
 } from '@/lib/shelby';
 import { askShelby } from '@/lib/shelby-api';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -74,10 +74,14 @@ export default function NovaChatModal() {
     setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 100);
   }, [messages.length, busy]);
 
+  // A question that failed keeps its id: if the server did answer before the connection dropped,
+  // sending it again returns that answer instead of asking Shelby twice.
+  const failed = useRef<FailedQuestion | null>(null);
   const ask = async () => {
     const question = input.trim();
     if (!question || busy || !horseId) return;
-    const clientId = newId();
+    const clientId = questionId(failed.current, question, horseId, newId);
+    failed.current = null;
     setInput('');
     setError('');
     setPending(old => [...old, { id: clientId, role: 'user', body: question, plusCta: false }]);
@@ -92,7 +96,8 @@ export default function NovaChatModal() {
       setPending(old => [...old.filter(m => m.id !== clientId), ...result.messages]);
     } catch (failure) {
       if (!mounted.current) return;
-      // Nothing was saved; give the question back so the owner can send it again.
+      // Give the question back so the owner can send it again with the same id.
+      failed.current = { id: clientId, body: question, horseId };
       setPending(old => old.filter(m => m.id !== clientId));
       setInput(current => current || question);
       setError(failure instanceof Error ? failure.message : 'Shelby is even niet bereikbaar. Probeer het zo opnieuw.');

@@ -56,3 +56,10 @@ export function mergeShelbyMessages(synced: readonly Record<string, unknown>[], 
   const known = new Set(rows.map(row => row.id));
   return [...rows, ...pending.filter(message => !known.has(message.id))];
 }
+
+export type FailedQuestion = { id: string; body: string; horseId: string };
+
+/** Resending the same failed question for the same horse reuses its id, so the server can return an answer it already gave. */
+export function questionId(failed: FailedQuestion | null, body: string, horseId: string, make: () => string): string {
+  return failed && failed.body === body && failed.horseId === horseId ? failed.id : make();
+}

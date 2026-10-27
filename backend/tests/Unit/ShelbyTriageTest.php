@@ -32,6 +32,9 @@ class ShelbyTriageTest extends TestCase
             'Hij is niet kreupel meer, maar heeft nu wel koorts.',
             'Geen koorts, maar wel kreupel.',
             'Is dit acuut?',
+            'Vorig jaar had hij koliek en nu is hij kreupel.',
+            'Ooit was ze hoefbevangen, maar nu heeft ze weer koorts.',
+            'Hij had vroeger mok, nu rolt hij steeds en kijkt naar zijn buik.',
         ]);
     }
 
@@ -45,6 +48,8 @@ class ShelbyTriageTest extends TestCase
             'Ze is niet kreupel, maar schuurt wel haar manen kapot.',
             'Vorig jaar heeft hij koliek gehad. Nu heeft hij mok.',
             'Ooit was ze hoefbevangen, daarom let ik op het gras.',
+            'Hij heeft vorig jaar koliek gehad.',
+            'Ze was jaren geleden kreupel, nu loopt ze goed.',
             'Mijn merrie schuurt haar manen helemaal kapot.',
             'Hij heeft elke winter mok.',
             'Hij heeft een klein wondje aan zijn neus.',

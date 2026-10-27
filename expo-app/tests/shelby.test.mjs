@@ -73,3 +73,12 @@ test('limits and outages are explained in Dutch, other errors stay generic', asy
   await assert.rejects(fail(500, 'SQLSTATE secret'), /Shelby is even niet bereikbaar/);
   await assert.rejects(api(async () => { throw new TypeError('Network request failed'); }).askShelby({ horseId: 'h', clientId: 'c', body: 'x' }), /Shelby is even niet bereikbaar/);
 });
+
+test('sending a failed question again reuses its id, a new or edited question gets a new one', () => {
+  const failed = { id: 'c1', body: 'Hij heeft mok', horseId: 'h1' };
+  const make = () => 'new';
+  assert.equal(shelby.questionId(failed, 'Hij heeft mok', 'h1', make), 'c1');
+  assert.equal(shelby.questionId(failed, 'Hij heeft mok aan twee benen', 'h1', make), 'new');
+  assert.equal(shelby.questionId(failed, 'Hij heeft mok', 'h2', make), 'new');
+  assert.equal(shelby.questionId(null, 'Hij heeft mok', 'h1', make), 'new');
+});

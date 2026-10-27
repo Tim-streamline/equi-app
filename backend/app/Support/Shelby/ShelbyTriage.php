@@ -54,21 +54,22 @@ class ShelbyTriage
     /** Words that deny a signal when they come shortly before it. */
     private const DENIAL = '/\b(?:geen|niet|nooit|zonder|nauwelijks|nergens)\b(?:\s+\S+){0,2}\s*$/u';
 
-    /** A sentence about the past is not an acute situation. */
+    /** A clause about the past is not an acute situation. */
     private const HISTORY = '/\b(?:ooit|vroeger|jaren\s+geleden|vorig(?:e)?\s+(?:jaar|zomer|winter|lente|herfst|seizoen)|in\s+het\s+verleden|lang\s+geleden)\b/u';
 
     public function acute(string $text): bool
     {
         $text = mb_strtolower($text);
         foreach (preg_split('/(?<=[.!?\n])\s+/u', $text) ?: [$text] as $sentence) {
-            if (preg_match(self::HISTORY, $sentence)) {
-                continue;
-            }
             foreach ($this->signals() as $signal) {
                 if (! preg_match_all('/'.$signal.'/u', $sentence, $matches, PREG_OFFSET_CAPTURE)) {
                     continue;
                 }
                 foreach ($matches[0] as [$found, $offset]) {
+                    // History only cancels its own clause: "vorig jaar koliek, nu kreupel" is still acute.
+                    if (preg_match(self::HISTORY, $this->clause($sentence, $offset, strlen($found)))) {
+                        continue;
+                    }
                     $before = mb_substr(substr($sentence, 0, $offset), -40);
                     // A signal that itself contains a denial ("kan niet opstaan") is never cancelled.
                     if (! preg_match('/\b(?:geen|niet|nauwelijks)\b/u', $found) && preg_match(self::DENIAL, $before)) {
@@ -81,6 +82,21 @@ class ShelbyTriage
         }
 
         return false;
+    }
+
+    /** The part of a sentence around a match, bounded by punctuation and joining words. */
+    private function clause(string $sentence, int $offset, int $length): string
+    {
+        $boundary = '/[,;:]|\b(?:en|maar|nu|terwijl|sinds|daarom|want)\b/u';
+        $start = 0;
+        if (preg_match_all($boundary, substr($sentence, 0, $offset), $before, PREG_OFFSET_CAPTURE)) {
+            $last = end($before[0]);
+            $start = $last[1] + strlen($last[0]);
+        }
+        $rest = substr($sentence, $offset + $length);
+        $end = preg_match($boundary, $rest, $after, PREG_OFFSET_CAPTURE) ? $offset + $length + $after[0][1] : strlen($sentence);
+
+        return substr($sentence, $start, $end - $start);
     }
 
     /** Fixed answer when an acute message arrives while the AI is unavailable. */

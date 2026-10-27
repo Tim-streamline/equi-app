@@ -50,8 +50,12 @@ class ShelbyChatController extends Controller
         $hasPlus = app(ProtocolAccess::class)->existingForHorse($userId, $horse->id) !== null
             || $horse->protocols()->whereNotIn('status', ['completed', 'archived'])->exists();
 
+        // EquiBoost is offered at most once per chat, also in a chat longer than the history sent to the AI.
+        $plusMentioned = $session && $session->messages()->where('role', 'assistant')->get(['body', 'meta'])
+            ->contains(fn ($m) => ($m->meta['plus_cta'] ?? false) || $shelby->mentionsPlus($m->body));
+
         try {
-            $answer = $shelby->answer($data['body'], $history, $horse, $hasPlus);
+            $answer = $shelby->answer($data['body'], $history, $horse, $hasPlus, null, $plusMentioned);
         } catch (Throwable) {
             return response()->json(['message' => 'Shelby is even niet bereikbaar. Probeer het zo opnieuw.'], 503);
         }

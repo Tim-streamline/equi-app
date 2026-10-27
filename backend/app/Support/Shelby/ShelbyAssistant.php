@@ -16,14 +16,16 @@ class ShelbyAssistant
     }
 
     /**
-     * @param  list<array{role: string, body: string}>  $history  Earlier messages from today's chat, oldest first.
+     * @param  list<array{role: string, body: string}>  $history  Recent messages from today's chat, oldest first.
+     * @param  bool|null  $plusMentioned  Whether EquiBoost was already named anywhere in today's chat.
      * @return array{body: string, acute: bool, plus_cta: bool, provider: string, model: string, ms: int, fallback: bool}
      */
-    public function answer(string $question, array $history, ?Horse $horse, bool $hasPlus, ?string $provider = null): array
+    public function answer(string $question, array $history, ?Horse $horse, bool $hasPlus, ?string $provider = null, ?bool $plusMentioned = null): array
     {
         $provider ??= (string) config('shelby.provider');
         $acute = $this->triage->acute($question);
-        $plusMentioned = collect($history)->contains(fn ($m) => $m['role'] === 'assistant' && $this->mentionsPlus($m['body']));
+        // The caller can check the whole conversation; the history sent to the AI is only the recent part.
+        $plusMentioned ??= collect($history)->contains(fn ($m) => $m['role'] === 'assistant' && $this->mentionsPlus($m['body']));
         $context = $this->context($horse, $hasPlus, $plusMentioned, $acute);
         $messages = [];
         foreach ($history as $message) {
