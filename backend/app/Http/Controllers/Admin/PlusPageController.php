@@ -37,7 +37,11 @@ class PlusPageController extends Controller
         }
         $rules['content.benefits'] = ['present', 'array', 'list', 'max:20'];
         $rules['content.benefits.*'] = ['required', 'string', 'max:500'];
-        $data = $request->validate($rules);
+        $data = $request->validate($rules, [
+            'hero.max' => 'De hero-foto is te groot. Kies een foto van maximaal 10 MB.',
+            'hero.image' => 'Kies een geldige foto voor de hero.',
+            'hero.mimes' => 'Kies een JPG-, PNG- of WebP-foto voor de hero.',
+        ]);
         $created = []; $removed = [];
         try {
             foreach (['hero', 'portrait'] as $kind) {

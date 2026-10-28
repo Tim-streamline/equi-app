@@ -169,14 +169,13 @@ export default function HomeScreen() {
                 className="rounded-[22px] bg-[#FFF0EC] p-5"
               >
                 <Text className="font-semi text-[17px] leading-[23px] text-ink">
-                  Wil je jouw paard écht gericht ondersteunen?
+                  Twijfel je wat jouw paard écht nodig heeft?
                 </Text>
                 <Text className="mt-2 text-[14px] leading-[22px] text-ink-70">
-                  Koop een persoonlijk protocol voor je paard,
-                  afgestemd op jouw paard, zijn klachten en jullie doelen.
+                  Je hoeft het niet zelf uit te zoeken. Met EquiBoost krijg je een persoonlijk plan én 3 maanden begeleiding om gericht aan zijn gezondheid te werken.
                 </Text>
                 <Text className="mt-3 font-semi text-[14px] text-mint-700">
-                  Protocol kopen →
+                  Ontdek EquiBoost
                 </Text>
               </Pressable>
             )}
