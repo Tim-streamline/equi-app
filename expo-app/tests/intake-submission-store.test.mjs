@@ -38,7 +38,7 @@ function context({ answers, episode, questionnaire = config, submitted_at = null
    ? [{ laminitis_safety: JSON.stringify(episode) }]
    : sql.includes('FROM intake_bookings') ? [{ id: 'intake-a', submitted_at, completed_at }] : [] }) },
   '@/db/provider': { useDb: () => ({ powersync: db }) },
-  '@/db/hooks': { useCurrentUserId: () => 'owner', useCurrentHorseId: () => 'horse' },
+  '@/db/hooks': { useCurrentUserId: () => 'owner', useCurrentHorseSelection: () => ({ horseId: 'horse', loading: false }) },
   '@/hooks/useHorseDashboard': { dashboardRequest: recordWrite },
   '@/lib/account-session': { accountSession: { revision: 1 } },
   './schema-provider': { useIntakeSchema: () => ({ schema, noneOptions: [] }) },
@@ -89,7 +89,7 @@ test('a synced reopening unlocks the form and removes obsolete answers while pre
  const modules={react,'react/jsx-runtime':{jsx,jsxs:jsx},'react-native':{Alert:{alert:()=>{}}},
   'expo-router':{useGlobalSearchParams:()=>({})},
   '@powersync/react':{useQuery:sql=>({isLoading:false,data:sql.includes('FROM horses')?rows.horse:sql.includes('FROM intake_bookings')?rows.bookings:rows.answers})},
-  '@/db/provider':{useDb:()=>({powersync:{}})},'@/db/hooks':{useCurrentUserId:()=> 'owner',useCurrentHorseId:()=> 'horse'},
+  '@/db/provider':{useDb:()=>({powersync:{}})},'@/db/hooks':{useCurrentUserId:()=> 'owner',useCurrentHorseSelection:()=> ({horseId:'horse',loading:false})},
   '@/hooks/useHorseDashboard':{dashboardRequest:()=>{}},'@/lib/account-session':{accountSession:{revision:1}},
   './schema-provider':{useIntakeSchema:()=>({schema,noneOptions:[]})},'./submission-blocks':rules,
   './persistence':{bookingQuery:'SELECT * FROM intake_bookings',saveAnswer:async(...args)=>writes.push(args)},

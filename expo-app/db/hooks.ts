@@ -76,13 +76,21 @@ export function useCurrentUserId(): string {
 }
 
 export function useCurrentHorseId(): string {
+  return useCurrentHorseSelection().horseId;
+}
+
+export function useCurrentHorseSelection(): { horseId: string; loading: boolean } {
   const uid = useCurrentUserId();
   const { selectedHorseId } = useDb();
-  const rows = useCamelQuery(
+  const { data: rows, isLoading, isFetching } = useQuery<{ id: string }>(
     `SELECT id FROM horses WHERE owner_id = ? AND status = 'active' ORDER BY created_at`,
     [uid],
+    { reportFetching: true },
   );
-  return rows.find((horse) => horse.id === selectedHorseId)?.id ?? rows[0]?.id ?? '';
+  return {
+    horseId: rows.find((horse) => horse.id === selectedHorseId)?.id ?? rows[0]?.id ?? '',
+    loading: isLoading || isFetching,
+  };
 }
 
 export function useCurrentUser(): Indexed {
