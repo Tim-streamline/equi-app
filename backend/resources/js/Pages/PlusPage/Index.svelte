@@ -32,6 +32,7 @@
         }
     }
     const sections = [
+        ['EquiBoost-blok op Home', ['homeTitle', 'homeBody', 'homeButton']],
         ['Intro en prijs', ['pageTitle', 'heroLabel', 'heroTitle', 'heroBody', 'period', 'heroButton']],
         ['Hoe het werkt', ['stepsTitle', 'stepsButton']],
         ['Shelley', ['guideTitle', 'guideBody', 'guideSignature']],
@@ -41,6 +42,7 @@
     const labels = { heroTitle: 'Kop', heroBody: 'Introductie', price: 'Prijs', period: 'Periode', heroButton: 'Eerste knop', stepsTitle: 'Titel stappen', stepsButton: 'Knop na stappen', guideTitle: 'Titel begeleider', guideBody: 'Over Shelley', guideSignature: 'Ondertekening', reviewsTitle: 'Titel reviews', priceButton: 'Knop prijsblok', priceNote: 'Regel onder prijs', closingTitle: 'Afsluitende kop', confirmationTitle: 'Titel bevestiging', confirmationPlan: 'Aankoopregel', confirmationProtocol: 'Protocolregel', confirmationButton: 'Bevestigingsknop', welcomeTitle: 'Titel welkom', welcomeBody: 'Welkomsttekst' };
     Object.assign(labels, { pageTitle: 'Paginatitel in de app', heroLabel: 'Label boven de introductie en het prijsblok', heroTitle: 'Kop introductie', heroBody: 'Body introductie', period: 'Omschrijving naast de prijs bovenaan', pricePeriod: 'Omschrijving naast de prijs onderaan' });
     const lists = { steps: { label: 'Stappen', fields: { title: 'Titel', body: 'Tekst' } }, reviews: { label: 'Reviews', fields: { title: 'Kop', quote: 'Citaat', name: 'Naam' } }, faqs: { label: 'Veelgestelde vragen', fields: { question: 'Vraag', answer: 'Antwoord' } } };
+    Object.assign(labels, { homeTitle: 'Kop roze homeblok', homeBody: 'Omschrijving roze homeblok', homeButton: 'Knoptekst roze homeblok' });
     function move(key, index, delta) {
         const rows = [...$form.content[key]];
         [rows[index], rows[index + delta]] = [rows[index + delta], rows[index]];

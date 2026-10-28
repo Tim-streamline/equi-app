@@ -73,6 +73,31 @@ class HorseDashboardTest extends TestCase
         ]);
     }
 
+    public function test_home_promotion_defaults_and_admin_edits_reach_the_dashboard(): void
+    {
+        $content = \App\Models\PlusPage::defaults();
+        unset($content['homeTitle'], $content['homeBody'], $content['homeButton']);
+        \App\Models\PlusPage::create(['id' => \App\Models\PlusPage::PAGE_ID, 'content' => $content]);
+        $url = '/api/horses/'.$this->horse->id.'/dashboard';
+        $this->getJson($url)->assertOk()
+            ->assertJsonPath('homeUpsell.title', 'Twijfel je wat jouw paard écht nodig heeft?')
+            ->assertJsonPath('homeUpsell.button', 'Ontdek EquiBoost');
+
+        $this->actingAs(\App\Models\AdminUser::create([
+            'name' => 'Editor', 'email' => 'home-editor@example.test', 'password' => 'password',
+            'role' => 'content_editor', 'active' => true,
+        ]), 'admin');
+        $content = \App\Models\PlusPage::current()->payload()['content'];
+        $content['homeTitle'] = 'Eigen kop';
+        $content['homeBody'] = 'Eigen omschrijving';
+        $content['homeButton'] = 'Bekijk mijn traject';
+        $this->post('/admin/plus-page', ['content' => json_encode($content)])
+            ->assertRedirect()->assertSessionHasNoErrors();
+        $this->getJson($url)->assertOk()->assertJsonPath('homeUpsell', [
+            'title' => 'Eigen kop', 'body' => 'Eigen omschrijving', 'button' => 'Bekijk mijn traject',
+        ]);
+    }
+
     public function test_account_without_an_active_horse_has_a_personal_home_and_four_published_recommendations(): void
     {
         $this->horse->update(['status' => 'archived']);

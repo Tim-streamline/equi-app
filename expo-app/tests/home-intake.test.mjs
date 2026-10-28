@@ -20,7 +20,7 @@ const flatten = node => Array.isArray(node) ? node.flatMap(flatten)
 const text = node => flatten(node).filter(value => typeof value === 'string' || typeof value === 'number').join('');
 
 // Render actual Home, shared card and progress logic; mock provider boundaries and native UI.
-function screen() {
+function screen(homeUpsell) {
   const horses = ['purchased', 'unpurchased', 'submitted', 'partial'].map(id => ({ id, name: id, status: 'active' }));
   const intakes = Object.fromEntries(horses.map(horse => [horse.id, { loaded: true, state: { answers: {}, submittedAt: null } }]));
   intakes.submitted.state.submittedAt = '2026-09-29T12:00:00Z';
@@ -48,7 +48,7 @@ function screen() {
     '@/components/ui/Button': { Button: 'Button' },
     '@/db/provider': { useDb: () => ({ selectHorse: id => { selected = id; } }) },
     '@/hooks/useHorseDashboard': { useHorseDashboard: () => ({
-      data: ready ? { horse: { id: selected }, greeting: selected ? 'Welkom, Tim' : 'Goedemorgen, Tim', hasPlus: !!selected && selected !== 'basic', recommendations: selected ? [] : [1, 2, 3, 4].map(id => ({ id: `item-${id}`, title: `Item ${id}` })), protocol: null } : null,
+      data: ready ? { horse: { id: selected }, greeting: selected ? 'Welkom, Tim' : 'Goedemorgen, Tim', hasPlus: !!selected && selected !== 'basic', showPlusUpsell: selected === 'unpurchased', homeUpsell, recommendations: selected ? [] : [1, 2, 3, 4].map(id => ({ id: `item-${id}`, title: `Item ${id}` })), protocol: null } : null,
       loading: !ready, refresh() {},
     }) },
     '@/hooks/useTabBarPadding': { useTabBarPadding: () => 76 },
@@ -76,6 +76,25 @@ function screen() {
     set ready(value) { ready = value; }, set delivered(value) { delivered = value; }, clearHorse() { selected = ''; }, withoutHorse() { selected = ''; horses.length = 0; }, addHorse(id) { horses.push({ id, name: id, status: 'active' }); selected = id; },
   };
 }
+
+test('Home renders the admin promotion copy and keeps its purchase destination', () => {
+  const copy = { title: 'Eigen kop', body: 'Eigen omschrijving', button: 'Bekijk mijn traject' };
+  const app = screen(copy);
+  app.select('unpurchased');
+  const tree = app.render();
+  for (const value of Object.values(copy)) assert.ok(tree.includes(value));
+  const card = tree.find(node => node?.type === 'Pressable' && node.props.accessibilityRole === 'link' && text(node).includes(copy.button));
+  card.props.onPress();
+  assert.equal(app.routes.at(-1), '/protocol-purchase');
+});
+
+test('Home keeps readable promotion text with older cached dashboard data', () => {
+  const app = screen();
+  app.select('unpurchased');
+  const tree = app.render();
+  assert.ok(tree.includes('Twijfel je wat jouw paard écht nodig heeft?'));
+  assert.ok(tree.includes('Ontdek EquiBoost'));
+});
 
 test('Home lists the purchased protocol and opens its exact intake', () => {
   const app = screen(), tree = app.render();
