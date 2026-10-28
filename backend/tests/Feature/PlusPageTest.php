@@ -15,7 +15,7 @@ class PlusPageTest extends TestCase
     }
     public function test_default_page_and_photo_need_no_horse_or_subscription(): void
     {
-        $this->getJson('/api/plus-page')->assertOk()->assertJsonPath('content.price', '€ 147,00')->assertJsonPath('content.reviewsAreExamples', true)->assertJsonCount(4, 'content.faqs')->assertJsonPath('portraitImageUrl', null);
+        $this->getJson('/api/plus-page')->assertOk()->assertJsonPath('content.price', '€ 147')->assertJsonPath('content.pageTitle', 'Begeleiding op maat')->assertJsonPath('content.heroLabel', 'EQUIBOOST | 3 MAANDEN GERICHT AAN DE SLAG')->assertJsonPath('content.reviewsAreExamples', true)->assertJsonCount(4, 'content.faqs')->assertJsonPath('portraitImageUrl', null);
         $this->get('/api/plus-page/images/hero')->assertOk()->assertHeader('Content-Type', 'image/jpeg');
         $this->get('/api/plus-page/images/portrait')->assertNotFound();
         $this->get('/api/plus-page/images/unknown')->assertNotFound();
@@ -26,10 +26,12 @@ class PlusPageTest extends TestCase
         Storage::fake('local'); $this->editor();
         $this->get('/admin/plus-page')->assertOk()->assertInertia(fn (AssertableInertia $page) => $page->component('PlusPage/Index')->has('content.steps', 4));
         $content = PlusPage::defaults(); $content['heroTitle'] = 'Aangepaste kop';
+        $content['pageTitle'] = 'Mijn begeleiding'; $content['heroLabel'] = 'Mijn traject';
+        $content['period'] = 'Mijn eerste prijsomschrijving'; $content['pricePeriod'] = 'Mijn tweede prijsomschrijving';
         $content['reviews'] = []; $content['faqs'] = []; $content['benefits'] = [];
         $this->post('/admin/plus-page', ['protocol_price_cents' => 19900, 'content' => json_encode($content), 'hero' => UploadedFile::fake()->image('hero.jpg'), 'portrait' => UploadedFile::fake()->image('shelley.png')])->assertRedirect()->assertSessionHasNoErrors();
         $page = PlusPage::current(); Storage::disk('local')->assertExists([$page->hero_path, $page->portrait_path]);
-        $this->getJson('/api/plus-page')->assertJsonPath('protocolPriceCents', 19900)->assertJsonPath('content.price', '€ 199,00')->assertJsonPath('content.heroTitle', 'Aangepaste kop')->assertJsonCount(0, 'content.reviews');
+        $this->getJson('/api/plus-page')->assertJsonPath('protocolPriceCents', 19900)->assertJsonPath('content.price', '€ 199')->assertJsonPath('content.heroTitle', 'Aangepaste kop')->assertJsonPath('content.pageTitle', 'Mijn begeleiding')->assertJsonPath('content.heroLabel', 'Mijn traject')->assertJsonPath('content.period', 'Mijn eerste prijsomschrijving')->assertJsonPath('content.pricePeriod', 'Mijn tweede prijsomschrijving')->assertJsonCount(0, 'content.reviews');
         $this->get('/api/plus-page/images/portrait')->assertOk()->assertHeader('Content-Type', 'image/png');
         $this->assertDatabaseCount('subscriptions', 0); $this->assertDatabaseCount('plans', 0);
         $oldHero = $page->hero_path; $oldPortrait = $page->portrait_path;
@@ -47,6 +49,18 @@ class PlusPageTest extends TestCase
             $this->postJson('/admin/plus-page', ['protocol_price_cents' => $price, 'content' => PlusPage::defaults()])->assertUnprocessable()->assertJsonValidationErrors('protocol_price_cents');
         }
         $this->assertDatabaseCount('plus_pages', 0); $this->assertSame([], Storage::disk('local')->allFiles());
+    }
+    public function test_older_saved_content_gets_new_fields_and_keeps_fractional_prices(): void
+    {
+        $content = PlusPage::defaults();
+        unset($content['pageTitle'], $content['heroLabel'], $content['pricePeriod']);
+        $content['heroTitle'] = 'Bestaande eigen tekst';
+        PlusPage::create(['id' => PlusPage::PAGE_ID, 'content' => $content, 'protocol_price_cents' => 14750]);
+        $this->getJson('/api/plus-page')->assertOk()
+            ->assertJsonPath('content.pageTitle', 'Begeleiding op maat')
+            ->assertJsonPath('content.heroTitle', 'Bestaande eigen tekst')
+            ->assertJsonPath('content.pricePeriod', 'Traject op maat gedurende 3 maanden')
+            ->assertJsonPath('content.price', '€ 147,50');
     }
     public function test_content_management_requires_editor_role(): void
     {

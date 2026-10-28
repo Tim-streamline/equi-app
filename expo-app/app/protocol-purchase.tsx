@@ -53,7 +53,7 @@ export default function ProtocolPurchase() {
     return () => { mounted = false; controller.abort(); clearTimeout(timeout); };
   }, [retry]));
   return <SafeAreaView className="flex-1 bg-canvas">
-    <SubHeader title="Protocol kopen" onBack={() => router.canGoBack() ? router.back() : router.replace('/(tabs)/(pager)/home')} />
+    <SubHeader title={data?.content.pageTitle ?? 'Begeleiding op maat'} onBack={() => router.canGoBack() ? router.back() : router.replace('/(tabs)/(pager)/home')} />
     {data ? <PlusPage data={data} horseName={String(horse.name || 'je paard')} apiBaseUrl={getApiBaseUrl()} access={{ intakeAvailable: false, checkoutAvailable: false }} busy={busy} error={message}
       onIntake={createProtocol} />
       : <View className="flex-1 items-center justify-center gap-4">{error ? <><Text>{error}</Text><Button title="Opnieuw proberen" onPress={() => setRetry(n => n + 1)} /></> : <ActivityIndicator />}</View>}

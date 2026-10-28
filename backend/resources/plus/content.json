@@ -1,9 +1,12 @@
 {
-  "heroTitle": "Je hoeft het niet allemaal zelf uit te zoeken.",
-  "heroBody": "Ik zet alle losse signalen om in een plan dat past bij jouw paard, zodat jij gericht kunt werken aan meer rust, herstel en een paard dat weer lekkerder in z'n vel zit.",
-  "price": "€ 147,00",
-  "period": "per protocol",
-  "heroButton": "Protocol kopen",
+  "pageTitle": "Begeleiding op maat",
+  "heroLabel": "EQUIBOOST | 3 MAANDEN GERICHT AAN DE SLAG",
+  "heroTitle": "Wat als je eindelijk stopt met gokken wat jouw paard nodig heeft?",
+  "heroBody": "Al die supplementen, behandelingen en goedbedoelde adviezen. Maar wordt jouw paard er écht beter van?\nTijd voor een aanpak die wél ergens op gebaseerd is. Met EquiBoost krijg je een op maat gemaakt gezondheidsprotocol, zodat je gericht kunt werken aan een paard dat weer lekker in het vel zit.",
+  "price": "€ 147",
+  "period": "Persoonlijk traject van 3 maanden",
+  "pricePeriod": "Traject op maat gedurende 3 maanden",
+  "heroButton": "Start mijn EquiBoost traject",
   "stepsTitle": "Zo werkt een persoonlijk protocol in de praktijk",
   "steps": [
     {
@@ -57,7 +60,7 @@
     "Een bijbehorende intake voor jouw paard",
     "Regelmatige evaluatie en aanpassingen"
   ],
-  "priceButton": "Koop een protocol",
+  "priceButton": "Start mijn EquiBoost traject",
   "priceNote": "Een losse aankoop voor je paard. Je abonnement staat hier los van.",
   "faqs": [
     {

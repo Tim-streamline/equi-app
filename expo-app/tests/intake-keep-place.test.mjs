@@ -27,6 +27,69 @@ function hooks() {
   };
 }
 
+function horseSelectionScreen() {
+  const h = hooks();
+  let userId = 'owner', selectedHorseId = 'horse';
+  let result = { data: [{ id: 'horse' }], isLoading: false, isFetching: false };
+  const react = { ...h.react, createContext: () => ({ Provider: 'Context' }) };
+  const dbHooks = load('../db/hooks.ts', {
+    react,
+    '@powersync/react': { useQuery: (sql, params, options) => {
+      assert.match(sql, /status = 'active'/);
+      assert.deepEqual(params, [userId]);
+      assert.equal(options.reportFetching, true);
+      return result;
+    } },
+    '@/db/provider': { useDb: () => ({ currentUserId: userId, selectedHorseId }) },
+    './ids': { IDS: {} }, './app-strings': {}, '@/lib/protocol-plan': {}, '@/lib/protocol-advice': {},
+  });
+  const { IntakeProvider } = load('../lib/intake/store.tsx', {
+    react, 'react/jsx-runtime': { jsx, jsxs: jsx },
+    '@/db/hooks': dbHooks, '@/db/provider': {}, '@powersync/react': {}, 'expo-router': {}, 'react-native': {},
+    '@/hooks/useHorseDashboard': {}, '@/lib/account-session': {},
+    './persistence': {}, './submission': {}, './refresh': {}, '../refresh-safety': {},
+    './submission-blocks': {}, './schema-provider': {},
+  });
+  return {
+    render: () => h.render(IntakeProvider, { children: null }).props,
+    set result(value) { result = value; },
+    set userId(value) { userId = value; },
+    set selectedHorseId(value) { selectedHorseId = value; },
+  };
+}
+
+test('a transient horse query refresh preserves the open intake selection', () => {
+  const app = horseSelectionScreen();
+  assert.equal(app.render().horseId, 'horse');
+  app.result = { data: [], isLoading: true, isFetching: false };
+  assert.equal(app.render().horseId, 'horse');
+  app.result = { data: [], isLoading: false, isFetching: true };
+  assert.equal(app.render().horseId, 'horse');
+  app.result = { data: [{ id: 'horse' }], isLoading: false, isFetching: false };
+  assert.equal(app.render().horseId, 'horse');
+});
+
+test('a settled empty active-horse list clears a removed or archived final horse', () => {
+  const app = horseSelectionScreen();
+  assert.equal(app.render().horseId, 'horse');
+  app.result = { data: [], isLoading: false, isFetching: true };
+  assert.equal(app.render().horseId, 'horse');
+  app.result = { data: [], isLoading: false, isFetching: false };
+  assert.equal(app.render().horseId, '');
+  app.result = { data: [], isLoading: false, isFetching: true };
+  assert.equal(app.render().horseId, '', 'later refreshes cannot revive the removed horse');
+});
+
+test('horse and account switches do not retain the previous intake selection', () => {
+  const app = horseSelectionScreen();
+  assert.equal(app.render().horseId, 'horse');
+  app.result = { data: [{ id: 'other' }], isLoading: false, isFetching: false };
+  assert.equal(app.render().horseId, 'other');
+  app.userId = 'another-owner';
+  app.result = { data: [], isLoading: true, isFetching: false };
+  assert.deepEqual([app.render().userId, app.render().horseId], ['another-owner', '']);
+});
+
 test('a recent position on a page is remembered, an old one is not', () => {
   memory.rememberScroll('b:paard', 840, 1000);
   assert.equal(memory.rememberedScroll('b:paard', 1000 + 60_000), 840);

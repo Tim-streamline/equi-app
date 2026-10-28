@@ -17,16 +17,16 @@ export function PlusPage({ data, apiBaseUrl, onIntake, access, horseName = 'je p
   const open = () => setSheet('confirm');
   const close = () => setSheet(null);
   const reviewWidth = Math.min(width - 66, 380);
-  const price = <View className="flex-row flex-wrap items-baseline gap-x-2"><Text className="font-bold text-[30px] text-white">{c.price}</Text><Text className="text-[15px] text-white/80">{c.period}</Text></View>;
+  const price = (period: string) => <View className="flex-row flex-wrap items-baseline gap-x-2"><Text className="font-bold text-[30px] text-white">{c.price}</Text><Text className="text-[15px] text-white/80">| {period}</Text></View>;
   return <>
     <ScrollView testID="plus-page" contentContainerStyle={{ width: '100%', maxWidth: 560, alignSelf: 'center', paddingBottom: 32 }}>
       <View className="mx-4 mt-2 overflow-hidden rounded-[24px] bg-[#0B4A49]">
         <Image source={{ uri: apiBaseUrl + data.heroImageUrl }} accessibilityLabel="Een vrouw met haar paard" contentFit="cover" contentPosition={{ top: '40%', left: '50%' }} transition={180} style={{ width: '100%', height: 140 }} />
         <View className="gap-3 p-[18px]">
-          <Text className="font-semi text-[10px] tracking-[2px] text-mint-200">{BRAND_NAME} · PROTOCOL</Text>
+          <Text className="font-semi text-[10px] tracking-[2px] text-mint-200">{c.heroLabel}</Text>
           <Text accessibilityRole="header" className="font-bold text-[27px] leading-[29px] text-white">{c.heroTitle}</Text>
           <Text className="text-[15px] leading-[21px] text-white/90">{c.heroBody}</Text>
-          {price}
+          {price(c.period)}
           <Button title={c.heroButton} className="rounded-full py-3" onPress={open} />
         </View>
       </View>
@@ -61,7 +61,7 @@ export function PlusPage({ data, apiBaseUrl, onIntake, access, horseName = 'je p
       </View>}
 
       <View className="mx-4 gap-4 rounded-[24px] bg-[#0B4A49] p-5">
-        <Text className="text-[10px] tracking-[2px] text-mint-200">PROTOCOL</Text>{price}
+        <Text className="text-[10px] tracking-[2px] text-mint-200">{c.heroLabel}</Text>{price(c.pricePeriod)}
         <View className="gap-3">{c.benefits.map((benefit, index) => <View key={index} className="flex-row items-start gap-3"><Check size={19} color="#5FD7CB" /><Text className="flex-1 text-[15px] leading-[21px] text-white">{benefit}</Text></View>)}</View>
         <Button title={c.priceButton} variant="light" className="rounded-full py-3" onPress={open} />
         <Text className="text-center text-[12px] text-white/75">{c.priceNote}</Text>
@@ -76,7 +76,7 @@ export function PlusPage({ data, apiBaseUrl, onIntake, access, horseName = 'je p
           {faq === index && <Text className="pt-3 text-[15px] leading-[23px] text-ink-70">{item.answer}</Text>}
         </View>)}
       </View>
-      <View className="items-center gap-4 px-9 pb-3 pt-10"><Text className="text-[11px] tracking-[3px] text-teal-500">{BRAND_NAME}</Text><Button title="Koop een protocol" className="w-full rounded-full py-3" onPress={open} /><Text className="mt-2 text-center text-[10px] tracking-[1px] text-ink-50">POWERED BY <Text className="font-semi text-teal-500">De Paardentherapeut</Text></Text></View>
+      <View className="items-center gap-4 px-9 pb-3 pt-10"><Text className="text-[11px] tracking-[3px] text-teal-500">{BRAND_NAME}</Text><Button title={c.priceButton} className="w-full rounded-full py-3" onPress={open} /><Text className="mt-2 text-center text-[10px] tracking-[1px] text-ink-50">POWERED BY <Text className="font-semi text-teal-500">De Paardentherapeut</Text></Text></View>
     </ScrollView>
 
     <Modal visible={sheet !== null} transparent animationType="slide" onRequestClose={close}>

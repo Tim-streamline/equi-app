@@ -1,4 +1,5 @@
 export type PlusContent = {
+  pageTitle: string; heroLabel: string; pricePeriod: string;
   heroTitle: string; heroBody: string; price: string; period: string; heroButton: string;
   stepsTitle: string; stepsButton: string; steps: { title: string; body: string }[];
   guideTitle: string; guideBody: string; guideSignature: string;
