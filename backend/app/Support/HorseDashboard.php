@@ -5,6 +5,7 @@ namespace App\Support;
 use App\Models\Horse;
 use App\Models\LibraryItem;
 use App\Models\Plan;
+use App\Models\PlusPage;
 use App\Models\Protocol;
 use App\Models\SeasonalTip;
 use App\Models\User;
@@ -61,13 +62,14 @@ class HorseDashboard
             ->where(fn ($q) => $q->whereNotNull('active_from')->orWhere('month_order', $now->month))
             ->orderByRaw('active_from IS NULL ASC')->orderByDesc('active_from')->orderByDesc('updated_at')->first();
         $tipItem = $tip ? $items->firstWhere('id', $tip->cta_item_id) : null;
-
+        $pageContent = PlusPage::current()->payload()['content'];
 
         return [
             'timezone' => $now->timezoneName, 'generatedAt' => $now->toIso8601String(), 'date' => $now->toDateString(),
             'greeting' => ($now->hour < 12 ? 'Goedemorgen' : ($now->hour < 18 ? 'Goedemiddag' : 'Goedenavond')).', '.explode(' ', trim($user->name))[0],
             'horse' => ['id' => $horse?->id ?? '', 'name' => $horse?->name ?? ''],
             'hasPlus' => $hasPlus, 'showPlusUpsell' => $horse && $horse->owner_id === $user->id && ! app(ProtocolAccess::class)->existingForHorse($user->id, $horse->id) && ! $protocol,
+            'homeUpsell' => ['title' => $pageContent['homeTitle'], 'body' => $pageContent['homeBody'], 'button' => $pageContent['homeButton']],
             'variant' => $horse ? ($hasPlus || $protocol ? 'plus' : 'basic') : 'without-horse',
             'credits' => app(CreditLedger::class)->summary($user)['balance'],
             'plusOffer' => null,
