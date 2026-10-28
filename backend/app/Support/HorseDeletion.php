@@ -54,6 +54,7 @@ class HorseDeletion
             $before = $locked->getAttributes();
             $bookings = IntakeBooking::where('horse_id', $locked->id)->lockForUpdate()->get();
             $paths = IntakeAttachment::whereIn('booking_id', $bookings->modelKeys())->pluck('path')->all();
+            $paths = array_merge($paths, array_map(IntakePhotoPreview::path(...), $paths));
             $locked->protocols()->delete();
             foreach ($bookings as $booking) {
                 // Answers, attachments and reminder deliveries cascade with the intake.

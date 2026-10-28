@@ -1,34 +1,42 @@
 import { useEffect, useRef, useState } from 'react';
-import { View, Text, Pressable, Image, Platform, ActivityIndicator } from 'react-native';
-import * as ImagePicker from 'expo-image-picker';
+import { View, Text, Pressable, ActivityIndicator } from 'react-native';
+import type * as ImagePicker from 'expo-image-picker';
+import { launchImageLibraryAsync, releasePickedImages } from '@/lib/intake/attachments/image-picker';
 import * as DocumentPicker from 'expo-document-picker';
 import { Camera, FileText, Plus, Trash2 } from 'lucide-react-native';
-import { getApiBaseUrl } from '@/db/auth';
-import { getOrMintToken } from '@/db/connector';
 import { useDb } from '@/db/provider';
 import { accountSession } from '@/lib/account-session';
 import { attachmentStorage, saveAttachment } from '@/lib/intake/attachments/storage';
 import { onAttachmentsChanged } from '@/lib/intake/attachments/events';
+import { validatePhotoDimensions } from '@/lib/intake/attachments/photo-dimensions';
 import type { LocalAttachment } from '@/lib/intake/attachments/types';
+import { Photo } from './AttachmentPhoto';
 import { useIntake } from '@/lib/intake/store';
 import { registerRefreshProtection, refreshProtectionChanged } from '@/lib/refresh-safety';
+
+export { Photo } from './AttachmentPhoto';
 
 function fileName(reference: string) {
   try { return decodeURIComponent(reference.split(':').slice(2).join(':')) || 'Bijlage'; } catch { return 'Bijlage'; }
 }
 function useLocalAttachment(reference: string) {
   const { currentUserId } = useDb();
-  const [record, setRecord] = useState<LocalAttachment | null | undefined>(undefined);
+  const [record, setRecord] = useState<Pick<LocalAttachment, 'uploaded' | 'error'> | null | undefined>(undefined);
   useEffect(() => {
     let active = true;
+    let request = 0;
     setRecord(undefined);
     const refresh = () => {
+      const version = ++request;
       if (currentUserId) void attachmentStorage.get(currentUserId, reference.split(':')[1])
-        .then(value => { if (active) setRecord(value); }).catch(() => { if (active) setRecord(null); });
+        .then(value => { if (active && version === request) setRecord(value ? { uploaded: value.uploaded, error: value.error } : null); })
+        .catch(() => { if (active && version === request) setRecord(null); });
       else setRecord(null);
     };
     refresh();
-    const unsubscribe = onAttachmentsChanged(refresh);
+    const unsubscribe = onAttachmentsChanged(change => {
+      if (change.userId === currentUserId && change.id === reference.split(':')[1]) refresh();
+    });
     return () => { active = false; unsubscribe(); };
   }, [currentUserId, reference]);
   return record;
@@ -38,40 +46,6 @@ function UploadStatus({ reference }: { reference: string }) {
   return record && !record.uploaded ? <Text accessibilityLiveRegion="polite" className="text-xs text-ink-50">
     {record.error ? 'Opgeslagen op dit apparaat · upload wordt opnieuw geprobeerd' : 'Opgeslagen op dit apparaat · wacht op upload'}
   </Text> : null;
-}
-export function Photo({ reference, expanded = false }: { reference: string; expanded?: boolean }) {
-  const local = useLocalAttachment(reference);
-  const [source, setSource] = useState<{ uri: string; headers?: Record<string, string> }>();
-  useEffect(() => {
-    let active = true;
-    setSource(undefined);
-    let objectUrl: string | undefined;
-    const controller = new AbortController();
-    void (async () => {
-      if (local === undefined) return;
-      if (local) {
-        if (local.blob) { objectUrl = URL.createObjectURL(local.blob); setSource({ uri: objectUrl }); }
-        else if (local.uri) setSource({ uri: local.uri });
-        return;
-      }
-      const token = await getOrMintToken();
-      if (!token || !active) return;
-      const uri = `${getApiBaseUrl()}/api/intake-media/${reference.split(':')[1]}`;
-      const headers = { Authorization: `Bearer ${token}` };
-      if (Platform.OS === 'web') {
-        const response = await fetch(uri, { headers, signal: controller.signal });
-        if (!response.ok) return;
-        const blob = await response.blob();
-        if (!active) return;
-        objectUrl = URL.createObjectURL(blob);
-        setSource({ uri: objectUrl });
-      } else setSource({ uri, headers });
-    })().catch(() => {});
-    return () => { active = false; controller.abort(); if (objectUrl) URL.revokeObjectURL(objectUrl); };
-  }, [reference, local]);
-  return source ? <Image source={source} accessibilityLabel={fileName(reference)} resizeMode={expanded ? 'contain' : 'cover'}
-    style={expanded ? { width: '100%', height: 240, borderRadius: 12, backgroundColor: '#f2f6f5' } : { width: 80, height: 80, borderRadius: 12 }} />
-    : <View style={expanded ? { width: '100%', height: 240, alignItems: 'center', justifyContent: 'center' } : undefined}><Camera size={24} color="#108a82" /></View>;
 }
 type PickedAsset = ImagePicker.ImagePickerAsset | DocumentPicker.DocumentPickerAsset;
 type PhotoSlot = { id: string; label: string; field: string };
@@ -101,6 +75,12 @@ export function AttachmentField({ value, onChange, section, field, photo, max, r
   const [pending, setPending] = useState<{ assets: PickedAsset[]; assignments: string[]; revision: number } | null>(null);
   const pendingRef = useRef(pending);
   pendingRef.current = pending;
+  useEffect(() => () => { releasePickedImages(pendingRef.current?.assets ?? []); }, []);
+  function discardPending() {
+    releasePickedImages(pendingRef.current?.assets ?? []);
+    pendingRef.current = null;
+    setPending(null);
+  }
   useEffect(() => registerRefreshProtection({
     reason: () => busyRef.current ? 'Rond het kiezen of opslaan van je bestand eerst af.'
       : pendingRef.current ? 'Wijs je gekozen foto’s toe en sla ze op, of annuleer de selectie.' : null,
@@ -124,6 +104,7 @@ export function AttachmentField({ value, onChange, section, field, photo, max, r
       const originalName = ('name' in asset ? asset.name : asset.fileName) || (photo ? 'foto.jpg' : 'document.pdf');
       const name = originalName.split(/[\\/]/).pop()!.slice(0, 255);
       try {
+        if (photo && 'width' in asset && 'height' in asset) validatePhotoDimensions(asset);
         const size = 'size' in asset ? asset.size : 'fileSize' in asset ? asset.fileSize : undefined;
         if (size && size > 15 * 1024 * 1024) throw new Error('Het bestand is te groot. Maximaal 15 MB per bestand.');
         const file = 'file' in asset ? asset.file : undefined;
@@ -156,30 +137,42 @@ export function AttachmentField({ value, onChange, section, field, photo, max, r
     if (busyRef.current || remaining() === 0 || readOnlyRef.current) return;
     busyRef.current = true; setBusy(true); setError('');
     const revision = accountSession.revision;
+    let pickedAssets: PickedAsset[] = [];
+    let keepSelection = false;
     try {
       // Open the browser's file chooser directly from the user gesture.
       const available = remaining();
       const picked = photo
-        ? await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], quality: 0.85,
+        ? await launchImageLibraryAsync({ mediaTypes: ['images'], quality: 0.85,
           allowsMultipleSelection: available > 1, selectionLimit: Number.isFinite(available) ? available : 0 })
         : await DocumentPicker.getDocumentAsync({ type: ['application/pdf', 'image/jpeg', 'image/png', 'image/webp'], copyToCacheDirectory: true });
       if (picked.canceled || !picked.assets?.length) return;
+      pickedAssets = picked.assets;
       checkSession(revision);
       if (slots) {
+        for (const asset of picked.assets) {
+          if (photo && 'width' in asset && 'height' in asset) validatePhotoDimensions(asset);
+        }
         // Browsers cannot enforce selectionLimit. Do not silently discard excess photos.
         if (picked.assets.length > remaining()) throw new Error(`Kies maximaal ${remaining()} foto’s voor de vrije aanzichten.`);
-        setPending({ assets: picked.assets, assignments: picked.assets.map(() => ''), revision });
+        const selection = { assets: picked.assets, assignments: picked.assets.map(() => ''), revision };
+        pendingRef.current = selection;
+        setPending(selection);
+        keepSelection = true;
       } else await saveAssets(picked.assets, revision);
     } catch (error) { if (mounted.current) setError(message(error)); }
-    finally { busyRef.current = false; if (mounted.current) setBusy(false); }
+    finally {
+      if (!keepSelection) releasePickedImages(pickedAssets);
+      busyRef.current = false; if (mounted.current) setBusy(false);
+    }
   }
   async function savePending() {
     if (!pending || busyRef.current) return;
     const assigned = pending.assignments;
     if (assigned.some(id => !id || !slots?.some(slot => slot.id === id)) || new Set(assigned).size !== assigned.length) return;
     busyRef.current = true; setBusy(true); setError('');
-    try { await saveAssets(pending.assets, pending.revision, assigned); setPending(null); }
-    catch (error) { if (mounted.current) { setError(message(error)); setPending(null); } }
+    try { await saveAssets(pending.assets, pending.revision, assigned); discardPending(); }
+    catch (error) { if (mounted.current) { setError(message(error)); discardPending(); } }
     finally { busyRef.current = false; if (mounted.current) setBusy(false); }
   }
   return <View>
@@ -215,7 +208,7 @@ export function AttachmentField({ value, onChange, section, field, photo, max, r
     {!readOnly && pending && <View className="gap-3">
       <Text className="text-sm text-ink">Kies het aanzicht voor iedere foto.</Text>
       {pending.assets.map((asset, index) => <View key={`${asset.uri}-${index}`} className="gap-2 rounded-xl border border-ink-15 p-3">
-        <Image source={{ uri: asset.uri }} accessibilityLabel={`Geselecteerde foto ${index + 1}`} style={{ width: 160, height: 160, borderRadius: 12 }} resizeMode="contain" />
+        <Photo reference={`selected::Geselecteerde foto ${index + 1}`} asset={asset} expanded />
         {slots?.map(slot => {
           const selected = pending.assignments[index] === slot.id;
           const disabled = busy || pending.assignments.some((id, i) => i !== index && id === slot.id);
@@ -230,7 +223,7 @@ export function AttachmentField({ value, onChange, section, field, photo, max, r
         onPress={() => void savePending()} className="rounded-xl border border-ink-15 p-4">
         <Text className="font-semi text-mint-700">{busy ? 'Toevoegen…' : 'Foto’s opslaan'}</Text>
       </Pressable>
-      <Pressable accessibilityRole="button" disabled={busy} onPress={() => setPending(null)} className="p-3"><Text className="text-ink">Annuleren</Text></Pressable>
+      <Pressable accessibilityRole="button" disabled={busy} onPress={discardPending} className="p-3"><Text className="text-ink">Annuleren</Text></Pressable>
     </View>}
     {bloodTest && <Text className="mt-1 text-xs text-ink-50">Maximaal 5 bestanden</Text>}
     {!!error && <Text accessibilityRole="alert" className="mt-2 text-sm text-red-700">{error}</Text>}

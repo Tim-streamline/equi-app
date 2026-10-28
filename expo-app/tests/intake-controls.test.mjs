@@ -1,3 +1,4 @@
+import * as photoDimensions from '../lib/intake/attachments/photo-dimensions.ts';
 import * as intakeDates from '../lib/intake/dates.ts';
 import * as repeaterRows from '../lib/intake/repeater.ts';
 import assert from 'node:assert/strict';
@@ -161,7 +162,9 @@ test('offline blood-test selection shows size restrictions only on validation fa
     'react/jsx-runtime': runtime,
     react: { useRef: value => ({ current: value }), useEffect: () => {}, useState: initial => { const i = hook++; if (!(i in state)) state[i] = initial; return [state[i], next => { state[i] = next; }]; } },
     'react-native': { ...native, Platform: { OS: 'web' } }, 'lucide-react-native': icons,
-    'expo-image-picker': {}, 'expo-document-picker': { getDocumentAsync: async () => { picks++; return { canceled: false, assets: [{ name: 'blood.pdf', uri: 'blob:fixture', mimeType: 'application/pdf', size, file: new File(['blood'], 'blood.pdf', { type: 'application/pdf' }) }] }; } },
+    './AttachmentPhoto': { Photo: 'Photo' },
+    '@/lib/intake/attachments/photo-dimensions': photoDimensions,
+    '@/lib/intake/attachments/image-picker': { releasePickedImages() {}, }, 'expo-document-picker': { getDocumentAsync: async () => { picks++; return { canceled: false, assets: [{ name: 'blood.pdf', uri: 'blob:fixture', mimeType: 'application/pdf', size, file: new File(['blood'], 'blood.pdf', { type: 'application/pdf' }) }] }; } },
     '@/db/auth': { getApiBaseUrl: () => 'https://test.invalid' }, '@/db/connector': { getOrMintToken: async () => 'fixture-token' },
     '@/db/provider': { useDb: () => ({ currentUserId: 'owner' }) },
     '@/lib/account-session': { accountSession: { revision: 0 } },
@@ -266,7 +269,9 @@ test('offline hoof photo selection retains all eight front and side photos and a
     'react/jsx-runtime': runtime,
     react: { useRef: value => ({ current: value }), useEffect: () => {}, useState: initial => { const i = hook++; if (!(i in state)) state[i] = initial; return [state[i], next => { state[i] = next; }]; } },
     'react-native': { ...native, Platform: { OS: 'web' } }, 'lucide-react-native': icons,
-    'expo-image-picker': { launchImageLibraryAsync: async () => ({ canceled: false, assets: [{ fileName: 'hoef.jpg', uri: 'blob:fixture', mimeType: 'image/jpeg', fileSize: 20, file: new File(['photo'], 'hoef.jpg', { type: 'image/jpeg' }) }] }) },
+    './AttachmentPhoto': { Photo: 'Photo' },
+    '@/lib/intake/attachments/photo-dimensions': photoDimensions,
+    '@/lib/intake/attachments/image-picker': { releasePickedImages() {},  launchImageLibraryAsync: async () => ({ canceled: false, assets: [{ fileName: 'hoef.jpg', uri: 'blob:fixture', mimeType: 'image/jpeg', fileSize: 20, file: new File(['photo'], 'hoef.jpg', { type: 'image/jpeg' }) }] }) },
     'expo-document-picker': {},
     '@/db/auth': { getApiBaseUrl: () => 'https://test.invalid' }, '@/db/connector': { getOrMintToken: async () => 'fixture-token' },
     '@/db/provider': { useDb: () => ({ currentUserId: 'owner' }) },

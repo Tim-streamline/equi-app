@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Support\IntakePhotoPreview;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Model;
@@ -74,6 +75,7 @@ class Protocol extends Model
             \App\Support\LibrarySyncLock::acquire();
             static::whereKey($this->id)->lockForUpdate()->firstOrFail();
             $paths = IntakeAttachment::whereIn('booking_id', $this->intake()->select('id'))->pluck('path')->all();
+            $paths = array_merge($paths, array_map(IntakePhotoPreview::path(...), $paths));
             $deleted = parent::delete();
             if ($deleted && $paths) {
                 DB::afterCommit(function () use ($paths) {

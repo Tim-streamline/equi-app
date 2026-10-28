@@ -30,7 +30,7 @@ export const attachmentStorage = {
         tx.onerror = () => reject(tx.error);
         tx.objectStore('files').put(record);
       });
-      attachmentsChanged();
+      attachmentsChanged({ userId: record.userId, id: record.id });
     } finally { db.close(); }
   },
 };

@@ -6,6 +6,8 @@ use App\Models\Horse;
 use App\Models\IntakeAttachment;
 use App\Models\IntakeBooking;
 use App\Models\IntakeField;
+use App\Rules\IntakePhotoDimensions;
+use App\Support\IntakePhotoPreview;
 use App\Support\ProtocolAccess;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -32,7 +34,7 @@ class IntakeAttachmentController extends Controller
                 || $data['field'] === ($field->photo_config['legacy_field'] ?? null)));
         abort_unless($field, 404);
         if ($field->type === 'photo') {
-            $request->validate(['file' => ['image']]);
+            $request->validate(['file' => ['image', new IntakePhotoDimensions]]);
         }
 
         return DB::transaction(function () use ($request, $userId, $data, $id) {
@@ -81,6 +83,14 @@ class IntakeAttachmentController extends Controller
     private function file(Request $request, IntakeAttachment $attachment)
     {
         abort_unless(Storage::disk('local')->exists($attachment->path), 404);
+        if ($request->boolean('preview') && ! $request->boolean('download')) {
+            $path = app(IntakePhotoPreview::class)->make($attachment->path);
+
+            return Storage::disk('local')->response($path, 'preview.jpg', [
+                'Content-Type' => 'image/jpeg', 'Cache-Control' => 'private, no-store', 'X-Content-Type-Options' => 'nosniff',
+                'X-Intake-Preview' => '1',
+            ]);
+        }
         $headers = ['Content-Type' => $attachment->mime, 'Cache-Control' => 'private, no-store', 'X-Content-Type-Options' => 'nosniff'];
 
         return $request->boolean('download')

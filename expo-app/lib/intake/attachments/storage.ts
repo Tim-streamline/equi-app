@@ -16,7 +16,7 @@ export const attachmentStorage = {
   },
   async put(record: LocalAttachment) {
     await AsyncStorage.setItem(key(record.userId, record.id), JSON.stringify(record));
-    attachmentsChanged();
+    attachmentsChanged({ userId: record.userId, id: record.id });
   },
 };
 export async function saveAttachment(record: LocalAttachment, asset: AttachmentAsset) {

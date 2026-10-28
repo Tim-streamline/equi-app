@@ -1,3 +1,4 @@
+import * as photoDimensions from '../lib/intake/attachments/photo-dimensions.ts';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import test from 'node:test';
@@ -12,7 +13,7 @@ const tick = () => new Promise(resolve => setImmediate(resolve));
 function fixture({ assets = [asset('a.jpg'), asset('b.jpg')], max, slots, initial = [], save, pick } = {}) {
   const hooks = []; let hook = 0, value = initial;
   const effects = [], refreshSafety = new RefreshSafety();
-  const saved = [], published = [], options = [], assigned = [], session = { revision: 0 };
+  const saved = [], published = [], options = [], assigned = [], released = [], session = { revision: 0 };
   const intake = { state: { submittedAt: null }, submitting: false, horseId: 'horse', ensureBooking: async () => 'booking' };
   const jsx = (type, props) => ({ type, props });
   const modules = {
@@ -29,7 +30,9 @@ function fixture({ assets = [asset('a.jpg'), asset('b.jpg')], max, slots, initia
     'react/jsx-runtime': { jsx, jsxs: jsx },
     'react-native': { ...Object.fromEntries(['View', 'Text', 'Pressable', 'Image', 'ActivityIndicator'].map(x => [x, x])), Platform: { OS: 'web' } },
     'lucide-react-native': { Camera: 'Camera', FileText: 'FileText', Trash2: 'Trash2' },
-    'expo-image-picker': { launchImageLibraryAsync: async opts => { options.push(opts); return pick ? pick() : { canceled: false, assets }; } },
+    './AttachmentPhoto': { Photo: function Photo() {} },
+    '@/lib/intake/attachments/photo-dimensions': photoDimensions,
+    '@/lib/intake/attachments/image-picker': { releasePickedImages(assets) { released.push(...assets); },  launchImageLibraryAsync: async opts => { options.push(opts); return pick ? pick() : { canceled: false, assets }; } },
     'expo-document-picker': {},
     '@/db/auth': {}, '@/db/connector': {}, '@/db/provider': { useDb: () => ({ currentUserId: 'owner' }) },
     '@/lib/account-session': { accountSession: session },
@@ -50,7 +53,7 @@ function fixture({ assets = [asset('a.jpg'), asset('b.jpg')], max, slots, initia
     return tree;
   };
   const button = label => draw().find(n => n.type === 'Pressable' && (label ? text(n) === label : n.props.accessibilityRole === 'button' && n.props.accessibilityLabel !== 'Bijlage verwijderen'));
-  return { draw, button, options, saved, published, assigned, props, session, intake, refreshSafety, value: () => value };
+  return { draw, button, options, saved, published, assigned, released, props, session, intake, refreshSafety, value: () => value };
 }
 
 test('mandatory refresh waits for picker selection, view assignment and durable photo saving', async () => {
@@ -225,4 +228,38 @@ test('a view filled during file storage does not overwrite the newer answer', as
   app.button('Foto’s opslaan').props.onPress(); await tick();
   assert.equal(app.assigned.length, 0);
   assert.match(text(app.draw()), /aanzicht is inmiddels ingevuld/);
+});
+
+
+test('picker URLs are released after save, rejection, and cancelling view assignment', async () => {
+  const saved = fixture(); saved.button().props.onPress(); await tick();
+  assert.equal(saved.released.length, 2);
+  const rejected = fixture({ assets: [asset('too-big.jpg', { fileSize: 16 * 1024 * 1024 })] });
+  rejected.button().props.onPress(); await tick();
+  assert.equal(rejected.saved.length, 0); assert.equal(rejected.released.length, 1);
+  const pending = fixture({ assets: [asset('a.jpg')], slots: [{ id: 'left', label: 'Links', field: 'left' }] });
+  pending.button().props.onPress(); await tick();
+  assert.equal(pending.released.length, 0);
+  pending.button('Annuleren').props.onPress(); await tick();
+  assert.equal(pending.released.length, 1); assert.equal(pending.saved.length, 0);
+});
+
+test('photo resolution rejects oversized images while preserving valid originals in a batch', async () => {
+  const app = fixture({ assets: [asset('landscape.jpg', { width: 7680, height: 4320 }),
+    asset('portrait.jpg', { width: 4320, height: 7680 }), asset('wide.jpg', { width: 7681, height: 4320 }),
+    asset('tall.jpg', { width: 7680, height: 4321 })] });
+  app.button().props.onPress(); await tick();
+  assert.deepEqual(app.saved.map(record => record.name), ['landscape.jpg', 'portrait.jpg']);
+  assert.match(text(app.draw()), /wide.jpg:.*7680 × 4320/);
+  assert.match(text(app.draw()), /tall.jpg:.*7680 × 4320/);
+});
+
+test('oversized photos never enter the view-assignment preview screen', async () => {
+  const oversized = asset('panorama.jpg', { width: 16000, height: 4000 });
+  const app = fixture({ assets: [oversized], slots: [{ id: 'left', label: 'Links', field: 'left' }] });
+  app.button().props.onPress(); await tick();
+  assert.match(text(app.draw()), /7680 × 4320/);
+  assert.doesNotMatch(text(app.draw()), /Kies het aanzicht/);
+  assert.equal(app.saved.length, 0);
+  assert.deepEqual(app.released, [oversized]);
 });
