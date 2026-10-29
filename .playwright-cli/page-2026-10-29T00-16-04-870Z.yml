@@ -1,0 +1,19 @@
+- generic [ref=f1e4]:
+  - generic [ref=f1e8]:
+    - generic [ref=f1e9]: EquiApp Admin
+    - generic [ref=f1e10]: Back-office console
+  - generic [ref=f1e11]:
+    - generic [ref=f1e12]:
+      - heading "Sign in" [level=3] [ref=f1e13]
+      - paragraph [ref=f1e14]: Use your admin credentials to continue.
+    - generic [ref=f1e16]:
+      - generic [ref=f1e17]:
+        - generic [ref=f1e18]: Email
+        - textbox [ref=f1e19]
+      - generic [ref=f1e20]:
+        - generic [ref=f1e21]: Password
+        - textbox [ref=f1e22]
+      - generic [ref=f1e23]:
+        - checkbox "Remember me" [ref=f1e24]
+        - text: Remember me
+      - button "Sign in" [ref=f1e25] [cursor=pointer]

@@ -3,7 +3,6 @@
 namespace App\Support;
 
 use App\Models\FeedAssessment;
-use App\Models\FeedLabelAttachment;
 use App\Models\FeedScanSubmission;
 use App\Models\Ingredient;
 use App\Models\IngredientRevision;
@@ -11,7 +10,6 @@ use App\Models\Product;
 use App\Models\ProductVersion;
 use App\Models\ScanResult;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 
@@ -22,7 +20,7 @@ class FeedScanProcessor
         $submission = app(FeedScanReviewCompletion::class)->complete($submission->fresh());
         $token = DB::transaction(function () use ($submission) {
             $s = FeedScanSubmission::lockForUpdate()->findOrFail($submission->id);
-            if (in_array($s->status, ['completed', 'review_required']) || ($s->status === 'processing' && $s->processing_started_at?->gt(now()->subMinutes(3)))) {
+            if (in_array($s->status, ['completed', 'review_required']) || ($s->status === 'processing' && $s->processing_started_at?->gt(now()->subMinutes(5)))) {
                 return null;
             }
             if ($s->workflow_version === 2 && (! in_array($s->status, ['needs_photos', 'failed', 'processing']) || ! $s->product_id || ! isset($s->photo_ids['front']))) {
@@ -41,12 +39,16 @@ class FeedScanProcessor
         }
         try {
             $submission->refresh();
-            $images = FeedLabelAttachment::where('submission_id', $submission->id)->whereIn('id', array_values($submission->photo_ids))->get()
-                ->map(fn ($a) => ['mime' => $a->mime_type, 'bytes' => Storage::disk($a->disk)->get($a->path), 'purpose' => $a->purpose])->all();
-            $extraction = app(FeedLabelReader::class)->read($images);
-            DB::transaction(function () use ($submission, $token, $extraction) {
+            $sourcePhotoIds = $submission->photo_ids;
+            $reader = app(FeedPhotoAnalysis::class);
+            foreach ($submission->currentPhotos() as $slot => $photo) {
+                $reader->analyse($submission, $slot);
+            }
+            $submission->refresh();
+            $extraction = $reader->extraction($submission);
+            DB::transaction(function () use ($submission, $token, $extraction, $sourcePhotoIds) {
                 $s = FeedScanSubmission::lockForUpdate()->findOrFail($submission->id);
-                if ($s->processing_token !== $token) {
+                if ($s->processing_token !== $token || $s->photo_ids !== $sourcePhotoIds) {
                     return;
                 }
                 $fingerprint = FeedRecipeIdentity::fingerprint($extraction);
@@ -95,7 +97,7 @@ class FeedScanProcessor
                 // Only the first revision's selected evidence is frozen on it.
                 // All later submissions keep their own original photos separately.
                 if (! $existing || $version->product_id !== $existing->id) {
-                    foreach (FeedLabelAttachment::whereIn('id', array_values($s->photo_ids))->where('submission_id', $s->id)->get() as $attachment) {
+                    foreach ($s->currentPhotos() as $attachment) {
                         $copy = $attachment->replicate();
                         $copy->product_version_id = $version->id;
                         $copy->save();
@@ -145,7 +147,7 @@ class FeedScanProcessor
         return str_starts_with($name, $brand.' ') ? substr($name, strlen($brand) + 1) : $name;
     }
 
-    private function normalize(array $raw, Product $product, ?string $submittedName): array
+    public function normalize(array $raw, Product $product, ?string $submittedName): array
     {
         $cards = Ingredient::where('catalog_status', 'published')->whereNotNull('published_version_id')->get();
         $revisions = IngredientRevision::whereIn('id', $cards->pluck('published_version_id'))->get()->keyBy('id');

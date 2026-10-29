@@ -3,9 +3,11 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Models\FeedAnalysisPrompt;
 use App\Models\FeedKnowledgeCard;
 use App\Models\FeedLabelAttachment;
 use App\Models\FeedRuleVersion;
+use App\Models\FeedScanSubmission;
 use App\Models\Ingredient;
 use App\Models\IngredientRevision;
 use App\Models\LibraryItem;
@@ -14,7 +16,12 @@ use App\Models\ProductVersion;
 use App\Support\AuditLogger;
 use App\Support\FeedAdminReadModel;
 use App\Support\FeedCatalog;
+use App\Support\FeedLabelReader;
+use App\Support\FeedPhotoAnalysis;
 use App\Support\FeedPolicy;
+use App\Support\FeedPrefillMerger;
+use App\Support\FeedProductPrefill;
+use App\Support\FeedScanProcessor;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
@@ -188,11 +195,9 @@ class FeedCatalogController extends Controller
             ->orderBy('brand')->orderBy('name')->paginate(20)->withQueryString();
         $rows->through(function ($product) {
             $currentVersionIds = FeedCatalog::currentProductVersions($product)->pluck('id');
-            $submissions = \App\Models\FeedScanSubmission::where('product_id', $product->id)->orderByDesc('created_at')->with('attachments')
-                ->get(['id', 'status', 'message', 'extraction', 'created_at', 'reference_product_id', 'reference_version_id', 'recognition', 'photo_ids']);
-            foreach ($submissions as $submission) {
-                $submission->setRelation('attachments', $submission->attachments->whereIn('id', array_values($submission->photo_ids))->values());
-            }
+            $submissions = FeedScanSubmission::where(fn ($q) => $q->where('product_id', $product->id)
+                ->orWhere(fn ($q) => $q->whereNull('product_id')->where('reference_product_id', $product->id)))
+                ->orderByDesc('created_at')->get()->map(fn ($s) => array_replace($s->toArray(), ['photos' => $s->adminPhotos()]));
             $product->setAttribute('submissions', $submissions);
             $product->setAttribute('versions', ProductVersion::where('product_id', $product->id)->with(['attachments', 'assessments.overrides', 'assessments.ruleVersion:id,number,profile_id,status'])->orderByDesc('number')->get()
                 ->each(fn ($version) => $version->setAttribute('is_current', $currentVersionIds->contains($version->id))));
@@ -211,9 +216,10 @@ class FeedCatalogController extends Controller
         ]));
     }
 
-    public function retrySubmission(Request $request, \App\Models\FeedScanSubmission $submission)
+    public function retrySubmission(Request $request, FeedScanSubmission $submission)
     {
-        app(\App\Support\FeedScanProcessor::class)->analyse($submission);
+        app(FeedScanProcessor::class)->analyse($submission);
+
         return back()->with('success', 'Inzending verwerkt. Bekijk de actuele status bij het product.');
     }
 
@@ -223,6 +229,8 @@ class FeedCatalogController extends Controller
             'source_version_id' => ['nullable', 'uuid', Rule::prohibitedIf(! $product)],
             'related_product_id' => ['nullable', 'uuid', 'exists:products,id', Rule::prohibitedIf((bool) $product)],
             'approve' => ['sometimes', 'boolean'],
+            'analysis_attachment_ids' => ['sometimes', 'array', 'max:20'],
+            'analysis_attachment_ids.*' => ['required', 'uuid', 'distinct'],
             'brand' => ['required', 'string', 'max:255'], 'name' => ['required', 'string', 'max:255'],
             'barcode' => ['nullable', 'string', 'max:64'],
             'category' => ['required', Rule::in(array_keys(FeedCatalog::CATEGORIES))],
@@ -289,7 +297,12 @@ class FeedCatalogController extends Controller
                 $this->checkVersion($data, $source?->number);
             }
             $record->forceFill(['internal_notes' => $data['internal_notes'] ?? null, 'catalog_status' => in_array($record->catalog_status, ['published', 'legacy']) ? $record->catalog_status : 'draft', 'needs_review' => true])->save();
-            $version = FeedCatalog::productDraft($record, collect($data)->except(['internal_notes', 'expected_number', 'source_version_id', 'related_product_id', 'approve'])->all(), $request->user('admin')->id, sourceVersion: $source);
+            $version = FeedCatalog::productDraft($record, collect($data)->except(['internal_notes', 'expected_number', 'source_version_id', 'related_product_id', 'approve', 'analysis_attachment_ids'])->all(), $request->user('admin')->id, sourceVersion: $source);
+            foreach ($data['analysis_attachment_ids'] ?? [] as $id) {
+                $photo = FeedLabelAttachment::where('uploaded_by', $request->user('admin')->id)
+                    ->whereNull('product_version_id')->whereNull('submission_id')->lockForUpdate()->findOrFail($id);
+                $photo->update(['product_version_id' => $version->id]);
+            }
             if ($data['approve'] ?? false) {
                 FeedCatalog::approveProduct($record, $version, $request->user('admin')->id, null);
             }
@@ -320,25 +333,53 @@ class FeedCatalogController extends Controller
         return back()->with('success', 'Controle opgeslagen.');
     }
 
-    /** Read a label with AI and return a draft for the product form. Nothing is stored. */
-    public function prefillProduct(Request $request, \App\Support\FeedLabelReader $reader, \App\Support\FeedProductPrefill $prefill)
+    /** Save comparison evidence privately; product fields are saved only when the form is submitted. */
+    public function prefillProduct(Request $request, FeedLabelReader $reader, FeedProductPrefill $prefill)
     {
         $data = $request->validate([
             'text' => ['nullable', 'string', 'max:30000', 'required_without:photos'],
             'photos' => ['nullable', 'array', 'max:4', 'required_without:text'],
             'photos.*' => ['file', 'mimes:jpg,jpeg,png,webp', 'max:15360'],
         ], ['text.required_without' => 'Voeg een foto toe of plak de tekst van het etiket.', 'photos.required_without' => 'Voeg een foto toe of plak de tekst van het etiket.']);
-        if (! $reader->configured()) {
+        if (! $reader->configured() && ! $request->hasFile('photos')) {
             return response()->json(['message' => 'Uitlezen met AI is niet ingesteld op deze server.'], 503);
         }
-        $images = array_map(fn ($file) => ['mime' => $file->getMimeType(), 'bytes' => $file->get(), 'purpose' => 'etiket'], $request->file('photos', []));
+        $comparisons = [];
+        $ids = [];
+        $readings = [];
         try {
-            $raw = $reader->read($images, $data['text'] ?? null);
+            foreach ($request->file('photos', []) as $file) {
+                $path = $file->store('feed-labels', 'local');
+                $photo = FeedLabelAttachment::create(['purpose' => 'label', 'disk' => 'local', 'path' => $path,
+                    'original_name' => $file->getClientOriginalName(), 'mime_type' => $file->getMimeType(), 'size_bytes' => $file->getSize(),
+                    'checksum' => hash_file('sha256', $file->getRealPath()), 'uploaded_by' => $request->user('admin')->id]);
+                $analysis = app(FeedPhotoAnalysis::class);
+                $photo->update(['ocr' => $analysis->ocr($photo)]);
+                $photo->update(['luna' => $analysis->luna($photo)]);
+                $comparisons[] = ['id' => $photo->id, 'name' => $photo->original_name, 'ocr' => $photo->ocr, 'luna' => $photo->luna];
+                $ids[] = $photo->id;
+                if ($photo->luna['status'] === 'completed') {
+                    $readings[] = $photo->luna['data'];
+                }
+            }
+            if (filled($data['text'] ?? null)) {
+                $prompt = FeedAnalysisPrompt::findOrFail('label');
+                $readings[] = $reader->read([], $data['text'], ['type' => 'label', 'prompt' => $prompt->prompt]);
+            }
+            if (! $readings) {
+                throw new \RuntimeException('reader_unavailable');
+            }
         } catch (\Throwable) {
-            return response()->json(['message' => 'Het etiket kon niet worden uitgelezen. Probeer een scherpere foto of plak de tekst.'], 422);
+            return response()->json(['message' => 'Het etiket kon niet worden uitgelezen. Probeer een scherpere foto of plak de tekst.', 'analyses' => $comparisons, 'analysis_attachment_ids' => $ids], 422);
+        }
+        $merged = FeedPrefillMerger::merge($readings);
+        $result = $prefill->fromExtraction($merged['extraction']);
+        $result['notes'] = array_values(array_unique([...$result['notes'], ...$merged['notes']]));
+        if (collect($comparisons)->contains(fn ($row) => $row['luna']['status'] !== 'completed')) {
+            $result['notes'][] = 'Niet alle foto’s konden met Luna worden gelezen. Controleer de vergelijking en vul ontbrekende gegevens aan.';
         }
 
-        return response()->json($prefill->fromExtraction($raw));
+        return response()->json($result + ['analyses' => $comparisons, 'analysis_attachment_ids' => $ids, 'nutrient_conflicts' => $merged['nutrient_conflicts']]);
     }
 
     public function archiveProduct(Request $request, Product $product)
@@ -376,6 +417,7 @@ class FeedCatalogController extends Controller
             if (in_array('een vervolgrecept', $blocked, true)) {
                 return back()->withErrors(['product' => 'Dit product hoort bij de receptgeschiedenis van een ander product. Je kunt het archiveren.']);
             }
+
             return back()->withErrors(['product' => 'Dit product kan niet worden verwijderd, want het heeft '.implode(', ', $blocked).'. Archiveer het in plaats daarvan.']);
         }
 
@@ -404,8 +446,9 @@ class FeedCatalogController extends Controller
         $data = $request->validate(['file' => ['required', 'file', 'mimes:jpg,jpeg,png,webp,pdf', 'max:15360'], 'purpose' => ['required', Rule::in(['packaging', 'composition', 'analysis'])]]);
         // Keep attachments on a version immutable after approval, including concurrent reviews.
         $path = null;
+        $attachment = null;
         try {
-            DB::transaction(function () use ($request, $version, $data, &$path) {
+            DB::transaction(function () use ($request, $version, $data, &$path, &$attachment) {
                 $product = Product::lockForUpdate()->findOrFail($version->product_id);
                 abort_if($product->catalog_status === 'archived', 409, 'Dit product is gearchiveerd.');
                 $version->refresh();
@@ -424,7 +467,19 @@ class FeedCatalogController extends Controller
             throw $e;
         }
 
-        return back()->with('success', 'Etiket toegevoegd.');
+        app(FeedPhotoAnalysis::class)->attachment($attachment);
+
+        return back()->with('success', 'Etiket toegevoegd. Bekijk de OCR- en Luna-resultaten bij het product.');
+    }
+
+    public function submissionPhoto(FeedScanSubmission $submission, string $photo)
+    {
+        $file = $submission->currentPhotos()->firstWhere('id', $photo);
+        abort_unless($file, 404);
+        $disk = Storage::disk($file->disk);
+        abort_unless($disk->exists($file->path), 404);
+
+        return $disk->download($file->path, $file->original_name, ['Cache-Control' => 'private, no-store', 'X-Content-Type-Options' => 'nosniff']);
     }
 
     public function attachment(FeedLabelAttachment $attachment)
@@ -434,8 +489,32 @@ class FeedCatalogController extends Controller
 
     public function rules(Request $request)
     {
-        return Inertia::render('FeedScanner/Rules', array_merge($this->options($request), FeedAdminReadModel::profiles(), ['cards' => [],
+        return Inertia::render('FeedScanner/Rules', array_merge($this->options($request), FeedAdminReadModel::profiles(), ['cards' => [], 'analysisPrompts' => FeedAnalysisPrompt::orderBy('type')->get(),
             'ingredientOptions' => Ingredient::whereNotIn('catalog_status', ['archived', 'removed'])->orderBy('name')->get(['id', 'name'])]));
+    }
+
+    public function saveAnalysisPrompt(Request $request, string $type)
+    {
+        abort_unless($this->canPublish($request), 403);
+        $data = $request->validate(['prompt' => ['required', 'string', 'max:20000'], 'version' => ['required', 'integer', 'min:1']]);
+        DB::transaction(function () use ($type, $data) {
+            $prompt = FeedAnalysisPrompt::lockForUpdate()->findOrFail($type);
+            abort_unless($prompt->version === $data['version'], 409, 'Deze prompt is ondertussen gewijzigd. Vernieuw de pagina.');
+            $before = $prompt->toArray();
+            $prompt->update(['prompt' => trim($data['prompt']), 'version' => $prompt->version + 1]);
+            AuditLogger::log('feed_analysis_prompt_updated', before: $before, after: $prompt->toArray(), label: 'Analyseprompt '.$prompt->type);
+        });
+
+        return back()->with('success', 'Analyseprompt opgeslagen. Nieuwe analyses gebruiken deze versie.');
+    }
+
+    public function retryPhotoAnalysis(FeedScanSubmission $submission, string $photo)
+    {
+        $slot = array_search($photo, $submission->photo_ids, true);
+        abort_if($slot === false, 404);
+        app(FeedPhotoAnalysis::class)->analyse($submission, $slot);
+
+        return back()->with('success', 'Fotoanalyse bijgewerkt. Bekijk beide resultaten bij de foto.');
     }
 
     public function saveCard(Request $request, ?FeedKnowledgeCard $card = null)

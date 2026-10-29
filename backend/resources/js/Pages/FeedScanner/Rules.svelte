@@ -4,11 +4,12 @@
     import Modal from '$lib/components/Modal.svelte';
     import Field from '$lib/components/Field.svelte';
     import KnowledgeTabs from './KnowledgeTabs.svelte';
+    import AnalysisPrompts from './AnalysisPrompts.svelte';
     import PolicySummary from './PolicySummary.svelte';
     import { router, useForm } from '@inertiajs/svelte';
     import { Card, CardContent, Button, Input, Textarea, Select, Badge } from '$lib/components/ui';
 
-    let { profiles, cards, libraryOptions, ingredientOptions, canPublish, mode = 'settings', scoreConflicts = [], filters = {}, errors = {} } = $props();
+    let { analysisPrompts = [], profiles, cards, libraryOptions, ingredientOptions, canPublish, mode = 'settings', scoreConflicts = [], filters = {}, errors = {} } = $props();
     let q = $state(filters.q ?? '');
     let status = $state(filters.status ?? '');
     let timer;
@@ -41,6 +42,7 @@
     <PageHeader title={mode === 'knowledge' ? 'Kennisbank' : 'Beoordelingsinstellingen'} description={mode === 'knowledge' ? 'Beheer jouw ingrediëntenkennis en voedingskundige uitleg.' : 'Jouw voedingsprincipes en de grenzen die bij beoordelingen worden gebruikt.'} />
     {#each Object.values(errors) as error}<p role="alert" class="mb-3 text-sm text-destructive">{error}</p>{/each}
     {#if mode === 'settings'}
+    <AnalysisPrompts prompts={analysisPrompts} canEdit={canPublish} />
     <PolicySummary {profiles} />
     {#if scoreConflicts.length}<section class="mt-5 rounded-xl border bg-card p-5 text-sm" aria-label="Regels voor een score van nul"><h2 class="font-semibold">Een voer kan 0/10 scoren</h2><p class="mt-2">De beoordelingsschaal loopt van 0 tot 10. Onderstaande regels kunnen een score van 0/10 opleveren. Per regel zie je of deze actief, concept of historisch is.</p><ul class="mt-3 space-y-2">{#each scoreConflicts as conflict}<li><strong>{conflict.profile}</strong> · versie {conflict.version} · {conflict.state}: {conflict.rule}.</li>{/each}</ul></section>{/if}
     <details class="mt-6 rounded-xl border bg-card p-5"><summary class="cursor-pointer font-semibold">Geavanceerde instellingen</summary>

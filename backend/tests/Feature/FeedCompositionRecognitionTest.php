@@ -22,6 +22,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
+use Inertia\Testing\AssertableInertia;
 use Tests\TestCase;
 
 class FeedCompositionRecognitionTest extends TestCase
@@ -76,7 +77,7 @@ class FeedCompositionRecognitionTest extends TestCase
 
     private function ocr(?string $text = null, float $confidence = 99): void
     {
-        $this->mock(FeedCompositionOcr::class, fn ($mock) => $mock->shouldReceive('read')->once()->andReturn([
+        $this->mock(FeedCompositionOcr::class, fn ($mock) => $mock->shouldReceive('read')->atLeast()->once()->andReturn([
             'text' => $text ?? "Testmerk Balansvoer\nSamenstelling:\n".self::RECIPE."\nAnalytische bestanddelen\nRuw eiwit 11 procent",
             'confidence' => $confidence, 'words' => 20, 'low_confidence_words' => $confidence < 90 ? 5 : 0, 'engine' => 'test-ocr']));
     }
@@ -139,7 +140,7 @@ class FeedCompositionRecognitionTest extends TestCase
         $secondOwner = User::factory()->create();
         $this->owner($secondOwner);
         $second = $this->pendingSubmission($reference);
-        $this->mock(FeedLabelReader::class, fn ($mock) => $mock->shouldReceive('read')->twice()->andReturn($this->extractedLabel()));
+        $this->mock(FeedLabelReader::class, fn ($mock) => $mock->shouldReceive('read')->times(6)->andReturn($this->extractedLabel()));
         $results = [];
         foreach ([[$first, $firstOwner], [$second, $secondOwner]] as [$id, $owner]) {
             $this->owner($owner);
@@ -153,11 +154,11 @@ class FeedCompositionRecognitionTest extends TestCase
         $this->assertNotSame($results[0]['scan_result_id'], $results[1]['scan_result_id']);
         $this->assertSame(1, ProductVersion::where('product_id', $results[0]['product_id'])->count());
         $this->assertNull(ProductVersion::findOrFail($results[0]['product_version_id'])->submission_id);
-        $this->assertCount(3, FeedLabelAttachment::where('submission_id', $second)->get());
+        $this->assertCount(3, FeedScanSubmission::findOrFail($second)->currentPhotos());
         $this->getJson("/api/feed-scanner/submissions/$first")->assertNotFound();
         $this->actingAs($this->admin(), 'admin');
-        $this->get('/admin/feed-scanner/products?open='.$results[0]['product_id'])->assertInertia(fn (\Inertia\Testing\AssertableInertia $page) => $page
-            ->has('products.data.0.submissions', 2)->has('products.data.0.submissions.0.attachments', 3)->has('products.data.0.submissions.1.attachments', 3));
+        $this->get('/admin/feed-scanner/products?open='.$results[0]['product_id'])->assertInertia(fn (AssertableInertia $page) => $page
+            ->has('products.data.0.submissions', 2)->has('products.data.0.submissions.0.photos', 3)->has('products.data.0.submissions.1.photos', 3));
     }
 
     public function test_an_archived_recipe_does_not_block_a_new_submission_with_the_same_label(): void
@@ -165,7 +166,7 @@ class FeedCompositionRecognitionTest extends TestCase
         $reference = $this->product();
         $first = $this->pendingSubmission($reference);
         $second = $this->pendingSubmission($reference);
-        $this->mock(FeedLabelReader::class, fn ($mock) => $mock->shouldReceive('read')->twice()->andReturn($this->extractedLabel()));
+        $this->mock(FeedLabelReader::class, fn ($mock) => $mock->shouldReceive('read')->times(6)->andReturn($this->extractedLabel()));
         $oldId = $this->postJson("/api/feed-scanner/submissions/$first/analyse")->assertJsonPath('status', 'completed')->json('product_id');
         Product::findOrFail($oldId)->forceFill(['catalog_status' => 'archived'])->save();
         $newId = $this->postJson("/api/feed-scanner/submissions/$second/analyse")->assertJsonPath('status', 'completed')->json('product_id');
@@ -183,7 +184,7 @@ class FeedCompositionRecognitionTest extends TestCase
         $two = array_replace($one, ['composition_text' => str_replace('7,88%', '9%', self::RECIPE)]);
         $three = $one;
         $three['nutrients'][0]['value'] = '7';
-        $this->mock(FeedLabelReader::class, fn ($mock) => $mock->shouldReceive('read')->times(3)->andReturn($one, $two, $three));
+        $this->mock(FeedLabelReader::class, fn ($mock) => $mock->shouldReceive('read')->times(9)->andReturn($one, $one, $one, $two, $two, $two, $three, $three, $three));
         $products = [];
         foreach ([$first, $second, $third] as $id) {
             $products[] = $this->postJson("/api/feed-scanner/submissions/$id/analyse")->assertJsonPath('status', 'completed')->json('product_id');
@@ -214,8 +215,9 @@ class FeedCompositionRecognitionTest extends TestCase
         $data = array_replace(ProductVersion::findOrFail($reference->published_version_id)->data, ['name' => 'Naam van beheerder']);
         $edited = null;
         $this->mock(FeedLabelReader::class, function ($mock) use ($id, $data, &$edited) {
-            $mock->shouldReceive('read')->once()->andReturnUsing(function () use ($id, $data, &$edited) {
-                $edited = $this->draftFor($id, $data);
+            $mock->shouldReceive('read')->times(3)->andReturnUsing(function () use ($id, $data, &$edited) {
+                $edited ??= $this->draftFor($id, $data);
+
                 return $this->extractedLabel();
             });
         });
@@ -330,7 +332,7 @@ class FeedCompositionRecognitionTest extends TestCase
         $photo = FeedLabelAttachment::create(['product_version_id' => $version->id, 'submission_id' => $s->id,
             'submitted_by' => $s->user_id, 'purpose' => 'composition', 'disk' => 'local', 'path' => 'legacy.jpg',
             'original_name' => 'legacy.jpg', 'mime_type' => 'image/jpeg', 'size_bytes' => 10, 'checksum' => hash('sha256', 'legacy')]);
-        $s->update(['photo_ids' => ['composition' => $photo->id]]);
+        DB::table('feed_scan_submissions')->where('id', $s->id)->update(['photo_ids' => json_encode(['composition' => $photo->id])]);
     }
 
     public function test_approval_during_extraction_finishes_once_without_overwriting_review(): void
@@ -339,9 +341,13 @@ class FeedCompositionRecognitionTest extends TestCase
         $id = $this->pendingSubmission($reference);
         $data = array_replace(ProductVersion::findOrFail($reference->published_version_id)->data, ['name' => 'Naam uit review']);
         $this->mock(FeedLabelReader::class, function ($mock) use ($id, $data) {
-            $mock->shouldReceive('read')->once()->andReturnUsing(function () use ($id, $data) {
+            $mock->shouldReceive('read')->times(3)->andReturnUsing(function () use ($id, $data) {
+                if (ProductVersion::where('product_id', FeedScanSubmission::findOrFail($id)->product_id)->exists()) {
+                    return $this->extractedLabel();
+                }
                 $version = $this->draftFor($id, $data);
                 DB::transaction(fn () => FeedCatalog::approveProduct(Product::findOrFail($version->product_id), $version, $this->admin()->id, null));
+
                 return $this->extractedLabel();
             });
         });
@@ -357,7 +363,7 @@ class FeedCompositionRecognitionTest extends TestCase
         $second = $this->pendingSubmission($reference);
         $raw = $this->extractedLabel();
         $raw['unreadable_fields'] = ['Toevoegingen niet leesbaar'];
-        $this->mock(FeedLabelReader::class, fn ($mock) => $mock->shouldReceive('read')->twice()->andReturn($raw));
+        $this->mock(FeedLabelReader::class, fn ($mock) => $mock->shouldReceive('read')->times(6)->andReturn($raw));
         $one = $this->postJson("/api/feed-scanner/submissions/$first/analyse")->assertJsonPath('status', 'completed')->json('product_id');
         $two = $this->postJson("/api/feed-scanner/submissions/$second/analyse")->assertJsonPath('status', 'completed')->json('product_id');
         $this->assertNotSame($one, $two);
@@ -380,6 +386,22 @@ class FeedCompositionRecognitionTest extends TestCase
         Http::assertNothingSent();
     }
 
+    public function test_replacing_ingredients_checks_again_and_can_finish_without_followup_photos(): void
+    {
+        $product = $this->product();
+        $this->ocr('Uncertain original label', 10);
+        $id = $this->submission();
+        $draft = $this->postJson("/api/feed-scanner/submissions/$id/check")->assertJsonPath('status', 'needs_photos')->json('product_id');
+        $this->ocr();
+        $this->post("/api/feed-scanner/submissions/$id/photos", ['slot' => 'composition', 'file' => UploadedFile::fake()->image('replacement.jpg', 160, 100)])
+            ->assertOk()->assertJsonPath('status', 'awaiting_composition')->assertJsonPath('recognition', null);
+        $this->postJson("/api/feed-scanner/submissions/$id/check")->assertJsonPath('status', 'candidate');
+        $this->postJson("/api/feed-scanner/submissions/$id/confirm")->assertJsonPath('status', 'completed')->assertJsonPath('product_id', $product->id);
+        $this->assertSame('archived', Product::findOrFail($draft)->catalog_status);
+        $this->assertCount(1, FeedScanSubmission::findOrFail($id)->currentPhotos());
+        Http::assertNothingSent();
+    }
+
     public function test_changed_recipe_creates_a_separate_product_and_preserves_the_original(): void
     {
         $product = $this->product();
@@ -394,7 +416,7 @@ class FeedCompositionRecognitionTest extends TestCase
         $this->assertSame($product->published_version_id, $s['reference_version_id']);
         $this->assertSame($original, ProductVersion::find($product->published_version_id)->data);
         $this->assertNull($s['product_version_id']);
-        $this->assertSame(1, FeedLabelAttachment::where('submission_id', $id)->count());
+        $this->assertCount(1, FeedScanSubmission::findOrFail($id)->currentPhotos());
         $this->postJson("/api/feed-scanner/submissions/$id/analyse")->assertUnprocessable();
         $this->upload($id, 'analysis');
         $this->postJson("/api/feed-scanner/submissions/$id/analyse")->assertUnprocessable();
@@ -531,6 +553,6 @@ class FeedCompositionRecognitionTest extends TestCase
         $new = ProductVersion::find($s['product_version_id']);
         $this->assertCount(1, $new->data['nutrients']); // No old starch value is borrowed.
         $this->assertSame(3, $new->attachments()->count()); // Only this submission's three photos.
-        Http::assertSentCount(1);
+        Http::assertSentCount(3);
     }
 }

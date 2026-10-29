@@ -3,7 +3,6 @@
 namespace App\Support;
 
 use App\Models\FeedAssessment;
-use App\Models\FeedLabelAttachment;
 use App\Models\FeedScanSubmission;
 use App\Models\Product;
 use App\Models\ProductVersion;
@@ -18,7 +17,7 @@ class FeedScanRecognition
     {
         $token = DB::transaction(function () use ($submission) {
             $s = FeedScanSubmission::lockForUpdate()->findOrFail($submission->id);
-            if ($s->workflow_version !== 2 || $s->product_id || in_array($s->status, ['candidate', 'needs_photos', 'completed', 'review_required', 'processing']) ||
+            if ($s->workflow_version !== 2 || ! in_array($s->status, ['awaiting_composition', 'checking']) ||
                 ($s->status === 'checking' && $s->processing_started_at?->gt(now()->subMinutes(2)))) {
                 return null;
             }
@@ -33,20 +32,28 @@ class FeedScanRecognition
         if (! $token) {
             return $submission->fresh();
         }
+        $photo = null;
         try {
             $submission->refresh();
-            $ocr = app(FeedCompositionOcr::class)->read(FeedLabelAttachment::findOrFail($submission->photo_ids['composition']));
+            $photo = $submission->photo('composition');
+            app(FeedPhotoAnalysis::class)->analyse($submission, 'composition', false);
+            $submission->refresh();
+            $ocr = $submission->photoOcr('composition') ?? ['text' => '', 'confidence' => 0, 'engine' => 'unavailable'];
             $match = app(FeedCompositionMatcher::class)->match($ocr, $submission->reference_product_id);
         } catch (\Throwable) {
             $ocr = ['text' => '', 'confidence' => 0, 'engine' => 'unavailable'];
             $match = ['decision' => 'uncertain', 'product_id' => $submission->reference_product_id, 'version_id' => null, 'composition_text' => null];
         }
-        DB::transaction(function () use ($submission, $token, $ocr, $match) {
+        DB::transaction(function () use ($submission, $token, $ocr, $match, $photo) {
             $s = FeedScanSubmission::lockForUpdate()->findOrFail($submission->id);
-            if ($s->processing_token !== $token) {
+            if ($s->processing_token !== $token || $s->ingredients_photo_id !== $photo?->id || $s->ingredients_photo_checksum !== $photo?->checksum) {
                 return;
             }
-            $s->update(['recognition' => $match + ['ocr' => $ocr, 'photo_id' => $s->photo_ids['composition']], 'processing_token' => null,
+            if (! $s->photoOcr('composition')) {
+                $s->setPhotoOcr('composition', $ocr);
+            }
+            $s->setRecognitionData($match + ['photo_id' => $photo->id]);
+            $s->update(['processing_token' => null,
                 'reference_product_id' => $match['product_id'], 'reference_version_id' => $match['version_id'],
                 'status' => $match['decision'] === 'candidate' ? 'candidate' : 'needs_photos',
                 'message' => $match['decision'] === 'candidate' ? 'Deze samenstelling herkennen we. Controleer of dit jouw voer is.' :
@@ -68,7 +75,7 @@ class FeedScanRecognition
                 if (! $changed) {
                     $s->reference_product_id = $s->reference_version_id = null;
                 }
-                $s->recognition = array_merge($s->recognition ?? [], ['decision' => $changed ? 'changed' : 'unknown', 'owner_reported_change' => $changed]);
+                $s->setRecognitionData(array_merge($s->recognition ?? [], ['decision' => $changed ? 'changed' : 'unknown', 'owner_reported_change' => $changed]));
                 $s->status = 'needs_photos';
                 $s->message = 'Voeg de analyse en de voorkant toe. Wij controleren de samenstelling en etiketgegevens.';
                 $s->save();
@@ -106,8 +113,14 @@ class FeedScanRecognition
             $public = FeedScanResults::make($version, $assessment);
             $scan = ScanResult::create(['user_id' => $s->user_id, 'product_id' => $product->id, 'product_name' => $public['name'], 'brand' => $public['brand'],
                 'scanned_at' => now(), 'score' => $public['score'] === null ? null : (int) round((float) $public['score'] * 10), 'rating' => 'Gecontroleerd', 'advice' => $public['message']]);
+            if ($s->product_id && $s->product_id !== $product->id) {
+                Product::whereKey($s->product_id)->where('catalog_status', 'draft')
+                    ->whereNotIn('id', ProductVersion::select('product_id'))
+                    ->whereNotIn('id', FeedScanSubmission::where('id', '!=', $s->id)->whereNotNull('product_id')->select('product_id'))
+                    ->update(['catalog_status' => 'archived', 'needs_review' => false]);
+            }
             $s->update(['status' => 'completed', 'product_id' => $product->id, 'product_version_id' => $version->id, 'assessment_id' => $assessment?->id,
-                'scan_result_id' => $scan->id, 'public_result' => $public, 'message' => 'Bestaande beoordeling geopend, zonder AI-aanroep.']);
+                'scan_result_id' => $scan->id, 'public_result' => $public, 'message' => 'Bestaande gecontroleerde beoordeling geopend.']);
             AuditLogger::log('feed_scan_known_recipe', $product, after: ['submission_id' => $s->id, 'product_version_id' => $version->id]);
 
             return $s->fresh();

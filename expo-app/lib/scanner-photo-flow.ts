@@ -14,6 +14,7 @@ export function resumePhotoStep(submission: FeedSubmission | null): PhotoStep {
 }
 
 export function needsAdditionalPhotos(submission: FeedSubmission | null): boolean {
+  if (submission?.status === 'awaiting_composition' || submission?.status === 'checking' || submission?.status === 'candidate') return false;
   return !!submission && (submission.workflow_version === 1 || !!submission.product_id || !!submission.product_version_id || submission.status === 'needs_photos');
 }
 

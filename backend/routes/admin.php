@@ -112,10 +112,13 @@ Route::middleware('auth:admin')->group(function () {
 
     // ---- Scanner: products, ingredients, results ------------------------
     Route::middleware('admin.role:admin,content_editor')->prefix('feed-scanner')->as('feed-scanner.')->controller(\App\Http\Controllers\Admin\FeedCatalogController::class)->group(function () {
+        Route::get('submissions/{submission}/photos/{photo}', 'submissionPhoto')->whereUuid(['submission', 'photo']);
         Route::post('submissions/{submission}/retry', 'retrySubmission')->whereUuid('submission')->middleware('throttle:10,60,feed-scan-admin-retry:');
         Route::get('/', 'overview')->name('overview');
         Route::get('knowledge', 'knowledge')->name('knowledge');
         Route::get('settings', 'rules')->name('settings');
+        Route::put('analysis-prompts/{type}', 'saveAnalysisPrompt');
+        Route::post('submissions/{submission}/photos/{photo}/analyse', 'retryPhotoAnalysis')->whereUuid(['submission', 'photo'])->middleware('throttle:20,1');
         Route::get('ingredients', 'ingredients')->name('ingredients');
         Route::post('ingredients', 'saveIngredient');
         Route::put('ingredients/{ingredient}', 'saveIngredient');

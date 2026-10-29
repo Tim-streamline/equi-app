@@ -8,6 +8,7 @@ use App\Models\FeedScanSubmission;
 use App\Models\Ingredient;
 use App\Models\IngredientRevision;
 use App\Models\Product;
+use App\Models\ProductVersion;
 use App\Models\ScanResult;
 use App\Models\User;
 use App\Support\FeedCompositionOcr;
@@ -87,10 +88,15 @@ class FeedScanSubmissionTest extends TestCase
         $file = UploadedFile::fake()->image('same.jpg');
         $url = '/api/feed-scanner/submissions/'.$s['id'].'/photos';
         $this->post($url, ['slot' => 'composition', 'file' => $file])->assertOk();
-        $count = DB::table('feed_label_attachments')->count();
+        $before = FeedScanSubmission::findOrFail($s['id']);
+        $photoId = $before->ingredients_photo_id;
+        $count = $before->photo_upload_count;
         $this->post($url, ['slot' => 'composition', 'file' => $file])->assertOk();
-        $this->assertSame($count, DB::table('feed_label_attachments')->count());
-        $attachment = DB::table('feed_label_attachments')->first();
+        $after = FeedScanSubmission::findOrFail($s['id']);
+        $this->assertSame($count, $after->photo_upload_count);
+        $this->assertSame($photoId, $after->ingredients_photo_id);
+        $this->assertSame(0, DB::table('feed_label_attachments')->count());
+        $attachment = $after->photo('composition');
         Storage::disk('local')->assertExists($attachment->path);
         $this->asOwner(User::factory()->create());
         $this->getJson('/api/feed-scanner/submissions/'.$s['id'])->assertNotFound();
@@ -103,7 +109,7 @@ class FeedScanSubmissionTest extends TestCase
         $base = '/api/feed-scanner/submissions/'.$submission['id'].'/photos';
         $saved = $this->post($base, ['slot' => 'composition', 'file' => UploadedFile::fake()->image('ingredients.jpg', 120, 80)])
             ->assertOk()->json();
-        $photo = \App\Models\FeedLabelAttachment::findOrFail($saved['photo_ids']['composition']);
+        $photo = FeedScanSubmission::findOrFail($saved['id'])->photo('composition');
         $response = $this->get($base.'/'.$photo->id)->assertOk()->assertHeader('Content-Type', 'image/jpeg')->assertHeader('X-Content-Type-Options', 'nosniff');
         $this->assertStringContainsString('private', $response->headers->get('Cache-Control'));
         $this->assertStringContainsString('no-store', $response->headers->get('Cache-Control'));
@@ -114,7 +120,7 @@ class FeedScanSubmissionTest extends TestCase
         $this->asOwner($this->owner);
         $new = $this->post($base, ['slot' => 'composition', 'file' => UploadedFile::fake()->image('replacement.jpg', 160, 100)])->assertOk()->json();
         $this->get($base.'/'.$photo->id)->assertNotFound();
-        $replacement = \App\Models\FeedLabelAttachment::findOrFail($new['photo_ids']['composition']);
+        $replacement = FeedScanSubmission::findOrFail($new['id'])->photo('composition');
         Storage::disk('local')->delete($replacement->path);
         $this->get($base.'/'.$replacement->id)->assertNotFound();
         Http::assertNothingSent();
@@ -145,7 +151,7 @@ class FeedScanSubmissionTest extends TestCase
             ->assertJsonPath('public_result.name', 'Testvoer')
             ->assertJsonPath('public_result.ingredients.0.explanation', 'Gepubliceerde uitleg');
         $this->postJson($url)->assertOk()->assertJsonPath('scan_result_id', $response->json('scan_result_id'));
-        Http::assertSentCount(1);
+        Http::assertSentCount(3);
         $this->assertSame(1, ScanResult::count());
         $this->assertDatabaseHas('products', ['id' => $s['product_id'], 'needs_review' => true, 'published_version_id' => null]);
         $this->getJson('/api/feed-scanner/scans/'.$response->json('scan_result_id'))->assertOk()->assertJsonPath('result.provisional', true);
@@ -171,9 +177,9 @@ class FeedScanSubmissionTest extends TestCase
         $result = $this->postJson('/api/feed-scanner/submissions/'.$s['id'].'/analyse', ['name' => '  Mijn merk Balans  '])
             ->assertOk()->assertJsonPath('status', 'completed')->assertJsonPath('public_result.name', 'Mijn merk Balans')->json();
         $this->assertSame('Mijn merk Balans', ScanResult::findOrFail($result['scan_result_id'])->product_name);
-        $this->assertSame('Mijn merk Balans', \App\Models\ProductVersion::findOrFail($result['product_version_id'])->data['name']);
+        $this->assertSame('Mijn merk Balans', ProductVersion::findOrFail($result['product_version_id'])->data['name']);
         $this->getJson('/api/feed-scanner/scans')->assertJsonPath('scans.0.product_name', 'Mijn merk Balans');
-        Http::assertSentCount(1);
+        Http::assertSentCount(3);
     }
 
     public function test_provider_failure_and_processing_lease_are_retry_safe(): void
@@ -183,6 +189,8 @@ class FeedScanSubmissionTest extends TestCase
         $this->postJson('/api/feed-scanner/submissions/'.$s['id'].'/analyse')->assertJsonPath('status', 'failed')->assertJsonPath('error_code', 'reader_unavailable');
         FeedScanSubmission::find($s['id'])->update(['status' => 'processing', 'processing_started_at' => now(), 'processing_token' => (string) Str::uuid()]);
         $this->postJson('/api/feed-scanner/submissions/'.$s['id'].'/analyse')->assertJsonPath('status', 'processing');
-        Http::assertSentCount(1);
+        $this->travel(4)->minutes();
+        $this->postJson('/api/feed-scanner/submissions/'.$s['id'].'/analyse')->assertJsonPath('status', 'processing');
+        Http::assertSentCount(3);
     }
 }

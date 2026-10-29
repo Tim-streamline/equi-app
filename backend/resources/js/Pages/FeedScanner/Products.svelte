@@ -5,6 +5,7 @@
     import Modal from '$lib/components/Modal.svelte';
     import Field from '$lib/components/Field.svelte';
     import AssessmentHistory from './AssessmentHistory.svelte';
+    import PhotoAnalysis from './PhotoAnalysis.svelte';
     import { router, useForm } from '@inertiajs/svelte';
     import { csrfHeaders } from '$lib/csrf.js';
     import { Card, CardContent, Button, Input, Textarea, Select, Badge } from '$lib/components/ui';
@@ -28,6 +29,7 @@
     let aiBusy = $state(false);
     let aiError = $state('');
     let aiNotes = $state(null);
+    let aiAnalyses = $state([]);
     let formGeneration = 0;
     function setProductOpen(value) {
         formGeneration++;
@@ -35,10 +37,10 @@
         open = value;
     }
     const labels = { draft: 'Concept', approved: 'Goedgekeurd', needs_info: 'Informatie ontbreekt', rejected: 'Afgewezen', legacy: 'Bestaand · nog te controleren' };
-    const purposes = { packaging: 'Verpakking', composition: 'Samenstelling', analysis: 'Analyse' };
+    const purposes = { label: 'Volledig etiket', packaging: 'Verpakking', composition: 'Samenstelling', analysis: 'Analyse' };
     const bases = { product: 'Productbasis', dry_matter: 'Droge-stofbasis', unknown: 'Onbekend' };
     const qualifiers = { exact: 'Exact vermeld', less_than: 'Minder dan (<)', greater_than: 'Meer dan (>)', minimum: 'Minimaal (≥)', maximum: 'Maximaal (≤)' };
-    const empty = () => ({ brand: '', name: '', barcode: '', category: '', composition_text: '', recognition_enabled: false, usage: '', source: '', internal_notes: '', ingredients: [], nutrients: [], related_product_id: null, source_version_id: null, expected_number: null, approve: false });
+    const empty = () => ({ brand: '', name: '', barcode: '', category: '', composition_text: '', recognition_enabled: false, usage: '', source: '', internal_notes: '', ingredients: [], nutrients: [], related_product_id: null, source_version_id: null, expected_number: null, analysis_attachment_ids: [], approve: false });
     const form = useForm(empty());
     const uploadForm = useForm({ file: null, purpose: 'composition' });
     function apply() { clearTimeout(timer); timer = setTimeout(() => router.get('/admin/feed-scanner/products', { q, status, sort, category }, { preserveState: true, replace: true }), 250); }
@@ -50,11 +52,15 @@
             nutrients: (data.nutrients ?? []).map(row => ({ qualifier: 'exact', ...row })),
             internal_notes: record?.internal_notes ?? '', source_version_id: version?.id ?? null, expected_number: version?.number ?? null, approve: false });
         $form.reset(); $form.clearErrors(); historyOpen = false; setProductOpen(true);
-        aiPhotos = null; aiText = ''; aiError = ''; aiNotes = null;
+        aiPhotos = null; aiText = ''; aiError = ''; aiNotes = null; aiAnalyses = [];
     }
     async function prefill() {
         aiError = ''; aiNotes = null;
         const body = new FormData();
+        if (($form.analysis_attachment_ids?.length ?? 0) + (aiPhotos?.length ?? 0) > 20) {
+            aiError = 'Je hebt maximaal 20 etiketfoto’s per concept. Sla dit product eerst op voordat je meer foto’s toevoegt.';
+            return;
+        }
         for (const file of aiPhotos ?? []) body.append('photos[]', file);
         if (aiText.trim()) body.append('text', aiText.trim());
         if (!body.has('text') && !body.has('photos[]')) { aiError = 'Voeg een foto toe of plak de tekst van het etiket.'; return; }
@@ -64,11 +70,14 @@
             const response = await fetch('/admin/feed-scanner/products/prefill', { method: 'POST', body, headers: { Accept: 'application/json', ...csrfHeaders() } });
             const result = await response.json().catch(() => ({}));
             if (generation !== formGeneration) return;
+            aiAnalyses = [...new Map([...aiAnalyses, ...(result.analyses ?? [])].map(analysis => [analysis.id, analysis])).values()];
+            $form.analysis_attachment_ids = [...new Set([...($form.analysis_attachment_ids ?? []), ...(result.analysis_attachment_ids ?? [])])];
             if (!response.ok) { aiError = result.message ?? 'Uitlezen is niet gelukt. Probeer het opnieuw.'; return; }
             const { ingredients, nutrients, ...fields } = result.data;
             // Assign per key so the form store notices each change; Object.assign would bypass it.
             for (const [key, value] of Object.entries(fields)) $form[key] = value;
             if (ingredients.length) $form.ingredients = ingredients;
+            $form.nutrients = $form.nutrients.filter(row => !(result.nutrient_conflicts ?? []).some(conflict => conflict.code === row.code && conflict.basis === row.basis));
             if (nutrients.length) $form.nutrients = nutrients;
             if (!$form.source) $form.source = aiPhotos?.length ? 'Etiket, uitgelezen met AI' : 'Geplakte fabrikanttekst, uitgelezen met AI';
             aiNotes = result.notes;
@@ -128,7 +137,7 @@
                     </div>
                     <div class="flex flex-wrap gap-2">
                         <Button size="sm" variant="outline" onclick={() => edit(product)}>Bewerken</Button>
-                        {#if pendingSubmissions.length}<Button size="sm" variant="outline" onclick={() => { detailId = product.id; historyOpen = true; }}>Ingezonden etiketten ({pendingSubmissions.length})</Button>{/if}
+                        {#if pendingSubmissions.length}<Button size="sm" variant="outline" onclick={() => { detailId = product.id; historyOpen = true; }}>Ingezonden etiketten · OCR & Luna ({pendingSubmissions.length})</Button>{/if}
                         {#if ['draft', 'needs_info', 'legacy'].includes(latest?.status)}<Button size="sm" variant="outline" onclick={() => { detailId = product.id; historyOpen = true; }}>Product bekijken</Button>{/if}
                         <Button size="sm" variant="ghost" onclick={() => { detailId = product.id; historyOpen = true; }}>Beoordelingen & historie</Button>
                         {#if ['draft', 'needs_info'].includes(latest?.status) && product.catalog_status !== 'archived'}
@@ -149,10 +158,11 @@
         <details class="mb-4 rounded-lg border p-3" open={!editing}>
             <summary class="cursor-pointer font-medium">Invullen met AI</summary>
             <div class="mt-3 space-y-3">
-                <p class="text-sm text-muted-foreground">Upload foto's van het etiket of plak de tekst van de fabrikantwebsite. De AI vult Algemeen, Samenstelling en Analyse in. Er wordt nog niets opgeslagen: controleer alles en sla daarna zelf op.</p>
+                <p class="text-sm text-muted-foreground">Upload foto's van het etiket of plak de tekst van de fabrikantwebsite. De AI vult Algemeen, Samenstelling en Analyse in. Eerdere foto’s en vergelijkingen blijven bewaard (maximaal 20 per concept). Controleer alles en sla daarna het product op.</p>
                 <Field label="Etiketfoto's (maximaal 4)"><input type="file" accept="image/jpeg,image/png,image/webp" multiple bind:files={aiPhotos} class="block w-full text-sm" /></Field>
                 <Field label="Of plak de tekst"><Textarea bind:value={aiText} rows={4} placeholder="Samenstelling, analytische bestanddelen, toevoegingen…" /></Field>
                 <Button type="button" variant="outline" disabled={aiBusy} onclick={prefill}>{aiBusy ? 'Bezig met uitlezen…' : 'Invullen met AI'}</Button>
+                {#each aiAnalyses as analysis}<section class="mt-4 space-y-3"><h4 class="font-medium">{analysis.name}</h4><PhotoAnalysis ocr={analysis.ocr} luna={analysis.luna} {nutrientOptions} /></section>{/each}
                 {#if aiError}<p role="alert" class="text-sm text-destructive">{aiError}</p>{/if}
                 {#if aiNotes}
                     <div class="rounded-lg border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900 dark:border-amber-700 dark:bg-amber-950 dark:text-amber-100">
@@ -212,7 +222,7 @@
             {#each Object.values($uploadForm.errors) as error}<p role="alert" class="text-destructive">{error}</p>{/each}
             <Field label="Wat staat er op dit bestand?"><Select bind:value={$uploadForm.purpose} options={Object.entries(purposes).map(([value, label]) => ({ value, label }))} /></Field>
             <Field label="Foto of PDF (maximaal 15 MB)"><input type="file" accept="image/jpeg,image/png,image/webp,application/pdf" onchange={e => $uploadForm.file = e.target.files?.[0] ?? null} /></Field>
-            <p class="text-sm text-muted-foreground">Het bestand is alleen beschikbaar voor bevoegde beheerders. Er wordt nog geen AI-herkenning uitgevoerd.</p>
+            <p class="text-sm text-muted-foreground">Het bestand is alleen beschikbaar voor bevoegde beheerders. Foto’s worden gelezen met OCR en Luna. Luna vult de bijbehorende gegevens in een nieuw concept in. PDF’s blijven alleen bewijsmateriaal.</p>
         </form>
         {#snippet footer()}<Button variant="outline" onclick={() => uploadOpen = false}>Annuleren</Button><Button form="feed-upload" type="submit" disabled={$uploadForm.processing || !$uploadForm.file}>Etiket toevoegen</Button>{/snippet}
     </Modal>
@@ -225,10 +235,15 @@
                 <h3 class="font-semibold">Ingezonden etiket · {new Date(submission.created_at).toLocaleDateString('nl-NL')}</h3>
                 <p class="text-sm">{({draft: 'Foto’s ontvangen / nog aan te vullen', needs_photos: 'Wacht op analyse en voorkant', processing: 'Etiket wordt uitgelezen', failed: 'Automatisch uitlezen niet gelukt', completed: 'Beoordeling beschikbaar', review_required: 'Handmatige beoordeling nodig'})[submission.status] ?? submission.status}</p>
                 <p class="text-xs text-muted-foreground">Deze foto’s zijn bewijsmateriaal bij het product. Corrigeer en beoordeel het product via de productacties.</p>
-                {#each submission.attachments ?? [] as file}<a href={`/admin/feed-scanner/attachments/${file.id}`} class="block text-sm text-primary underline">{purposes[file.purpose]}: {file.original_name}</a>{/each}
                 {#if submission.message}<p class="text-sm text-muted-foreground">{submission.message}</p>{/if}
                 {#if ['draft', 'failed', 'needs_photos'].includes(submission.status)}<Button size="sm" variant="outline" onclick={() => router.post(`/admin/feed-scanner/submissions/${submission.id}/retry`)}>Etiket opnieuw uitlezen</Button>{/if}
-                {#if submission.recognition}<details><summary class="cursor-pointer text-sm">Controle van de samenstelling bekijken</summary><pre class="mt-2 whitespace-pre-wrap break-words text-xs">{JSON.stringify(submission.recognition, null, 2)}</pre></details>{/if}
+                {#each submission.photos ?? [] as photo}
+                    <div class="space-y-2 pt-2">
+                        <a href={`/admin/feed-scanner/submissions/${submission.id}/photos/${photo.id}`} class="block text-sm text-primary underline">{purposes[photo.purpose]}: {photo.original_name}</a>
+                        <PhotoAnalysis ocr={photo.ocr} luna={photo.luna} {nutrientOptions} recognition={photo.slot === 'composition' ? submission.recognition : null} />
+                        {#if photo.luna?.status !== 'completed' || photo.ocr?.status !== 'completed'}<Button size="sm" variant="outline" onclick={() => router.post(`/admin/feed-scanner/submissions/${submission.id}/photos/${photo.id}/analyse`, {}, { preserveScroll: true })}>Ontbrekende analyse opnieuw proberen</Button>{/if}
+                    </div>
+                {:else}<p class="text-sm text-muted-foreground">Er zijn nog geen foto’s opgeslagen voor deze inzending.</p>{/each}
                 {#if submission.extraction}<details><summary class="cursor-pointer text-sm">Uitgelezen brongegevens controleren</summary><pre class="mt-2 whitespace-pre-wrap break-words text-xs">{JSON.stringify(submission.extraction, null, 2)}</pre></details>{/if}
             </div>
         {/each}
@@ -245,7 +260,7 @@
                 {#if version.data.usage}<p class="whitespace-pre-wrap text-sm">Gebruik: {version.data.usage}</p>{/if}
                 {#if version.data.source}<p class="text-sm">Bron: {version.data.source}</p>{/if}
                 {#if version.review_notes}<p class="text-sm">Controle: {version.review_notes}</p>{/if}
-                {#each version.attachments ?? [] as file}<a href={`/admin/feed-scanner/attachments/${file.id}`} class="block text-sm text-primary underline">{purposes[file.purpose]}: {file.original_name}</a>{/each}
+                {#each version.attachments ?? [] as file}<a href={`/admin/feed-scanner/attachments/${file.id}`} class="block text-sm text-primary underline">{purposes[file.purpose]}: {file.original_name}</a>{#if file.ocr || file.luna}<PhotoAnalysis ocr={file.ocr} luna={file.luna} {nutrientOptions} />{/if}{/each}
             </section>
         {/each}{/if}
         {#snippet footer()}{#if canPublish && detail && ['draft', 'needs_info'].includes(detail.versions.find(v => v.is_current)?.status) && detail.catalog_status !== 'archived'}<Button variant="outline" onclick={() => reviewProduct(detail, 'needs_info')}>Informatie ontbreekt</Button><Button onclick={() => reviewProduct(detail, 'approve')}>Goedkeuren</Button>{/if}<Button variant="outline" onclick={() => historyOpen = false}>Sluiten</Button>{/snippet}

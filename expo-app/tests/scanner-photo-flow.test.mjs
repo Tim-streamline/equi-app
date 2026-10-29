@@ -43,3 +43,12 @@ test('a failed submission resumes additional photos before its first product rev
   assert.equal(resumePhotoStep(pending), 'front');
   assert.equal(missingPhotoCount(pending, {}), 0);
 });
+
+
+test('a replaced composition must be checked again even when the submission already has a draft product', () => {
+  const pending = { status: 'awaiting_composition', workflow_version: 2, product_id: 'draft', photo_ids: { composition: 'replacement', analysis: 'saved-analysis', front: 'saved-front' } };
+  assert.equal(resumePhotoStep(pending), 'composition');
+  assert.deepEqual(requiredPhotoSlots(pending), ['composition']);
+  assert.equal(missingPhotoCount(pending, {}), 0);
+  assert.equal(resumePhotoStep({ ...pending, status: 'candidate' }), 'composition');
+});

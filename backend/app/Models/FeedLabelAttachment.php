@@ -10,4 +10,9 @@ class FeedLabelAttachment extends Model
     use HasUuids;
 
     protected $guarded = [];
+
+    protected function casts(): array
+    {
+        return ['ocr' => 'array', 'luna' => 'array'];
+    }
 }

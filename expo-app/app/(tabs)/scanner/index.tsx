@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { BackHandler, Image, Modal, Platform, Pressable, Text, TextInput, useWindowDimensions, View } from 'react-native';
 import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
 import * as ImagePicker from 'expo-image-picker';
-import { Camera, CheckCircle2, ChevronRight, History, ImagePlus, Plus, ScanLine, Search, Upload, X } from 'lucide-react-native';
+import { Camera, CheckCircle2, ChevronRight, History, ImagePlus, ScanLine, Search, Upload, X } from 'lucide-react-native';
 import { PhotoReplacementSheet, ScannerPhotoCard } from '@/components/scanner/ScannerPhotoCard';
 import { useCurrentUserId, useScannerProducts } from '@/db/hooks';
 import { C, FeedIcon, RoundButton, ScannerButton, ScannerFrame, ScannerNote, ScannerStepProgress, ScanRow, s } from '@/components/scanner/ScannerUI';
@@ -31,8 +31,6 @@ export default function ScannerScreen() {
   const [name, setName] = useState('');
   const [selected, setSelected] = useState<ScannerRow | null>(null);
   const [photos, setPhotos] = useState<Photos>({});
-  const [extras, setExtras] = useState<string[]>([]);
-  const extraSequence = useRef(0);
   const [replaceKey, setReplaceKey] = useState<string | null>(null);
   const [pickingKey, setPickingKey] = useState<string | null>(null);
   const handledVariant = useRef('');
@@ -56,7 +54,7 @@ export default function ScannerScreen() {
   const currentUser = useRef(userId);
   currentUser.current = userId;
   useEffect(() => { mounted.current = true; return () => { mounted.current = false; }; }, []);
-  useEffect(() => { submission.current = null; sendingRef.current = false; clientId.current = scannerUuid(); setRecognition(null); setSubmitted(false); setSending(false); setPhotos({}); uploadedAssets.current = {}; setPhotoStep('composition'); setName(''); setQuery(''); setSelected(null); setExtras([]); setUnknownFeed(false); setVariant(false); setReplaceKey(null); handledVariant.current = ''; handledDesignState.current = ''; setScreen('start'); }, [userId]);
+  useEffect(() => { submission.current = null; sendingRef.current = false; clientId.current = scannerUuid(); setRecognition(null); setSubmitted(false); setSending(false); setPhotos({}); uploadedAssets.current = {}; setPhotoStep('composition'); setName(''); setQuery(''); setSelected(null); setUnknownFeed(false); setVariant(false); setReplaceKey(null); handledVariant.current = ''; handledDesignState.current = ''; setScreen('start'); }, [userId]);
   useEffect(() => {
     if (!params.submissionId || !userId) return;
     let alive = true;
@@ -65,9 +63,7 @@ export default function ScannerScreen() {
       if (!alive) return;
       if (current.status === 'completed' && current.scan_result_id) { router.replace({ pathname: '/(tabs)/scanner/result', params: { id: current.scan_result_id } }); return; }
       if (['checking', 'processing', 'review_required'].includes(current.status)) { router.replace({ pathname: '/(tabs)/scanner/processing', params: { id: current.id } }); return; }
-      const savedExtras = Object.keys(current.photo_ids ?? {}).filter(key => key.startsWith('extra-'));
-      extraSequence.current = Math.max(-1, ...savedExtras.map(key => Number(key.slice(6)))) + 1;
-      submission.current = current; setRecognition(current); setPhotos({}); uploadedAssets.current = {}; setPhotoStep(resumePhotoStep(current)); setExtras(savedExtras); setName(current.submitted_name ?? ''); setScreen('photos'); setSubmitted(false);
+      submission.current = current; setRecognition(current); setPhotos({}); uploadedAssets.current = {}; setPhotoStep(resumePhotoStep(current)); setName(current.submitted_name || current.suggested_name || ''); setScreen('photos'); setSubmitted(false);
     }).catch(e => { if (alive) setError(e.message); });
     return () => { alive = false; };
   }, [params.submissionId, userId]);
@@ -91,7 +87,7 @@ export default function ScannerScreen() {
     handledVariant.current = key;
     setSelected(product); setName(`${product.brand ?? ''} ${product.name ?? ''}`.trim());
     submission.current = null; clientId.current = scannerUuid(); setRecognition(null); setSubmitted(false);
-    setPhotos({}); uploadedAssets.current = {}; setPhotoStep('composition'); setExtras([]); setVariant(true); setUnknownFeed(false); setScreen('photos');
+    setPhotos({}); uploadedAssets.current = {}; setPhotoStep('composition'); setVariant(true); setUnknownFeed(false); setScreen('photos');
   }, [params.mode, params.productId, products, userId]);
 
   const back = useCallback(() => {
@@ -128,7 +124,7 @@ export default function ScannerScreen() {
       if (screen === 'start') { resetScan(); setPhotos({ [key]: result.assets[0] }); }
       if (key === 'composition' && unreadable) { submission.current = null; clientId.current = scannerUuid(); setRecognition(null); uploadedAssets.current = {}; }
       setScreen('photos');
-      if (key === 'analysis' || key === 'front' || key.startsWith('extra-') || (key === 'composition' && screen !== 'start' && additional && !unreadable)) {
+      if (key === 'analysis' || key === 'front' || (key === 'composition' && screen !== 'start' && additional && !unreadable)) {
         try { await persistPhoto(key, result.assets[0]); }
         catch (e) { if (mounted.current && currentUser.current === owner) setError(e instanceof Error ? e.message : 'Uploaden is niet gelukt. Probeer opnieuw.'); }
       }
@@ -140,12 +136,20 @@ export default function ScannerScreen() {
   async function persistPhoto(key: string, asset: ImagePicker.ImagePickerAsset) {
     if (!submission.current) throw new Error('Controleer eerst de ingrediëntenlijst.');
     const owner = userId;
+    const scanId = submission.current.id;
+    const previousSuggestion = submission.current.suggested_name;
     setUploadingKey(key);
     try {
-      const uploaded = await uploadFeedPhoto(submission.current.id, key, asset);
-      if (!mounted.current || currentUser.current !== owner) return;
-      submission.current = uploaded; setRecognition(uploaded); uploadedAssets.current[key] = asset; setError('');
-    } finally { if (mounted.current && currentUser.current === owner) setUploadingKey(null); }
+      const uploaded = await uploadFeedPhoto(scanId, key, asset);
+      if (!mounted.current || currentUser.current !== owner || submission.current?.id !== scanId) return;
+      if (key === 'front' && !selected && !uploaded.reference_product_id) {
+        // Replace only an empty field or our earlier suggestion, never a typed correction.
+        setName(current => !current.trim() || current === previousSuggestion ? (uploaded.suggested_name ?? '') : current);
+      }
+      submission.current = uploaded; setRecognition(uploaded); uploadedAssets.current[key] = asset;
+      if (uploaded.status === 'awaiting_composition') setPhotoStep('composition');
+      setError('');
+    } finally { if (mounted.current && currentUser.current === owner && submission.current?.id === scanId) setUploadingKey(null); }
   }
 
   async function continueAnalysis() {
@@ -154,10 +158,6 @@ export default function ScannerScreen() {
     const owner = userId;
     try {
       if (photos.analysis && uploadedAssets.current.analysis !== photos.analysis) await persistPhoto('analysis', photos.analysis);
-      for (const key of extras) {
-        if (!mounted.current || currentUser.current !== owner) return;
-        if (photos[key] && uploadedAssets.current[key] !== photos[key]) await persistPhoto(key, photos[key]);
-      }
       if (mounted.current && currentUser.current === owner && submission.current?.photo_ids?.analysis) setPhotoStep('front');
     } catch (e) { if (mounted.current && currentUser.current === owner) setError(e instanceof Error ? e.message : 'Uploaden is niet gelukt.'); }
     finally { if (currentUser.current === owner) { sendingRef.current = false; setSending(false); } }
@@ -207,7 +207,7 @@ export default function ScannerScreen() {
 
   function resetScan() {
     setPhotoStep('composition'); uploadedAssets.current = {};
-    submission.current = null; clientId.current = scannerUuid(); handledVariant.current = ''; setRecognition(null); setSubmitted(false); setPhotos({}); setName(''); setExtras([]); setSelected(null); setVariant(false); setUnknownFeed(false); setScreen('start');
+    submission.current = null; clientId.current = scannerUuid(); handledVariant.current = ''; setRecognition(null); setSubmitted(false); setPhotos({}); setName(''); setSelected(null); setVariant(false); setUnknownFeed(false); setScreen('start');
     router.setParams({ submissionId: undefined, mode: undefined, productId: undefined });
   }
 
@@ -239,7 +239,7 @@ export default function ScannerScreen() {
     {!!query && <RoundButton label="Zoekopdracht wissen" onPress={() => setQuery('')}><X size={14} color={C.muted} /></RoundButton>}
   </View>;
   const foundActions = screen === 'found' && selected ? <>
-    <ScannerButton title="Controleer de ingrediëntenlijst" icon={<ImagePlus size={20} color="#fff" />} onPress={() => { submission.current = null; clientId.current = scannerUuid(); setRecognition(null); setPhotos({}); uploadedAssets.current = {}; setPhotoStep('composition'); setExtras([]); setSubmitted(false); setName(`${selected.brand ?? ''} ${selected.name ?? ''}`.trim()); setUnknownFeed(false); setVariant(false); setScreen('photos'); }} />
+    <ScannerButton title="Controleer de ingrediëntenlijst" icon={<ImagePlus size={20} color="#fff" />} onPress={() => { submission.current = null; clientId.current = scannerUuid(); setRecognition(null); setPhotos({}); uploadedAssets.current = {}; setPhotoStep('composition'); setSubmitted(false); setName(`${selected.brand ?? ''} ${selected.name ?? ''}`.trim()); setUnknownFeed(false); setVariant(false); setScreen('photos'); }} />
     <ScannerButton title="Dit is niet mijn voer" variant="text" onPress={() => setScreen('search')} />
   </> : undefined;
 
@@ -307,14 +307,6 @@ export default function ScannerScreen() {
         detail={photoStep === 'analysis' ? 'Fotografeer de lijst waarop alle voedingswaarden, zoals suiker, zetmeel, eiwit, vet en ruwe celstof staan.' : photoStep === 'front' ? 'Zorg dat het merk en de productnaam zichtbaar zijn.' : unreadable ? 'Probeer het opnieuw met een beter leesbare foto.' : 'De volledige lijst, inclusief eventuele toevoegingen.'}
         uri={photos[photoStep]?.uri} submissionId={recognition?.id} photoId={recognition?.photo_ids?.[photoStep]} phase={uploadingKey === photoStep ? 'uploading' : pickingKey === photoStep ? 'selecting' : unreadable && photoStep === 'composition' ? 'empty' : hasPhoto(photoStep) ? 'selected' : 'empty'} disabled={busy}
         onCamera={() => void pick(photoStep, true)} onUpload={() => void pick(photoStep, false)} onReplace={() => setReplaceKey(photoStep)} />}
-      {!candidate && photoStep === 'analysis' && <>
-        {extras.map((key, i) => <ScannerPhotoCard key={key} title={`Extra foto ${i + 1}`} detail="Aanvullende voedingswaarden of een andere tabel."
-          uri={photos[key]?.uri} submissionId={recognition?.id} photoId={recognition?.photo_ids?.[key]} phase={uploadingKey === key ? 'uploading' : pickingKey === key ? 'selecting' : hasPhoto(key) ? 'selected' : 'empty'} disabled={busy}
-          onCamera={() => void pick(key, true)} onUpload={() => void pick(key, false)} onReplace={() => setReplaceKey(key)}
-          onRemove={!busy && !recognition?.photo_ids?.[key] ? () => { setExtras(old => old.filter(item => item !== key)); setPhotos(old => { const next = { ...old }; delete next[key]; return next; }); } : undefined} />)}
-        <Text style={s.small}>Staan de voedingswaarden in meerdere tabellen of passen ze niet op één foto? Voeg dan een extra foto toe.</Text>
-        <ScannerButton title="Nog een foto toevoegen" variant="outline" icon={<Plus size={18} color={C.teal} />} disabled={busy || extras.length >= 7 || !hasPhoto('analysis')} onPress={() => setExtras(old => [...old, `extra-${extraSequence.current++}`])} />
-      </>}
       {!candidate && photoStep === 'analysis' && <Pressable accessibilityRole="button" onPress={() => { setExampleType('analysis'); setExampleOpen(true); }} style={{ minHeight: 44, justifyContent: 'center', paddingHorizontal: 4 }}><Text style={[s.small, { color: C.teal, textDecorationLine: 'underline' }]}>Klik hier voor een voorbeeld van een analyse.</Text></Pressable>}
       {!candidate && photoStep === 'front' && <View style={{ gap: 6 }}><Text style={[s.small, { fontFamily: 'SourceSans3_700Bold' }]}>Merk en productnaam</Text><View style={{ backgroundColor: '#fff', borderWidth: 1, borderRadius: 14, borderColor: focused ? C.mint : C.border }}><TextInput editable={!busy} value={name} maxLength={255} onChangeText={setName} placeholder="Vitalbix Nutrimash" accessibilityLabel="Merk en productnaam" onFocus={() => setFocused(true)} onBlur={() => setFocused(false)} style={[s.input, Platform.OS === 'web' ? { outlineStyle: 'none' } as any : undefined]} /></View></View>}
       <PhotoReplacementSheet visible={replaceKey !== null} onClose={() => setReplaceKey(null)}

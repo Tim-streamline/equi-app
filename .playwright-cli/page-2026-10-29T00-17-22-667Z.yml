@@ -1,0 +1,111 @@
+- generic [ref=f3e3]:
+  - complementary [ref=f3e4]:
+    - generic [ref=f3e8]:
+      - generic [ref=f3e9]: EquiApp
+      - generic [ref=f3e10]: Admin console
+    - navigation [ref=f3e11]:
+      - link "Dashboard" [ref=f3e13] [cursor=pointer]:
+        - /url: https://equi-app.online/admin
+      - generic [ref=f3e16]:
+        - generic [ref=f3e17]: Support
+        - link "Users" [ref=f3e18] [cursor=pointer]:
+          - /url: https://equi-app.online/admin/users
+        - link "Horses" [ref=f3e21] [cursor=pointer]:
+          - /url: https://equi-app.online/admin/horses
+        - link "Therapists" [ref=f3e24] [cursor=pointer]:
+          - /url: https://equi-app.online/admin/therapists
+        - link "Intake bookings" [ref=f3e27] [cursor=pointer]:
+          - /url: https://equi-app.online/admin/bookings
+        - link "Protocols" [ref=f3e30] [cursor=pointer]:
+          - /url: https://equi-app.online/admin/protocols
+      - generic [ref=f3e33]:
+        - generic [ref=f3e34]: Voerscanner
+        - link "Overzicht" [ref=f3e35] [cursor=pointer]:
+          - /url: https://equi-app.online/admin/feed-scanner
+        - link "Voerproducten" [ref=f3e38] [cursor=pointer]:
+          - /url: https://equi-app.online/admin/feed-scanner/products
+        - link "Kennisbank" [ref=f3e41] [cursor=pointer]:
+          - /url: https://equi-app.online/admin/feed-scanner/knowledge
+        - link "Scanhistorie" [ref=f3e44] [cursor=pointer]:
+          - /url: https://equi-app.online/admin/scans
+        - link "Beoordelingsinstellingen" [ref=f3e47] [cursor=pointer]:
+          - /url: https://equi-app.online/admin/feed-scanner/settings
+      - generic [ref=f3e50]:
+        - generic [ref=f3e51]: Operations
+        - link "Data exports" [ref=f3e52] [cursor=pointer]:
+          - /url: https://equi-app.online/admin/exports
+        - link "Notifications" [ref=f3e55] [cursor=pointer]:
+          - /url: https://equi-app.online/admin/notifications
+        - link "Sync health" [ref=f3e58] [cursor=pointer]:
+          - /url: https://equi-app.online/admin/sync-health
+        - link "Audit log" [ref=f3e61] [cursor=pointer]:
+          - /url: https://equi-app.online/admin/audit-log
+        - link "Intakevragen" [ref=f3e64] [cursor=pointer]:
+          - /url: https://equi-app.online/admin/intake-questionnaire
+        - link "Protocol Templates" [ref=f3e67] [cursor=pointer]:
+          - /url: https://equi-app.online/admin/protocol-settings
+        - link "Protocol Settings" [ref=f3e70] [cursor=pointer]:
+          - /url: https://equi-app.online/admin/protocol-settings/advice
+        - link "Settings" [ref=f3e73] [cursor=pointer]:
+          - /url: https://equi-app.online/admin/settings
+    - generic [ref=f3e77]:
+      - generic [ref=f3e78]: TV
+      - generic [ref=f3e79]:
+        - generic [ref=f3e80]: Temporary scanner verification
+        - generic [ref=f3e81]: admin
+      - button "Log out" [ref=f3e82]
+  - generic [ref=f3e84]:
+    - banner [ref=f3e85]:
+      - heading "Voerscanner · Beoordelingsinstellingen" [level=1] [ref=f3e86]
+    - main [ref=f3e87]:
+      - generic [ref=f3e89]:
+        - heading "Beoordelingsinstellingen" [level=2] [ref=f3e90]
+        - paragraph [ref=f3e91]: Jouw voedingsprincipes en de grenzen die bij beoordelingen worden gebruikt.
+      - region "Analyseprompts" [ref=f3e92]:
+        - heading "Fotoanalyse · OCR en Luna" [level=2] [ref=f3e93]
+        - paragraph [ref=f3e94]: Elke foto wordt afzonderlijk gelezen door Tesseract en GPT-6 Luna. Luna levert de automatische productgegevens. Tesseract gebruikt geen prompt. Wijzigingen hieronder gelden voor nieuwe analyses; eerdere resultaten bewaren hun gebruikte prompt.
+        - generic [ref=f3e95]:
+          - generic [ref=f3e96]:
+            - heading "Voedingswaarden · versie 1" [level=3] [ref=f3e97]
+            - button "Prompt bewerken" [ref=f3e98] [cursor=pointer]
+          - paragraph [ref=f3e99]: Lees de analytische bestanddelen en voedingswaarden op deze paardenvoerfoto. Schrijf in raw_text alle leesbare tekst letterlijk over, inclusief kolomkoppen, decimalen, eenheden en voetnoten. Gebruik [onleesbaar] voor onleesbare delen. Koppel elke voedingswaarde aan het juiste nutriënt, de juiste kolom en de letterlijk vermelde eenheid. Geef in source de exacte bronregel en relevante kolomkop of voetnoot. Zet een decimale komma in value om naar een punt; verander de hoeveelheid niet en reken eenheden niet om. Bewaar <, >, minimum en maximum met qualifier. Leid nooit een waarde af uit andere waarden en vul ontbrekende waarden niet met nul. Gebruik basis product alleen als per kg product, zoals gevoerd of een gelijkwaardige aanduiding expliciet vermeld staat. Gebruik dry_matter alleen bij een expliciete droge-stofbasis en anders unknown. Kies confidence low als waarde, kolom of eenheid niet betrouwbaar leesbaar is; gebruik null voor een onleesbare waarde. Noteer ontbrekende of onleesbare informatie in unreadable_fields. Neem alleen nutriënten op waarvoor het schema een code biedt. Laat ingredients leeg en composition_text null. Totaal selenium is een analysewaarde, geen bewijs van toegevoegd selenium.
+        - generic [ref=f3e100]:
+          - generic [ref=f3e101]:
+            - heading "Ingrediënten en toevoegingen · versie 1" [level=3] [ref=f3e102]
+            - button "Prompt bewerken" [ref=f3e103] [cursor=pointer]
+          - paragraph [ref=f3e104]: Lees de samenstelling en toevoegingen op deze paardenvoerfoto. Schrijf in raw_text alle leesbare tekst letterlijk over, in de oorspronkelijke taal en volgorde. Behoud kopjes, percentages, eenheden en toevoegingscodes. Gebruik [onleesbaar] voor onleesbare delen. Vul composition_text met de volledige samenstelling én toevoegingen, zonder analytische bestanddelen of marketingtekst. Neem elk letterlijk vermeld ingrediënt en elke toevoeging afzonderlijk op in ingredients, in etiketvolgorde. Neem de exacte naam over zonder vertaling of normalisatie; zet een vermeld percentage of hoeveelheid in amount en de letterlijke bronregel in evidence. Splits samengestelde ingrediënten niet op als dat niet expliciet op het etiket staat. Confidence high geldt alleen voor volledig duidelijk leesbare gegevens. Laat onbekende hoeveelheden null. Geef composition_confidence low bij afgesneden, onleesbare of onvolledige tekst. Noteer zulke delen in unreadable_fields. Toegevoegd selenium en de chemische vorm mogen uitsluitend uit expliciete samenstellings- of toevoegingstekst volgen; citeer die tekst. Een vermelding van totaal selenium bewijst geen toevoeging of vorm. Gebruik anders unknown. Laat nutrients leeg; daarvoor is de aparte voedingswaardenanalyse bedoeld.
+        - generic [ref=f3e105]:
+          - generic [ref=f3e106]:
+            - heading "Volledig etiket / geplakte tekst · versie 1" [level=3] [ref=f3e107]
+            - button "Prompt bewerken" [ref=f3e108] [cursor=pointer]
+          - paragraph [ref=f3e109]: Lees het volledige paardenvoeretiket of de geplakte fabrikanttekst. Schrijf alle leesbare tekst letterlijk over in raw_text. Vul productidentiteit, samenstelling, ingrediënten, toevoegingen en analytische bestanddelen uitsluitend uit de bron. Behoud ingrediëntnamen en bronregels in hun oorspronkelijke taal en volgorde. Vul evidence en source met de letterlijke bronregel. Bewaar percentages, eenheden en grenswaarden; zet alleen de decimale komma in numerieke value om naar een punt. Vul ontbrekende waarden niet met nul en reken geen eenheden om. Gebruik basis product uitsluitend bij een expliciete productbasis, dry_matter bij expliciete droge stof, anders unknown. Totaal selenium bewijst geen toevoeging of chemische vorm. Geef confidence high alleen bij volledig duidelijk leesbare gegevens. Gebruik null, unknown of low bij ontbrekende of onzekere informatie en vermeld onleesbare velden in unreadable_fields. Geef geen beoordelingen of scores.
+        - generic [ref=f3e110]:
+          - generic [ref=f3e111]:
+            - heading "Voorkant / productidentiteit · versie 1" [level=3] [ref=f3e112]
+            - button "Prompt bewerken" [ref=f3e113] [cursor=pointer]
+          - paragraph [ref=f3e114]: Lees de voorkant en productidentiteit op deze paardenvoerverpakking. Schrijf alle leesbare tekst letterlijk over in raw_text. Gebruik [onleesbaar] voor onleesbare delen. Vul brand, name en barcode alleen met letterlijk zichtbare gegevens. Raad nooit een barcode of ontbrekende cijfers. Kies category alleen als het etiket expliciet de voercategorie vermeldt; anders unknown met category_confidence low. Marketingclaims bewijzen geen ingrediënten, voedingswaarden of geschiktheid. Laat ingredients en nutrients leeg en composition_text null. Vermeld onleesbare velden in unreadable_fields.
+      - generic [ref=f3e115]:
+        - heading "Algemene voedingsprincipes en scoreplafonds" [level=2] [ref=f3e116]
+        - paragraph [ref=f3e117]: Actief beleid · Standaardvoer
+        - paragraph [ref=f3e118]: Voorkeur voor natuurlijke, herkenbare en minimaal bewerkte ingrediënten. Suiker en zetmeel uitsluitend als gezamenlijke som beoordelen. Ingrediënten uit de blacklist kritisch beoordelen, met ruimte voor expliciet vastgelegde hoeveelheidsuitzonderingen.
+        - generic [ref=f3e119]:
+          - paragraph [ref=f3e120]: "Suiker + zetmeel samen: maximaal 7% bij gezondheidsuitdagingen en 10% voor gezonde paarden."
+          - paragraph [ref=f3e121]: "Vanaf 20% suiker + zetmeel: maximaal 0/10."
+          - paragraph [ref=f3e122]: "Boven 15% suiker + zetmeel: maximaal 4/10."
+          - paragraph [ref=f3e123]: "Boven 12% suiker + zetmeel: maximaal 5/10."
+          - paragraph [ref=f3e124]: "Bevestigd organisch selenium: maximaal 3/10."
+          - paragraph [ref=f3e125]: "Bevestigd toegevoegd selenium met onbekende vorm: maximaal 5.5/10."
+          - paragraph [ref=f3e126]: Alleen selenium totaal activeert geen plafond. Bevestigd anorganisch selenium heeft geen seleniumplafond. Een plafond is een maximum, geen toegekend rapportcijfer.
+        - paragraph [ref=f3e127]: Algemene productbeoordeling volgens de voedingsfilosofie van De Paardentherapeut. Geen persoonlijke geschiktheidsbeoordeling. Analyse vergelijken op productbasis; een onbekende analysebasis niet raden. Alleen selenium totaal is geen bewijs voor toegevoegd selenium. Bevestigd anorganisch selenium geeft geen seleniumgerelateerd scoreplafond. Het strengste bevestigde plafond geldt ook bij handmatige correcties.
+      - region "Regels voor een score van nul" [ref=f3e128]:
+        - heading "Een voer kan 0/10 scoren" [level=2] [ref=f3e129]
+        - paragraph [ref=f3e130]: De beoordelingsschaal loopt van 0 tot 10. Onderstaande regels kunnen een score van 0/10 opleveren. Per regel zie je of deze actief, concept of historisch is.
+        - list [ref=f3e131]:
+          - listitem [ref=f3e132]:
+            - strong [ref=f3e133]: Balancer
+            - text: "· versie 2 · Actief: Vanaf 20% suiker + zetmeel: maximaal 0/10."
+          - listitem [ref=f3e134]:
+            - strong [ref=f3e135]: Standaardvoer
+            - text: "· versie 2 · Actief: Vanaf 20% suiker + zetmeel: maximaal 0/10."
+      - group [ref=f3e136]:
+        - generic "Geavanceerde instellingen" [ref=f3e137] [cursor=pointer]

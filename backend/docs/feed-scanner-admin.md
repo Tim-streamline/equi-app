@@ -34,7 +34,7 @@ Beheerder/eigenaar mag publiceren, goedkeuren en archiveren. Content editors mog
 
 De oude adminroutes blijven bruikbaar voor legacyrecords en maken bij wijzigingen ook een versie. Ze mogen nieuwe beheerde records niet buiten het publicatieproces wijzigen. Historiehoudende records worden gearchiveerd in plaats van verwijderd.
 
-Etiketten: JPG, PNG, WebP of PDF, maximaal 15 MB per bestand; meerdere bestanden toegestaan. Opslag op de private `local` disk, download uitsluitend via bevoegde adminroutes. Een volgend concept behoudt de bestanden van de voorgaande versie zonder ze te veranderen. Uploaden kan alleen op het nieuwste nog niet goedgekeurde concept. Er wordt nog geen AI-verzoek verzonden.
+Etiketten: JPG, PNG, WebP of PDF, maximaal 15 MB per bestand; meerdere bestanden toegestaan. Opslag op de private `local` disk, download uitsluitend via bevoegde adminroutes. Een volgend concept behoudt de bestanden van de voorgaande versie zonder ze te veranderen. Uploaden kan alleen op het nieuwste nog niet goedgekeurde concept. Foto’s worden afzonderlijk met OCR en GPT-6 Luna uitgelezen. Beide resultaten zijn zichtbaar in de historie; Luna vult de bijbehorende velden in een nieuwe conceptrevisie. PDF’s blijven uitsluitend bewijsmateriaal. Analyseprompts zijn per type te bewerken bij Beoordelingsinstellingen.
 
 Voedingswaarden met onbekende analysebasis blijven onbekend. Deze fase voert geen omrekening of beoordeling uit. Een bevestigde seleniumtoevoeging of specifieke chemische vorm vereist een bronvermelding. Een analytische seleniumtotaalwaarde blijft daarvan gescheiden.
 

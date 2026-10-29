@@ -2,17 +2,19 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\FeedLabelAttachment;
 use App\Models\FeedScanSubmission;
 use App\Models\Product;
 use App\Models\ScanResult;
 use App\Support\AuditLogger;
+use App\Support\FeedPhotoAnalysis;
 use App\Support\FeedScanProcessor;
 use App\Support\FeedScanRecognition;
 use App\Support\FeedScanReviewCompletion;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
+use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 
 class FeedScanController extends Controller
@@ -51,7 +53,7 @@ class FeedScanController extends Controller
     public function upload(Request $request, string $id)
     {
         $s = $this->owned($request, $id);
-        $data = $request->validate(['slot' => ['required', 'regex:/^(composition|analysis|front|extra-[0-9]+)$/'],
+        $data = $request->validate(['slot' => ['required', Rule::in(array_keys(FeedScanSubmission::PHOTO_SLOTS))],
             'file' => ['required', 'file', 'mimes:jpg,jpeg,png,webp', 'max:'.config('feed-scanner.max_photo_kb')]]);
         $path = null;
         try {
@@ -63,35 +65,43 @@ class FeedScanController extends Controller
                 }
                 $file = $data['file'];
                 $checksum = hash_file('sha256', $file->getRealPath());
-                $current = isset($s->photo_ids[$data['slot']]) ? FeedLabelAttachment::find($s->photo_ids[$data['slot']]) : null;
-                if ($current?->checksum === $checksum) {
+                $prefix = FeedScanSubmission::photoPrefix($data['slot']);
+                if ($s->{$prefix.'checksum'} === $checksum) {
                     return;
                 }
-                // Includes replaced files to bound cumulative private storage per submission.
-                $attachments = FeedLabelAttachment::where('submission_id', $s->id)->get();
-                if ($attachments->count() >= 20 || $attachments->sum('size_bytes') + $file->getSize() > config('feed-scanner.max_total_bytes')) {
+                if ($s->photo_upload_count >= 20 || $s->photo_uploaded_bytes + $file->getSize() > config('feed-scanner.max_total_bytes')) {
                     throw ValidationException::withMessages(['file' => 'De foto’s zijn samen te groot. Gebruik kleinere foto’s (maximaal 20 MB samen).']);
-                }
-                $map = $s->photo_ids;
-                if (! isset($map[$data['slot']]) && count($map) >= config('feed-scanner.max_photos')) {
-                    abort(422, 'Maximaal tien foto’s per inzending.');
                 }
                 $path = $file->store('feed-labels', 'local');
                 if (! $path) {
                     throw ValidationException::withMessages(['file' => 'De foto kon niet worden opgeslagen. Probeer opnieuw.']);
                 }
-                $a = FeedLabelAttachment::create(['product_version_id' => null, 'submission_id' => $s->id,
-                    'submitted_by' => $s->user_id, 'purpose' => in_array($data['slot'], ['composition', 'analysis']) ? $data['slot'] : 'packaging',
-                    'disk' => 'local', 'path' => $path, 'original_name' => mb_substr($file->getClientOriginalName(), 0, 255),
-                    'mime_type' => $file->getMimeType(), 'size_bytes' => $file->getSize(), 'checksum' => $checksum]);
-                $map[$data['slot']] = $a->id;
-                $s->update(['photo_ids' => $map, 'status' => $s->workflow_version === 2 ? ($s->product_id ? 'needs_photos' : 'awaiting_composition') : 'draft', 'error_code' => null]);
+                $photo = ['id' => (string) Str::uuid(), 'disk' => 'local', 'path' => $path,
+                    'original_name' => mb_substr($file->getClientOriginalName(), 0, 255), 'mime_type' => $file->getMimeType(),
+                    'size_bytes' => $file->getSize(), 'checksum' => $checksum, 'uploaded_at' => now()];
+                foreach ($photo as $field => $value) {
+                    $s->{$prefix.$field} = $value;
+                }
+                $s->setPhotoOcr($data['slot'], null);
+                $s->setPhotoLuna($data['slot'], null);
+                $s->{$prefix.'analysis_token'} = $s->{$prefix.'analysis_started_at'} = null;
+                if ($data['slot'] === 'composition') {
+                    $s->setRecognitionData(null);
+                }
+                $s->photo_upload_count++;
+                $s->photo_uploaded_bytes += $file->getSize();
+                $s->fill(['status' => $s->workflow_version === 2 ? ($data['slot'] === 'composition' ? 'awaiting_composition' : 'needs_photos') : 'draft',
+                    'extraction' => null, 'public_result' => null, 'error_code' => null, 'message' => null,
+                    'processing_token' => null, 'processing_started_at' => null]);
+                $s->save();
             });
         } catch (\Throwable $e) {
             if ($path) {
                 Storage::disk('local')->delete($path);
             } throw $e;
         }
+
+        app(FeedPhotoAnalysis::class)->analyse($s, $data['slot'], false);
 
         return response()->json($s->fresh());
     }
@@ -100,7 +110,8 @@ class FeedScanController extends Controller
     {
         $submission = $this->owned($request, $id);
         abort_unless(in_array($photo, array_values($submission->photo_ids ?? []), true), 404);
-        $attachment = FeedLabelAttachment::where('submission_id', $submission->id)->findOrFail($photo);
+        $attachment = $submission->currentPhotos()->firstWhere('id', $photo);
+        abort_unless($attachment, 404);
         abort_unless(in_array($attachment->mime_type, ['image/jpeg', 'image/png', 'image/webp'], true), 404);
         $disk = Storage::disk($attachment->disk);
         abort_unless($disk->exists($attachment->path), 404);

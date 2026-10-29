@@ -1,0 +1,437 @@
+- generic [ref=f2e3]:
+  - complementary [ref=f2e4]:
+    - generic [ref=f2e8]:
+      - generic [ref=f2e9]: EquiApp
+      - generic [ref=f2e10]: Admin console
+    - navigation [ref=f2e11]:
+      - link "Dashboard" [ref=f2e13] [cursor=pointer]:
+        - /url: https://equi-app.online/admin
+      - generic [ref=f2e16]:
+        - generic [ref=f2e17]: Support
+        - link "Users" [ref=f2e18] [cursor=pointer]:
+          - /url: https://equi-app.online/admin/users
+        - link "Horses" [ref=f2e21] [cursor=pointer]:
+          - /url: https://equi-app.online/admin/horses
+        - link "Therapists" [ref=f2e24] [cursor=pointer]:
+          - /url: https://equi-app.online/admin/therapists
+        - link "Intake bookings" [ref=f2e27] [cursor=pointer]:
+          - /url: https://equi-app.online/admin/bookings
+        - link "Protocols" [ref=f2e30] [cursor=pointer]:
+          - /url: https://equi-app.online/admin/protocols
+      - generic [ref=f2e33]:
+        - generic [ref=f2e34]: Voerscanner
+        - link "Overzicht" [ref=f2e35] [cursor=pointer]:
+          - /url: https://equi-app.online/admin/feed-scanner
+        - link "Voerproducten" [ref=f2e38] [cursor=pointer]:
+          - /url: https://equi-app.online/admin/feed-scanner/products
+        - link "Kennisbank" [ref=f2e41] [cursor=pointer]:
+          - /url: https://equi-app.online/admin/feed-scanner/knowledge
+        - link "Scanhistorie" [ref=f2e44] [cursor=pointer]:
+          - /url: https://equi-app.online/admin/scans
+        - link "Beoordelingsinstellingen" [ref=f2e47] [cursor=pointer]:
+          - /url: https://equi-app.online/admin/feed-scanner/settings
+      - generic [ref=f2e50]:
+        - generic [ref=f2e51]: Operations
+        - link "Data exports" [ref=f2e52] [cursor=pointer]:
+          - /url: https://equi-app.online/admin/exports
+        - link "Notifications" [ref=f2e55] [cursor=pointer]:
+          - /url: https://equi-app.online/admin/notifications
+        - link "Sync health" [ref=f2e58] [cursor=pointer]:
+          - /url: https://equi-app.online/admin/sync-health
+        - link "Audit log" [ref=f2e61] [cursor=pointer]:
+          - /url: https://equi-app.online/admin/audit-log
+        - link "Intakevragen" [ref=f2e64] [cursor=pointer]:
+          - /url: https://equi-app.online/admin/intake-questionnaire
+        - link "Protocol Templates" [ref=f2e67] [cursor=pointer]:
+          - /url: https://equi-app.online/admin/protocol-settings
+        - link "Protocol Settings" [ref=f2e70] [cursor=pointer]:
+          - /url: https://equi-app.online/admin/protocol-settings/advice
+        - link "Settings" [ref=f2e73] [cursor=pointer]:
+          - /url: https://equi-app.online/admin/settings
+    - generic [ref=f2e77]:
+      - generic [ref=f2e78]: TV
+      - generic [ref=f2e79]:
+        - generic [ref=f2e80]: Temporary scanner verification
+        - generic [ref=f2e81]: admin
+      - button "Log out" [ref=f2e82]
+  - generic [ref=f2e84]:
+    - banner [ref=f2e85]:
+      - heading "Voerscanner · Voerproducten" [level=1] [ref=f2e86]
+    - main [ref=f2e87]:
+      - generic [ref=f2e88]:
+        - generic [ref=f2e89]:
+          - heading "Voerproducten" [level=2] [ref=f2e90]
+          - paragraph [ref=f2e91]: 1 producten in dit overzicht · 10 wachten op controle
+        - button "Product toevoegen" [ref=f2e93] [cursor=pointer]
+      - generic "Productstatus" [ref=f2e94]:
+        - button "Alle producten" [pressed] [ref=f2e95] [cursor=pointer]
+        - button "Te beoordelen" [ref=f2e96] [cursor=pointer]
+        - button "Goedgekeurd" [ref=f2e97] [cursor=pointer]
+        - button "Informatie ontbreekt" [ref=f2e98] [cursor=pointer]
+      - generic [ref=f2e100]:
+        - generic [ref=f2e101]:
+          - textbox "Producten zoeken" [ref=f2e102]:
+            - /placeholder: Zoek merk, product of barcode…
+          - combobox [ref=f2e103]:
+            - option "Alle categorieën" [selected]
+            - option "Compleet paardenvoer"
+            - option "Aanvullend voer"
+            - option "Balancer"
+            - option "Slobber"
+          - combobox [ref=f2e104]:
+            - option "Merk en naam" [selected]
+            - option "Nieuwste eerst"
+            - option "Meest gescand"
+        - generic [ref=f2e106]:
+          - generic [ref=f2e107]:
+            - paragraph [ref=f2e108]: Scanner Test · Luna OCR Testvoer 2026-10-29
+            - generic [ref=f2e109]:
+              - generic [ref=f2e110]: Concept
+              - generic [ref=f2e111]: Aanvullend voer
+              - generic [ref=f2e112]: · 1 scans
+            - paragraph [ref=f2e113]: "Toegevoegd: 29-10-2026 · Laatst gecontroleerd: nog niet"
+          - generic [ref=f2e114]:
+            - button "Bewerken" [ref=f2e115] [cursor=pointer]
+            - button "Ingezonden etiketten · OCR & Luna (1)" [ref=f2e116] [cursor=pointer]
+            - button "Product bekijken" [ref=f2e117] [cursor=pointer]
+            - button "Beoordelingen & historie" [ref=f2e118] [cursor=pointer]
+            - button "Etiket toevoegen" [ref=f2e119] [cursor=pointer]
+            - button "Goedkeuren" [ref=f2e120] [cursor=pointer]
+            - button "Meer informatie nodig" [ref=f2e121] [cursor=pointer]
+            - button "Afwijzen" [ref=f2e122] [cursor=pointer]
+            - button "Archiveren" [ref=f2e123] [cursor=pointer]
+      - generic [ref=f2e125]:
+        - generic [ref=f2e126]:
+          - heading "Productdetails & historie" [level=3] [ref=f2e128]
+          - button "Close" [ref=f2e129]
+        - generic [ref=f2e131]:
+          - generic [ref=f2e132]:
+            - heading "Ingezonden etiket · 29-10-2026" [level=3] [ref=f2e133]
+            - paragraph [ref=f2e134]: Beoordeling beschikbaar
+            - paragraph [ref=f2e135]: Deze foto’s zijn bewijsmateriaal bij het product. Corrigeer en beoordeel het product via de productacties.
+            - paragraph [ref=f2e136]: De foto’s zijn uitgelezen. Dit product staat ter beoordeling.
+            - generic [ref=f2e137]:
+              - 'link "Samenstelling: composition.png" [ref=f2e138] [cursor=pointer]':
+                - /url: /admin/feed-scanner/submissions/01a18503-75f0-7376-adb7-dcabf26bf45c/photos/15c4a2d5-45a1-41e6-af9e-a12914301b86
+              - generic [ref=f2e139]:
+                - region "OCR · Tesseract" [ref=f2e140]:
+                  - generic [ref=f2e141]:
+                    - heading "OCR · Tesseract" [level=4] [ref=f2e142]
+                    - paragraph [ref=f2e143]: Automatisch gelezen van deze foto. Controleer de tekst aan de hand van het originele etiket.
+                  - generic [ref=f2e144]:
+                    - generic [ref=f2e145]:
+                      - term [ref=f2e146]: Gemiddelde OCR-zekerheid
+                      - definition [ref=f2e147]: 94,5 / 100
+                    - generic [ref=f2e148]:
+                      - term [ref=f2e149]: Gelezen woorden
+                      - definition [ref=f2e150]: "11"
+                    - generic [ref=f2e151]:
+                      - term [ref=f2e152]: Woorden met lage zekerheid
+                      - definition [ref=f2e153]: "0"
+                  - paragraph [ref=f2e154]: De OCR-zekerheid gaat over het lezen van tekst, niet over de juistheid van een productmatch.
+                  - generic [ref=f2e155]:
+                    - heading "Gelezen tekst" [level=5] [ref=f2e156]
+                    - paragraph [ref=f2e157]: "TESTETIKET - lokaal scanneronderzoek Samenstelling: Luzerne 80%, lijnzaad 15%, zout 5%."
+                  - generic [ref=f2e158]:
+                    - heading "Productherkenning" [level=5] [ref=f2e159]
+                    - paragraph [ref=f2e160]: Onvoldoende zekerheid om een product te herkennen.
+                - region "Luna-analyse" [ref=f2e161]:
+                  - generic [ref=f2e162]:
+                    - heading "Luna · GPT-6" [level=4] [ref=f2e163]
+                    - paragraph [ref=f2e164]: Bron voor de automatische productgegevens. Controleer de uitkomst op het originele etiket.
+                  - generic [ref=f2e165]:
+                    - heading "Gelezen tekst" [level=5] [ref=f2e166]
+                    - paragraph [ref=f2e167]: "TESTETIKET - lokaal scanneronderzoek Samenstelling: Luzerne 80%, lijnzaad 15%, zout 5%."
+                  - generic [ref=f2e168]:
+                    - heading "Ingrediënten en toevoegingen" [level=5] [ref=f2e169]
+                    - list [ref=f2e170]:
+                      - listitem [ref=f2e171]:
+                        - strong [ref=f2e172]: Luzerne
+                        - text: · 80%· Duidelijk gelezen
+                        - paragraph [ref=f2e173]: "Bron: Luzerne 80%"
+                      - listitem [ref=f2e174]:
+                        - strong [ref=f2e175]: lijnzaad
+                        - text: · 15%· Duidelijk gelezen
+                        - paragraph [ref=f2e176]: "Bron: lijnzaad 15%"
+                      - listitem [ref=f2e177]:
+                        - strong [ref=f2e178]: zout
+                        - text: · 5%· Duidelijk gelezen
+                        - paragraph [ref=f2e179]: "Bron: zout 5%"
+                  - paragraph [ref=f2e180]: gpt-6-luna · promptversie 1 · 29-10-2026, 01:16:05
+                  - paragraph [ref=f2e181]: "Tokens: 2033 invoer · 317 uitvoer"
+                  - group [ref=f2e182]:
+                    - generic "Gebruikte analyseprompt" [ref=f2e183] [cursor=pointer]
+            - generic [ref=f2e184]:
+              - 'link "Analyse: analysis.png" [ref=f2e185] [cursor=pointer]':
+                - /url: /admin/feed-scanner/submissions/01a18503-75f0-7376-adb7-dcabf26bf45c/photos/7be4cc85-0b09-479e-91a3-8635527eb1a2
+              - generic [ref=f2e186]:
+                - region "OCR · Tesseract" [ref=f2e187]:
+                  - generic [ref=f2e188]:
+                    - heading "OCR · Tesseract" [level=4] [ref=f2e189]
+                    - paragraph [ref=f2e190]: Automatisch gelezen van deze foto. Controleer de tekst aan de hand van het originele etiket.
+                  - generic [ref=f2e191]:
+                    - generic [ref=f2e192]:
+                      - term [ref=f2e193]: Gemiddelde OCR-zekerheid
+                      - definition [ref=f2e194]: 93,7 / 100
+                    - generic [ref=f2e195]:
+                      - term [ref=f2e196]: Gelezen woorden
+                      - definition [ref=f2e197]: "16"
+                    - generic [ref=f2e198]:
+                      - term [ref=f2e199]: Woorden met lage zekerheid
+                      - definition [ref=f2e200]: "0"
+                  - paragraph [ref=f2e201]: De OCR-zekerheid gaat over het lezen van tekst, niet over de juistheid van een productmatch.
+                  - generic [ref=f2e202]:
+                    - heading "Gelezen tekst" [level=5] [ref=f2e203]
+                    - paragraph [ref=f2e204]: "TESTETIKET - lokaal scanneronderzoek Analytische bestanddelen (per kg product): Ruw eiwit 12,5% Suiker 4,2% Zetmeel 6,0%"
+                - region "Luna-analyse" [ref=f2e205]:
+                  - generic [ref=f2e206]:
+                    - heading "Luna · GPT-6" [level=4] [ref=f2e207]
+                    - paragraph [ref=f2e208]: Bron voor de automatische productgegevens. Controleer de uitkomst op het originele etiket.
+                  - generic [ref=f2e209]:
+                    - heading "Gelezen tekst" [level=5] [ref=f2e210]
+                    - paragraph [ref=f2e211]: "TESTETIKET - lokaal scanneronderzoek Analytische bestanddelen (per kg product): Ruw eiwit 12,5% Suiker 4,2% Zetmeel 6,0%"
+                  - table [ref=f2e213]:
+                    - caption [ref=f2e214]: Voedingswaarden
+                    - rowgroup [ref=f2e215]:
+                      - row [ref=f2e216]:
+                        - columnheader "Waarde" [ref=f2e217]
+                        - columnheader "Uitgelezen" [ref=f2e218]
+                    - rowgroup [ref=f2e219]:
+                      - row [ref=f2e220]:
+                        - cell "Ruw eiwit" [ref=f2e221]
+                        - cell [ref=f2e222]:
+                          - text: 12.5 %
+                          - paragraph [ref=f2e223]: Per kg product · Duidelijk gelezen
+                          - paragraph [ref=f2e224]: "Bron: Analytische bestanddelen (per kg product): Ruw eiwit 12,5%"
+                      - row [ref=f2e225]:
+                        - cell "Suiker" [ref=f2e226]
+                        - cell [ref=f2e227]:
+                          - text: 4.2 %
+                          - paragraph [ref=f2e228]: Per kg product · Duidelijk gelezen
+                          - paragraph [ref=f2e229]: "Bron: Analytische bestanddelen (per kg product): Suiker 4,2%"
+                      - row [ref=f2e230]:
+                        - cell "Zetmeel" [ref=f2e231]
+                        - cell [ref=f2e232]:
+                          - text: 6.0 %
+                          - paragraph [ref=f2e233]: Per kg product · Duidelijk gelezen
+                          - paragraph [ref=f2e234]: "Bron: Analytische bestanddelen (per kg product): Zetmeel 6,0%"
+                  - paragraph [ref=f2e235]: gpt-6-luna · promptversie 1 · 29-10-2026, 01:16:11
+                  - paragraph [ref=f2e236]: "Tokens: 2042 invoer · 392 uitvoer"
+                  - group [ref=f2e237]:
+                    - generic "Gebruikte analyseprompt" [ref=f2e238] [cursor=pointer]
+            - generic [ref=f2e239]:
+              - 'link "Verpakking: front.png" [ref=f2e240] [cursor=pointer]':
+                - /url: /admin/feed-scanner/submissions/01a18503-75f0-7376-adb7-dcabf26bf45c/photos/087ceb2c-fd71-4f85-a5c6-1cea729d40a6
+              - generic [ref=f2e241]:
+                - region "OCR · Tesseract" [ref=f2e242]:
+                  - generic [ref=f2e243]:
+                    - heading "OCR · Tesseract" [level=4] [ref=f2e244]
+                    - paragraph [ref=f2e245]: Automatisch gelezen van deze foto. Controleer de tekst aan de hand van het originele etiket.
+                  - generic [ref=f2e246]:
+                    - generic [ref=f2e247]:
+                      - term [ref=f2e248]: Gemiddelde OCR-zekerheid
+                      - definition [ref=f2e249]: 94,9 / 100
+                    - generic [ref=f2e250]:
+                      - term [ref=f2e251]: Gelezen woorden
+                      - definition [ref=f2e252]: "17"
+                    - generic [ref=f2e253]:
+                      - term [ref=f2e254]: Woorden met lage zekerheid
+                      - definition [ref=f2e255]: "0"
+                  - paragraph [ref=f2e256]: De OCR-zekerheid gaat over het lezen van tekst, niet over de juistheid van een productmatch.
+                  - generic [ref=f2e257]:
+                    - heading "Gelezen tekst" [level=5] [ref=f2e258]
+                    - paragraph [ref=f2e259]: "Merk: Scanner Test Product: Luna OCR Testvoer 2026-10-29 Aanvullend diervoeder voor paarden TESTPRODUCT - NIET VOOR VERKOOP"
+                - region "Luna-analyse" [ref=f2e260]:
+                  - generic [ref=f2e261]:
+                    - heading "Luna · GPT-6" [level=4] [ref=f2e262]
+                    - paragraph [ref=f2e263]: Bron voor de automatische productgegevens. Controleer de uitkomst op het originele etiket.
+                  - generic [ref=f2e264]:
+                    - heading "Gelezen tekst" [level=5] [ref=f2e265]
+                    - paragraph [ref=f2e266]: "Merk: Scanner Test Product: Luna OCR Testvoer 2026-10-29 Aanvullend diervoeder voor paarden TESTPRODUCT - NIET VOOR VERKOOP"
+                  - paragraph [ref=f2e267]:
+                    - strong [ref=f2e268]: "Product:"
+                    - text: Scanner Test · Luna OCR Testvoer 2026-10-29
+                  - paragraph [ref=f2e269]: gpt-6-luna · promptversie 1 · 29-10-2026, 01:16:15
+                  - paragraph [ref=f2e270]: "Tokens: 1897 invoer · 226 uitvoer"
+                  - group [ref=f2e271]:
+                    - generic "Gebruikte analyseprompt" [ref=f2e272] [cursor=pointer]
+            - group [ref=f2e273]:
+              - generic "Uitgelezen brongegevens controleren" [ref=f2e274] [cursor=pointer]
+          - region "Productbeoordelingen" [ref=f2e275]:
+            - heading "Beoordelingen" [level=3] [ref=f2e276]
+            - paragraph [ref=f2e277]: De motor berekent de vastgelegde plafonds. De overige puntenweging is nog open. Een handmatige beoordeling blijft afzonderlijk herkenbaar.
+            - generic [ref=f2e278]:
+              - generic [ref=f2e279]:
+                - heading "Productversie 1" [level=4] [ref=f2e280]
+                - button "Berekenen met actieve regels" [ref=f2e281] [cursor=pointer]
+              - article [ref=f2e282]:
+                - generic [ref=f2e283]:
+                  - generic [ref=f2e284]: Regelversie 2
+                  - generic [ref=f2e285]: Voorlopig · product nog niet goedgekeurd bij berekening
+                  - generic [ref=f2e286]: 29-10-2026, 01:16:15
+                - paragraph [ref=f2e287]: Nog geen automatische eindscore
+                - paragraph [ref=f2e288]: "Scoreplafond: geen vastgesteld plafond vanuit de huidige regels"
+                - paragraph [ref=f2e289]: "Suiker + zetmeel samen: 10.2% op productbasis."
+                - paragraph [ref=f2e290]: De overige puntenweging is nog niet gekalibreerd. Een maximum van 4 of 5 is geen toegekende eindscore.
+                - button "Handmatig beoordelen" [ref=f2e291] [cursor=pointer]
+                - group [ref=f2e292]:
+                  - generic "Analyse en omrekening bekijken" [ref=f2e293] [cursor=pointer]
+          - heading "Productgegevens & versiehistorie" [level=3] [ref=f2e294]
+          - generic [ref=f2e295]:
+            - generic [ref=f2e296]:
+              - heading "Oorspronkelijke gegevens" [level=3] [ref=f2e297]
+              - generic [ref=f2e298]: Concept
+              - generic [ref=f2e299]: 29-10-2026, 01:16:15
+            - paragraph [ref=f2e300]: Scanner Test · Luna OCR Testvoer 2026-10-29
+            - paragraph [ref=f2e301]: Aanvullend voer · Geen barcode
+            - paragraph [ref=f2e302]: Luzerne 80%, lijnzaad 15%, zout 5%.
+            - paragraph [ref=f2e303]: 1. Luzerne (80%)
+            - paragraph [ref=f2e304]: 2. lijnzaad (15%)
+            - paragraph [ref=f2e305]: 3. zout (5%)
+            - paragraph [ref=f2e306]: "Ruw eiwit: 12.5 % · Exact vermeld · Productbasis · Analytische bestanddelen (per kg product): Ruw eiwit 12,5%"
+            - paragraph [ref=f2e307]: "Suiker: 4.2 % · Exact vermeld · Productbasis · Analytische bestanddelen (per kg product): Suiker 4,2%"
+            - paragraph [ref=f2e308]: "Zetmeel: 6.0 % · Exact vermeld · Productbasis · Analytische bestanddelen (per kg product): Zetmeel 6,0%"
+            - paragraph [ref=f2e309]: "Bron: Gebruikersinzending; automatisch uitgelezen, nog te beoordelen."
+            - 'link "Samenstelling: composition.png" [ref=f2e310] [cursor=pointer]':
+              - /url: /admin/feed-scanner/attachments/01a18503-b842-71e3-82e9-2963ea268646
+            - generic [ref=f2e311]:
+              - region "OCR · Tesseract" [ref=f2e312]:
+                - generic [ref=f2e313]:
+                  - heading "OCR · Tesseract" [level=4] [ref=f2e314]
+                  - paragraph [ref=f2e315]: Automatisch gelezen van deze foto. Controleer de tekst aan de hand van het originele etiket.
+                - generic [ref=f2e316]:
+                  - generic [ref=f2e317]:
+                    - term [ref=f2e318]: Gemiddelde OCR-zekerheid
+                    - definition [ref=f2e319]: 94,5 / 100
+                  - generic [ref=f2e320]:
+                    - term [ref=f2e321]: Gelezen woorden
+                    - definition [ref=f2e322]: "11"
+                  - generic [ref=f2e323]:
+                    - term [ref=f2e324]: Woorden met lage zekerheid
+                    - definition [ref=f2e325]: "0"
+                - paragraph [ref=f2e326]: De OCR-zekerheid gaat over het lezen van tekst, niet over de juistheid van een productmatch.
+                - generic [ref=f2e327]:
+                  - heading "Gelezen tekst" [level=5] [ref=f2e328]
+                  - paragraph [ref=f2e329]: "TESTETIKET - lokaal scanneronderzoek Samenstelling: Luzerne 80%, lijnzaad 15%, zout 5%."
+              - region "Luna-analyse" [ref=f2e330]:
+                - generic [ref=f2e331]:
+                  - heading "Luna · GPT-6" [level=4] [ref=f2e332]
+                  - paragraph [ref=f2e333]: Bron voor de automatische productgegevens. Controleer de uitkomst op het originele etiket.
+                - generic [ref=f2e334]:
+                  - heading "Gelezen tekst" [level=5] [ref=f2e335]
+                  - paragraph [ref=f2e336]: "TESTETIKET - lokaal scanneronderzoek Samenstelling: Luzerne 80%, lijnzaad 15%, zout 5%."
+                - generic [ref=f2e337]:
+                  - heading "Ingrediënten en toevoegingen" [level=5] [ref=f2e338]
+                  - list [ref=f2e339]:
+                    - listitem [ref=f2e340]:
+                      - strong [ref=f2e341]: Luzerne
+                      - text: · 80%· Duidelijk gelezen
+                      - paragraph [ref=f2e342]: "Bron: Luzerne 80%"
+                    - listitem [ref=f2e343]:
+                      - strong [ref=f2e344]: lijnzaad
+                      - text: · 15%· Duidelijk gelezen
+                      - paragraph [ref=f2e345]: "Bron: lijnzaad 15%"
+                    - listitem [ref=f2e346]:
+                      - strong [ref=f2e347]: zout
+                      - text: · 5%· Duidelijk gelezen
+                      - paragraph [ref=f2e348]: "Bron: zout 5%"
+                - paragraph [ref=f2e349]: gpt-6-luna · promptversie 1 · 29-10-2026, 01:16:05
+                - paragraph [ref=f2e350]: "Tokens: 2033 invoer · 317 uitvoer"
+                - group [ref=f2e351]:
+                  - generic "Gebruikte analyseprompt" [ref=f2e352] [cursor=pointer]
+            - 'link "Analyse: analysis.png" [ref=f2e353] [cursor=pointer]':
+              - /url: /admin/feed-scanner/attachments/01a18503-b847-7274-a1d1-e1827307102c
+            - generic [ref=f2e354]:
+              - region "OCR · Tesseract" [ref=f2e355]:
+                - generic [ref=f2e356]:
+                  - heading "OCR · Tesseract" [level=4] [ref=f2e357]
+                  - paragraph [ref=f2e358]: Automatisch gelezen van deze foto. Controleer de tekst aan de hand van het originele etiket.
+                - generic [ref=f2e359]:
+                  - generic [ref=f2e360]:
+                    - term [ref=f2e361]: Gemiddelde OCR-zekerheid
+                    - definition [ref=f2e362]: 93,7 / 100
+                  - generic [ref=f2e363]:
+                    - term [ref=f2e364]: Gelezen woorden
+                    - definition [ref=f2e365]: "16"
+                  - generic [ref=f2e366]:
+                    - term [ref=f2e367]: Woorden met lage zekerheid
+                    - definition [ref=f2e368]: "0"
+                - paragraph [ref=f2e369]: De OCR-zekerheid gaat over het lezen van tekst, niet over de juistheid van een productmatch.
+                - generic [ref=f2e370]:
+                  - heading "Gelezen tekst" [level=5] [ref=f2e371]
+                  - paragraph [ref=f2e372]: "TESTETIKET - lokaal scanneronderzoek Analytische bestanddelen (per kg product): Ruw eiwit 12,5% Suiker 4,2% Zetmeel 6,0%"
+              - region "Luna-analyse" [ref=f2e373]:
+                - generic [ref=f2e374]:
+                  - heading "Luna · GPT-6" [level=4] [ref=f2e375]
+                  - paragraph [ref=f2e376]: Bron voor de automatische productgegevens. Controleer de uitkomst op het originele etiket.
+                - generic [ref=f2e377]:
+                  - heading "Gelezen tekst" [level=5] [ref=f2e378]
+                  - paragraph [ref=f2e379]: "TESTETIKET - lokaal scanneronderzoek Analytische bestanddelen (per kg product): Ruw eiwit 12,5% Suiker 4,2% Zetmeel 6,0%"
+                - table [ref=f2e381]:
+                  - caption [ref=f2e382]: Voedingswaarden
+                  - rowgroup [ref=f2e383]:
+                    - row [ref=f2e384]:
+                      - columnheader "Waarde" [ref=f2e385]
+                      - columnheader "Uitgelezen" [ref=f2e386]
+                  - rowgroup [ref=f2e387]:
+                    - row [ref=f2e388]:
+                      - cell "Ruw eiwit" [ref=f2e389]
+                      - cell [ref=f2e390]:
+                        - text: 12.5 %
+                        - paragraph [ref=f2e391]: Per kg product · Duidelijk gelezen
+                        - paragraph [ref=f2e392]: "Bron: Analytische bestanddelen (per kg product): Ruw eiwit 12,5%"
+                    - row [ref=f2e393]:
+                      - cell "Suiker" [ref=f2e394]
+                      - cell [ref=f2e395]:
+                        - text: 4.2 %
+                        - paragraph [ref=f2e396]: Per kg product · Duidelijk gelezen
+                        - paragraph [ref=f2e397]: "Bron: Analytische bestanddelen (per kg product): Suiker 4,2%"
+                    - row [ref=f2e398]:
+                      - cell "Zetmeel" [ref=f2e399]
+                      - cell [ref=f2e400]:
+                        - text: 6.0 %
+                        - paragraph [ref=f2e401]: Per kg product · Duidelijk gelezen
+                        - paragraph [ref=f2e402]: "Bron: Analytische bestanddelen (per kg product): Zetmeel 6,0%"
+                - paragraph [ref=f2e403]: gpt-6-luna · promptversie 1 · 29-10-2026, 01:16:11
+                - paragraph [ref=f2e404]: "Tokens: 2042 invoer · 392 uitvoer"
+                - group [ref=f2e405]:
+                  - generic "Gebruikte analyseprompt" [ref=f2e406] [cursor=pointer]
+            - 'link "Verpakking: front.png" [ref=f2e407] [cursor=pointer]':
+              - /url: /admin/feed-scanner/attachments/01a18503-b848-724a-b859-120d426915c1
+            - generic [ref=f2e408]:
+              - region "OCR · Tesseract" [ref=f2e409]:
+                - generic [ref=f2e410]:
+                  - heading "OCR · Tesseract" [level=4] [ref=f2e411]
+                  - paragraph [ref=f2e412]: Automatisch gelezen van deze foto. Controleer de tekst aan de hand van het originele etiket.
+                - generic [ref=f2e413]:
+                  - generic [ref=f2e414]:
+                    - term [ref=f2e415]: Gemiddelde OCR-zekerheid
+                    - definition [ref=f2e416]: 94,9 / 100
+                  - generic [ref=f2e417]:
+                    - term [ref=f2e418]: Gelezen woorden
+                    - definition [ref=f2e419]: "17"
+                  - generic [ref=f2e420]:
+                    - term [ref=f2e421]: Woorden met lage zekerheid
+                    - definition [ref=f2e422]: "0"
+                - paragraph [ref=f2e423]: De OCR-zekerheid gaat over het lezen van tekst, niet over de juistheid van een productmatch.
+                - generic [ref=f2e424]:
+                  - heading "Gelezen tekst" [level=5] [ref=f2e425]
+                  - paragraph [ref=f2e426]: "Merk: Scanner Test Product: Luna OCR Testvoer 2026-10-29 Aanvullend diervoeder voor paarden TESTPRODUCT - NIET VOOR VERKOOP"
+              - region "Luna-analyse" [ref=f2e427]:
+                - generic [ref=f2e428]:
+                  - heading "Luna · GPT-6" [level=4] [ref=f2e429]
+                  - paragraph [ref=f2e430]: Bron voor de automatische productgegevens. Controleer de uitkomst op het originele etiket.
+                - generic [ref=f2e431]:
+                  - heading "Gelezen tekst" [level=5] [ref=f2e432]
+                  - paragraph [ref=f2e433]: "Merk: Scanner Test Product: Luna OCR Testvoer 2026-10-29 Aanvullend diervoeder voor paarden TESTPRODUCT - NIET VOOR VERKOOP"
+                - paragraph [ref=f2e434]:
+                  - strong [ref=f2e435]: "Product:"
+                  - text: Scanner Test · Luna OCR Testvoer 2026-10-29
+                - paragraph [ref=f2e436]: gpt-6-luna · promptversie 1 · 29-10-2026, 01:16:15
+                - paragraph [ref=f2e437]: "Tokens: 1897 invoer · 226 uitvoer"
+                - group [ref=f2e438]:
+                  - generic "Gebruikte analyseprompt" [ref=f2e439] [cursor=pointer]
+        - generic [ref=f2e440]:
+          - button "Informatie ontbreekt" [ref=f2e441] [cursor=pointer]
+          - button "Goedkeuren" [ref=f2e442] [cursor=pointer]
+          - button "Sluiten" [ref=f2e443] [cursor=pointer]

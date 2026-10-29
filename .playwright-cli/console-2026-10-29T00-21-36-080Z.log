@@ -1,0 +1,2 @@
+[    1554ms] [ERROR] Failed to load resource: the server responded with a status of 401 () @ https://equi-app.online/web-session/token:0
+[    2420ms] [VERBOSE] [DOM] Password field is not contained in a form: (More info: https://goo.gl/9p2vKq) %o @ https://equi-app.online/onboarding/welcome?returnTo=%2Fscanner:0
