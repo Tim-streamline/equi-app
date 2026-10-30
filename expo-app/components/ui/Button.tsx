@@ -2,6 +2,9 @@ import { Pressable, Text, View, PressableProps } from 'react-native';
 import { cssInterop } from 'nativewind';
 import { ReactNode } from 'react';
 
+/** Icon/spinner colour that matches the primary button label (teal-900). */
+export const PRIMARY_INK = '#083635';
+
 type Variant = 'primary' | 'deep' | 'light' | 'ghost' | 'text';
 
 type Props = {
@@ -27,21 +30,22 @@ export function Button({
   trailing,
   children,
 }: Props) {
-  const base = 'w-full flex-row items-center justify-center gap-2 rounded-2xl px-6 py-4';
+  const base = 'w-full flex-row items-center justify-center gap-2 rounded-pill px-6';
   const variants: Record<Variant, string> = {
-    primary: 'bg-mint-500 active:bg-mint-700 shadow-sm',
-    deep: 'bg-teal-700 active:bg-teal-800',
-    light: 'bg-white active:bg-mint-100',
-    ghost: 'bg-transparent border border-ink-8 active:bg-ink-8',
-    text: 'bg-transparent py-2',
+    primary: 'min-h-[52px] py-3.5 bg-mint-500 active:bg-mint-400 shadow-sm',
+    deep: 'min-h-[52px] py-3.5 bg-teal-700 active:bg-teal-800',
+    light: 'min-h-[52px] py-3.5 bg-white active:bg-mint-100',
+    ghost: 'min-h-[52px] py-3.5 bg-transparent border border-ink-15 active:bg-ink-8',
+    text: 'min-h-11 py-2 bg-transparent',
   };
   const textBase = 'font-semi text-base';
   const textVariants: Record<Variant, string> = {
-    primary: 'text-white',
+    // Dark label on mint: white on mint-500 is only 2.4:1.
+    primary: 'text-teal-900',
     deep: 'text-canvas',
     light: 'text-teal-700',
     ghost: 'text-ink',
-    text: 'text-mint-700',
+    text: 'text-teal-600',
   };
   return (
     <Pressable

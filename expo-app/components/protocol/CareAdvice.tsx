@@ -49,7 +49,7 @@ export function CareAdvice({ protocol }: {
                       onPress={() => void Linking.openURL(item.url!).catch(() => Alert.alert('Link niet beschikbaar'))}
                       className="min-h-[44px] justify-center pt-2"
                     >
-                      <Text className="font-semi text-[13px] text-mint-700">{item.ctaLabel || 'Meer informatie'} →</Text>
+                      <Text className="font-semi text-[13px] text-teal-600">{item.ctaLabel || 'Meer informatie'} →</Text>
                     </Pressable>
                   )}
                 </View>

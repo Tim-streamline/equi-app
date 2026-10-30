@@ -8,7 +8,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { X, ArrowRight } from 'lucide-react-native';
 
-import { Button } from '@/components/ui/Button';
+import { Button, PRIMARY_INK } from '@/components/ui/Button';
 import { IconButton } from '@/components/ui/IconButton';
 import { useCurrentUser, useHorse } from '@/db/hooks';
 import { useIntakeSchema } from '@/lib/intake/schema-provider';
@@ -80,7 +80,7 @@ export default function IntakeWelcome() {
             title="Beginnen"
             variant="primary"
             onPress={() => router.replace('/intake/overview' as any)}
-            trailing={<ArrowRight size={18} color="#fff" />}
+            trailing={<ArrowRight size={18} color={PRIMARY_INK} />}
           />
           <Pressable onPress={() => router.back()} className="items-center py-2">
             <Text className="font-semi text-[13px] text-white/70">Later beginnen</Text>

@@ -98,7 +98,7 @@ export function PhotoReplacementSheet({ visible, onClose, onCamera, onUpload }: 
 }) {
   return <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
     <View style={{ flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(13,42,42,0.28)' }}>
-      <Pressable accessibilityRole="button" accessibilityLabel="Foto vervangen sluiten" style={{ flex: 1 }} onPress={onClose} />
+      <Pressable accessibilityRole="button" accessibilityLabel="Foto vervangen sluiten" className="active:opacity-100" style={{ flex: 1 }} onPress={onClose} />
       <View accessibilityViewIsModal style={{ backgroundColor: C.canvas, borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 20, paddingBottom: 34, gap: 12 }}>
         <Text style={s.heading}>Foto vervangen</Text>
         <ScannerButton title="Nieuwe foto maken" variant="outline" icon={<Camera size={20} color={C.teal} />} onPress={onCamera} />

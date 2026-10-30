@@ -5,30 +5,34 @@ import { LibraryThumbnail } from './LibraryThumbnail';
 import { LibraryBookmarkButton } from './LibraryBookmarkButton';
 import { libraryAccessLabel, libraryFormat, libraryPath, type LibraryAccess, type LibraryCardItem } from '@/lib/library';
 
-export function LibraryCard({ item, access, compact = false, showBookmark = false }: {
+export function LibraryCard({ item, access, compact = false, showBookmark = false, wide = false }: {
   item: LibraryCardItem; access?: LibraryAccess | null; compact?: boolean; showBookmark?: boolean;
+  /** Full width, for a single-column list (large system text). */
+  wide?: boolean;
 }) {
   const Icon = item.format === 'video' ? Play : ['audio', 'podcast'].includes(item.format ?? '') ? Headphones : BookOpen;
   const state = libraryAccessLabel(item, access);
   const creditLocked = state.locked && !item.isPlus && item.equiboostAccess !== 'only';
   const unlocked = access?.unlockedIds.includes(item.id);
   const free = !item.equiboostAccess && (item.isPlus || (Number(item.creditCost) || 0) === 0);
-  return <View style={{ width: '48.5%' }} className="overflow-hidden rounded-2xl border border-ink-8 bg-white">
+  return <View style={{ width: wide ? '100%' : '48.5%' }} className="overflow-hidden rounded-2xl border border-ink-8 bg-white">
     <Pressable accessibilityRole="link" accessibilityLabel={`${item.title}, ${libraryFormat(item.format)}${state.locked ? ', Vergrendeld' : ''}${state.label ? `, ${state.label}` : ''}`}
-      onPress={() => router.push(libraryPath(item) as any)} className="flex-1 p-2">
+      onPress={() => router.push(libraryPath(item) as any)} className="grow p-2">
       <View>
         <LibraryThumbnail uri={item.heroImageUrl} format={item.format} style={compact ? { maxHeight: 160 } : undefined} />
         <View className="absolute bottom-1.5 right-1.5 flex-row items-center gap-1 rounded-lg bg-white px-1.5 py-1" style={{ maxWidth: '95%' }}>
           <Icon size={12} color="#127A79" />
-          <Text numberOfLines={1} className="shrink font-semi text-[10px] text-teal-700">{libraryFormat(item.format)}</Text>
+          <Text numberOfLines={1} maxFontSizeMultiplier={1.3} className="shrink font-semi text-[10px] text-teal-700">{libraryFormat(item.format)}</Text>
         </View>
       </View>
-      <View className="flex-1 px-1 pb-1 pt-2">
-        <Text className="font-semi text-[14px] leading-[19px] text-ink" style={{ minHeight: 38 }} numberOfLines={2} ellipsizeMode="tail">{item.title}</Text>
+      <View className="grow px-1 pb-1 pt-2">
+        {/* Long Dutch compounds ("hoefbevangenheid") overflow narrow two-column cards. Web hyphenates
+            with Dutch rules (data-hyphenate CSS + lang="nl"); Android would use the phone's language. */}
+        <Text className="font-semi text-[14px] leading-[19px] text-ink" style={{ minHeight: 38 }} numberOfLines={3} ellipsizeMode="tail" {...{ dataSet: { hyphenate: 'true' } }}>{item.title}</Text>
         {!compact && <Text className="mt-1 text-[12px] leading-[17px] text-ink-70" style={{ minHeight: 51 }} numberOfLines={3} ellipsizeMode="tail">{item.description ?? ''}</Text>}
         {!!state.label && <View className="mt-2 flex-row items-center gap-1">
           {state.locked && <LockKeyhole size={11} color={creditLocked ? '#DC2626' : '#127A79'} />}
-          <Text className={`text-[11px] ${creditLocked ? 'text-red-600' : unlocked || free ? 'text-teal-400' : 'text-ink-50'}`}>{state.label}</Text>
+          <Text className={`text-[12px] ${creditLocked ? 'text-red-700' : unlocked || free ? 'text-teal-600' : 'text-ink-70'}`}>{state.label}</Text>
         </View>}
       </View>
     </Pressable>

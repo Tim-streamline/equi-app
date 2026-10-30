@@ -31,7 +31,7 @@ export default function ConnectScreen() {
 
         <View className="mb-4 rounded-2xl bg-teal-700 p-6">
           <View className="mb-4 h-14 w-14 items-center justify-center rounded-full bg-mint-500">
-            <Text className="font-bold text-white" style={{ fontSize: 20 }}>
+            <Text className="font-bold text-teal-900" style={{ fontSize: 20 }} maxFontSizeMultiplier={1.2}>
               {(therapist.avatarInitial as string) ?? 'S'}
             </Text>
           </View>
@@ -51,7 +51,7 @@ export default function ConnectScreen() {
               </View>
               <View className="flex-1">
                 <Text className="font-bold text-ink text-[14px]">Eerstvolgende slot</Text>
-                <Text className="text-[13px] text-ink-50">{intake.slotLabel as string}</Text>
+                <Text className="text-[13px] text-ink-70">{intake.slotLabel as string}</Text>
               </View>
             </View>
           </View>

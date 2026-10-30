@@ -50,7 +50,7 @@ export function ConnectionStatus() {
   return (
     <View className="flex-row items-center gap-1.5 rounded-pill bg-ink-8 px-2.5 py-1">
       <Dot color={cfg.dot} pulse={cfg.pulse} />
-      <Text className="font-medium text-[11px] text-ink-50">{cfg.label}</Text>
+      <Text className="font-medium text-[11px] text-ink-70">{cfg.label}</Text>
     </View>
   );
 }

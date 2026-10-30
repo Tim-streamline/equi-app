@@ -45,7 +45,7 @@ function screen(homeUpsell) {
       useActiveProtocolForHorse: () => delivered ? { id: 'protocol' } : null,
     },
     '@powersync/react': { useQuery: (_sql, [horse, user]) => { assert.equal(user, 'u'); return { data: purchases[horse] ?? [] }; } },
-    '@/components/ui/Button': { Button: 'Button' },
+    '@/components/ui/Button': { Button: 'Button', PRIMARY_INK: '#083635' },
     '@/db/provider': { useDb: () => ({ selectHorse: id => { selected = id; } }) },
     '@/hooks/useHorseDashboard': { useHorseDashboard: () => ({
       data: ready ? { horse: { id: selected }, greeting: selected ? 'Welkom, Tim' : 'Goedemorgen, Tim', hasPlus: !!selected && selected !== 'basic', showPlusUpsell: selected === 'unpurchased', homeUpsell, recommendations: selected ? [] : [1, 2, 3, 4].map(id => ({ id: `item-${id}`, title: `Item ${id}` })), protocol: null } : null,
@@ -122,24 +122,22 @@ test('finished protocols stay visible alongside a newly purchased intake', () =>
   assert.equal(app.render().filter(n => n?.type === 'Button' && n.props.title === 'Intake openen').length, 1);
 });
 
-test('an account without a horse has personal greeting, both add actions, and four library items without protocol tasks', () => {
+test('an account without a horse has personal greeting, one add action, and four library items without protocol tasks', () => {
   const app = screen();
   app.withoutHorse();
   const tree = app.render();
   assert.ok(tree.includes('Goedemorgen, Tim'));
-  assert.ok(tree.includes('+ Paard toevoegen'));
+  assert.ok(!tree.some(node => node?.props?.accessibilityLabel === 'Paard toevoegen'), 'no header pill: the card below already offers adding a horse');
   assert.ok(text(tree).includes('Je paard toevoegen aan EquiApp?'));
   assert.ok(tree.includes('Voeg je paard toe aan je account, zodat je alle gegevens op één plek kunt bewaren.'));
   assert.equal(tree.filter(node => node?.type === 'LibraryCard').length, 4);
   assert.ok(tree.includes('Ontdek in de bibliotheek'));
   assert.equal(app.entry(), undefined);
   assert.ok(!tree.some(node => node?.props?.accessibilityLabel === 'Wissel paard'));
-  for (const copy of ['+ Paard toevoegen', 'Paard toevoegen →']) {
-    const action = tree.find(node => node?.type === 'Pressable' && text(node) === copy);
-    assert.ok(action);
-    action.props.onPress();
-  }
-  assert.deepEqual(app.routes, ['/onboarding/add-horse', '/onboarding/add-horse']);
+  const actions = tree.filter(node => node?.type === 'Button' && node.props.title === 'Paard toevoegen');
+  assert.equal(actions.length, 1);
+  actions[0].props.onPress();
+  assert.deepEqual(app.routes, ['/onboarding/add-horse']);
   app.addHorse('unpurchased');
   assert.ok(app.render().some(node => node?.props?.accessibilityLabel === 'Wissel paard'));
   assert.ok(!text(app.render()).includes('Je paard toevoegen aan EquiApp?'));

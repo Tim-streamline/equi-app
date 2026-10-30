@@ -1,10 +1,26 @@
 @tailwind base;
 @tailwind components;
+
+/*
+ * RN Web gives every root Text/TextInput the system font stack. App Text gets
+ * the brand font from components/react-native-defaults; this covers text
+ * inputs and text rendered by dependencies. Kept before the utilities so
+ * `font-*` classes still win, and skipped for elements that set fontFamily
+ * through a style (r-fontFamily-*). Nested Text keeps inheriting.
+ */
+[class^="css-text-"]:where(:not([class*="r-fontFamily-"])),
+[class^="css-textinput-"]:where(:not([class*="r-fontFamily-"])) {
+  font-family: SourceSans3_400Regular;
+}
+
 @tailwind utilities;
 
 html, body, #root { height: 100%; background: #F4EFE7; }
 body { margin: 0; }
 :focus-visible { outline: 2px solid #18BAB0; outline-offset: 3px; }
+
+/* Long Dutch compounds in narrow cards (see LibraryCard). Needs <html lang="nl">. */
+[data-hyphenate] { -webkit-hyphens: auto; hyphens: auto; }
 
 /* A compound intake field has one focus boundary, including units and icons. */
 [data-intake-input-frame]:focus-within { outline: 2px solid #18BAB0; outline-offset: 3px; }

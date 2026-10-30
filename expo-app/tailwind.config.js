@@ -3,6 +3,8 @@ module.exports = {
   content: [
     './app/**/*.{js,jsx,ts,tsx}',
     './components/**/*.{js,jsx,ts,tsx}',
+    // lib/ui-defaults.ts adds `font-sans` / `active:opacity-70` at runtime.
+    './lib/**/*.{js,jsx,ts,tsx}',
   ],
   // Resolve from the consuming Expo project (native or ../web).
   presets: [require(require.resolve('nativewind/preset', { paths: [process.cwd(), __dirname] }))],

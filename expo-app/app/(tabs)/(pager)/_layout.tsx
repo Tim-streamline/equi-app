@@ -9,12 +9,13 @@ const MaterialTopTabs = withLayoutContext(Navigator);
 export default function PagerLayout() {
   return (
     // Static canvas painted once behind the pager. Scenes stay transparent and
-    // navigation is handled exclusively through the bottom menu.
+    // navigation is handled exclusively through the bottom menu. Tabs mount on
+    // first visit so app start only renders Home.
     <View style={{ flex: 1, backgroundColor: '#FBF8F3' }}>
       <MaterialTopTabs
         tabBarPosition="bottom"
         tabBar={(props) => <PagerTabBar {...props} />}
-        screenOptions={{ swipeEnabled: false, lazy: false, sceneStyle: { backgroundColor: 'transparent' } }}
+        screenOptions={{ swipeEnabled: false, lazy: true, sceneStyle: { backgroundColor: 'transparent' } }}
       >
         <MaterialTopTabs.Screen name="home" />
         <MaterialTopTabs.Screen name="protocol" />

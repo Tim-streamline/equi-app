@@ -10,7 +10,7 @@ export function RelatedLibraryItems({ itemId }: { itemId: string }) {
   if (data?.items.length === 0) return null;
   return <View className="mt-6">
     <SectionTitle>GERELATEERDE ITEMS</SectionTitle>
-    {error && !data ? <Pressable accessibilityRole="button" onPress={() => void refresh()} className="px-5 py-3"><Text className="text-ink-50">Suggesties konden niet worden geladen. Tik om opnieuw te proberen.</Text></Pressable>
+    {error && !data ? <Pressable accessibilityRole="button" onPress={() => void refresh()} className="px-5 py-3"><Text className="text-ink-70">Suggesties konden niet worden geladen. Tik om opnieuw te proberen.</Text></Pressable>
       : <View className="flex-row flex-wrap items-stretch justify-between gap-y-3 px-4">
         {data?.items.map(item => <LibraryCard key={item.id} item={item} access={data.access} />)}
       </View>}

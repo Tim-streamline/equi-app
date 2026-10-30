@@ -9,7 +9,8 @@
     "web": {
       "output": "single",
       "favicon": "./public/favicon-32x32.png",
-      "themeColor": "#093536"
+      "themeColor": "#FBF8F3",
+      "lang": "nl"
     },
     "plugins": [
       "expo-router"

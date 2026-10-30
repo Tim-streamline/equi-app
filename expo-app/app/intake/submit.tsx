@@ -7,7 +7,7 @@ import { router } from 'expo-router';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ChevronLeft, Check, Send, AlertTriangle } from 'lucide-react-native';
 
-import { Button } from '@/components/ui/Button';
+import { Button, PRIMARY_INK } from '@/components/ui/Button';
 import { IconButton } from '@/components/ui/IconButton';
 import { MissingQuestionsModal } from '@/components/intake/MissingQuestionsModal';
 import { SubmissionBlockNotice } from '@/components/intake/SubmissionBlockNotice';
@@ -19,6 +19,7 @@ import {
   answersForSection,
 } from '@/lib/intake/logic';
 import { useIntake } from '@/lib/intake/store';
+import { successHaptic } from '@/lib/haptics';
 
 export default function IntakeSubmit() {
   const insets = useSafeAreaInsets();
@@ -40,6 +41,7 @@ export default function IntakeSubmit() {
     }
     try {
       await submit();
+      successHaptic();
       router.replace('/intake/sent' as any);
     } catch (error) {
       Alert.alert('Intake niet verstuurd', error instanceof Error ? error.message : 'Probeer opnieuw.');
@@ -50,7 +52,7 @@ export default function IntakeSubmit() {
     <View className="flex-1 bg-canvas">
       <SafeAreaView edges={['top']} style={{ flex: 1 }}>
         <View className="flex-row items-center justify-between gap-3 px-4 pb-3 pt-2">
-          <IconButton onPress={() => router.back()}>
+          <IconButton accessibilityLabel="Terug" onPress={() => router.back()}>
             <ChevronLeft size={22} color="#1B2A2A" />
           </IconButton>
           <Text className="flex-1 text-center font-semi text-[17px] text-ink">
@@ -64,7 +66,7 @@ export default function IntakeSubmit() {
         >
           <Text className="mt-2 font-bold text-ink" style={{ fontSize: 26, lineHeight: 30 }}>
             Tien van tien.{' '}
-            <Text className="text-mint-700">Mooi werk.</Text>
+            <Text className="text-teal-600">Mooi werk.</Text>
           </Text>
           <Text className="mt-2 mb-5 text-[14px] leading-[20px] text-ink-70">
             Ik (Shelley) lees jouw intake binnen 5 werkdagen helemaal door en zet de eerste
@@ -108,7 +110,7 @@ export default function IntakeSubmit() {
                     {done ? (
                       <Check size={14} color="#fff" strokeWidth={3} />
                     ) : (
-                      <Text className="font-bold text-[11px] text-ink-50">{s.nr}</Text>
+                      <Text className="font-bold text-[11px] text-ink-70">{s.nr}</Text>
                     )}
                   </View>
                   <View className="flex-1">
@@ -119,7 +121,7 @@ export default function IntakeSubmit() {
                       </Text>
                     )}
                   </View>
-                  <Text className="font-semi text-[12px] text-mint-700">Bewerk</Text>
+                  <Text className="font-semi text-[12px] text-teal-600">Bewerk</Text>
                 </Pressable>
               );
             })}
@@ -127,7 +129,7 @@ export default function IntakeSubmit() {
 
           <View className="rounded-2xl bg-mint-50 p-3.5">
             <Text className="text-[12.5px] leading-[18px] text-ink-70">
-              <Text className="font-bold text-mint-700">Even checken · </Text>
+              <Text className="font-bold text-teal-600">Even checken · </Text>
               Klopt alles? Loop nog een keer door je antwoorden voordat je het instuurt. Na het
               insturen kan het niet meer worden aangepast.
             </Text>
@@ -145,7 +147,7 @@ export default function IntakeSubmit() {
             disabled={submitting || !!state.submittedAt || submissionBlocks.length > 0}
             variant="primary"
             onPress={onSubmit}
-            leading={<Send size={18} color="#fff" />}
+            leading={<Send size={18} color={PRIMARY_INK} />}
           />
         </View>
         </ScrollView>

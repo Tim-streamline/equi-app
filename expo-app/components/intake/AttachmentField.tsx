@@ -43,7 +43,7 @@ function useLocalAttachment(reference: string) {
 }
 function UploadStatus({ reference }: { reference: string }) {
   const record = useLocalAttachment(reference);
-  return record && !record.uploaded ? <Text accessibilityLiveRegion="polite" className="text-xs text-ink-50">
+  return record && !record.uploaded ? <Text accessibilityLiveRegion="polite" className="text-xs text-ink-70">
     {record.error ? 'Opgeslagen op dit apparaat · upload wordt opnieuw geprobeerd' : 'Opgeslagen op dit apparaat · wacht op upload'}
   </Text> : null;
 }
@@ -199,10 +199,10 @@ export function AttachmentField({ value, onChange, section, field, photo, max, r
           {busy ? <ActivityIndicator color="white" /> : <Plus size={compactUpload ? 21 : 25} color="white" />}
         </View>
         <Text className="mt-3 font-semi text-[15px] text-[#174B49]">{busy ? 'Toevoegen…' : remaining() > 1 ? 'Foto’s toevoegen' : 'Foto toevoegen'}</Text>
-        {!!max && !slots && <Text className="mt-1 text-[12px] text-ink-50">Maximaal {max} {max === 1 ? 'foto' : 'foto’s'}</Text>}
+        {!!max && !slots && <Text className="mt-1 text-[12px] text-ink-70">Maximaal {max} {max === 1 ? 'foto' : 'foto’s'}</Text>}
       </> : <>
         {busy ? <ActivityIndicator color="#108a82"/> : photo ? <Camera size={20} color="#108a82"/> : <FileText size={20} color="#108a82"/>}
-        <Text className="font-semi text-mint-700">{busy ? (photo ? 'Toevoegen…' : 'Opslaan…') : photo ? (remaining() > 1 ? 'Foto’s toevoegen' : 'Foto toevoegen') : bloodTest ? 'Bloeduitslag toevoegen' : 'Document toevoegen'}</Text>
+        <Text className="font-semi text-teal-600">{busy ? (photo ? 'Toevoegen…' : 'Opslaan…') : photo ? (remaining() > 1 ? 'Foto’s toevoegen' : 'Foto toevoegen') : bloodTest ? 'Bloeduitslag toevoegen' : 'Document toevoegen'}</Text>
       </>}
     </Pressable>}
     {!readOnly && pending && <View className="gap-3">
@@ -215,17 +215,17 @@ export function AttachmentField({ value, onChange, section, field, photo, max, r
           return <Pressable key={slot.id} accessibilityRole="radio" accessibilityState={{ checked: selected, disabled }} disabled={disabled}
             onPress={() => setPending(current => current && ({ ...current, assignments: current.assignments.map((id, i) => i === index ? (id === slot.id ? '' : slot.id) : id) }))}
             className="rounded-lg border border-ink-15 p-3">
-            <Text className={disabled ? 'text-ink-50' : 'text-mint-700'}>{selected ? '● ' : '○ '}{slot.label}</Text>
+            <Text className={disabled ? 'text-ink-70' : 'text-teal-600'}>{selected ? '● ' : '○ '}{slot.label}</Text>
           </Pressable>;
         })}
       </View>)}
       <Pressable accessibilityRole="button" disabled={busy || pending.assignments.some(id => !slots?.some(slot => slot.id === id))}
         onPress={() => void savePending()} className="rounded-xl border border-ink-15 p-4">
-        <Text className="font-semi text-mint-700">{busy ? 'Toevoegen…' : 'Foto’s opslaan'}</Text>
+        <Text className="font-semi text-teal-600">{busy ? 'Toevoegen…' : 'Foto’s opslaan'}</Text>
       </Pressable>
       <Pressable accessibilityRole="button" disabled={busy} onPress={discardPending} className="p-3"><Text className="text-ink">Annuleren</Text></Pressable>
     </View>}
-    {bloodTest && <Text className="mt-1 text-xs text-ink-50">Maximaal 5 bestanden</Text>}
+    {bloodTest && <Text className="mt-1 text-xs text-ink-70">Maximaal 5 bestanden</Text>}
     {!!error && <Text accessibilityRole="alert" className="mt-2 text-sm text-red-700">{error}</Text>}
   </View>;
 }

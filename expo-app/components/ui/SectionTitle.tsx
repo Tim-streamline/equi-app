@@ -14,7 +14,7 @@ export function SectionTitle({ children, action, onAction }: Props) {
       </Text>
       {action && (
         <Pressable onPress={onAction}>
-          <Text className="font-semi text-[13px] text-mint-700">{action}</Text>
+          <Text className="font-semi text-[13px] text-teal-600">{action}</Text>
         </Pressable>
       )}
     </View>

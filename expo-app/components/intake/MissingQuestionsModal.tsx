@@ -31,7 +31,7 @@ export function MissingQuestionsModal({ visible, sections, onClose, onSelect }: 
         </View>
         <ScrollView className="min-h-0" contentContainerStyle={{ padding: 20, gap: 16 }}>
           {orderedSections.map(({ section, fields }) => <View key={section.id}>
-            <Text className="mb-2 text-[12px] font-bold uppercase tracking-wide text-mint-700">
+            <Text className="mb-2 text-[12px] font-bold uppercase tracking-wide text-teal-600">
               Sectie {section.nr + 1} · {section.title} · {fields.length}
             </Text>
             <View className="overflow-hidden rounded-2xl border border-ink-8 bg-white">

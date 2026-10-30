@@ -44,14 +44,14 @@ export default function CommunityThread() {
           {!data ? <ResourceState error={error} retry={() => void refresh()} /> : <>
             <View className="px-5"><CommunityCard item={data.post} postId={id} canParticipate={data.canParticipate} locked={data.post.locked} detail onChange={refresh} /></View>
             <Text className="px-5 pb-3 pt-6 font-bold text-[20px] text-ink">{data.replies.total} reacties</Text>
-            {!data.replies.total && <Text className="px-5 pb-5 text-ink-50">Nog geen reacties. Deel jouw ervaring of stel een vraag.</Text>}
+            {!data.replies.total && <Text className="px-5 pb-5 text-ink-70">Nog geen reacties. Deel jouw ervaring of stel een vraag.</Text>}
             <View className="gap-3 px-5">{data.replies.data.map(reply => <CommunityCard key={reply.id} item={reply} postId={id} canParticipate={data.canParticipate} locked={data.post.locked} detail onReply={replyTo} onChange={refresh} />)}</View>
             <Pagination page={page} last={data.replies.last_page} change={next => { setPage(next); scroll.current?.scrollTo({ y: 0 }); }} />
             {data.post.locked ? <Text className="p-5 text-ink-70">Deze discussie is gesloten. Je kunt de berichten nog lezen en bewaren.</Text>
               : !data.canParticipate ? <View className="mt-5"><MembershipNotice /></View> : <View className="m-5 gap-3 rounded-2xl border border-ink-8 bg-white p-4">
                 <Text className="font-semi text-[17px] text-ink">Jouw reactie</Text>
-                {parent && <View className="gap-2 rounded-xl bg-mint-50 p-3"><Text className="font-semi text-mint-700">Antwoord op {parent.authorName}</Text><Text className="text-ink-70" numberOfLines={2}>{parent.body}</Text><Action label="Antwoordreferentie verwijderen" onPress={() => setParent(null)} /></View>}
-                <TextInput ref={input} accessibilityLabel="Jouw reactie" value={body} onChangeText={setBody} editable={!sending} placeholder="Schrijf een reactie…" multiline maxLength={10000} textAlignVertical="top" className="min-h-28 text-[15px] text-ink" />
+                {parent && <View className="gap-2 rounded-xl bg-mint-50 p-3"><Text className="font-semi text-teal-600">Antwoord op {parent.authorName}</Text><Text className="text-ink-70" numberOfLines={2}>{parent.body}</Text><Action label="Antwoordreferentie verwijderen" onPress={() => setParent(null)} /></View>}
+                <TextInput ref={input} accessibilityLabel="Jouw reactie" value={body} onChangeText={setBody} editable={!sending} placeholder="Schrijf een reactie…" multiline maxLength={10000} textAlignVertical="top" className="min-h-28 font-sans text-[16px] text-ink" />
                 <Action label={sending ? 'Plaatsen…' : 'Reactie plaatsen'} primary disabled={sending || !body.trim()} onPress={() => void send()} />
               </View>}
           </>}

@@ -4,9 +4,10 @@ import { useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, Platform, Text, View } from 'react-native';
 import { Redirect, router } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { StatusBar } from 'expo-status-bar';
 import { SubHeader } from '@/components/ui/SubHeader';
 import { Field } from '@/components/ui/Field';
-import { Button } from '@/components/ui/Button';
+import { Button, PRIMARY_INK } from '@/components/ui/Button';
 import { useDb } from '@/db/provider';
 import { checkRegistration, type RegistrationChallenge } from '@/db/auth';
 import { waitForRegistration } from '@/lib/registration-wait';
@@ -76,35 +77,36 @@ export default function RegisterScreen() {
   }, [challenge, password, busy]);
   const locked = busy || finishing;
   if (isLoggedIn) return <Redirect href="/onboarding/add-horse" />;
-  return <SafeAreaView className="flex-1 bg-canvas">
+  return <SafeAreaView className="flex-1 bg-teal-900">
+    <StatusBar style="light" />
     <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
-      <SubHeader title="Account aanmaken" onBack={() => { if (!locked) { waitingController.current?.abort(); router.back(); } }} />
+      <SubHeader tone="deep" title="Account aanmaken" onBack={() => { if (!locked) { waitingController.current?.abort(); router.back(); } }} />
       <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={{ padding: 24, paddingBottom: 40, flexGrow: 1 }}>
         {challenge ? <>
-          <Text className="mb-2 font-bold text-[28px] text-ink">Bevestig je e-mailadres</Text>
-          <Text className="mb-6 text-[15px] text-ink-50">We hebben een bevestigingsmail gestuurd naar {challenge.email}. Klik op de link in de e-mail. Dit scherm gaat automatisch verder en logt je in zodra je e-mailadres is bevestigd, ook als je de link op een ander apparaat opent.</Text>
-          <Text className="mb-2 text-[13px] text-ink-50">Laat dit scherm openstaan. De link is 15 minuten geldig.</Text>
-          <Text className="mb-4 text-[13px] text-ink-50">Controleer ook je spam.</Text>
+          <Text className="mb-2 font-bold text-[28px] leading-[34px] text-white">Bevestig je e-mailadres</Text>
+          <Text className="mb-6 text-[16px] leading-6 text-mint-100">We hebben een bevestigingsmail gestuurd naar {challenge.email}. Klik op de link in de e-mail. Dit scherm gaat automatisch verder en logt je in zodra je e-mailadres is bevestigd, ook als je de link op een ander apparaat opent.</Text>
+          <Text className="mb-2 text-[14px] text-mint-100">Laat dit scherm openstaan. De link is 15 minuten geldig.</Text>
+          <Text className="mb-4 text-[14px] text-mint-100">Controleer ook je spam.</Text>
           {!expired && <View className="mb-4 flex-row items-center gap-3" accessibilityRole="progressbar" accessibilityLabel={finishing ? 'Je wordt ingelogd' : 'Wachten op e-mailbevestiging'}>
-            <ActivityIndicator color="#127A79" />
-            <Text className="text-ink-50">{finishing ? 'Je wordt ingelogd…' : 'Wachten op bevestiging…'}</Text>
+            <ActivityIndicator color="#C9F3EE" />
+            <Text className="text-mint-100">{finishing ? 'Je wordt ingelogd…' : 'Wachten op bevestiging…'}</Text>
           </View>}
         </> : <>
-          <Text className="mb-2 font-bold text-[28px] text-ink">Welkom bij {BRAND_NAME}!</Text>
-          <Text className="mb-6 text-[15px] text-ink-50">Maak je account aan en ontdek alles wat {BRAND_NAME} voor jou en je paard te bieden heeft. Bevestig daarna je e-mailadres om direct aan de slag te gaan.</Text>
-          <Field label="Naam" accessibilityLabel="Naam" value={name} onChangeText={setName} autoComplete="name" editable={!locked} maxLength={255} />
-          <Field label="E-mailadres" accessibilityLabel="E-mailadres" value={email} onChangeText={setEmail} autoComplete="email" autoCapitalize="none" autoCorrect={false} keyboardType="email-address" editable={!locked} maxLength={255} />
-          <Field label="Wachtwoord" accessibilityLabel="Wachtwoord" value={password} onChangeText={setPassword} autoComplete="new-password" secureTextEntry passwordToggle editable={!locked} maxLength={128} />
-          <Text className="mb-4 text-[13px] text-ink-50">Gebruik minimaal 8 tekens.</Text>
-          <Field label="Herhaal wachtwoord" accessibilityLabel="Herhaal wachtwoord" value={confirmation} onChangeText={setConfirmation} autoComplete="new-password" secureTextEntry passwordToggle editable={!locked} maxLength={128} onSubmitEditing={() => void submit()} />
+          <Text className="mb-2 font-bold text-[28px] leading-[34px] text-white">Welkom bij {BRAND_NAME}!</Text>
+          <Text className="mb-6 text-[16px] leading-6 text-mint-100">Maak je account aan en ontdek alles wat {BRAND_NAME} voor jou en je paard te bieden heeft. Bevestig daarna je e-mailadres om direct aan de slag te gaan.</Text>
+          <Field tone="deep" label="Naam" accessibilityLabel="Naam" value={name} onChangeText={setName} autoComplete="name" editable={!locked} maxLength={255} />
+          <Field tone="deep" label="E-mailadres" accessibilityLabel="E-mailadres" value={email} onChangeText={setEmail} autoComplete="email" autoCapitalize="none" autoCorrect={false} keyboardType="email-address" editable={!locked} maxLength={255} />
+          <Field tone="deep" label="Wachtwoord" accessibilityLabel="Wachtwoord" value={password} onChangeText={setPassword} autoComplete="new-password" secureTextEntry passwordToggle editable={!locked} maxLength={128} />
+          <Text className="-mt-1 mb-4 text-[14px] text-mint-100">Gebruik minimaal 8 tekens.</Text>
+          <Field tone="deep" label="Herhaal wachtwoord" accessibilityLabel="Herhaal wachtwoord" value={confirmation} onChangeText={setConfirmation} autoComplete="new-password" secureTextEntry passwordToggle editable={!locked} maxLength={128} onSubmitEditing={() => void submit()} />
         </>}
-        {!!(error || waitingError) && <Text accessibilityRole="alert" className="mb-4 text-[14px] text-red-700">{error || waitingError}</Text>}
+        {!!(error || waitingError) && <Text accessibilityRole="alert" className="mb-4 font-semi text-[14px] text-red-300">{error || waitingError}</Text>}
         <View className="mt-3 gap-3">
           {challenge ? <>
-            <Button title={busy ? 'Even geduld…' : 'Bevestigingsmail opnieuw versturen'} variant="text" disabled={locked} onPress={() => void submit()} />
-            <Button title="E-mailadres wijzigen" variant="text" disabled={locked} onPress={() => { if (submitting.current) return; waitingController.current?.abort(); setChallenge(null); setExpired(false); setError(''); setWaitingError(''); }} />
-          </> : <Button title={busy ? 'Account aanmaken…' : 'Account aanmaken'} onPress={() => void submit()} disabled={locked} trailing={busy ? <ActivityIndicator color="#fff" /> : undefined} />}
-          <Button title="Ik heb al een account" variant="text" disabled={locked} onPress={() => { if (submitting.current) return; waitingController.current?.abort(); router.replace('/onboarding/welcome'); }} />
+            <Button title={busy ? 'Even geduld…' : 'Bevestigingsmail opnieuw versturen'} variant="text" textClassName="text-white" disabled={locked} onPress={() => void submit()} />
+            <Button title="E-mailadres wijzigen" variant="text" textClassName="text-white" disabled={locked} onPress={() => { if (submitting.current) return; waitingController.current?.abort(); setChallenge(null); setExpired(false); setError(''); setWaitingError(''); }} />
+          </> : <Button title={busy ? 'Account aanmaken…' : 'Account aanmaken'} onPress={() => void submit()} disabled={locked} trailing={busy ? <ActivityIndicator color={PRIMARY_INK} /> : undefined} />}
+          <Button title="Ik heb al een account" variant="text" textClassName="text-white" disabled={locked} onPress={() => { if (submitting.current) return; waitingController.current?.abort(); router.replace('/onboarding/welcome'); }} />
         </View>
       </ScrollView>
     </KeyboardAvoidingView>

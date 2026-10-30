@@ -37,7 +37,7 @@ export function Bigchip({
       )}
       <View className="flex-1">
         {title && <Text className="font-bold text-[15px] text-ink">{title}</Text>}
-        {description && <Text className="mt-0.5 text-[12px] text-ink-50">{description}</Text>}
+        {description && <Text className="mt-0.5 text-[12px] text-ink-70">{description}</Text>}
       </View>
       {trailing}
     </Pressable>

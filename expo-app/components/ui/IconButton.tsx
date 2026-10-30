@@ -10,7 +10,7 @@ type Props = {
   accessibilityLabel?: string;
 };
 
-export function IconButton({ children, onPress, tone = 'light', size = 36, className = '', accessibilityLabel }: Props) {
+export function IconButton({ children, onPress, tone = 'light', size = 44, className = '', accessibilityLabel }: Props) {
   return (
     <Pressable
       onPress={onPress}

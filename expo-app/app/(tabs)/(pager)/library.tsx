@@ -1,6 +1,6 @@
 import { KeyboardScrollView as ScrollView, KeyboardTextInput as TextInput, KeyboardViewport } from '@/components/ui/KeyboardForm';
 import { useEffect, useRef, useState } from 'react';
-import { View, Text, Pressable, ActivityIndicator, Modal, useWindowDimensions } from 'react-native';
+import { View, Text, Pressable, ActivityIndicator, FlatList, Modal, useWindowDimensions } from 'react-native';
 import { useLocalSearchParams } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Search, X, Check, SlidersHorizontal, ChevronLeft } from 'lucide-react-native';
@@ -31,7 +31,10 @@ export default function LibraryScreen() {
   const placeholder = useValue('librarySearchPlaceholder') as string;
   const [activeCategoryIds, setActiveCategoryIds] = useState<string[]>([]);
   const [filtersOpen, setFiltersOpen] = useState(false);
-  const { width, height } = useWindowDimensions();
+  const { width, height, fontScale } = useWindowDimensions();
+  // Large system text: two narrow columns break words mid-way, and Android wraps a
+  // long placeholder onto a clipped second line.
+  const columns = fontScale >= 1.5 ? 1 : 2;
   const [personal, setPersonal] = useState<PersonalFilter[]>([]);
   const [formats, setFormats] = useState<string[]>([]);
   const savedOnly = personal.includes('saved');
@@ -71,65 +74,77 @@ export default function LibraryScreen() {
     : `Toon ${filteredList.length} ${filteredList.length === 1 ? 'item' : 'items'}`;
   return <View className="flex-1">
     <SafeAreaView edges={['top']} style={{ flex: 1 }}>
-      <KeyboardViewport style={{ flex: 1 }}><ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={{ paddingBottom: padBottom }}>
-        <View className="px-5 pb-3 pt-1.5">
-          <View className="mb-3 flex-row items-center justify-between">
-            <Text accessibilityRole="header" className="font-bold text-[22px] text-ink">Bibliotheek</Text>
-            {liveAccess ? <Text accessibilityLiveRegion="polite" className="font-semi text-[15px] text-teal-700">Je credits: {liveAccess.credits}</Text>
-              : accessError ? <Pressable accessibilityRole="button" onPress={() => void refreshAccess()}><Text className="text-[13px] text-teal-700">Saldo opnieuw laden</Text></Pressable>
-              : <ActivityIndicator accessibilityLabel="Credits laden" color="#127A79" />}
-          </View>
-          <View className="flex-row items-center gap-3">
-            <View className="flex-1 flex-row items-center gap-2.5 rounded-pill border border-ink-8 bg-white pl-3.5 pr-1" style={{ minWidth: 0 }}>
-              <Search size={18} color="rgba(27,42,42,0.5)" />
-              <TextInput ref={searchInput} value={searchQuery} onChangeText={setSearchQuery}
-                accessibilityLabel="Zoek in de bibliotheek" placeholder={placeholder} placeholderTextColor="rgba(27,42,42,0.4)"
-                returnKeyType="search" className="flex-1 py-3 font-sans text-[14px] text-ink" />
-              {searchQuery.length > 0 && <Pressable accessibilityRole="button" accessibilityLabel="Zoekterm wissen"
-                onPress={() => { setSearchQuery(''); searchInput.current?.focus(); }}
-                style={{ width: 44, height: 44, alignItems: 'center', justifyContent: 'center' }}><X size={18} color="#879392" /></Pressable>}
+      <KeyboardViewport style={{ flex: 1 }}>
+        {/* Virtualized grid: only cards near the viewport render, which keeps long libraries smooth on older phones. */}
+        <FlatList
+          key={columns}
+          data={waiting ? [] : filteredList}
+          keyExtractor={item => String(item.id)}
+          numColumns={columns}
+          keyboardShouldPersistTaps="handled"
+          columnWrapperStyle={columns > 1 ? { justifyContent: 'space-between', paddingHorizontal: 16 } : undefined}
+          ItemSeparatorComponent={CardGap}
+          contentContainerStyle={columns > 1 ? { paddingBottom: padBottom } : { paddingHorizontal: 16, paddingBottom: padBottom }}
+          initialNumToRender={6}
+          windowSize={7}
+          ListHeaderComponent={<>
+            <View className="px-5 pb-3 pt-1.5">
+              <View className="mb-3 flex-row items-center justify-between">
+                <Text accessibilityRole="header" className="font-bold text-[22px] text-ink">Bibliotheek</Text>
+                {liveAccess ? <Text accessibilityLiveRegion="polite" className="font-semi text-[15px] text-teal-700">Je credits: {liveAccess.credits}</Text>
+                  : accessError ? <Pressable accessibilityRole="button" onPress={() => void refreshAccess()}><Text className="text-[13px] text-teal-700">Saldo opnieuw laden</Text></Pressable>
+                  : <ActivityIndicator accessibilityLabel="Credits laden" color="#127A79" />}
+              </View>
+              <View className="flex-row items-center gap-3">
+                <View className="flex-1 flex-row items-center gap-2.5 rounded-pill border border-ink-8 bg-white pl-3.5 pr-1" style={{ minWidth: 0 }}>
+                  <Search size={18} color="rgba(27,42,42,0.5)" />
+                  <TextInput ref={searchInput} value={searchQuery} onChangeText={setSearchQuery}
+                    accessibilityLabel="Zoek in de bibliotheek" placeholder={fontScale >= 1.3 ? 'Zoeken' : placeholder} placeholderTextColor="rgba(27,42,42,0.55)"
+                    returnKeyType="search" maxFontSizeMultiplier={1.4} className="flex-1 py-3 font-sans text-[16px] text-ink" />
+                  {searchQuery.length > 0 && <Pressable accessibilityRole="button" accessibilityLabel="Zoekterm wissen"
+                    onPress={() => { setSearchQuery(''); searchInput.current?.focus(); }}
+                    style={{ width: 44, height: 44, alignItems: 'center', justifyContent: 'center' }}><X size={18} color="#879392" /></Pressable>}
+                </View>
+                <Pressable accessibilityRole="button" accessibilityLabel="Filters openen"
+                  accessibilityHint={`${chips.length} actieve filters`}
+                  accessibilityState={{ expanded: filtersOpen }} aria-expanded={filtersOpen}
+                  onPress={() => { searchInput.current?.blur(); setFiltersOpen(true); }}
+                  className="h-12 w-12 items-center justify-center rounded-pill bg-teal-700">
+                  <SlidersHorizontal size={22} color="#FBF8F3" />
+                  {chips.length > 0 && <View className="absolute -right-1 -top-1 min-w-5 items-center rounded-pill border-2 border-canvas bg-mint-500 px-1">
+                    <Text className="font-bold text-[11px] text-teal-900" maxFontSizeMultiplier={1.2}>{chips.length}</Text>
+                  </View>}
+                </Pressable>
+              </View>
             </View>
-            <Pressable accessibilityRole="button" accessibilityLabel="Filters openen"
-              accessibilityHint={`${chips.length} actieve filters`}
-              accessibilityState={{ expanded: filtersOpen }} aria-expanded={filtersOpen}
-              onPress={() => { searchInput.current?.blur(); setFiltersOpen(true); }}
-              className="h-12 w-12 items-center justify-center rounded-pill bg-teal-700">
-              <SlidersHorizontal size={22} color="#FBF8F3" />
-              {chips.length > 0 && <View className="absolute -right-1 -top-1 min-w-5 items-center rounded-pill border-2 border-canvas bg-mint-500 px-1">
-                <Text className="font-bold text-[11px] text-white">{chips.length}</Text>
-              </View>}
-            </Pressable>
-          </View>
-        </View>
-        <View className="flex-row flex-wrap items-center gap-2 px-5 pb-3">
-          {chips.map(chip => <Pressable key={chip.key} accessibilityRole="button"
-            accessibilityLabel={`Verwijder filter: ${chip.label}`} onPress={chip.remove}
-            className="min-h-11 flex-row items-center gap-2 rounded-pill bg-[#E7F5F3] px-3.5" style={{ maxWidth: '100%' }}>
-            <Text className="shrink font-semi text-[14px] text-teal-700">{chip.label}</Text>
-            <X size={16} color="#127A79" />
-          </Pressable>)}
-          {chips.length > 0 && <Pressable accessibilityRole="button" accessibilityLabel="Alle filters wissen"
-            onPress={clearFilters} className="min-h-11 justify-center px-2">
-            <Text className="font-semi text-[14px] text-ink-70 underline">Wis alles</Text>
-          </Pressable>}
-        </View>
-        {!!filterError && <Pressable accessibilityRole="button" onPress={() => { void bookmarks.refresh(); void refreshAccess(); }} className="mx-5 mb-3 py-2">
-          <Text className="text-[13px] text-ink-70">{filterError} Tik om opnieuw te proberen.</Text>
-        </Pressable>}
-        {waiting ? (!filterError && <ActivityIndicator color="#127A79" />) : <>
-          <Text className="mx-5 mb-3 text-[12px] text-ink-50">{filteredList.length} {filteredList.length === 1 ? 'item' : 'items'}</Text>
-          <View className="flex-row flex-wrap justify-between gap-y-3 px-4">
-            {filteredList.map(item => <LibraryCard key={item.id} item={item} access={access} showBookmark={savedOnly} />)}
-          </View>
-          {filteredList.length === 0 && <View className="px-7 py-8">
+            <View className="flex-row flex-wrap items-center gap-2 px-5 pb-3">
+              {chips.map(chip => <Pressable key={chip.key} accessibilityRole="button"
+                accessibilityLabel={`Verwijder filter: ${chip.label}`} onPress={chip.remove}
+                className="min-h-11 flex-row items-center gap-2 rounded-pill bg-[#E7F5F3] px-3.5" style={{ maxWidth: '100%' }}>
+                <Text className="shrink font-semi text-[14px] text-teal-700">{chip.label}</Text>
+                <X size={16} color="#127A79" />
+              </Pressable>)}
+              {chips.length > 0 && <Pressable accessibilityRole="button" accessibilityLabel="Alle filters wissen"
+                onPress={clearFilters} className="min-h-11 justify-center px-2">
+                <Text className="font-semi text-[14px] text-ink-70 underline">Wis alles</Text>
+              </Pressable>}
+            </View>
+            {!!filterError && <Pressable accessibilityRole="button" onPress={() => { void bookmarks.refresh(); void refreshAccess(); }} className="mx-5 mb-3 py-2">
+              <Text className="text-[13px] text-ink-70">{filterError} Tik om opnieuw te proberen.</Text>
+            </Pressable>}
+            {waiting ? (!filterError && <ActivityIndicator color="#127A79" />)
+              : <Text className="mx-5 mb-3 text-[12px] text-ink-70">{filteredList.length} {filteredList.length === 1 ? 'item' : 'items'}</Text>}
+          </>}
+          ListEmptyComponent={waiting ? null : <View className="px-7 py-8">
             <Text className="text-center font-semi text-[17px] text-ink">{emptySaved ? 'Nog niets opgeslagen' : 'Geen bibliotheekitems gevonden.'}</Text>
             {emptySaved && <>
-              <Text className="mt-2 text-center text-[14px] leading-5 text-ink-50">Bewaar interessante artikelen, video&apos;s en andere content zodat je ze hier makkelijk terugvindt.</Text>
+              <Text className="mt-2 text-center text-[14px] leading-5 text-ink-70">Bewaar interessante artikelen, video&apos;s en andere content zodat je ze hier makkelijk terugvindt.</Text>
               <Pressable accessibilityRole="button" onPress={() => { clearFilters(); setSearchQuery(''); }} className="mt-4 py-2"><Text className="text-center font-semi text-teal-700">Bekijk de bibliotheek</Text></Pressable>
             </>}
           </View>}
-        </>}
-      </ScrollView></KeyboardViewport>
+          renderItem={({ item }) => <LibraryCard item={item} access={access} showBookmark={savedOnly} wide={columns === 1} />}
+        />
+      </KeyboardViewport>
     </SafeAreaView>
     {filtersOpen && <Modal transparent animationType="fade" statusBarTranslucent navigationBarTranslucent onRequestClose={closeFilters}>
       <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: 'rgba(27,42,42,0.35)' }}>
@@ -150,7 +165,7 @@ export default function LibraryScreen() {
             <View className="mb-3 flex-row flex-wrap gap-2">
               {PERSONAL_FILTERS.map(filter => <FilterChoice key={filter.id} label={filter.label} selected={personal.includes(filter.id)} onPress={() => togglePersonal(filter.id)} />)}
             </View>
-            <Text className="mb-6 text-[13px] text-ink-50">Recent bekeken: de afgelopen 30 dagen.</Text>
+            <Text className="mb-6 text-[13px] text-ink-70">Recent bekeken: de afgelopen 30 dagen.</Text>
             {groups.map(group => <View key={group.id} className="mb-6">
               <Text accessibilityRole="header" className="mb-3 font-bold text-[20px] text-teal-900">{group.label}</Text>
               <View className="flex-row flex-wrap gap-2">
@@ -166,7 +181,7 @@ export default function LibraryScreen() {
           <View className="border-t border-ink-8 px-5 py-4">
             <Pressable accessibilityRole="button" accessibilityLabel={resultsLabel} onPress={closeFilters}
               className="min-h-14 items-center justify-center rounded-pill bg-mint-500 px-5 py-3">
-              <Text className="font-bold text-[18px] text-white">{resultsLabel}</Text>
+              <Text className="font-bold text-[18px] text-teal-900">{resultsLabel}</Text>
             </Pressable>
           </View>
         </SafeAreaView>
@@ -181,4 +196,8 @@ function FilterChoice({ label, selected, onPress }: { label: string; selected: b
     {selected && <Check size={18} color="#FBF8F3" />}
     <Text className={`shrink font-semi text-[16px] ${selected ? 'text-canvas' : 'text-teal-900'}`}>{label}</Text>
   </Pressable>;
+}
+
+function CardGap() {
+  return <View style={{ height: 12 }} />;
 }

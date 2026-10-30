@@ -215,7 +215,7 @@ export function MarkdownBody({ markdown, mediaMetadata }: { markdown: string; me
             <View key={index} className="mb-4 gap-2">
               {block.items.map((item, itemIndex) => (
                 <View key={itemIndex} className="flex-row items-start gap-2.5">
-                  <Text className="w-4 font-semi text-[15px] leading-[24px] text-mint-700">
+                  <Text className="w-4 font-semi text-[15px] leading-[24px] text-teal-600">
                     {block.ordered ? `${itemIndex + 1}.` : '•'}
                   </Text>
                   <Text className="flex-1 text-[15.5px] leading-[24px] text-ink-70">

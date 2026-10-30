@@ -31,7 +31,7 @@ export function Sheet({ open, onClose, children, heightFraction = 0.78 }: Props)
         style={{ flex: 1, backgroundColor: 'rgba(11, 42, 41, 0.45)', opacity, justifyContent: 'flex-end' }}
       >
         <KeyboardViewport style={{ flex: 1, justifyContent: 'flex-end' }}>
-        <Pressable style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }} onPress={onClose} />
+        <Pressable className="active:opacity-100" style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }} onPress={onClose} />
           <Animated.View
             style={{ transform: [{ translateY }], maxHeight: `${heightFraction * 100}%`, flexShrink: 1 }}
             className="rounded-t-3xl bg-white px-5 pb-8 pt-3"

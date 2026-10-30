@@ -22,7 +22,7 @@ export function Avatar({
   if (gradient && !bg) {
     return (
       <LinearGradient
-        colors={['#99E8DF', '#108A82']}
+        colors={['#108A82', '#0B4A49']}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
         style={[style, { justifyContent: 'center', alignItems: 'center' }]}
@@ -30,6 +30,7 @@ export function Avatar({
         <Text
           className={`font-semi text-white ${textClassName}`}
           style={{ fontSize: Math.round(size * 0.35) }}
+          maxFontSizeMultiplier={1.2}
         >
           {initial}
         </Text>
@@ -41,7 +42,7 @@ export function Avatar({
       className={`items-center justify-center ${className}`}
       style={[style, bg ? { backgroundColor: bg } : { backgroundColor: '#108A82' }]}
     >
-      <Text className={`font-semi text-white ${textClassName}`} style={{ fontSize: Math.round(size * 0.35) }}>
+      <Text className={`font-semi text-white ${textClassName}`} style={{ fontSize: Math.round(size * 0.35) }} maxFontSizeMultiplier={1.2}>
         {initial}
       </Text>
     </View>

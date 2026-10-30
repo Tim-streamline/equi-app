@@ -15,6 +15,7 @@ import {
 import { router, useLocalSearchParams } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
 import {
+  ArrowRight,
   ChevronDown,
   UserRound,
 } from "lucide-react-native";
@@ -29,6 +30,7 @@ import { seasonalTipVisible } from "@/lib/home-preferences";
 import { ConnectionStatus } from "@/components/ui/ConnectionStatus";
 import { BRAND_NAME } from "@/constants/brand";
 import { ShelbyChatButton } from "@/components/shelby/ShelbyChatButton";
+import { Button, PRIMARY_INK } from "@/components/ui/Button";
 
 export default function HomeScreen() {
   const { data, error, refresh, loading } = useHorseDashboard();
@@ -76,7 +78,7 @@ export default function HomeScreen() {
         }
       >
         <View className="mb-5 mt-2 flex-row items-center justify-between">
-          <Text className="font-semi text-[12px] tracking-[2px] text-mint-700">
+          <Text className="font-semi text-[12px] tracking-[2px] text-teal-600">
             {BRAND_NAME}
           </Text>
           <View className="flex-row items-center gap-4">
@@ -85,6 +87,7 @@ export default function HomeScreen() {
               accessibilityRole="button"
               onPress={() => router.push("/(tabs)/account")}
               accessibilityLabel="Account openen"
+              className="-mr-3 h-11 w-11 items-center justify-center rounded-full active:bg-ink-8"
             >
               <UserRound size={20} color="#466362" />
             </Pressable>
@@ -98,10 +101,10 @@ export default function HomeScreen() {
             accessibilityRole="button"
             accessibilityLabel="Wissel paard"
             onPress={() => setPickerOpen(true)}
-            className="max-w-[45%] flex-row items-center gap-2 rounded-full bg-white px-3 py-2"
+            className="min-h-11 max-w-[45%] flex-row items-center gap-2 rounded-full bg-white px-3 py-2"
           >
             <View className="h-7 w-7 items-center justify-center rounded-full bg-mint-500">
-              <Text className="font-semi text-[12px] text-white">
+              <Text className="font-semi text-[12px] text-teal-900" maxFontSizeMultiplier={1.2}>
                 {String(horse.name ?? "").charAt(0)}
               </Text>
             </View>
@@ -112,14 +115,7 @@ export default function HomeScreen() {
               {horse.name ?? "Kies paard"}
             </Text>
             <ChevronDown size={14} color="#536C6B" />
-          </Pressable> : <Pressable
-            accessibilityRole="button"
-            accessibilityLabel="Paard toevoegen"
-            onPress={() => router.push('/onboarding/add-horse')}
-            className="rounded-full bg-white px-3 py-2"
-          >
-            <Text className="font-semi text-[13px] text-mint-700">+ Paard toevoegen</Text>
-          </Pressable>}
+          </Pressable> : null}
         </View>
         {hasHorse && <PurchasedProtocols />}
         {!!error && (
@@ -135,8 +131,8 @@ export default function HomeScreen() {
         )}
         {!hasHorse && <View className="mb-5 rounded-2xl bg-white p-5">
           <Text className="mb-2 font-semi text-[20px] text-ink">Je paard toevoegen aan {BRAND_NAME}?</Text>
-          <Text className="mb-4 text-[14px] text-ink-50">Voeg je paard toe aan je account, zodat je alle gegevens op één plek kunt bewaren.</Text>
-          <Pressable accessibilityRole="button" onPress={() => router.push('/onboarding/add-horse')} className="rounded-xl bg-teal-700 p-4"><Text className="text-center font-semi text-white">Paard toevoegen →</Text></Pressable>
+          <Text className="mb-4 text-[14px] text-ink-70">Voeg je paard toe aan je account, zodat je alle gegevens op één plek kunt bewaren.</Text>
+          <Button title="Paard toevoegen" onPress={() => router.push('/onboarding/add-horse')} trailing={<ArrowRight size={18} color={PRIMARY_INK} />} />
         </View>}
         {loading && <ActivityIndicator color="#18BAB0" />}
         {data && (
@@ -158,7 +154,7 @@ export default function HomeScreen() {
               ))}
             </View>
             <Pressable onPress={openLibrary} className="mb-5 mt-4 py-1">
-              <Text className="font-semi text-[14px] text-mint-700">
+              <Text className="font-semi text-[14px] text-teal-600">
                 Bekijk de hele bibliotheek →
               </Text>
             </Pressable>
@@ -174,7 +170,7 @@ export default function HomeScreen() {
                 <Text className="mt-2 text-[14px] leading-[22px] text-ink-70">
                   {data.homeUpsell?.body ?? 'Je hoeft het niet zelf uit te zoeken. Met EquiBoost krijg je een persoonlijk plan én 3 maanden begeleiding om gericht aan zijn gezondheid te werken.'}
                 </Text>
-                <Text className="mt-3 font-semi text-[14px] text-mint-700">
+                <Text className="mt-3 font-semi text-[14px] text-teal-600">
                   {data.homeUpsell?.button ?? 'Ontdek EquiBoost'}
                 </Text>
               </Pressable>
@@ -192,11 +188,11 @@ export default function HomeScreen() {
       >
         <Pressable
           onPress={() => setPickerOpen(false)}
-          className="flex-1 justify-end bg-black/30"
+          className="flex-1 justify-end bg-black/30 active:opacity-100"
         >
           <Pressable
             onPress={(e) => e.stopPropagation()}
-            className="max-h-[75%] rounded-t-[28px] bg-canvas p-5"
+            className="max-h-[75%] rounded-t-[28px] bg-canvas p-5 active:opacity-100"
           >
             <Text className="mb-4 font-bold text-[20px] text-ink">
               Kies je paard
@@ -223,13 +219,13 @@ export default function HomeScreen() {
               <Pressable accessibilityRole="button" accessibilityLabel="Paard toevoegen vanuit paardenlijst"
                 onPress={() => { setPickerOpen(false); router.push({ pathname: '/onboarding/add-horse', params: { returnTo: 'horse-picker' } }); }}
                 className="mt-3 rounded-full border border-mint-500 p-3">
-                <Text className="text-center font-semi text-mint-700">+ Paard toevoegen</Text>
+                <Text className="text-center font-semi text-teal-600">+ Paard toevoegen</Text>
               </Pressable>
               <Pressable
                 onPress={() => setPickerOpen(false)}
                 className="mt-2 rounded-full bg-mint-500 p-3"
               >
-                <Text className="text-center font-bold text-white">
+                <Text className="text-center font-bold text-teal-900">
                   Sluiten
                 </Text>
               </Pressable>
@@ -254,13 +250,13 @@ function ProtocolCard({ data }: { data: HorseDashboard }) {
       }
       className="mb-4 rounded-[22px] bg-white p-5"
     >
-      <Text className="text-[10px] uppercase tracking-[1.3px] text-ink-50">
+      <Text className="text-[10px] uppercase tracking-[1.3px] text-ink-70">
         {data.horse.name}&apos;s protocol
       </Text>
       <Text className="mt-3 font-bold text-[18px] text-ink">
         {protocol.statusLabel}
       </Text>
-      <Text className="mt-1 text-[13px] text-ink-50">
+      <Text className="mt-1 text-[13px] text-ink-70">
         Dag {protocol.currentDay} · Week {protocol.currentWeek}
         {protocol.phaseLabel ? ` · ${protocol.phaseLabel}` : ""}
       </Text>
@@ -270,7 +266,7 @@ function ProtocolCard({ data }: { data: HorseDashboard }) {
           style={{ width: `${protocol.progressPercent}%` }}
         />
       </View>
-      <Text className="mt-4 font-semi text-[14px] text-mint-700">
+      <Text className="mt-4 font-semi text-[14px] text-teal-600">
         Ga verder met het protocol →
       </Text>
     </Pressable>

@@ -64,7 +64,7 @@ export function IntakeField({ field, sectionId, n, noneOptions }: Props) {
   if (field.type === 'sectionhead') {
     return (
       <View className="mt-3 mb-2 border-t border-ink-8 pt-3">
-        <Text className={field.photoConfig ? "font-bold text-[18px] leading-[24px] text-ink" : "font-semi uppercase text-mint-700 text-[11px] tracking-eyebrow"}>
+        <Text className={field.photoConfig ? "font-bold text-[18px] leading-[24px] text-ink" : "font-semi uppercase text-teal-600 text-[11px] tracking-eyebrow"}>
           {field.label}
         </Text>
         {field.hint && <Text className={field.photoConfig ? "mt-2 text-[16px] leading-[23px] text-ink-70" : "mt-2 text-[13.5px] leading-[20px] text-ink-70"}>{field.hint}</Text>}
@@ -78,7 +78,7 @@ export function IntakeField({ field, sectionId, n, noneOptions }: Props) {
   return (
     <View className={photoDesign ? '' : 'mb-5'}>
       {photoDesign && <View className="mb-3 flex-row items-center justify-between gap-2">
-        <Text className="font-bold text-[11px] tracking-eyebrow text-mint-700">FOTO {String(n).padStart(2, '0')}</Text>
+        <Text className="font-bold text-[11px] tracking-eyebrow text-teal-600">FOTO {String(n).padStart(2, '0')}</Text>
         <View className="rounded-full bg-canvas-2 px-3 py-1">
           <Text className="text-[11px] text-ink-70">{photoNotApplicable(field, state.answers, sectionId) ? 'Niet van toepassing' : `${photoCount}${photoLimit ? ` / ${photoLimit}` : ''} foto’s`}</Text>
         </View>
@@ -254,13 +254,13 @@ function TextInputField({
         value={value ?? ''}
         onChangeText={onChange}
         placeholder={placeholder}
-        placeholderTextColor="rgba(27,42,42,0.4)"
+        placeholderTextColor="rgba(27,42,42,0.55)"
         keyboardType={keyboard === 'decimal-pad' ? 'decimal-pad' : 'default'}
-        className="flex-1 px-4 py-3.5 font-sans text-[15px] text-ink"
+        className="flex-1 px-4 py-3.5 font-sans text-[16px] text-ink"
         style={keyboard === 'decimal-pad' ? { fontWeight: '600' } : undefined}
       />
       {unit && (
-        <Text className="pr-4 font-semi text-[13px] text-ink-50">{unit}</Text>
+        <Text className="pr-4 font-semi text-[13px] text-ink-70">{unit}</Text>
       )}
     </IntakeInputFrame>
   );
@@ -291,8 +291,8 @@ function MultiLineTextField({
             value={value[i] ?? ''}
             onChangeText={(v) => update(i, v)}
             placeholder={placeholder}
-            placeholderTextColor="rgba(27,42,42,0.4)"
-            className="flex-1 px-4 py-3.5 font-sans text-[15px] text-ink"
+            placeholderTextColor="rgba(27,42,42,0.55)"
+            className="flex-1 px-4 py-3.5 font-sans text-[16px] text-ink"
           />
         </IntakeInputFrame>
       ))}
@@ -320,8 +320,8 @@ function TextAreaField({
       value={value ?? ''}
       onChangeText={onChange}
       placeholder={placeholder}
-      placeholderTextColor="rgba(27,42,42,0.4)"
-      className="px-4 py-3.5 font-sans text-[15px] text-ink"
+      placeholderTextColor="rgba(27,42,42,0.55)"
+      className="px-4 py-3.5 font-sans text-[16px] text-ink"
       style={{ minHeight: (lines ? lines * 24 + 28 : tall ? 288 : 96) - 2, ...(lines ? { lineHeight: 24 } : {}), textAlignVertical: 'top' }}
     /></IntakeInputFrame>
   );
@@ -357,7 +357,7 @@ function RadioField({
             >
               <Text
                 className={`text-center font-semi text-[13px] ${
-                  active ? 'text-mint-700' : 'text-ink-70'
+                  active ? 'text-teal-600' : 'text-ink-70'
                 }`}
               >
                 {o}
@@ -389,7 +389,7 @@ function RadioField({
             </View>
             <Text
               className={`flex-1 font-semi text-[14px] ${
-                active ? 'text-mint-700' : 'text-ink'
+                active ? 'text-teal-600' : 'text-ink'
               }`}
             >
               {o}
@@ -480,7 +480,7 @@ function MultiField({
             </View>
             <Text
               className={`flex-1 font-semi text-[14px] ${
-                active ? 'text-mint-700' : 'text-ink'
+                active ? 'text-teal-600' : 'text-ink'
               }`}
             >
               {o}
@@ -574,8 +574,8 @@ function RepeaterField({
                     onChangeText={(v) => { if (s.type !== 'number' || isRepeaterNumberInput(v)) update(row._rowId as string, s.id, v); }}
                     multiline={s.type === 'textarea'}
                     keyboardType={s.type === 'number' ? 'decimal-pad' : 'default'}
-                    placeholderTextColor="rgba(27,42,42,0.4)"
-                    className="min-w-0 flex-1 px-4 py-3.5 font-sans text-[15px] leading-[22px] text-ink"
+                    placeholderTextColor="rgba(27,42,42,0.55)"
+                    className="min-w-0 flex-1 px-4 py-3.5 font-sans text-[16px] leading-[22px] text-ink"
                     style={s.type === 'textarea' ? { minHeight: 112, textAlignVertical: 'top' } : { minHeight: 48 }}
                   />{s.unit && <Text className="pr-4 font-semi text-[15px] text-ink-70">{s.unit}</Text>}</IntakeInputFrame>
                   {s.type === 'number' && !!row[s.id] && !repeaterNumberText(row[s.id], s.unit) && <Text className="mt-2 text-[13px] leading-[20px] text-ink-70">Eerder ingevuld: {String(row[s.id])}. Vul hierboven alleen het getal{s.unit ? ` in ${s.unit}` : ''} in.</Text>}
@@ -592,7 +592,7 @@ function RepeaterField({
         className="mt-3 min-h-12 flex-row items-center justify-center gap-2 rounded-xl border border-dashed border-ink-15 bg-white px-4 py-3.5"
       >
         <Plus size={20} color="#108A82" />
-        <Text className="font-semi text-[15px] leading-[22px] text-mint-700">
+        <Text className="font-semi text-[15px] leading-[22px] text-teal-600">
           {addLabel ?? (value.length === 0 ? (firstAddLabel ?? 'Eerste toevoegen') : 'Nog één toevoegen')}
         </Text>
       </Pressable>

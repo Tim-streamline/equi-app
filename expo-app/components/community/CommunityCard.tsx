@@ -61,13 +61,13 @@ export function CommunityCard({ item, postId, canParticipate, locked = false, de
       <Avatar initial={item.authorInitial} size={36} gradient={false} bg={item.authorIsExpert ? '#0D5C5B' : '#30BCAF'} />
       <View className="flex-1">
         <View className="flex-row flex-wrap items-center gap-2"><Text className="font-semi text-[15px] text-ink">{item.authorName}</Text>{item.authorIsExpert && <Chip label="Therapeut" />}</View>
-        <Text className="text-[12px] text-ink-50">{relativeTime(item.createdAt)}{item.editedAt ? ' · bewerkt' : ''}{post?.category ? ` · ${post.category.label}` : ''}</Text>
+        <Text className="text-[12px] text-ink-70">{relativeTime(item.createdAt)}{item.editedAt ? ' · bewerkt' : ''}{post?.category ? ` · ${post.category.label}` : ''}</Text>
       </View>
       <Pressable accessibilityRole="button" accessibilityLabel="Berichtacties" onPress={() => setMenu(true)} hitSlop={12}><MoreHorizontal size={22} color="#466362" /></Pressable>
     </View>
     {post && (post.pinned || post.locked) && <View className="mb-3 flex-row gap-2">{post.pinned && <Chip label="Vastgezet" />}{post.locked && <Chip label="Gesloten" variant="warn" />}</View>}
     {reply?.parentReplyId && <View className="mb-3 rounded-xl border-l-2 border-mint-500 bg-canvas p-3">
-      <Text className="font-semi text-[12px] text-mint-700">Antwoord op {reply.parentReply?.authorName ?? 'een niet-beschikbare reactie'}</Text>
+      <Text className="font-semi text-[12px] text-teal-600">Antwoord op {reply.parentReply?.authorName ?? 'een niet-beschikbare reactie'}</Text>
       {reply.parentReply && <Text className="mt-1 text-[13px] text-ink-70" numberOfLines={3}>{reply.parentReply.body}</Text>}
     </View>}
     <Pressable disabled={!post || detail} onPress={openThread} accessibilityRole={post && !detail ? 'button' : undefined}>
@@ -87,7 +87,7 @@ export function CommunityCard({ item, postId, canParticipate, locked = false, de
         <ThumbsUp size={17} color={item.liked ? '#127A79' : '#718580'} fill={item.liked ? '#CDEEE7' : 'transparent'} /><Text className="text-[13px] text-ink-70">{item.likesCount}</Text>
       </Pressable>
       {post ? <Pressable accessibilityRole="button" accessibilityLabel="Open reacties" onPress={openThread} disabled={detail} className="flex-row items-center gap-1.5 py-1"><MessageCircle size={17} color="#718580" /><Text className="text-[13px] text-ink-70">{post.repliesCount} reacties</Text></Pressable>
-        : canParticipate && !locked && <Pressable accessibilityRole="button" onPress={() => reply && onReply?.(reply)}><Text className="font-semi text-[13px] text-mint-700">Antwoorden</Text></Pressable>}
+        : canParticipate && !locked && <Pressable accessibilityRole="button" onPress={() => reply && onReply?.(reply)}><Text className="font-semi text-[13px] text-teal-600">Antwoorden</Text></Pressable>}
       {post && <Pressable accessibilityRole="button" accessibilityLabel={post.bookmarked ? 'Uit bewaard verwijderen' : 'Bericht bewaren'} accessibilityState={{ selected: post.bookmarked }} disabled={busy} onPress={() => void run(() => communityRequest(`${target}/bookmark`, post.bookmarked ? 'DELETE' : 'PUT'))} style={{ marginLeft: 'auto', padding: 4 }}>
         <Bookmark size={20} color="#127A79" fill={post.bookmarked ? '#BDE8DD' : 'transparent'} />
       </Pressable>}
@@ -98,11 +98,11 @@ export function CommunityCard({ item, postId, canParticipate, locked = false, de
     <CommunityDialog open={report} close={() => { if (!busy) setReport(false); }} title="Bericht rapporteren">
       <Text className="text-ink-70">Waarom wil je dit bericht melden? Een moderator bekijkt je melding.</Text>
       {reasons.map(option => <Pressable key={option.id} accessibilityRole="radio" accessibilityState={{ checked: reason === option.id }} onPress={() => setReason(option.id)} className={`rounded-xl border p-3 ${reason === option.id ? 'border-mint-500 bg-mint-50' : 'border-ink-8'}`}><Text className="text-ink">{option.label}</Text></Pressable>)}
-      <TextInput accessibilityLabel="Toelichting bij melding" value={reportDetail} onChangeText={setReportDetail} placeholder="Toelichting (optioneel)" multiline maxLength={2000} className="min-h-24 rounded-xl bg-white p-4 text-ink" />
+      <TextInput accessibilityLabel="Toelichting bij melding" value={reportDetail} onChangeText={setReportDetail} placeholder="Toelichting (optioneel)" multiline maxLength={2000} className="min-h-24 rounded-xl bg-white p-4 font-sans text-[16px] text-ink" />
       <Action label={busy ? 'Versturen…' : 'Melding versturen'} disabled={busy} primary onPress={() => void run(async () => { await communityRequest(`${target}/report`, 'POST', { reason, detail: reportDetail }); setReport(false); Alert.alert('Melding ontvangen', 'Dank je. Je melding staat bij de moderators.'); })} />
     </CommunityDialog>
     <CommunityDialog open={edit} close={() => { if (!busy) setEdit(false); }} title="Reactie bewerken">
-      <TextInput accessibilityLabel="Reactie" value={body} onChangeText={setBody} multiline maxLength={10000} className="min-h-40 rounded-xl bg-white p-4 text-ink" />
+      <TextInput accessibilityLabel="Reactie" value={body} onChangeText={setBody} multiline maxLength={10000} className="min-h-40 rounded-xl bg-white p-4 font-sans text-[16px] text-ink" />
       <Action label={busy ? 'Opslaan…' : 'Opslaan'} disabled={busy || !body.trim()} primary onPress={() => void run(async () => { await communityRequest(target, 'PATCH', { body }); setEdit(false); })} />
     </CommunityDialog>
   </View>;

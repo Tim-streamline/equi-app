@@ -52,6 +52,7 @@ import { ProtocolTabs } from "@/components/protocol/ProtocolTabs";
 import { accessibleNotificationPhase } from "@/lib/protocol-notifications";
 import { useDb } from "@/db/provider";
 import { protocolTab, type ProtocolTab } from "@/lib/protocol-tabs";
+import { selectionHaptic } from "@/lib/haptics";
 
 export default function ProtocolListScreen() {
   const { tab: tabParam, t: nonce, horseId: requestedHorse, protocolId: requestedProtocol, phaseIds: requestedPhases } = useLocalSearchParams<{
@@ -124,9 +125,9 @@ export default function ProtocolListScreen() {
       <View className="flex-row items-center justify-between gap-3 px-5 pb-3 pt-1">
         <View className="flex-1">
           <Text className="font-bold text-[26px] leading-[30px] text-ink">
-            {data?.horse.name ?? "Protocol"}
+            {data?.horse.name || "Protocol"}
           </Text>
-          <Text className="mt-0.5 text-[13px] text-ink-50">{sub}</Text>
+          <Text className="mt-0.5 text-[13px] text-ink-70">{sub}</Text>
         </View>
         {protocol && (
           <Pressable
@@ -162,6 +163,17 @@ export default function ProtocolListScreen() {
           contentContainerStyle={{ padding: 20, paddingBottom: padBottom }}
         >
           <PurchasedProtocols />
+          {!horseId && !!data && (
+            <View className="rounded-2xl bg-white p-5">
+              <Text className="mb-2 font-semi text-[20px] leading-[26px] text-ink">
+                Nog geen paard toegevoegd
+              </Text>
+              <Text className="mb-4 font-sans text-[15px] leading-[22px] text-ink-70">
+                Voeg eerst je paard toe. Daarna kun je hier een persoonlijk protocol voor je paard volgen.
+              </Text>
+              <Button title="Paard toevoegen" onPress={() => router.push('/onboarding/add-horse')} />
+            </View>
+          )}
           {!!horseId && data?.horse.id === horseId && data.showPlusUpsell && (
             <Pressable
               accessibilityRole="link"
@@ -175,7 +187,7 @@ export default function ProtocolListScreen() {
               <Text className="mt-2 text-[14px] leading-[22px] text-ink-70">
                 Koop een persoonlijk protocol voor je paard, afgestemd op jouw paard, zijn klachten en jullie doelen.
               </Text>
-              <Text className="mt-3 font-semi text-[14px] text-mint-700">
+              <Text className="mt-3 font-semi text-[14px] text-teal-600">
                 Protocol kopen →
               </Text>
             </Pressable>
@@ -235,7 +247,7 @@ export default function ProtocolListScreen() {
                 ))}
               </View>
             ) : (
-              <Text className="py-5 text-[14px] text-ink-50">
+              <Text className="py-5 text-[14px] text-ink-70">
                 Er staan geen producten op deze bestellijst.
               </Text>
             )}
@@ -301,7 +313,7 @@ function Card({ children }: { children: ReactNode }) {
 }
 function Label({ children }: { children: ReactNode }) {
   return (
-    <Text className="font-semi text-[10px] uppercase tracking-[1.3px] text-ink-50">
+    <Text className="font-semi text-[10px] uppercase tracking-[1.3px] text-ink-70">
       {children}
     </Text>
   );
@@ -313,12 +325,12 @@ function Supplement({ item }: { item: DashboardSupplement }) {
         <Text className="flex-1 font-semi text-[14px] text-ink">
           {item.name}
         </Text>
-        <Text className="max-w-[40%] font-bold text-[13px] text-mint-700">
+        <Text className="max-w-[40%] font-bold text-[13px] text-teal-600">
           {item.dosage ?? "Dosering niet ingesteld"}
         </Text>
       </View>
       {!!item.description && (
-        <Text className="mt-1 text-[12px] leading-[18px] text-ink-50">
+        <Text className="mt-1 text-[12px] leading-[18px] text-ink-70">
           {item.description}
         </Text>
       )}
@@ -350,6 +362,7 @@ function Today({
   const localIntakes = useSupplementIntakesForDate(date);
   const [pending, setPending] = useState<string | null>(null);
   const toggle = async (item: DashboardSupplement) => {
+    selectionHaptic();
     setPending(item.id);
     try {
       await mutations.toggleSupplementIntake(
@@ -374,11 +387,11 @@ function Today({
                 <Text className="font-bold text-[16px] text-ink">
                   Vandaag afvinken
                 </Text>
-                <Text className="mt-1 text-[13px] text-ink-50">
+                <Text className="mt-1 text-[13px] text-ink-70">
                   {protocol.today.done} van {protocol.today.total} gedaan
                 </Text>
               </View>
-              <Text className="font-bold text-[15px] text-mint-700">
+              <Text className="font-bold text-[15px] text-teal-600">
                 {protocol.today.percentage}%
               </Text>
             </View>
@@ -417,18 +430,18 @@ function Today({
                 {done && <Check size={13} color="white" />}
               </View>
               <Text
-                className={`flex-1 font-semi text-[14px] ${done ? "text-ink-50 line-through" : "text-ink"}`}
+                className={`flex-1 font-semi text-[14px] ${done ? "text-ink-70 line-through" : "text-ink"}`}
               >
                 {item.name}
               </Text>
-              <Text className="max-w-[35%] font-bold text-[13px] text-mint-700">
+              <Text className="max-w-[35%] font-bold text-[13px] text-teal-600">
                 {item.dosage ?? "Dosering niet ingesteld"}
               </Text>
             </Pressable>
           );
         })}
         {protocol.today.total === 0 && (
-          <Text className="py-3 text-[14px] text-ink-50">
+          <Text className="py-3 text-[14px] text-ink-70">
             Vandaag staat er niets gepland.
           </Text>
         )}
@@ -535,6 +548,7 @@ function Calendar({
   };
   const toggleDayItem = async (item: DashboardSupplement) => {
     if (!day?.editable || busy) return;
+    selectionHaptic();
     const generation = ++request.current;
     setBusy(true); setDayError(null);
     try {
@@ -638,7 +652,7 @@ function Calendar({
                 className="h-2 w-2 rounded-full"
                 style={{ backgroundColor: color }}
               />
-              <Text className="text-[10px] text-ink-50">{label}</Text>
+              <Text className="text-[10px] text-ink-70">{label}</Text>
             </View>
           ))}
         </View>
@@ -647,8 +661,8 @@ function Calendar({
         {busy && !day && <ActivityIndicator color="#18BAB0" />}
         {!!dayError && <Text accessibilityRole="alert" className="mb-3 text-[13px] text-[#8B621C]">{dayError}</Text>}
         {!day && !busy && selected && <Button title="Opnieuw proberen" onPress={() => void openDay(selected)} />}
-        {day && !day.editable && <Text className="mb-3 text-[13px] text-ink-50">Deze dag is alleen te bekijken. Je kunt tot 14 dagen terug aanpassen.</Text>}
-        {day?.items.length === 0 && <Text className="py-3 text-ink-50">Op deze dag stond niets gepland.</Text>}
+        {day && !day.editable && <Text className="mb-3 text-[13px] text-ink-70">Deze dag is alleen te bekijken. Je kunt tot 14 dagen terug aanpassen.</Text>}
+        {day?.items.length === 0 && <Text className="py-3 text-ink-70">Op deze dag stond niets gepland.</Text>}
         {day?.items.map((item) => (
           <Pressable key={item.id} accessibilityRole="checkbox" accessibilityLabel={`${item.name}, ${item.dosage ?? "dosering niet ingesteld"}`}
             accessibilityState={{ checked: !!item.done, disabled: busy || !day.editable }} disabled={busy || !day.editable}
@@ -657,10 +671,10 @@ function Calendar({
               {item.done && <Check size={13} color="white" />}
             </View>
             <View className="flex-1">
-              <Text className={`font-semi text-[14px] ${item.done ? "text-ink-50 line-through" : "text-ink"}`}>{item.name}</Text>
-              {!!item.instructions && <Text className="mt-1 text-[12px] text-ink-50">{item.instructions}</Text>}
+              <Text className={`font-semi text-[14px] ${item.done ? "text-ink-70 line-through" : "text-ink"}`}>{item.name}</Text>
+              {!!item.instructions && <Text className="mt-1 text-[12px] text-ink-70">{item.instructions}</Text>}
             </View>
-            <Text className="max-w-[35%] font-bold text-[13px] text-mint-700">{item.dosage ?? "Dosering niet ingesteld"}</Text>
+            <Text className="max-w-[35%] font-bold text-[13px] text-teal-600">{item.dosage ?? "Dosering niet ingesteld"}</Text>
           </Pressable>
         ))}
       </Sheet>
@@ -681,13 +695,13 @@ function Calendar({
               <Text className="font-semi text-[14px] text-ink">
                 {phase.title}
               </Text>
-              <Text className="mt-1 text-[12px] text-ink-50">
+              <Text className="mt-1 text-[12px] text-ink-70">
                 {phase.durationLabel}
               </Text>
             </View>
             {phase.state === "locked" && <LockKeyhole size={13} color="#8A9292" />}
             <Text
-              className={`max-w-[40%] rounded-full px-2 py-1 text-[10px] ${phase.state === "active" || phase.state === "preview" ? "bg-mint-50 text-mint-700" : "bg-ink-8 text-ink-50"}`}
+              className={`max-w-[40%] rounded-full px-2 py-1 text-[10px] ${phase.state === "active" || phase.state === "preview" ? "bg-mint-50 text-teal-600" : "bg-ink-8 text-ink-70"}`}
             >
               {phase.statusLabel}
             </Text>
@@ -732,7 +746,7 @@ function LibraryLink({
       <LibraryThumbnail uri={item?.heroImageUrl} format={item?.format} style={{ width: 64 }} />
       <View className="flex-1">
         <Text className="font-semi text-[13px] text-ink">{title}</Text>
-        <Text className="mt-1 text-[11px] leading-[16px] text-ink-50">
+        <Text className="mt-1 text-[11px] leading-[16px] text-ink-70">
           {description}
         </Text>
       </View>
@@ -808,12 +822,12 @@ function Nutrition({
                     {feed.dosage ? ` · ${feed.dosage}` : ""}
                   </Text>
                   <Text
-                    className={`mt-1 font-semi text-[12px] ${feed.status === "continue" ? "text-mint-700" : "text-[#B45E56]"}`}
+                    className={`mt-1 font-semi text-[12px] ${feed.status === "continue" ? "text-teal-600" : "text-[#B45E56]"}`}
                   >
                     {feed.status === "continue" ? "Doorgaan" : "Stoppen"}
                   </Text>
                   {!!feed.note && (
-                    <Text className="mt-1 text-[12px] leading-[19px] text-ink-50">
+                    <Text className="mt-1 text-[12px] leading-[19px] text-ink-70">
                       {feed.note}
                     </Text>
                   )}
@@ -837,7 +851,7 @@ function Nutrition({
         </Text>
         {nutrition.water.needsAnalysis && (
           <>
-            <Text className="mb-3 mt-3 text-[13px] leading-[20px] text-ink-50">
+            <Text className="mb-3 mt-3 text-[13px] leading-[20px] text-ink-70">
               {nutrition.water.advice}
             </Text>
             <LibraryLink
@@ -888,7 +902,7 @@ function Sheet({
           accessibilityLabel="Sluit details"
           onPress={onClose}
           style={{ position: "absolute", top: 0, right: 0, bottom: 0, left: 0 }}
-          className="bg-black/30"
+          className="bg-black/30 active:opacity-100"
         />
         <View
           testID="protocol-sheet-panel"
@@ -907,7 +921,7 @@ function Sheet({
           >
             <Text accessibilityRole="header" className="font-bold text-[21px] text-ink">{title}</Text>
             {!!subtitle && (
-              <Text className="mt-1 text-[12px] text-ink-50">{subtitle}</Text>
+              <Text className="mt-1 text-[12px] text-ink-70">{subtitle}</Text>
             )}
             <View className="mt-4">
               {children}
@@ -988,7 +1002,7 @@ function WeeklySheet({
             placeholder="Hoe gaat het met je paard deze week?"
             maxLength={10000}
             textAlignVertical="top"
-            className="mb-4 min-h-[130px] rounded-2xl border border-ink-15 bg-white p-4 text-[15px] text-ink"
+            className="mb-4 min-h-[130px] rounded-2xl border border-ink-15 bg-white p-4 font-sans text-[16px] text-ink"
           />
           <Button
             title={busy ? "Opslaan…" : "Weekupdate opslaan"}
@@ -996,7 +1010,7 @@ function WeeklySheet({
             disabled={busy || !note.trim()}
           />
           <Pressable disabled={busy} onPress={onClose} className="mt-3 py-2">
-            <Text className="text-center text-[14px] text-ink-50">
+            <Text className="text-center text-[14px] text-ink-70">
               Annuleren
             </Text>
           </Pressable>

@@ -44,7 +44,7 @@ export default function LogEntryScreen() {
           onBack={() => router.back()}
           right={
             <Pressable onPress={submit} hitSlop={8}>
-              <Text className="font-semi text-mint-700 text-[14px]">Klaar</Text>
+              <Text className="font-semi text-teal-600 text-[14px]">Klaar</Text>
             </Pressable>
           }
         />
@@ -68,7 +68,7 @@ export default function LogEntryScreen() {
                   className={`flex-1 items-center rounded-2xl border bg-white py-3 ${active ? 'border-mint-500 bg-mint-50' : 'border-ink-8'}`}
                 >
                   <Text style={{ fontSize: 22 }}>{MOOD[n - 1]}</Text>
-                  <Text className="mt-0.5 text-[10px] text-ink-50">{MOOD_LBL[n - 1]}</Text>
+                  <Text className="mt-0.5 text-[10px] text-ink-70">{MOOD_LBL[n - 1]}</Text>
                 </Pressable>
               );
             })}

@@ -66,7 +66,7 @@ export default function IntakeSectionScreen() {
   if (!section) {
     return (
       <View className="flex-1 items-center justify-center bg-canvas">
-        <Text className="text-ink-50">Sectie niet gevonden.</Text>
+        <Text className="text-ink-70">Sectie niet gevonden.</Text>
       </View>
     );
   }
@@ -97,7 +97,7 @@ export default function IntakeSectionScreen() {
           </IconButton>
           <View className="flex-1 items-center">
             <Text
-              className="font-bold uppercase text-ink-50"
+              className="font-bold uppercase text-ink-70"
               style={{ fontSize: 10.5, letterSpacing: 1.5 }}
             >
               Sectie {section.nr + 1} van {schema.length}
@@ -138,7 +138,7 @@ export default function IntakeSectionScreen() {
           />
           <View className="flex-row items-center justify-center gap-1.5">
             <View className="h-1.5 w-1.5 rounded-full bg-mint-500" />
-            <Text className="text-[11px] text-ink-50">
+            <Text className="text-[11px] text-ink-70">
               {state.submittedAt ? `Ingestuurd op ${formatIntakeDate(state.submittedAt)} · ` : 'Automatisch opgeslagen · '}
               <Text className={allAnswered ? 'text-success' : 'text-danger'}>
                 {filled} / {total}
@@ -169,7 +169,7 @@ export default function IntakeSectionScreen() {
             )}
 
             {photoSection && isSectionComplete(section, answers, state.answers, noneOptions) && (
-              <Text className="mb-4 font-semi text-mint-700">Foto’s compleet ✓</Text>
+              <Text className="mb-4 font-semi text-teal-600">Foto’s compleet ✓</Text>
             )}
             {visible.map((f) => {
               if (f.type !== 'sectionhead') fieldCounter += 1;

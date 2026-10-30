@@ -18,7 +18,7 @@ export function FieldLabel({ n, label, hint, required, link, photo }: Props) {
   return (
     <View className="mb-2">
       <View className="flex-row items-baseline gap-2">
-        {n > 0 && <Text className="font-bold text-[11px] tracking-display text-ink-50">
+        {n > 0 && <Text className="font-bold text-[11px] tracking-display text-ink-70">
           {String(n).padStart(2, '0')}
         </Text>}
         <Text className={photo ? `flex-1 font-bold ${n === 0 ? 'text-[21px] leading-[28px]' : 'text-[18px] leading-[24px]'} text-ink` : "flex-1 font-semi text-[14.5px] leading-[20px] text-ink"}>
@@ -26,7 +26,7 @@ export function FieldLabel({ n, label, hint, required, link, photo }: Props) {
             <>
               {parts[0]}
               <Text
-                className="text-mint-700 underline"
+                className="text-teal-600 underline"
                 onPress={() => Linking.openURL(link!.url)}
               >
                 {link!.text}
@@ -40,7 +40,7 @@ export function FieldLabel({ n, label, hint, required, link, photo }: Props) {
         </Text>
       </View>
       {hint && (
-        <Text className={photo ? "mt-2 text-[16px] leading-[23px] text-ink-70" : "mt-0.5 pl-[22px] text-[12px] text-ink-50 leading-[16px]"}>
+        <Text className={photo ? "mt-2 text-[16px] leading-[23px] text-ink-70" : "mt-0.5 pl-[22px] text-[12px] text-ink-70 leading-[16px]"}>
           {hint}
         </Text>
       )}

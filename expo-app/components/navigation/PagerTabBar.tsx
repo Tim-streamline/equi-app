@@ -23,30 +23,36 @@ const LABELS: Record<string, string> = {
 };
 
 const ACTIVE = '#127A79';
-const INACTIVE = 'rgba(27,42,42,0.5)';
+const INACTIVE = 'rgba(27,42,42,0.7)';
 
 function Cell({
   icon: Icon,
   label,
   focused,
   onPress,
+  action = false,
 }: {
   icon: IconCmp;
   label: string;
   focused: boolean;
   onPress: () => void;
+  /** Opens something instead of switching tabs (Scan). */
+  action?: boolean;
 }) {
   const color = focused ? ACTIVE : INACTIVE;
   return (
     <Pressable
       onPress={onPress}
-      style={{ flex: 1, alignItems: 'center', justifyContent: 'center', gap: 2, paddingVertical: 4 }}
-      hitSlop={8}
+      accessibilityRole={action ? "button" : "tab"}
+      accessibilityLabel={label}
+      accessibilityState={action ? undefined : { selected: focused }}
+      style={{ flex: 1, minHeight: 48, alignItems: 'center', justifyContent: 'center', gap: 2, paddingVertical: 4 }}
     >
       <Icon size={22} color={color} strokeWidth={focused ? 2.4 : 2} />
       <Text
+        maxFontSizeMultiplier={1.2}
         style={{
-          fontSize: 10,
+          fontSize: 11,
           color,
           fontFamily: focused ? 'SourceSans3_600SemiBold' : 'SourceSans3_500Medium',
           letterSpacing: 0.2,
@@ -60,7 +66,6 @@ function Cell({
 
 export function PagerTabBar({ state, navigation }: MaterialTopTabBarProps) {
   const insets = useSafeAreaInsets();
-
   const cells: ReactNode[] = [];
   state.routes.forEach((route, index) => {
     const Icon = ICONS[route.name];
@@ -92,12 +97,13 @@ export function PagerTabBar({ state, navigation }: MaterialTopTabBarProps) {
       icon={ScanLine}
       label="Scan"
       focused={false}
+      action
       onPress={() => router.push('/(tabs)/scanner')}
     />,
   );
 
   return (
-    <View style={{ position: 'absolute', left: 0, right: 0, bottom: 0 }}>
+    <View accessibilityRole="tablist" style={{ position: 'absolute', left: 0, right: 0, bottom: 0 }}>
       <BlurView
         intensity={Platform.OS === 'ios' ? 60 : 100}
         tint="light"
@@ -108,7 +114,7 @@ export function PagerTabBar({ state, navigation }: MaterialTopTabBarProps) {
           backgroundColor: 'rgba(255,255,255,0.92)',
         }}
       >
-        <View style={{ flexDirection: 'row', paddingTop: 8, paddingBottom: 8 }}>{cells}</View>
+        <View style={{ flexDirection: 'row', paddingTop: 4, paddingBottom: 4 }}>{cells}</View>
         <View style={{ height: insets.bottom }} />
       </BlurView>
     </View>

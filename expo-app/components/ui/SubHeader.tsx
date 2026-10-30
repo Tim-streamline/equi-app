@@ -13,7 +13,7 @@ type Props = {
 export function SubHeader({ title, onBack, right, tone = 'light' }: Props) {
   return (
     <View className="flex-row items-center justify-between gap-3 px-5 pb-3 pt-2">
-      <IconButton tone={tone} onPress={onBack}>
+      <IconButton tone={tone} onPress={onBack} size={44} accessibilityLabel="Terug" className="-ml-2">
         <ChevronLeft size={22} color={tone === 'deep' ? '#fff' : '#1B2A2A'} />
       </IconButton>
       <Text
@@ -22,7 +22,7 @@ export function SubHeader({ title, onBack, right, tone = 'light' }: Props) {
       >
         {title}
       </Text>
-      <View style={{ width: 36, alignItems: 'flex-end' }}>{right}</View>
+      <View style={{ width: 44, marginRight: -8, alignItems: 'flex-end' }}>{right}</View>
     </View>
   );
 }

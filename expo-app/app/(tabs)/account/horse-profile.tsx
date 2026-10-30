@@ -54,11 +54,11 @@ export default function HorseProfileScreen() {
           <View className="mb-4 flex-row gap-2.5 px-4">
             {stats.map((s: any) => (
               <View key={s.id} className="flex-1 rounded-card border border-ink-8 bg-white p-3">
-                <Text className="font-semi uppercase text-ink-50" style={{ fontSize: 10, letterSpacing: 1.2 }}>
+                <Text className="font-semi uppercase text-ink-70" style={{ fontSize: 10, letterSpacing: 1.2 }}>
                   {s.label}
                 </Text>
                 <Text className="mt-1 font-bold text-ink" style={{ fontSize: 18 }}>{s.valueLabel}</Text>
-                <Text className="mt-0.5 text-[11px] text-ink-50">{s.trend}</Text>
+                <Text className="mt-0.5 text-[11px] text-ink-70">{s.trend}</Text>
               </View>
             ))}
           </View>
@@ -78,7 +78,7 @@ export default function HorseProfileScreen() {
                   )}
                 </View>
                 <View className="flex-1">
-                  <Text className="font-semi uppercase text-ink-50" style={{ fontSize: 10, letterSpacing: 1.2 }}>
+                  <Text className="font-semi uppercase text-ink-70" style={{ fontSize: 10, letterSpacing: 1.2 }}>
                     {step.whenLabel}
                   </Text>
                   <Text className="mt-1 text-[14px] text-ink">{step.message}</Text>

@@ -25,6 +25,7 @@ async function screen(file, { db = {}, mutations = {}, platform = 'android', aut
     'react-native': { ...Object.fromEntries(['ActivityIndicator', 'KeyboardAvoidingView', 'ScrollView', 'Text', 'View'].map(name => [name,name])), Platform: { OS: platform } },
     'expo-router': { useLocalSearchParams: () => params, Redirect: 'Redirect', router: { replace: path => routes.push(path), back: () => routes.push('back') } },
     'react-native-safe-area-context': { SafeAreaView: 'SafeAreaView' },
+    'expo-status-bar': { StatusBar: 'StatusBar' },
     '@/components/ui/SubHeader': { SubHeader: 'SubHeader' },
     '@/components/ui/Field': { Field: 'Field' },
     '@/components/ui/Button': { Button: 'Button' },

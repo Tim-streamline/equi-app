@@ -23,7 +23,7 @@ export default function CommunityMutes() {
     <ScrollView contentContainerStyle={{ padding: 20, gap: 16 }}>
       <Text className="text-[15px] leading-5 text-ink-70">Berichten en reacties van gedempte auteurs zijn voor jou verborgen, ook in Bewaard. Zet dempen uit om ze weer te zien.</Text>
       {!isLoggedIn ? <Action label="Inloggen" onPress={() => router.push('/onboarding/welcome')} /> : !data ? <ResourceState error={error} retry={() => void refresh()} /> : <>
-        {!data.data.length && <Text className="text-ink-50">Je hebt geen auteurs gedempt.</Text>}
+        {!data.data.length && <Text className="text-ink-70">Je hebt geen auteurs gedempt.</Text>}
         {data.data.map(author => <View key={`${author.type}:${author.id}`} className="flex-row items-center gap-3 rounded-2xl bg-white p-4"><Text className="flex-1 font-semi text-ink">{author.name}</Text><Action label="Dempen uit" disabled={busy} onPress={() => void unmute(author)} /></View>)}
       </>}
     </ScrollView>

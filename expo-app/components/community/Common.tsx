@@ -6,8 +6,8 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 export function Action({ label, onPress, disabled = false, primary = false }: { label: string; onPress: () => void; disabled?: boolean; primary?: boolean }) {
   return <Pressable accessibilityRole="button" accessibilityLabel={label} disabled={disabled} onPress={onPress}
-    className={`rounded-full px-4 py-2.5 ${primary ? 'bg-teal-700' : 'bg-mint-50'} ${disabled ? 'opacity-40' : ''}`}>
-    <Text className={`font-semi text-[14px] ${primary ? 'text-white' : 'text-mint-700'}`}>{label}</Text>
+    className={`min-h-11 justify-center rounded-full px-4 py-2.5 ${primary ? 'bg-teal-700' : 'bg-mint-50'} ${disabled ? 'opacity-40' : ''}`}>
+    <Text className={`font-semi text-[14px] ${primary ? 'text-white' : 'text-teal-600'}`}>{label}</Text>
   </Pressable>;
 }
 export function CommunityDialog({ open, close, title, children }: { open: boolean; close: () => void; title: string; children: ReactNode }) {
@@ -36,7 +36,7 @@ export function Pagination({ page, last, change }: { page: number; last: number;
   if (last <= 1) return null;
   return <View className="flex-row items-center justify-between gap-2 px-5 py-5">
     <Action label="Vorige" disabled={page <= 1} onPress={() => change(page - 1)} />
-    <Text className="text-ink-50">{page} / {last}</Text>
+    <Text className="text-ink-70">{page} / {last}</Text>
     <Action label="Volgende" disabled={page >= last} onPress={() => change(page + 1)} />
   </View>;
 }

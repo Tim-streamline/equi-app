@@ -21,7 +21,7 @@ export function ProtocolTabs({ selected, onSelect }: {
             numberOfLines={1}
             adjustsFontSizeToFit
             minimumFontScale={0.75}
-            className={`w-full text-center font-semi text-[13px] ${selected === tab.key ? 'text-mint-700' : 'text-ink-70'}`}
+            className={`w-full text-center font-semi text-[13px] ${selected === tab.key ? 'text-teal-600' : 'text-ink-70'}`}
           >
             {tab.label}
           </Text>

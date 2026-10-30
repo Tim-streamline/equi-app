@@ -12,7 +12,7 @@ type Props = {
 };
 
 const styles: Record<ChipVariant, { box: string; text: string }> = {
-  default: { box: 'bg-mint-50',           text: 'text-mint-700' },
+  default: { box: 'bg-mint-50',           text: 'text-teal-600' },
   savedOutline: { box: 'bg-transparent border border-teal-700', text: 'text-ink-70' },
   outline: { box: 'bg-transparent border border-ink-8', text: 'text-ink-70' },
   warn:    { box: 'bg-[#FBE9C6]',         text: 'text-[#8C6420]' },

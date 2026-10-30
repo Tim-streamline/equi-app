@@ -28,7 +28,8 @@ function renderLogin(platform, params = {}, replace = () => {}, push = () => {})
     'react-native-safe-area-context': { SafeAreaView: 'SafeAreaView' },
     'expo-status-bar': { StatusBar: 'StatusBar' },
     'lucide-react-native': { ArrowRight: 'ArrowRight' },
-    '@/components/ui/Button': { Button: 'Button' },
+    '@/components/ui/Button': { Button: 'Button', PRIMARY_INK: '#083635' },
+    '@/components/ui/Field': { Field: 'Field' },
     '@/db/provider': { useDb: () => ({ login: async () => {} }) },
     '@/assets/images/logo-horse-white.png': 'horse-logo',
   };
@@ -73,7 +74,7 @@ for (const [platform, behavior] of [['android', 'height'], ['ios', 'padding']]) 
     assert.equal(scroll.props.contentContainerStyle.justifyContent, 'space-between');
     assert.equal(scroll.props.keyboardShouldPersistTaps, 'handled');
     assert.ok(
-      find(scroll, 'TextInput', (props) => props.secureTextEntry),
+      find(scroll, 'Field', (props) => props.secureTextEntry),
       'The password field must be inside the scrollable area',
     );
     assert.ok(find(scroll, 'Button'), 'Login must remain reachable with the keyboard open');
@@ -81,10 +82,11 @@ for (const [platform, behavior] of [['android', 'height'], ['ios', 'padding']]) 
 }
 
 
-test('password recovery is reachable from the login screen and email uses the supplied placeholder', () => {
+test('password recovery is reachable from the login screen and both fields have visible labels', () => {
   let destination;
   const screen = renderLogin('web', {}, () => {}, route => { destination = route; });
-  assert.equal(find(screen, 'TextInput', props => props.autoComplete === 'email').props.placeholder, 'e-mailadres');
+  assert.equal(find(screen, 'Field', props => props.autoComplete === 'email').props.label, 'E-mailadres');
+  assert.equal(find(screen, 'Field', props => props.secureTextEntry).props.label, 'Wachtwoord');
   const link = find(screen, 'Pressable', props => props.accessibilityRole === 'link');
   assert.equal(find(link, 'Text').props.children, 'Wachtwoord vergeten?');
   link.props.onPress();

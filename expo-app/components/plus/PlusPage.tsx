@@ -34,7 +34,7 @@ export function PlusPage({ data, apiBaseUrl, onIntake, access, horseName = 'je p
       <View className="gap-5 px-5 pb-8 pt-9">
         <View className="gap-1"><Text className="text-[10px] tracking-[2px] text-teal-500">HOE HET WERKT</Text><Text accessibilityRole="header" className="font-bold text-[23px] text-teal-500">{c.stepsTitle}</Text></View>
         {c.steps.map((step, index) => <View key={index} className="flex-row items-start gap-3">
-          <View className="h-9 w-9 items-center justify-center rounded-full bg-teal-500"><Text className="font-bold text-[16px] text-white">{index + 1}</Text></View>
+          <View className="h-9 w-9 items-center justify-center rounded-full bg-teal-500"><Text className="font-bold text-[16px] text-white" maxFontSizeMultiplier={1.2}>{index + 1}</Text></View>
           <View className="flex-1 gap-1"><Text className="font-bold text-[16px] leading-[21px] text-ink">{step.title}</Text><Text className="text-[15px] leading-[22px] text-ink">{step.body}</Text></View>
         </View>)}
         <Button title={c.stepsButton} variant="deep" className="mt-2 rounded-full px-3 py-3" textClassName="text-center" onPress={open} />
@@ -51,7 +51,7 @@ export function PlusPage({ data, apiBaseUrl, onIntake, access, horseName = 'je p
 
       {c.reviews.length > 0 && <View className="gap-3 pb-9">
         <Text accessibilityRole="header" className="px-5 font-bold text-[23px] text-teal-500">{c.reviewsTitle}</Text>
-        {c.reviewsAreExamples && <Text className="px-5 text-[12px] text-ink-50">Voorbeeldreviews</Text>}
+        {c.reviewsAreExamples && <Text className="px-5 text-[12px] text-ink-70">Voorbeeldreviews</Text>}
         <ScrollView horizontal showsHorizontalScrollIndicator={false} snapToInterval={reviewWidth + 12} decelerationRate="fast" contentContainerStyle={{ paddingHorizontal: 20, gap: 12 }} accessibilityLabel="Reviews van eigenaren">
           {c.reviews.map((review, index) => <View key={index} style={{ width: reviewWidth }} className="gap-4 rounded-[20px] border border-ink-8 bg-white p-5">
             <Text className="font-bold text-[17px] leading-[22px] text-ink">{review.title}</Text><Text className="flex-1 text-[15px] leading-[22px] text-ink">“{review.quote}”</Text>
@@ -76,12 +76,12 @@ export function PlusPage({ data, apiBaseUrl, onIntake, access, horseName = 'je p
           {faq === index && <Text className="pt-3 text-[15px] leading-[23px] text-ink-70">{item.answer}</Text>}
         </View>)}
       </View>
-      <View className="items-center gap-4 px-9 pb-3 pt-10"><Text className="text-[11px] tracking-[3px] text-teal-500">{BRAND_NAME}</Text><Button title={c.priceButton} className="w-full rounded-full py-3" onPress={open} /><Text className="mt-2 text-center text-[10px] tracking-[1px] text-ink-50">POWERED BY <Text className="font-semi text-teal-500">De Paardentherapeut</Text></Text></View>
+      <View className="items-center gap-4 px-9 pb-3 pt-10"><Text className="text-[11px] tracking-[3px] text-teal-500">{BRAND_NAME}</Text><Button title={c.priceButton} className="w-full rounded-full py-3" onPress={open} /><Text className="mt-2 text-center text-[10px] tracking-[1px] text-ink-70">POWERED BY <Text className="font-semi text-teal-500">De Paardentherapeut</Text></Text></View>
     </ScrollView>
 
     <Modal visible={sheet !== null} transparent animationType="slide" onRequestClose={close}>
       <View style={{ flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(11,42,41,0.45)' }}>
-        <Pressable accessibilityRole="button" accessibilityLabel="Sluiten" onPress={close} style={{ flex: 1 }} />
+        <Pressable accessibilityRole="button" accessibilityLabel="Sluiten" onPress={close} className="active:opacity-100" style={{ flex: 1 }} />
         <View accessibilityViewIsModal className="w-full self-center rounded-t-[28px] bg-canvas" style={{ maxWidth: 560, maxHeight: height - insets.top - 24, paddingBottom: Math.max(insets.bottom, 20) }}>
           <View className="flex-row items-center justify-between px-6 pt-4"><View className="h-1 w-10 rounded-full bg-ink-15" /><Pressable accessibilityRole="button" accessibilityLabel="Sluiten" onPress={close} className="h-11 w-11 items-center justify-center"><X size={22} color="#127A79" /></Pressable></View>
           <ScrollView contentContainerStyle={{ paddingHorizontal: 24, paddingBottom: 8 }}>

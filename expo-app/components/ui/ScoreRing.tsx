@@ -34,7 +34,7 @@ export function ScoreRing({ score, size = 96, stroke = 6 }: Props) {
           {score}
         </Text>
         {size >= 80 && (
-          <Text className="mt-0.5 font-semi uppercase text-ink-50" style={{ fontSize: 11, letterSpacing: 1.1 }}>
+          <Text className="mt-0.5 font-semi uppercase text-ink-70" style={{ fontSize: 11, letterSpacing: 1.1 }}>
             van 100
           </Text>
         )}

@@ -17,7 +17,7 @@ export function Tile({ label, sub, icon, onPress, className = '' }: Props) {
     >
       <View className="h-7 w-7 items-center justify-center">{icon}</View>
       <Text className="font-bold text-base text-ink">{label}</Text>
-      {sub && <Text className="text-[12px] text-ink-50">{sub}</Text>}
+      {sub && <Text className="text-[12px] text-ink-70">{sub}</Text>}
     </Pressable>
   );
 }

@@ -1,5 +1,6 @@
 import { BRAND_NAME } from '@/constants/brand';
-import { KeyboardScrollView as ScrollView, KeyboardTextInput as TextInput, KeyboardViewport as KeyboardAvoidingView } from '@/components/ui/KeyboardForm';
+import { KeyboardScrollView as ScrollView, KeyboardViewport as KeyboardAvoidingView } from '@/components/ui/KeyboardForm';
+import { Field } from '@/components/ui/Field';
 // Welcome + login screen. Bypasses the old "screenCopy" table which used to
 // live in TinyBase — once we moved to PowerSync the brand strings became
 // hard-coded again. Auth credentials are sent to Laravel which mints a
@@ -10,8 +11,8 @@ import { View, Text, Image, Pressable, ActivityIndicator, Platform,  } from 'rea
 import { router, useLocalSearchParams } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
-import { ArrowRight, Eye, EyeOff } from 'lucide-react-native';
-import { Button } from '@/components/ui/Button';
+import { ArrowRight } from 'lucide-react-native';
+import { Button, PRIMARY_INK } from '@/components/ui/Button';
 import { useDb } from '@/db/provider';
 
 export default function WelcomeScreen() {
@@ -19,7 +20,6 @@ export default function WelcomeScreen() {
   const { login } = useDb();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [passwordVisible, setPasswordVisible] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -82,37 +82,27 @@ export default function WelcomeScreen() {
                 Welkom bij {BRAND_NAME}!
               </Text>
 
-              <View className="gap-2 mb-3">
-                <TextInput
-                  value={email}
-                  onChangeText={setEmail}
-                  placeholder="e-mailadres"
-                  accessibilityLabel="E-mailadres"
-                  autoComplete="email"
-                  placeholderTextColor="rgba(255,255,255,0.5)"
-                  autoCapitalize="none"
-                  autoCorrect={false}
-                  keyboardType="email-address"
-                  className="rounded-pill bg-white/10 px-4 py-3 font-sans text-[14px] text-white"
-                />
-                <View className="flex-row items-center rounded-pill bg-white/10">
-                <TextInput
-                  value={password}
-                  onChangeText={setPassword}
-                  placeholder="wachtwoord"
-                  accessibilityLabel="Wachtwoord"
-                  autoComplete="current-password"
-                  onSubmitEditing={() => { if (!busy) void submit(); }}
-                  placeholderTextColor="rgba(255,255,255,0.5)"
-                  secureTextEntry={!passwordVisible}
-                  className="flex-1 px-4 py-3 font-sans text-[14px] text-white"
-                />
-                <Pressable accessibilityRole="button" accessibilityLabel={passwordVisible ? 'Wachtwoord verbergen' : 'Wachtwoord tonen'} accessibilityState={{ checked: passwordVisible }} onPress={() => setPasswordVisible(value => !value)} style={{ width: 48, height: 48, alignItems: 'center', justifyContent: 'center' }}>
-                  {passwordVisible ? <EyeOff size={20} color="#fff" /> : <Eye size={20} color="#fff" />}
-                </Pressable>
-                </View>
-              </View>
-              <Pressable accessibilityRole="link" onPress={() => router.push('/onboarding/forgot-password')} className="self-end py-2">
+              <Field
+                tone="deep"
+                label="E-mailadres"
+                value={email}
+                onChangeText={setEmail}
+                autoComplete="email"
+                autoCapitalize="none"
+                autoCorrect={false}
+                keyboardType="email-address"
+              />
+              <Field
+                tone="deep"
+                label="Wachtwoord"
+                value={password}
+                onChangeText={setPassword}
+                autoComplete="current-password"
+                secureTextEntry
+                passwordToggle
+                onSubmitEditing={() => { if (!busy) void submit(); }}
+              />
+              <Pressable accessibilityRole="link" onPress={() => router.push('/onboarding/forgot-password')} className="min-h-11 justify-center self-end">
                 <Text className="font-semi text-[14px] text-mint-200">Wachtwoord vergeten?</Text>
               </Pressable>
               {passwordReset === '1' ? <Text accessibilityRole="alert" className="mt-2 text-[14px] text-mint-200">Je wachtwoord is gewijzigd. Je kunt nu inloggen.</Text> : null}
@@ -129,7 +119,7 @@ export default function WelcomeScreen() {
                 variant="primary"
                 disabled={busy}
                 onPress={submit}
-                trailing={busy ? <ActivityIndicator color="#fff" /> : <ArrowRight size={18} color="#fff" />}
+                trailing={busy ? <ActivityIndicator color={PRIMARY_INK} /> : <ArrowRight size={18} color={PRIMARY_INK} />}
               />
               <Button title="Nieuw hier? Maak een account" variant="text" textClassName="text-white" disabled={busy} onPress={() => router.push('/onboarding/register')} />
             </View>

@@ -15,10 +15,10 @@ export function SubscriptionRenewal() {
     finally { setBusy(false); }
   }
   return <View className="flex-1 justify-center gap-5 bg-canvas px-6" style={{ width: '100%', maxWidth: 560, alignSelf: 'center' }}>
-    <Text className="font-bold text-[28px] text-teal-700">Activeer je abonnment</Text>
-    <Text className="text-[16px] leading-6 text-ink">Met een actief abonnement heb je toegang tot alle functies van EquiApp. Een persoonlijk protocol koop je apart voor je paard.</Text>
-    <Text>Je paarden, protocollen en intake-antwoorden blijven bewaard.</Text>
+    <Text className="font-bold text-[28px] leading-[34px] text-ink">Activeer je abonnement</Text>
+    <Text className="font-sans text-[16px] leading-6 text-ink">Met een actief abonnement heb je toegang tot alle functies van EquiApp. Een persoonlijk protocol koop je apart voor je paard.</Text>
+    <Text className="font-sans text-[15px] leading-[22px] text-ink-70">Je paarden, protocollen en intake-antwoorden blijven bewaard.</Text>
     <Button title={busy ? 'Even geduld…' : 'Abonnement activeren'} disabled={busy} onPress={() => void renew()} />
-    {!!message && <Text accessibilityRole="alert">{message}</Text>}
+    {!!message && <Text accessibilityRole="alert" className="font-sans text-[15px] leading-[22px] text-ink">{message}</Text>}
   </View>;
 }

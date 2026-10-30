@@ -128,7 +128,7 @@ export default function IntakeOverview() {
           </View>
 
           {!!state.submittedAt && <View className="mx-4 mb-4 rounded-2xl bg-mint-50 p-4">
-            <Text className="font-bold text-mint-700">Intake ingestuurd op {formatIntakeDate(state.submittedAt)}</Text>
+            <Text className="font-bold text-teal-600">Intake ingestuurd op {formatIntakeDate(state.submittedAt)}</Text>
             <Text className="mt-1 text-ink-70">Je kunt je antwoorden hieronder bekijken. Aanpassen is niet meer mogelijk.</Text>
           </View>}
           <View className="mx-4 gap-2">
@@ -147,7 +147,7 @@ export default function IntakeOverview() {
 
           {!state.submittedAt && <View className="mx-4 mt-4 rounded-2xl bg-mint-50 p-3.5">
             <Text className="text-[12.5px] leading-[18px] text-ink-70">
-              <Text className="font-bold text-mint-700">Tip · </Text>
+              <Text className="font-bold text-teal-600">Tip · </Text>
               Doe één sectie per dag als je het rustig wilt aanpakken. Alles wordt automatisch
               opgeslagen, je kunt later verder.
             </Text>
@@ -205,13 +205,13 @@ function SectionRow({ sec, status, answered, total }: { sec: Section; status: St
       </View>
       <View className="flex-1">
         <View className="flex-row items-baseline gap-1.5">
-          <Text className="font-bold text-[11px] text-ink-50">
+          <Text className="font-bold text-[11px] text-ink-70">
             {String(sec.nr).padStart(2, '0')}
           </Text>
           <Text className="font-bold text-[15px] text-ink">{sec.title}</Text>
         </View>
-        <Text className="mt-0.5 text-[12px] leading-[16px] text-ink-50">{sec.sub}</Text>
-        {done && isPhotoSection(sec) && <Text className="mt-1 text-xs text-mint-700">Foto’s compleet ✓</Text>}
+        <Text className="mt-0.5 text-[12px] leading-[16px] text-ink-70">{sec.sub}</Text>
+        {done && isPhotoSection(sec) && <Text className="mt-1 text-xs text-teal-600">Foto’s compleet ✓</Text>}
       </View>
       <View
         className={`rounded-pill px-2.5 py-1 ${
@@ -221,7 +221,7 @@ function SectionRow({ sec, status, answered, total }: { sec: Section; status: St
         <Text
           accessibilityLabel={`${answered} van ${total} vragen beantwoord`}
           className={`font-bold text-[11px] ${
-            active ? 'text-white' : done ? 'text-mint-700' : 'text-ink-50'
+            active ? 'text-white' : done ? 'text-teal-600' : 'text-ink-70'
           }`}
         >
           {answered} / {total}

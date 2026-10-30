@@ -2,10 +2,10 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { BackHandler, Image, Modal, Platform, Pressable, Text, TextInput, useWindowDimensions, View } from 'react-native';
 import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
 import * as ImagePicker from 'expo-image-picker';
-import { Camera, CheckCircle2, ChevronRight, History, ImagePlus, ScanLine, Search, Upload, X } from 'lucide-react-native';
+import { Camera, CheckCircle2, ChevronRight, History, ImagePlus, Plus, ScanLine, Search, Upload, X } from 'lucide-react-native';
 import { PhotoReplacementSheet, ScannerPhotoCard } from '@/components/scanner/ScannerPhotoCard';
 import { useCurrentUserId, useScannerProducts } from '@/db/hooks';
-import { C, FeedIcon, RoundButton, ScannerButton, ScannerFrame, ScannerNote, ScannerStepProgress, ScanRow, s } from '@/components/scanner/ScannerUI';
+import { C, closeScanner, FeedIcon, RoundButton, ScannerButton, ScannerFrame, ScannerNote, ScannerStepProgress, ScanRow, s } from '@/components/scanner/ScannerUI';
 import { feedCategory, matchesFeed, type ScannerRow } from '@/lib/scanner-presentation';
 import { scannerRequest, scannerUuid, uploadFeedPhoto, type FeedSubmission } from '@/lib/feed-scanner-api';
 import { useScannerHistory } from '@/hooks/useScannerHistory';
@@ -22,7 +22,9 @@ export default function ScannerScreen() {
   const [screen, setScreen] = useState<Screen>('start');
   const [exampleOpen, setExampleOpen] = useState(false);
   const [exampleType, setExampleType] = useState<'ingredients' | 'analysis'>('ingredients');
-  const { height: viewportHeight } = useWindowDimensions();
+  const { height: viewportHeight, fontScale } = useWindowDimensions();
+  // Keep Camera/Uploaden above the fold on small phones (iPhone SE with Safari's toolbars).
+  const compact = viewportHeight < 760;
   const [photoStep, setPhotoStep] = useState<PhotoStep>('composition');
   const uploadedAssets = useRef<Photos>({});
   const [unknownFeed, setUnknownFeed] = useState(false);
@@ -243,26 +245,30 @@ export default function ScannerScreen() {
     <ScannerButton title="Dit is niet mijn voer" variant="text" onPress={() => setScreen('search')} />
   </> : undefined;
 
-  return <ScannerFrame title="" header={screen !== 'start'} onBack={back} navigation={screen === 'start'} showHistory={false} headerContent={screen === 'search' ? searchInput : undefined} footer={foundActions ?? photoActions}>
+  return <ScannerFrame title="" header={screen !== 'start'} onBack={back} showHistory={false} headerContent={screen === 'search' ? searchInput : undefined} footer={foundActions ?? photoActions}>
     {designPreview && <Text style={[s.small, { color: C.teal }]}>Ontwerpstand · alleen lokale vormcontrole</Text>}
     {!!error && <Text accessibilityRole="alert" style={[s.body, { color: C.danger }]}>{error}</Text>}
     {!!error && submitted && !sending && <ScannerButton title="Nieuwe inzending starten" variant="outline" onPress={() => { resetScan(); setError(''); }} />}
     {screen === 'start' && <>
       <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingTop: 8, paddingLeft: 4 }}>
-        <Text style={[s.eyebrow, { fontSize: 14, color: C.teal }]}>Voerscanner</Text>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginLeft: -4 }}>
+          <View style={{ borderRadius: 24, backgroundColor: '#fff', borderWidth: 1, borderColor: C.border }}><RoundButton label="Scanner sluiten" onPress={closeScanner}><X size={20} color={C.ink} /></RoundButton></View>
+          <Text style={[s.eyebrow, { fontSize: 14, color: C.teal }]}>Voerscanner</Text>
+        </View>
         <View style={{ borderRadius: 24, backgroundColor: '#fff', borderWidth: 1, borderColor: C.border }}><RoundButton label="Scanhistorie" onPress={() => router.push('/(tabs)/scanner/history')}><History size={20} color={C.ink} /></RoundButton></View>
       </View>
-      <Text style={[s.title, { paddingHorizontal: 4, paddingTop: 2 }]}>Welk voer wil je scannen?</Text>
+      <Text style={[s.title, { paddingHorizontal: 4, paddingTop: 2 }, compact && { fontSize: 26, lineHeight: 29 }]}>Welk voer wil je scannen?</Text>
       <Text style={[s.body, { color: C.muted, paddingHorizontal: 4, marginBottom: 6 }]}>Ontdek wat er écht in paardenvoer zit en hoe de samenstelling scoort!</Text>
       <ScannerStepProgress step={1} />
-      <View style={{ backgroundColor: C.deep, borderRadius: 22, padding: 20, gap: 16, overflow: 'hidden' }}>
+      <View style={{ backgroundColor: C.deep, borderRadius: 22, padding: compact ? 16 : 20, gap: compact ? 12 : 16, overflow: 'hidden' }}>
         <View style={{ flexDirection: 'row', gap: 12, alignItems: 'flex-start' }}>
           <View style={{ width: 44, height: 44, borderRadius: 14, backgroundColor: 'rgba(255,255,255,0.14)', alignItems: 'center', justifyContent: 'center' }}><ScanLine size={22} color="#fff" /></View>
           <View style={{ flex: 1 }}><Text style={[s.heading, { color: '#fff', fontSize: 19, lineHeight: 23 }]}>Scan de ingrediëntenlijst</Text><Text style={[s.small, { fontSize: 14, lineHeight: 20, color: 'rgba(255,255,255,0.85)', marginTop: 3 }]}>Maak een foto van het gedeelte op de verpakking waar alle ingrediënten staan vermeld. Zoek op de zak naar “Samenstelling” of “Ingrediënten”. Een screenshot van een webshop mag ook.</Text></View>
         </View>
-        <View style={{ flexDirection: 'row', gap: 8 }}>
-          <View style={{ flex: 1.3 }}><ScannerButton title="Camera" variant="white" disabled={picking} icon={<Camera size={20} color={C.deep} />} onPress={() => void pick('composition', true)} /></View>
-          <View style={{ flex: 1 }}><ScannerButton title="Uploaden" variant="dark-outline" disabled={picking} icon={<Upload size={19} color="#fff" />} onPress={() => void pick('composition', false)} /></View>
+        {/* Side by side the labels no longer fit with large system text. */}
+        <View style={{ flexDirection: fontScale >= 1.3 ? 'column' : 'row', gap: 8 }}>
+          <View style={{ flex: fontScale >= 1.3 ? undefined : 1.3 }}><ScannerButton title="Camera" variant="white" disabled={picking} icon={<Camera size={20} color={C.deep} />} onPress={() => void pick('composition', true)} /></View>
+          <View style={{ flex: fontScale >= 1.3 ? undefined : 1 }}><ScannerButton title="Uploaden" variant="dark-outline" disabled={picking} icon={<Upload size={19} color="#fff" />} onPress={() => void pick('composition', false)} /></View>
         </View>
         <Pressable accessibilityRole="button" onPress={() => { setExampleType('ingredients'); setExampleOpen(true); }} style={{ minHeight: 44, justifyContent: 'center' }}>
           <Text style={[s.small, { color: '#fff', textDecorationLine: 'underline' }]}>Klik hier voor een voorbeeld van een ingrediëntenlijst.</Text>
@@ -270,7 +276,7 @@ export default function ScannerScreen() {
       </View>
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: 8, paddingVertical: 4 }}><View style={{ height: 1, backgroundColor: 'rgba(27,42,42,0.15)', flex: 1 }} /><Text style={s.small}>of</Text><View style={{ height: 1, backgroundColor: 'rgba(27,42,42,0.15)', flex: 1 }} /></View>
       <Pressable accessibilityRole="button" accessibilityLabel="Zoek op merk of productnaam" onPress={() => setScreen('search')} style={[s.row, { minHeight: 56, paddingHorizontal: 16, borderColor: 'rgba(27,42,42,0.15)' }]}><Search size={20} color={C.teal} /><Text style={[s.body, { fontSize: 17, color: C.muted }]}>Zoek op merk of productnaam</Text></Pressable>
-      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 10 }}><Text style={s.eyebrow}>Laatst gescand</Text><Pressable accessibilityRole="button" onPress={() => router.push('/(tabs)/scanner/history')} style={{ minHeight: 44, justifyContent: 'center' }}><Text style={[s.body, { color: C.teal, fontFamily: 'SourceSans3_700Bold' }]}>Alles »</Text></Pressable></View>
+      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 10 }}><Text style={s.eyebrow}>Laatst gescand</Text><Pressable accessibilityRole="button" onPress={() => router.push('/(tabs)/scanner/history')} style={{ minHeight: 44, minWidth: 44, alignItems: 'flex-end', justifyContent: 'center' }}><Text style={[s.body, { color: C.teal, fontFamily: 'SourceSans3_700Bold' }]}>Alles »</Text></Pressable></View>
       <View style={{ gap: 8 }}>{scans.slice(0, 3).map(scan => <ScanRow key={scan.id} scan={scan} compact />)}{!scans.length && <View style={s.card}><Text style={s.rowTitle}>Hier verschijnen straks jouw scans!</Text><Text style={s.small}>Scan je eerste voer en ontdek hoe de samenstelling scoort.</Text></View>}</View>
     </>}
     {screen === 'search' && <>

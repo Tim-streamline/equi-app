@@ -83,8 +83,8 @@ export function LibraryContent({ itemId, preview }: { itemId: string; preview?: 
         {data.chapters.length > 0 && <>
           <SectionTitle>Hoofdstukken</SectionTitle>
           <View className="px-4">{data.chapters.map((chapter, index) => <View key={chapter.id} className="flex-row items-center gap-3 rounded-xl p-3.5">
-            <Text className="font-bold text-ink-50">{String(index + 1).padStart(2, '0')}</Text>
-            <Text className="flex-1 text-[14px] text-ink">{chapter.title}</Text><Text className="text-[12px] text-ink-50">{chapter.startLabel}</Text>
+            <Text className="font-bold text-ink-70">{String(index + 1).padStart(2, '0')}</Text>
+            <Text className="flex-1 text-[14px] text-ink">{chapter.title}</Text><Text className="text-[12px] text-ink-70">{chapter.startLabel}</Text>
           </View>)}</View>
         </>}
         <LibraryAttachments itemId={itemId} attachments={data.attachments ?? []} />

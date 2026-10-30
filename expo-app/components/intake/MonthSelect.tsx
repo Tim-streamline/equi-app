@@ -11,8 +11,8 @@ export function MonthSelect({ value, options, onChange, disabled, label }: { val
     <Modal transparent visible={open} animationType="fade" onRequestClose={() => setOpen(false)}>
       <View className="flex-1 justify-center bg-black/40 px-6 py-12"><View accessibilityViewIsModal className="max-h-full rounded-2xl bg-white p-4">
         <Text className="mb-2 font-bold text-[17px] text-ink">{label}</Text>
-        <ScrollView>{options.map(option => <Pressable key={option.value} accessibilityRole="radio" accessibilityState={{ selected: value === option.value }} onPress={() => { onChange(option.value); setOpen(false); }} className="min-h-12 justify-center border-b border-ink-8 py-3"><Text className={value === option.value ? 'font-bold text-mint-700' : 'text-ink'}>{option.label}</Text></Pressable>)}</ScrollView>
-        <Pressable accessibilityRole="button" onPress={() => setOpen(false)} className="items-center py-3"><Text className="font-bold text-mint-700">Sluiten</Text></Pressable>
+        <ScrollView>{options.map(option => <Pressable key={option.value} accessibilityRole="radio" accessibilityState={{ selected: value === option.value }} onPress={() => { onChange(option.value); setOpen(false); }} className="min-h-12 justify-center border-b border-ink-8 py-3"><Text className={value === option.value ? 'font-bold text-teal-600' : 'text-ink'}>{option.label}</Text></Pressable>)}</ScrollView>
+        <Pressable accessibilityRole="button" onPress={() => setOpen(false)} className="items-center py-3"><Text className="font-bold text-teal-600">Sluiten</Text></Pressable>
       </View></View>
     </Modal>
   </>;

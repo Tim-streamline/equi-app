@@ -52,7 +52,7 @@ export default function IntakeSent() {
           </View>
 
           <Text
-            className="mb-2 font-semi-italic text-mint-700"
+            className="mb-2 font-semi-italic text-teal-600"
             style={{ fontSize: 13, letterSpacing: 0.2 }}
           >
             Dankjewel, {firstName}.
@@ -128,7 +128,7 @@ function TimelineStep({
     <View className="flex-row gap-3">
       <View className={`mt-1 h-3 w-3 rounded-full border-2 ${dotClass}`} />
       <View className="flex-1">
-        <Text className="text-[11px] text-ink-50">{when}</Text>
+        <Text className="text-[11px] text-ink-70">{when}</Text>
         <Text
           className={`mt-0.5 font-semi text-[13.5px] ${
             state === 'todo' ? 'text-ink-70' : 'text-ink'

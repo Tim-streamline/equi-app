@@ -30,7 +30,12 @@ function screen() {
       useState(initial) { const index = cursor++; if (!(index in values)) values[index] = initial; return [values[index], value => { values[index] = typeof value === 'function' ? value(values[index]) : value; }]; },
       useEffect() {}, useMemo: fn => fn(), useRef: () => ({ current: { focus: () => focused++, blur: () => {}, measureInWindow: fn => fn(20, 160, 120, 44) } }),
     },
-    'react-native': { ...Object.fromEntries(['View', 'Text', 'ScrollView', 'Pressable', 'TextInput', 'ActivityIndicator', 'Modal'].map(name => [name, name])), useWindowDimensions: () => ({ width: 400, height: 800 }) },
+    'react-native': {
+      ...Object.fromEntries(['View', 'Text', 'ScrollView', 'Pressable', 'TextInput', 'ActivityIndicator', 'Modal'].map(name => [name, name])),
+      // Render every row so assertions see the whole list.
+      FlatList: ({ data, renderItem, ListHeaderComponent, ListEmptyComponent }) => ({ type: 'FlatList', props: { children: [ListHeaderComponent, ...(data.length ? data.map((item, index) => renderItem({ item, index })) : [ListEmptyComponent])] } }),
+      useWindowDimensions: () => ({ width: 400, height: 800 }),
+    },
     'react-native-safe-area-context': { SafeAreaView: 'SafeAreaView' },
     'expo-router': { useLocalSearchParams: () => ({}) },
     'lucide-react-native': { Search: 'Search', ChevronDown: 'ChevronDown', Check: 'Check', X: 'X', SlidersHorizontal: 'SlidersHorizontal', ChevronLeft: 'ChevronLeft' },

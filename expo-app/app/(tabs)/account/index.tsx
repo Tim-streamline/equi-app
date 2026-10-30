@@ -20,6 +20,7 @@ import {
   usePlan,
 } from '@/db/hooks';
 import { useDb } from '@/db/provider';
+import { joinMeta, subscriptionPriceLabel } from '@/lib/subscription';
 import { SubHeader } from '@/components/ui/SubHeader';
 
 const SETTINGS_ICONS: Record<string, any> = {
@@ -100,8 +101,8 @@ export default function AccountScreen() {
                 </LinearGradient>
                 <View className="flex-1">
                   <Text className="font-bold text-ink" style={{ fontSize: 17 }}>{user.name as string}</Text>
-                  <Text className="text-[12px] text-ink-50">
-                    {(user.email as string) ?? ''} · {formatJoinedLabel(user.createdAt as string)}
+                  <Text className="text-[12px] text-ink-70">
+                    {joinMeta(user.email as string, formatJoinedLabel(user.createdAt as string))}
                   </Text>
                 </View>
                 <ChevronRight size={18} color="rgba(27,42,42,0.5)" />
@@ -122,8 +123,8 @@ export default function AccountScreen() {
                   </View>
                   <View className="flex-1">
                     <Text className="font-bold text-ink text-[15px]">{active.name as string}</Text>
-                    <Text className="text-[12px] text-ink-50">
-                      {(active.breed as string)} · {active.age as number} jr
+                    <Text className="text-[12px] text-ink-70">
+                      {joinMeta(active.breed as string, active.age ? `${active.age} jr` : null)}
                     </Text>
                   </View>
                   <Chip label="Actief" variant="success" />
@@ -149,13 +150,13 @@ export default function AccountScreen() {
                   <View className="flex-row items-start justify-between">
                     <View>
                       <View className="self-start rounded-pill bg-mint-500 px-3 py-1">
-                        <Text className="font-semi text-white text-[12px]">Abonnement</Text>
+                        <Text className="font-semi text-teal-900 text-[12px]">Abonnement</Text>
                       </View>
                       <Text className="font-bold text-white mt-2.5" style={{ fontSize: 20 }}>
                         EquiApp abonnement
                       </Text>
                       <Text className="text-white/70 mt-0.5 text-[12px]">
-                        {(subscription.renewsLabel as string) ?? ''} · € {((subscription.priceCents as number) / 100).toFixed(0)} {plan.priceSuffix as string}
+                        {joinMeta(subscription.renewsLabel as string, subscriptionPriceLabel(subscription.priceCents as number, subscription.interval as string, plan.priceSuffix as string))}
                       </Text>
                     </View>
                     <ChevronRight size={18} color="rgba(255,255,255,0.7)" />
@@ -165,7 +166,7 @@ export default function AccountScreen() {
             </>
           )}
 
-          <View className="px-4 mb-5"><Card onPress={() => router.push('/(tabs)/account/credits')}><View className="flex-row items-center justify-between"><View><Text className="font-bold text-[16px] text-ink">Credits</Text><Text className="text-[13px] text-ink-50">Saldo, bijkopen en creditgeschiedenis</Text></View><ChevronRight size={18} color="#127A79" /></View></Card></View>
+          <View className="px-4 mb-5"><Card onPress={() => router.push('/(tabs)/account/credits')}><View className="flex-row items-center justify-between"><View><Text className="font-bold text-[16px] text-ink">Credits</Text><Text className="text-[13px] text-ink-70">Saldo, bijkopen en creditgeschiedenis</Text></View><ChevronRight size={18} color="#127A79" /></View></Card></View>
           <SectionTitle>Algemeen</SectionTitle>
           <View className="px-4">
             {accountRows.map((r) => {
@@ -182,7 +183,7 @@ export default function AccountScreen() {
                     <Icon size={20} color="rgba(27,42,42,0.7)" />
                     <View>
                       <Text className="font-medium text-ink text-[14px]">{r.title as string}</Text>
-                      {r.subtitle ? <Text className="text-[11px] text-ink-50">{r.subtitle as string}</Text> : null}
+                      {r.subtitle ? <Text className="text-[11px] text-ink-70">{r.subtitle as string}</Text> : null}
                     </View>
                   </View>
                   <ChevronRight size={16} color="rgba(27,42,42,0.5)" />
@@ -208,10 +209,10 @@ export default function AccountScreen() {
                 {loggingOut ? 'Uitloggen…' : 'Uitloggen'}
               </Text>
             </Pressable>
-            <Text className="mt-2 text-center text-[11px] text-ink-50">
+            <Text className="mt-2 text-center text-[11px] text-ink-70">
               Ingelogd als {(user.email as string) ?? ''}
             </Text>
-            <Text className="mt-1 text-center text-[11px] text-ink-50">
+            <Text className="mt-1 text-center text-[11px] text-ink-70">
               v{Constants.expoConfig?.version ?? '0.0.0'}
             </Text>
           </View>

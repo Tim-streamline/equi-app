@@ -5,7 +5,7 @@ import { Redirect, router, useLocalSearchParams } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { SubHeader } from '@/components/ui/SubHeader';
 import { Field } from '@/components/ui/Field';
-import { Button } from '@/components/ui/Button';
+import { Button, PRIMARY_INK } from '@/components/ui/Button';
 import { useStoreMutations } from '@/db/hooks';
 import { useDb } from '@/db/provider';
 
@@ -50,7 +50,7 @@ export default function AddHorseScreen() {
       <SubHeader title="Paard toevoegen" onBack={finish} />
       <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 40 }}>
         <Text className="mb-2 font-bold text-[26px] text-ink">Vertel me over je paard.</Text>
-        <Text className="mb-6 text-[14px] text-ink-50">Alleen de naam is verplicht. Je kunt deze stap overslaan en later een paard toevoegen via Mijn paarden.</Text>
+        <Text className="mb-6 text-[14px] text-ink-70">Alleen de naam is verplicht. Je kunt deze stap overslaan en later een paard toevoegen via Mijn paarden.</Text>
         <Field label="Naam van je paard" accessibilityLabel="Naam van je paard" value={name} onChangeText={setName} editable={!busy} maxLength={255} />
         <Field label="Ras (optioneel)" accessibilityLabel="Ras" value={breed} onChangeText={setBreed} editable={!busy} maxLength={255} />
         <View className="flex-row gap-3">
@@ -63,7 +63,7 @@ export default function AddHorseScreen() {
         </View>
         {!!error && <Text accessibilityRole="alert" className="mb-4 text-[14px] text-red-700">{error}</Text>}
         <View className="mt-3 gap-3">
-          <Button title={busy ? 'Paard opslaan…' : 'Paard toevoegen'} onPress={() => void save()} disabled={busy} trailing={busy ? <ActivityIndicator color="#fff" /> : undefined} />
+          <Button title={busy ? 'Paard opslaan…' : 'Paard toevoegen'} onPress={() => void save()} disabled={busy} trailing={busy ? <ActivityIndicator color={PRIMARY_INK} /> : undefined} />
           <Button title="Nu overslaan" variant="ghost" onPress={finish} disabled={busy} />
         </View>
       </ScrollView>

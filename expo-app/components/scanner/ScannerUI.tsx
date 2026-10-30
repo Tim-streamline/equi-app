@@ -1,9 +1,9 @@
 import type { ReactNode } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
-import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { router } from 'expo-router';
-import { ChevronLeft, BookOpen, ChevronRight, ClipboardList, History, Home, UserRound, ShoppingBag, ScanLine } from 'lucide-react-native';
+import { ChevronLeft, ChevronRight, History, ShoppingBag } from 'lucide-react-native';
 import { legacyScanScore, scanScoreLabel, type ScannerRow } from '@/lib/scanner-presentation';
 
 export const C = { canvas: '#FBF8F3', ink: '#1B2A2A', muted: 'rgba(27,42,42,0.7)', border: 'rgba(27,42,42,0.08)',
@@ -16,8 +16,8 @@ export function ScannerStepProgress({ step }: { step: 1 | 2 | 3 | 4 }) {
   </View>;
 }
 
-export function ScannerFrame({ title, onBack, children, navigation = false, header = true, scroll = true, showHistory = true, headerContent, footer, largeTitle = false }: {
-  title?: string; onBack?: () => void; children: ReactNode; navigation?: boolean; header?: boolean; scroll?: boolean; showHistory?: boolean; headerContent?: ReactNode; footer?: ReactNode; largeTitle?: boolean;
+export function ScannerFrame({ title, onBack, children, header = true, scroll = true, showHistory = true, headerContent, footer, largeTitle = false }: {
+  title?: string; onBack?: () => void; children: ReactNode; header?: boolean; scroll?: boolean; showHistory?: boolean; headerContent?: ReactNode; footer?: ReactNode; largeTitle?: boolean;
 }) {
   return <View style={s.screen}>
     <StatusBar style="dark" />
@@ -29,26 +29,15 @@ export function ScannerFrame({ title, onBack, children, navigation = false, head
       </View>}
       {scroll ? <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={s.content}>{children}</ScrollView> : children}
       {footer && <View style={{ paddingHorizontal: 16, paddingTop: 12, gap: 4, backgroundColor: C.canvas }}>{footer}</View>}
-      {navigation ? <ScannerNavigation /> : <SafeAreaView edges={['bottom']} />}
+      <SafeAreaView edges={['bottom']} />
     </SafeAreaView>
   </View>;
 }
 
-function ScannerNavigation() {
-  const insets = useSafeAreaInsets();
-  const tabs = [
-    { label: 'Home', icon: Home, href: '/(tabs)/(pager)/home' },
-    { label: 'Protocol', icon: ClipboardList, href: '/(tabs)/(pager)/protocol' },
-    { label: 'Scan', icon: ScanLine, href: '/(tabs)/scanner' },
-    { label: 'Bibliotheek', icon: BookOpen, href: '/(tabs)/(pager)/library' },
-    { label: 'Account', icon: UserRound, href: '/(tabs)/account' },
-  ] as const;
-  return <View style={{ flexDirection: 'row', borderTopWidth: 1, borderColor: C.border, backgroundColor: '#fff', paddingTop: 8, paddingBottom: Math.max(insets.bottom, 10) }}>
-    {tabs.map(({ label, icon: Icon, href }) => <Pressable key={label} accessibilityRole="button" accessibilityLabel={label} accessibilityState={{ selected: label === 'Scan' }} onPress={() => router.navigate(href)} style={s.navItem}>
-      <Icon size={23} color={label === 'Scan' ? C.teal : C.muted} strokeWidth={label === 'Scan' ? 2.5 : 1.8} />
-      <Text style={{ fontFamily: 'SourceSans3_600SemiBold', fontSize: 11, color: label === 'Scan' ? C.teal : C.muted }}>{label}</Text>
-    </Pressable>)}
-  </View>;
+/** Leaves the full-screen scanner; it opens over the tabs as a modal. */
+export function closeScanner() {
+  if (router.canGoBack()) router.back();
+  else router.replace('/(tabs)/(pager)/home');
 }
 
 export function RoundButton({ label, onPress, children }: { label: string; onPress: () => void; children: ReactNode }) {
@@ -97,7 +86,6 @@ export const s = StyleSheet.create({
   headerTitle: { flex: 1, textAlign: 'center', fontSize: 17, color: C.ink, fontFamily: 'SourceSans3_600SemiBold' },
   content: { padding: 16, paddingTop: 4, paddingBottom: 40, gap: 12, flexGrow: 1 },
   round: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center', borderRadius: 22 },
-  navItem: { flex: 1, minHeight: 44, alignItems: 'center', justifyContent: 'center', gap: 3 },
   button: { minHeight: 52, borderRadius: 14, paddingHorizontal: 15, paddingVertical: 12, flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 8 },
   buttonText: { fontSize: 16, fontFamily: 'SourceSans3_600SemiBold', textAlign: 'center', flexShrink: 1 },
   title: { fontSize: 30, lineHeight: 33, color: C.ink, fontFamily: 'SourceSans3_700Bold' },

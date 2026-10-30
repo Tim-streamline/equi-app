@@ -5,6 +5,7 @@ import {
 } from 'react-native';
 import { router } from 'expo-router';
 import { Send } from 'lucide-react-native';
+import { PRIMARY_INK } from '@/components/ui/Button';
 import { useQuery } from '@powersync/react';
 import { ShelbyAvatar } from '@/components/shelby/ShelbyAvatar';
 import {
@@ -15,6 +16,7 @@ import { askShelby } from '@/lib/shelby-api';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useHorseDashboard } from '@/hooks/useHorseDashboard';
 import { useCurrentUserId, useChatMessages } from '@/db/hooks';
+import { impactHaptic } from '@/lib/haptics';
 
 const newId = () => typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function'
   ? crypto.randomUUID()
@@ -80,6 +82,7 @@ export default function NovaChatModal() {
   const ask = async () => {
     const question = input.trim();
     if (!question || busy || !horseId) return;
+    impactHaptic();
     const clientId = questionId(failed.current, question, horseId, newId);
     failed.current = null;
     setInput('');
@@ -109,10 +112,12 @@ export default function NovaChatModal() {
   return (
     <KeyboardViewport style={{ flex: 1 }}>
     <Pressable
+      className="active:opacity-100"
       style={{ flex: 1, backgroundColor: 'rgba(11,42,41,0.45)', justifyContent: 'flex-end' }}
       onPress={() => router.back()}
     >
       <Pressable
+        className="active:opacity-100"
         onPress={() => {}}
         style={{
           backgroundColor: '#fff',
@@ -138,7 +143,7 @@ export default function NovaChatModal() {
             <ShelbyMessage named>
               <Text className="text-[14px] leading-[21px] text-ink">{SHELBY_WELCOME}</Text>
             </ShelbyMessage>
-            <Text className="ml-9 text-[11px] leading-[16px] text-ink-50">{SHELBY_AI_NOTICE}</Text>
+            <Text className="ml-9 text-[11px] leading-[16px] text-ink-70">{SHELBY_AI_NOTICE}</Text>
             {messages.map((m) => m.role === 'assistant' ? (
               <ShelbyMessage key={m.id}>
                 <Text className="text-[14px] leading-[21px] text-ink">{m.body}</Text>
@@ -163,17 +168,17 @@ export default function NovaChatModal() {
               value={input}
               onChangeText={setInput}
               onSubmitEditing={() => void ask()}
-              placeholder={`Vraag iets over ${data?.horse.name ?? 'je paard'}...`}
-              placeholderTextColor="rgba(27,42,42,0.4)"
-              className="flex-1 rounded-pill bg-canvas-2 px-4 py-3 font-sans text-[14px] text-ink"
+              placeholder={`Vraag iets over ${data?.horse.name || 'je paard'}…`}
+              placeholderTextColor="rgba(27,42,42,0.55)"
+              className="min-w-0 flex-1 rounded-pill bg-canvas-2 px-4 py-3 font-sans text-[16px] text-ink"
             />
             <Pressable
               onPress={() => void ask()}
               accessibilityRole="button" accessibilityLabel={`Verstuur je vraag aan ${SHELBY_NAME}`}
               disabled={busy || !horseId || !input.trim()}
-              className={`h-10 w-10 items-center justify-center rounded-full ${busy ? 'bg-ink-15' : 'bg-mint-500'}`}
+              className={`h-11 w-11 items-center justify-center rounded-full ${busy ? 'bg-ink-15' : 'bg-mint-500'}`}
             >
-              <Send size={16} color="#fff" />
+              <Send size={18} color={busy ? "#fff" : PRIMARY_INK} />
             </Pressable>
           </View>
         </ScrollView>

@@ -47,11 +47,11 @@ export default function MyHorsesScreen() {
                 </View>
                 <View className="flex-1">
                   <Text className="font-bold text-ink" style={{ fontSize: 18 }}>{h.name as string}</Text>
-                  <Text className="mt-0.5 text-[12px] text-ink-50">
+                  <Text className="mt-0.5 text-[12px] text-ink-70">
                     {h.breed as string} · {h.age as number} jaar · {h.sex as string}
                   </Text>
                   {h.archivedNote ? (
-                    <Text className="mt-1.5 font-italic text-[11px] text-ink-50">
+                    <Text className="mt-1.5 font-italic text-[11px] text-ink-70">
                       {h.archivedNote as string}
                     </Text>
                   ) : null}
@@ -109,7 +109,7 @@ function ActiveHorseCard({ horse }: { horse: any }) {
             <Text className="font-bold text-ink" style={{ fontSize: 19 }}>{horse.name}</Text>
             <Chip label="Actief" variant="success" />
           </View>
-          <Text className="mt-0.5 text-[12px] text-ink-50">
+          <Text className="mt-0.5 text-[12px] text-ink-70">
             {horse.breed} · {horse.age} jaar · {horse.sex} · {horse.weightKg} kg
           </Text>
         </View>
@@ -123,15 +123,15 @@ function ShareRow({ name, sub, bg, initial }: { name: string; sub: string; bg: s
     <View className="flex-row items-center justify-between border-b border-ink-8 py-3">
       <View className="flex-row items-center gap-3 flex-1">
         <View className="h-8 w-8 items-center justify-center rounded-full" style={{ backgroundColor: bg }}>
-          <Text className="font-bold text-white text-[12px]">{initial}</Text>
+          <Text className="font-bold text-white text-[12px]" maxFontSizeMultiplier={1.2}>{initial}</Text>
         </View>
         <View className="flex-1">
           <Text className="font-semi text-ink text-[14px]">{name}</Text>
-          <Text className="text-[11px] text-ink-50">{sub}</Text>
+          <Text className="text-[11px] text-ink-70">{sub}</Text>
         </View>
       </View>
       <Pressable hitSlop={8}>
-        <Text className="font-semi text-mint-700 text-[13px]">Beheer</Text>
+        <Text className="font-semi text-teal-600 text-[13px]">Beheer</Text>
       </Pressable>
     </View>
   );

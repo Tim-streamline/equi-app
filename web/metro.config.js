@@ -19,8 +19,17 @@ const overrides = new Map([
   ['app/_layout.tsx', 'components/RootLayout.tsx'],
   ['components/community/MediaGallery.tsx', 'components/MediaGallery.tsx'],
 ].map(([source, target]) => [path.join(shared, source), path.resolve(__dirname, target)]));
+// Shared app code gets brand defaults for Text and Pressable (see that module and
+// ../expo-app/metro.config.js for why it sits alone in its directory).
+const uiDefaultsDir = path.join(shared, 'components/react-native-defaults');
+const uiDefaults = path.join(uiDefaultsDir, 'index.tsx');
+const appSource = [shared, path.resolve(__dirname, 'components')].map(dir => dir + path.sep);
 config.resolver.resolveRequest = (context, moduleName, platform) => {
   if (moduleName === '@powersync/react-native') moduleName = '@powersync/common';
+  const origin = context.originModulePath;
+  if (moduleName === 'react-native' && path.dirname(origin) !== uiDefaultsDir && appSource.some(dir => origin.startsWith(dir)) && !origin.includes(`${path.sep}node_modules${path.sep}`)) {
+    moduleName = uiDefaults;
+  }
   if (moduleName.startsWith('@/')) moduleName = path.join(shared, moduleName.slice(2));
   const resolved = context.resolveRequest(context, moduleName, platform);
   if (resolved.type === 'sourceFile' && overrides.has(resolved.filePath)) {

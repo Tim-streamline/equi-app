@@ -24,7 +24,7 @@ export function PhotoExample({ field }: { field: Field }) {
   if (!url) return null;
   return <View className="my-3 gap-2">
     <Image source={{ uri }} resizeMode="contain" style={{ width: '100%', ...(aspectRatio ? { aspectRatio } : { height: 280 }) }} accessibilityLabel={field.photoConfig?.example_caption ?? field.label} />
-    {!!field.photoConfig?.example_caption && <Text className="text-xs text-ink-50">{field.photoConfig.example_caption}</Text>}
+    {!!field.photoConfig?.example_caption && <Text className="text-xs text-ink-70">{field.photoConfig.example_caption}</Text>}
     {!!field.photoConfig?.example_after && <Text className="text-[16px] leading-[23px] text-ink-70">{field.photoConfig.example_after}</Text>}
   </View>;
 }
@@ -52,8 +52,8 @@ export function ConfiguredPhotoField({ field, sectionId, value, onChange, design
     return <View className="gap-1">
       <Text className="text-xs text-ink">Jaartal van deze foto *</Text>
       {readOnly ? <Text className="text-sm text-ink">{year}</Text> : <IntakeInputFrame radius={8} className="rounded-lg border border-ink-15"><IntakeTextInput accessibilityLabel="Jaartal van deze foto" keyboardType="number-pad" maxLength={4} value={year}
-        placeholder="Bijv. 2023" onChangeText={text => setField('__photos', key, text)} className="px-3 py-2 text-ink" /></IntakeInputFrame>}
-      <Text className="text-xs text-ink-50">Een schatting is ook goed.</Text>
+        placeholder="Bijv. 2023" onChangeText={text => setField('__photos', key, text)} className="px-3 py-2 font-sans text-[16px] text-ink" /></IntakeInputFrame>}
+      <Text className="text-xs text-ink-70">Een schatting is ook goed.</Text>
       {!validPhotoYear(year) && <Text className="text-xs text-danger">Vul een geldig jaartal in.</Text>}
     </View>;
   } : undefined;
@@ -63,7 +63,7 @@ export function ConfiguredPhotoField({ field, sectionId, value, onChange, design
       <Text className="text-xs text-ink">{config.caption.label}</Text>
       {readOnly ? <Text className="text-sm text-ink">{String(metadata[`caption-${photoId(ref)}`] ?? '')}</Text> : <IntakeInputFrame radius={8} className="rounded-lg border border-ink-15"><IntakeTextInput accessibilityLabel={config.caption.label} value={String(metadata[`caption-${photoId(ref)}`] ?? '')}
         placeholder={config.caption.placeholder} onChangeText={text => setField('__photos', `caption-${photoId(ref)}`, text)}
-        className="px-3 py-2 text-ink" /></IntakeInputFrame>}
+        className="px-3 py-2 font-sans text-[16px] text-ink" /></IntakeInputFrame>}
     </View>}
   </View> : undefined;
   return <View className="gap-3">
@@ -76,8 +76,8 @@ export function ConfiguredPhotoField({ field, sectionId, value, onChange, design
       </View>}
       <Text className={design ? 'text-[13px] text-ink-70' : 'text-sm text-ink'}>{design ? '' : na ? '☑ ' : '☐ '}Niet van toepassing{design ? ' op mijn paard' : ''}</Text>
     </Pressable>}
-    {na ? (design ? readOnly && <Text className="text-sm text-ink-50">Niet van toepassing</Text>
-      : <Text className="text-sm text-ink-50">{readOnly ? 'Niet van toepassing' : 'Afgehandeld. Je kunt deze keuze later wijzigen. Eerder toegevoegde foto’s blijven bewaard.'}</Text>)
+    {na ? (design ? readOnly && <Text className="text-sm text-ink-70">Niet van toepassing</Text>
+      : <Text className="text-sm text-ink-70">{readOnly ? 'Niet van toepassing' : 'Afgehandeld. Je kunt deze keuze later wijzigen. Eerder toegevoegde foto’s blijven bewaard.'}</Text>)
       : <>
         {design && <PhotoInstructions field={field} design />}
         {design && <PhotoExample field={field} />}
@@ -105,14 +105,14 @@ export function ConfiguredPhotoField({ field, sectionId, value, onChange, design
               const occupied = refs.some(other => other !== ref && slotOf(other) === slot.id);
               return <Pressable key={slot.id} disabled={occupied || readOnly} accessibilityRole="button" accessibilityState={{ disabled: occupied }}
                 onPress={() => setSlot(ref, slot.id)} className="rounded-lg border border-ink-15 p-2">
-                <Text className={occupied ? 'text-ink-50' : 'text-mint-700'}>{slot.label}{occupied ? ' (ingevuld)' : ''}</Text>
+                <Text className={occupied ? 'text-ink-70' : 'text-teal-600'}>{slot.label}{occupied ? ' (ingevuld)' : ''}</Text>
               </Pressable>;
             })}</View>} />
         </View>}
       </View> : <AttachmentField value={refs} onChange={change} section={sectionId} field={field.id} photo
         max={config.existing_only ? 0 : config.max} renderMetadata={renderMetadata} photoDesign={design} />}
       </>}
-    {!!config.max && refs.length < config.max && !na && !design && <Text className="text-xs text-ink-50">Maximaal {config.max} {config.max === 1 ? 'foto' : 'foto’s'}.</Text>}
+    {!!config.max && refs.length < config.max && !na && !design && <Text className="text-xs text-ink-70">Maximaal {config.max} {config.max === 1 ? 'foto' : 'foto’s'}.</Text>}
   </View>;
 }
 
@@ -135,7 +135,7 @@ function GroupedHoofPhotos({ field, sectionId, design }: { field: Field; section
       </View>
       <Text className="text-[13px] text-ink-70">Niet van toepassing op mijn paard</Text>
     </Pressable>}
-    {na ? readOnly && <Text className="text-sm text-ink-50">Niet van toepassing</Text> : <>
+    {na ? readOnly && <Text className="text-sm text-ink-70">Niet van toepassing</Text> : <>
       <PhotoInstructions field={field} design={design} />
       <PhotoExample field={field} />
       {groups.map(group => <View key={group.field} className="gap-3 pt-2">

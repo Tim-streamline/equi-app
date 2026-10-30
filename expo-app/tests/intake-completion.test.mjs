@@ -22,7 +22,7 @@ function overview(answers,submittedAt=null,s={id:'test',nr:0,title:'Test',fields
   'react-native-safe-area-context':{SafeAreaView:'SafeAreaView',useSafeAreaInsets:()=>({bottom:0})}, 'lucide-react-native':{},
   'expo-router':{router:{replace(){},push:route=>routes.push(route)},useNavigation:()=>({canGoBack:()=>false})},
   '@/components/intake/SubmissionBlockNotice': { SubmissionBlockNotice: 'SubmissionBlockNotice' },
-    '@/components/ui/Button':{Button:'Button'}, '@/components/ui/IconButton':{IconButton:'IconButton'},
+    '@/components/ui/Button':{Button:'Button',PRIMARY_INK:'#083635'}, '@/components/ui/IconButton':{IconButton:'IconButton'}, '@/lib/haptics':{successHaptic(){}},
   '@/components/intake/MissingQuestionsModal':{MissingQuestionsModal:'MissingQuestionsModal'},
   '@/lib/intake/submission':{formatIntakeDate},'@/lib/intake/logic':logic,
   '@/lib/intake/store':{formatSavedAgo:()=>null,useIntake:()=>({submissionBlocks:blocks,state:{answers,submittedAt},loaded:true,submitting:false,submit:async()=>{submissions++;}})},

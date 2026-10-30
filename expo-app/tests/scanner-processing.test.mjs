@@ -21,6 +21,7 @@ async function openProcessing(status, start) {
       router: { replace: target => navigation.push(target) },
     },
     '@/db/hooks': { useCurrentUserId: () => 'owner' },
+    '@/lib/haptics': { successHaptic: () => {} },
     '@/components/scanner/ScannerUI': { ScannerFrame: 'Frame', ScannerButton: 'Button', ScannerStepProgress: 'Progress', s: {} },
     '@/components/scanner/ScannerProcessingStates': { ScannerProcessingState: 'Processing' },
     '@/lib/feed-scanner-api': {
