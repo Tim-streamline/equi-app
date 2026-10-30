@@ -4603,6 +4603,7 @@ export const INTAKE_SCHEMA: Section[] = [
         "label": "Anders, namelijk",
         "type": "text",
         "showIf": {
+          "komt-op-weide": ["Ja, seizoensgebonden","Ja, het hele jaar door","Anders, namelijk"],
           "weide-omschrijving": "Anders, namelijk"
         }
       },
@@ -4748,6 +4749,7 @@ export const INTAKE_SCHEMA: Section[] = [
           "Windbeschutting / bosrand / haag"
         ],
         "showIf": {
+          "komt-op-weide": ["Ja, seizoensgebonden","Ja, het hele jaar door","Anders, namelijk"],
           "weide-schuil": [
             "Ja, altijd",
             "Meestal wel",
@@ -4789,6 +4791,7 @@ export const INTAKE_SCHEMA: Section[] = [
         "label": "Anders, namelijk",
         "type": "text",
         "showIf": {
+          "komt-op-weide": ["Ja, seizoensgebonden","Ja, het hele jaar door","Anders, namelijk"],
           "weide-bodem": "Anders, namelijk"
         }
       },

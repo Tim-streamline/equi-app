@@ -4977,6 +4977,7 @@
           "label": "Anders, namelijk",
           "type": "text",
           "showIf": {
+            "komt-op-weide": ["Ja, seizoensgebonden","Ja, het hele jaar door","Anders, namelijk"],
             "weide-omschrijving": "Anders, namelijk"
           }
         },
@@ -5122,6 +5123,7 @@
             "Windbeschutting / bosrand / haag"
           ],
           "showIf": {
+            "komt-op-weide": ["Ja, seizoensgebonden","Ja, het hele jaar door","Anders, namelijk"],
             "weide-schuil": [
               "Ja, altijd",
               "Meestal wel",
@@ -5163,6 +5165,7 @@
           "label": "Anders, namelijk",
           "type": "text",
           "showIf": {
+            "komt-op-weide": ["Ja, seizoensgebonden","Ja, het hele jaar door","Anders, namelijk"],
             "weide-bodem": "Anders, namelijk"
           }
         },
