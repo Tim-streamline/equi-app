@@ -17,6 +17,58 @@ const followups = ['wegjagen-frequentie', 'wegjagen-gedrag', 'wegjagen-reactie',
 for (const [name, schema] of [['offline bootstrap', modules['./schema'].INTAKE_SCHEMA], ['admin configuration', seed.sections], ['synced configuration', synced]]) {
   const social = schema.find(s => s.id === 'sociaal'), housing = schema.find(s => s.id === 'huisvesting');
   const visible = answers => modules['./logic'].visibleFields(social, answers.sociaal ?? {}, answers).map(f => f.id);
+  test(`${name}: Nooit is first and hides every chasing detail from required progress, including cached answers`, () => {
+    const logic = modules['./logic'];
+    const frequency = social.fields.find(f => f.id === 'wegjagen-frequentie');
+    assert.equal(frequency.options[0], 'Nooit');
+    const details = social.fields.filter(f => f.id.startsWith('wegjagen-') && f.id !== frequency.id);
+    assert.equal(details.length, 6);
+    const pair = { ...social, fields: [frequency, ...details] };
+    const values = { 'sociaal-spanning': ['Wegjagen bij voer'], 'wegjagen-frequentie': 'Nooit' };
+    const answers = { huisvesting: { 'leefruimte-paarden': 3 }, sociaal: values };
+    for (const cached of [false, true]) {
+      if (cached) for (const f of details) values[f.id] = f.type === 'multi' ? ['Anders, namelijk...'] : 'Een eerder antwoord';
+      assert.ok(visible(answers).includes(frequency.id));
+      assert.ok(details.every(f => !visible(answers).includes(f.id)));
+      assert.deepEqual(logic.missingRequired(pair, values, answers), []);
+      assert.deepEqual(logic.answeredCount(pair, values, answers), { answered: 1, total: 1 });
+      assert.equal(logic.isSectionComplete(pair, values, answers), true);
+    }
+    for (const option of frequency.options.slice(1)) {
+      values[frequency.id] = option;
+      for (const f of details) delete values[f.id];
+      for (const id of ['wegjagen-gedrag', 'wegjagen-reactie', 'wegjagen-momenten']) {
+        assert.ok(visible(answers).includes(id), option);
+        assert.ok(logic.missingRequired(pair, values, answers).some(f => f.id === id), option);
+      }
+      assert.deepEqual(logic.answeredCount(pair, values, answers), { answered: 1, total: 4 });
+    }
+  });
+  test(`${name}: species contact is required only when another animal species is selected`, () => {
+    const logic = modules['./logic'];
+    const species = social.fields.find(f => f.id === 'andere-diersoorten');
+    const contact = social.fields.find(f => f.id === 'andere-diersoorten-contact');
+    const pair = { ...social, fields: [species, contact] };
+    for (const selected of [undefined, [], ['Geen andere diersoorten']]) {
+      for (const oldContact of [undefined, 'Ja, regelmatig']) {
+        const values = { 'andere-diersoorten': selected, 'andere-diersoorten-contact': oldContact };
+        const answers = { sociaal: values };
+        assert.ok(!visible(answers).includes(contact.id));
+        assert.ok(!logic.missingRequired(pair, values, answers).some(f => f.id === contact.id));
+        assert.deepEqual(logic.answeredCount(pair, values, answers), { answered: selected?.length ? 1 : 0, total: 1 });
+        assert.equal(logic.isSectionComplete(pair, values, answers), !!selected?.length);
+      }
+    }
+    for (const option of species.options.filter(o => o !== 'Geen andere diersoorten')) {
+      const values = { 'andere-diersoorten': [option] };
+      const answers = { sociaal: values };
+      assert.ok(visible(answers).includes(contact.id), option);
+      assert.ok(logic.missingRequired(pair, values, answers).some(f => f.id === contact.id));
+      assert.deepEqual(logic.answeredCount(pair, values, answers), { answered: 1, total: 2 });
+      values[contact.id] = 'Nee';
+      assert.equal(logic.isSectionComplete(pair, values, answers), true);
+    }
+  });
   test(`${name}: housing progress excludes optional questions and agrees with completion`, () => {
     const logic = modules['./logic'];
     const values = { 'komt-op-weide': 'Nee, nooit', 'landbouw-nabij': 'Nee', 'giftige-planten': 'Nee', 'leefruimte-paarden': 1 };

@@ -11724,7 +11724,7 @@
                         "Nee",
                         "Weet ik niet"
                     ],
-                    "show_if": null,
+                    "show_if": {"andere-diersoorten": "any-checked"},
                     "flag_if": null,
                     "critical_if": null,
                     "protocol_if": null,
@@ -12331,6 +12331,7 @@
                     "placeholder": null,
                     "link": null,
                     "options": [
+                        "Nooit",
                         "Zelden (minder dan één keer per week)",
                         "Enkele keren per week",
                         "Dagelijks",
@@ -12452,6 +12453,7 @@
                     "answer_aliases": null,
                     "submission_blocks": null,
                     "show_if": {
+                        "$not": {"sociaal.wegjagen-frequentie": "Nooit"},
                         "$all": [
                             {
                                 "$all": [
@@ -12559,6 +12561,7 @@
                     "answer_aliases": null,
                     "submission_blocks": null,
                     "show_if": {
+                        "$not": {"sociaal.wegjagen-frequentie": "Nooit"},
                         "$all": [
                             {
                                 "$all": [
@@ -12677,6 +12680,7 @@
                     "answer_aliases": null,
                     "submission_blocks": null,
                     "show_if": {
+                        "$not": {"sociaal.wegjagen-frequentie": "Nooit"},
                         "$all": [
                             {
                                 "$all": [
@@ -12784,6 +12788,7 @@
                     "answer_aliases": null,
                     "submission_blocks": null,
                     "show_if": {
+                        "$not": {"sociaal.wegjagen-frequentie": "Nooit"},
                         "$all": [
                             {
                                 "$all": [
@@ -12902,6 +12907,7 @@
                     "answer_aliases": null,
                     "submission_blocks": null,
                     "show_if": {
+                        "$not": {"sociaal.wegjagen-frequentie": "Nooit"},
                         "$all": [
                             {
                                 "$all": [
@@ -13010,6 +13016,7 @@
                     "answer_aliases": null,
                     "submission_blocks": null,
                     "show_if": {
+                        "$not": {"sociaal.wegjagen-frequentie": "Nooit"},
                         "$all": [
                             {
                                 "$all": [
