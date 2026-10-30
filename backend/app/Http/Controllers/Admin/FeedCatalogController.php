@@ -391,25 +391,62 @@ class FeedCatalogController extends Controller
         return back()->with('success', 'Product gearchiveerd. De historie blijft bewaard.');
     }
 
-    /**
-     * Permanently delete a product that nobody has used yet, such as a placeholder.
-     * Anything with scans, submissions, assessments, label photos or later recipes is archived instead.
-     */
+    /** Explicitly confirmed deletion removes the product's own scanner data. */
     public function deleteProduct(Request $request, Product $product)
     {
         abort_unless($this->canPublish($request), 403);
+        $request->validate(['confirmed' => ['required', 'accepted']]);
         $label = trim($product->brand.' · '.$product->name, ' ·');
         $blocked = DB::transaction(function () use ($product) {
+            // Scanner operations lock their submission before the product too.
+            $submissions = DB::table('feed_scan_submissions')->where('product_id', $product->id)->orderBy('id')->lockForUpdate()->pluck('id');
             $record = Product::lockForUpdate()->findOrFail($product->id);
+            $versions = ProductVersion::where('product_id', $record->id)->orderBy('id')->lockForUpdate()->pluck('id');
             if ($blockers = $this->deleteBlockers($record)) {
                 return $blockers;
             }
+            $assessments = DB::table('feed_assessments')->whereIn('product_version_id', $versions)->pluck('id');
+            $photos = FeedLabelAttachment::whereIn('product_version_id', $versions)->orWhereIn('submission_id', $submissions)->get();
+            $files = $photos->concat(\App\Models\FeedScanSubmission::whereIn('id', $submissions)->get()
+                ->flatMap(fn ($submission) => $submission->currentPhotos()->values()));
             $before = $record->only('brand', 'name', 'barcode', 'category', 'catalog_status');
+            $before['removed_data'] = ['versions' => $versions->count(), 'submissions' => $submissions->count(),
+                'scans' => DB::table('scan_results')->where('product_id', $record->id)->count(), 'photos' => $photos->count(), 'assessments' => $assessments->count()];
+            // Deliberately bypass immutable-history model guards only in this confirmed
+            // deletion path, after checking that no other product relies on these rows.
+            FeedLabelAttachment::whereIn('id', $photos->modelKeys())->delete();
+            DB::table('feed_scan_submissions')->whereIn('id', $submissions)->delete();
+            DB::table('scan_results')->where('product_id', $record->id)->delete();
+            DB::table('feed_assessment_overrides')->whereIn('assessment_id', $assessments)->delete();
+            DB::table('feed_assessments')->whereIn('id', $assessments)->update(['previous_assessment_id' => null]);
+            DB::table('feed_assessments')->whereIn('id', $assessments)->delete();
             $record->forceFill(['published_version_id' => null])->save();
             $record->ingredients()->detach();
             ProductVersion::where('product_id', $record->id)->delete();
             $record->delete();
             AuditLogger::log('deleted', $record, before: $before);
+            DB::afterCommit(function () use ($files) {
+                foreach ($files->unique(fn ($photo) => $photo->disk.'|'.$photo->path) as $photo) {
+                    // Revisions and other products may share an immutable stored file.
+                    if (FeedLabelAttachment::where('disk', $photo->disk)->where('path', $photo->path)->exists()) {
+                        continue;
+                    }
+                    if (\App\Models\FeedScanSubmission::query()->where(function ($query) use ($photo) {
+                        foreach (\App\Models\FeedScanSubmission::PHOTO_SLOTS as $prefix) {
+                            $query->orWhere(fn ($slot) => $slot->where($prefix.'_photo_disk', $photo->disk)->where($prefix.'_photo_path', $photo->path));
+                        }
+                    })->exists()) {
+                        continue;
+                    }
+                    try {
+                        if (! Storage::disk($photo->disk)->delete($photo->path)) {
+                            throw new \RuntimeException('Could not clean up a deleted feed product photo.');
+                        }
+                    } catch (\Throwable $exception) {
+                        report($exception);
+                    }
+                }
+            });
 
             return [];
         });
@@ -417,23 +454,28 @@ class FeedCatalogController extends Controller
             if (in_array('een vervolgrecept', $blocked, true)) {
                 return back()->withErrors(['product' => 'Dit product hoort bij de receptgeschiedenis van een ander product. Je kunt het archiveren.']);
             }
-
-            return back()->withErrors(['product' => 'Dit product kan niet worden verwijderd, want het heeft '.implode(', ', $blocked).'. Archiveer het in plaats daarvan.']);
+            return back()->withErrors(['product' => 'Dit product kan nu niet worden verwijderd vanwege '.implode(', ', $blocked).'.']);
         }
 
         return back()->with('success', "Product {$label} verwijderd.");
     }
 
-    /** @return list<string> Reasons, in Dutch, why deleting would lose history. */
+    /** @return list<string> External dependencies and active work that prevent deletion. */
     private function deleteBlockers(Product $product): array
     {
         $versions = ProductVersion::where('product_id', $product->id)->pluck('id');
+        $submissions = DB::table('feed_scan_submissions')->where('product_id', $product->id)->pluck('id');
+        $assessments = DB::table('feed_assessments')->whereIn('product_version_id', $versions)->pluck('id');
+        $scans = DB::table('scan_results')->where('product_id', $product->id)->pluck('id');
         $checks = [
-            'scans' => DB::table('scan_results')->where('product_id', $product->id)->exists(),
-            'inzendingen uit de app' => DB::table('feed_scan_submissions')->where('product_id', $product->id)
-                ->orWhere('reference_product_id', $product->id)->orWhereIn('reference_version_id', $versions)->orWhereIn('product_version_id', $versions)->exists(),
-            'beoordelingen' => DB::table('feed_assessments')->whereIn('product_version_id', $versions)->exists(),
-            'etiketfoto\'s' => DB::table('feed_label_attachments')->whereIn('product_version_id', $versions)->exists(),
+            'een lopende scan' => DB::table('feed_scan_submissions')->whereIn('id', $submissions)->whereIn('status', ['processing', 'checking'])->exists(),
+            'inzendingen van een ander product' => DB::table('feed_scan_submissions')->whereNotIn('id', $submissions)
+                ->where(fn ($query) => $query->where('reference_product_id', $product->id)->orWhereIn('reference_version_id', $versions)
+                    ->orWhereIn('product_version_id', $versions)->orWhereIn('assessment_id', $assessments)->orWhereIn('scan_result_id', $scans))->exists(),
+            'gedeelde versiehistorie' => ProductVersion::whereNotIn('id', $versions)->whereIn('submission_id', $submissions)->exists()
+                || Product::where('id', '!=', $product->id)->whereIn('published_version_id', $versions)->exists(),
+            'gedeelde etiketgegevens' => FeedLabelAttachment::whereIn('submission_id', $submissions)->whereNotNull('product_version_id')->whereNotIn('product_version_id', $versions)->exists(),
+            'beoordelingshistorie van een ander product' => DB::table('feed_assessments')->whereNotIn('id', $assessments)->whereIn('previous_assessment_id', $assessments)->exists(),
             'een vervolgrecept' => ProductVersion::where('superseded_by_product_id', $product->id)->exists()
                 || Product::where('related_product_id', $product->id)->exists(),
         ];

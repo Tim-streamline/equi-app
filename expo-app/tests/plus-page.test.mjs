@@ -72,3 +72,21 @@ test('purchase confirmation creates the protocol without a payment step', async 
  await action.props.onPress();
  assert.equal(page.intakes, 1);
 });
+
+test('editable closing block follows the FAQ CTA without branding or a price line', () => {
+  const custom = { ...content, closingLabel: 'Laatste label', closingTitle: 'Laatste kop', closingBody: 'Laatste tekst', closingButton: 'Mijn afsluitende knop' };
+  const page = screen(undefined, custom);
+  const tree = page.render();
+  assert.ok(!tree.includes('EquiApp'));
+  const block = tree.find(node => node?.props?.testID === 'closing-block');
+  const blockTree = flatten(block);
+  for (const value of [custom.closingLabel, custom.closingTitle, custom.closingBody]) assert.ok(blockTree.includes(value));
+  assert.ok(blockTree.some(node => node?.type === 'Button' && node.props.title === custom.closingButton));
+  assert.ok(!blockTree.some(node => typeof node === 'string' && (node.includes('€') || node.includes('Basic'))));
+  const faqEnd = tree.indexOf(custom.faqs.at(-1).question);
+  const afterFaq = tree.findIndex((node, index) => index > faqEnd && node?.type === 'Button' && node.props.title === custom.priceButton);
+  assert.ok(afterFaq > faqEnd && afterFaq < tree.indexOf(block));
+  blockTree.find(node => node?.type === 'Button' && node.props.title === custom.closingButton).props.onPress();
+  assert.ok(page.render().includes('BEVESTIG JE AANKOOP'));
+  assert.equal(page.intakes, 0, 'the final CTA opens confirmation without starting intake immediately');
+});

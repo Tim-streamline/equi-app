@@ -87,6 +87,7 @@
                 {:else if tab === 'analyse'}
                     {#if protocol.analysis}<section class="rounded-[22px] bg-[#EAFBF9] p-5"><h3 class="text-xs font-semibold uppercase tracking-wide text-[#0E6F69]">Persoonlijke analyse</h3><p class="mt-3 max-w-[72ch] whitespace-pre-wrap break-words text-base leading-7">{protocol.analysis.summary}</p></section>{#each protocol.analysis.priorities as point}<section class="rounded-2xl bg-white p-4"><h3 class="text-sm font-semibold">{point.title}</h3><p class="mt-1 text-sm">{point.body}</p></section>{/each}{#if protocol.analysis.observations.length}<h3 class="text-xs font-semibold uppercase">Waar letten we op?</h3><ul class="list-disc space-y-2 pl-4 text-sm leading-6">{#each protocol.analysis.observations as observation}<li>{observation}</li>{/each}</ul>{/if}{:else}<p class="text-sm text-[#1B2A2A]/55">De persoonlijke analyse is nog niet ingevuld voor dit paard.</p>{/if}
                 {/if}
+                {#if tab === 'analyse' && protocol.analysis?.expectationFollowUp}<section class="rounded-[22px] bg-[#EAFBF9] p-5"><h3 class="text-xs font-semibold uppercase tracking-wide text-[#0E6F69]">Verwachting en vervolg</h3><p class="mt-3 whitespace-pre-wrap break-words text-base leading-7">{protocol.analysis.expectationFollowUp}</p></section>{/if}
             </div>
         {/if}
     </section>

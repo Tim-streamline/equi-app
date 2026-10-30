@@ -148,6 +148,7 @@ const protocol_phase_supplement_weeks = new Table({
 }, { indexes: { bySupplement: ['protocol_phase_supplement_id'] } });
 
 const protocol_analyses = new Table({
+  expectation_follow_up: column.text,
   protocol_id: column.text,
   cause: column.text,
   summary: column.text,

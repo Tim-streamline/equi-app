@@ -415,6 +415,7 @@ class HorseDashboardTest extends TestCase
         $this->protocol->analysis()->create([
             'cause' => 'Original internal notes must not be used as a customer summary.',
             'summary' => 'Personal explanation',
+            'expectation_follow_up' => "Evaluate progress in two weeks.\nDiscuss the next steps together.",
             'focus_points' => collect(range(1, 4))->map(fn ($i) => ['title' => 'Personal focus '.$i, 'body' => 'Personal goal.'])->all(),
             'observations' => ['Personal observation.'],
         ]);
@@ -424,6 +425,7 @@ class HorseDashboardTest extends TestCase
             ->assertJsonPath('protocol.analysis.summary', 'Personal explanation')->assertJsonCount(4, 'protocol.analysis.priorities')
             ->assertJsonPath('protocol.analysis.priorities.3.title', 'Personal focus 4')
             ->assertJsonPath('protocol.analysis.observations.0', 'Personal observation.')
+            ->assertJsonPath('protocol.analysis.expectationFollowUp', "Evaluate progress in two weeks.\nDiscuss the next steps together.")
             ->assertJsonMissingPath('protocol.analysis.priorities.0.icon_key');
     }
 

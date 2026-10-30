@@ -116,6 +116,7 @@ export type DashboardProtocol = {
     summary: string;
     priorities: { id: string; title: string; body: string }[];
     observations: string[];
+    expectationFollowUp?: string | null;
   } | null;
 };
 export type HorseDashboard = {

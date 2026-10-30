@@ -1,5 +1,4 @@
 import type { PlusAccess } from '@/lib/plus-access';
-import { BRAND_NAME } from '@/constants/brand';
 import { useState } from 'react';
 import { Modal, Pressable, ScrollView, Text, View, useWindowDimensions } from 'react-native';
 import { Image } from 'expo-image';
@@ -76,7 +75,16 @@ export function PlusPage({ data, apiBaseUrl, onIntake, access, horseName = 'je p
           {faq === index && <Text className="pt-3 text-[15px] leading-[23px] text-ink-70">{item.answer}</Text>}
         </View>)}
       </View>
-      <View className="items-center gap-4 px-9 pb-3 pt-10"><Text className="text-[11px] tracking-[3px] text-teal-500">{BRAND_NAME}</Text><Button title={c.priceButton} className="w-full rounded-full py-3" onPress={open} /><Text className="mt-2 text-center text-[10px] tracking-[1px] text-ink-70">POWERED BY <Text className="font-semi text-teal-500">De Paardentherapeut</Text></Text></View>
+      <View className="px-9 pb-8 pt-10">
+        <Button title={c.priceButton} className="w-full rounded-full py-3" onPress={open} />
+      </View>
+      <View testID="closing-block" className="mx-4 gap-5 rounded-[24px] bg-teal-800 p-5">
+        <Text className="font-semi text-[10px] tracking-[2px] text-mint-200">{c.closingLabel}</Text>
+        <Text accessibilityRole="header" className="font-bold text-[26px] leading-[32px] text-white">{c.closingTitle}</Text>
+        <Text className="text-[16px] leading-[24px] text-white/90">{c.closingBody}</Text>
+        <Button title={c.closingButton} className="rounded-full py-3" textClassName="text-center" onPress={open} />
+      </View>
+      <Text className="mt-6 text-center text-[10px] tracking-[1px] text-ink-70">POWERED BY <Text className="font-semi text-teal-500">De Paardentherapeut</Text></Text>
     </ScrollView>
 
     <Modal visible={sheet !== null} transparent animationType="slide" onRequestClose={close}>

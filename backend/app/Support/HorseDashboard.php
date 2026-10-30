@@ -175,6 +175,7 @@ class HorseDashboard
                 'priorities' => collect($protocol->analysis->focus_points ?? [])->take(4)
                     ->map(fn ($point, $index) => ['id' => 'focus-'.$index, 'title' => $point['title'], 'body' => $point['body']])->values()->all(),
                 'observations' => $protocol->analysis->observations ?? [],
+                'expectationFollowUp' => $protocol->analysis->expectation_follow_up,
             ] : null,
         ];
     }

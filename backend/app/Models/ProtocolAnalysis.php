@@ -8,7 +8,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
-#[Fillable(['protocol_id', 'cause', 'summary', 'focus_points', 'observations'])]
+#[Fillable(['protocol_id', 'cause', 'summary', 'focus_points', 'observations', 'expectation_follow_up'])]
 class ProtocolAnalysis extends Model
 {
     use HasUuids;

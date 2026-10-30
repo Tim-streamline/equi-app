@@ -59,6 +59,14 @@ export function ProtocolAnalysis({ analysis }: {
           </View>
         </View>
       )}
+      {!!analysis.expectationFollowUp?.trim() && (
+        <View className="rounded-[22px] bg-mint-50 p-5">
+          <Text accessibilityRole="header" className="font-semi text-[12px] uppercase tracking-[0.8px] text-mint-800">
+            Verwachting en vervolg
+          </Text>
+          <Text selectable className="mt-3 text-[16px] leading-[26px] text-ink">{analysis.expectationFollowUp}</Text>
+        </View>
+      )}
     </View>
   );
 }

@@ -61,12 +61,13 @@ class SaveProtocolRequest extends FormRequest
             'analysis' => ['nullable', 'array'],
             'analysis.cause' => ['nullable', 'string', 'max:10000'],
             'analysis.summary' => ['nullable', 'string', 'max:2100'],
+            'analysis.expectation_follow_up' => ['nullable', 'string', 'max:2100'],
             'analysis.focus_points' => ['sometimes', 'array', 'max:4'],
             'analysis.focus_points.*' => ['array:title,body'],
             'analysis.focus_points.*.title' => ['required', 'string', 'max:48', 'not_regex:/^(voeding|management|training|beweging|verzorging|zorg|nutrition|movement)$/iu'],
-            'analysis.focus_points.*.body' => ['required', 'string', 'max:160', new ShortProtocolText(1)],
+            'analysis.focus_points.*.body' => ['required', 'string', 'max:320', new ShortProtocolText(2)],
             'analysis.observations' => ['sometimes', 'array', 'max:4'],
-            'analysis.observations.*' => ['required', 'string', 'max:160', new ShortProtocolText(1)],
+            'analysis.observations.*' => ['required', 'string', 'max:320', new ShortProtocolText(2)],
             'advice' => ['present', 'array', 'max:20'],
             'advice.*.id' => ['nullable', 'uuid'],
             'advice.*.icon_key' => ['required', 'in:leaf,run,horse'],
@@ -106,9 +107,9 @@ class SaveProtocolRequest extends FormRequest
             'analysis.summary.max' => 'Gebruik maximaal 2100 tekens voor de persoonlijke analyse.',
             'analysis.focus_points.max' => 'Gebruik maximaal 4 focuspunten.',
             'analysis.focus_points.*.title.max' => 'Gebruik een korte titel van maximaal 48 tekens.',
-            'analysis.focus_points.*.body.max' => 'Gebruik één korte doelzin van maximaal 160 tekens.',
+            'analysis.focus_points.*.body.max' => 'Gebruik maximaal twee korte doelzinnen van samen maximaal 320 tekens.',
             'analysis.observations.max' => 'Gebruik maximaal 4 observatiepunten.',
-            'analysis.observations.*.max' => 'Gebruik één korte observatiezin van maximaal 160 tekens.',
+            'analysis.observations.*.max' => 'Gebruik maximaal twee korte observatiezinnen van samen maximaal 320 tekens.',
         ];
     }
 
@@ -127,7 +128,7 @@ class SaveProtocolRequest extends FormRequest
                 $validator->errors()->add('status', 'Dit paard heeft al een actief protocol. Rond dat eerst af of pauzeer het.');
             }
             $hasCompactAnalysis = filled($this->input('analysis.summary'))
-                || filled($this->input('analysis.observations'));
+                || filled($this->input('analysis.observations')) || filled($this->input('analysis.expectation_follow_up'));
             if ($this->boolean('published') && $hasCompactAnalysis) {
                 if (! filled($this->input('analysis.summary'))) {
                     $validator->errors()->add('analysis.summary', 'Vul een persoonlijke analyse in voordat je publiceert.');

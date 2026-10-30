@@ -60,6 +60,21 @@ class FeedCatalogManagementTest extends TestCase
         $this->put("/admin/ingredients/{$ingredient->id}", ['name' => 'Bypass'])->assertStatus(409);
     }
 
+    public function test_roughage_replacer_category_is_selectable_and_can_be_saved_and_approved(): void
+    {
+        $this->get('/admin/feed-scanner/products')->assertOk()->assertInertia(fn (Assert $page) => $page
+            ->where('categories.roughage_replacer', 'Ruwvoer vervanger'));
+        $this->post('/admin/feed-scanner/products', $this->product(['category' => 'roughage_replacer']))
+            ->assertRedirect()->assertSessionHasNoErrors();
+        $product = Product::where('name', 'Voorbeeldvoer')->sole();
+        $version = ProductVersion::where('product_id', $product->id)->sole();
+        $this->assertSame('roughage_replacer', $version->data['category']);
+        $this->assertSame('standard', DB::table('feed_assessment_profiles')->where('id', $version->profile_id)->value('code'));
+        $this->post("/admin/feed-scanner/products/{$product->id}/review", ['version_id' => $version->id, 'decision' => 'approve'])
+            ->assertRedirect()->assertSessionHasNoErrors();
+        $this->assertSame('roughage_replacer', $product->fresh()->category);
+    }
+
     public function test_ambiguous_exact_synonym_cannot_be_published_but_related_term_can(): void
     {
         $this->post('/admin/feed-scanner/ingredients', $this->ingredient());

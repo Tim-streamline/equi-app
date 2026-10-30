@@ -653,7 +653,8 @@ class AdminProtocolManagementTest extends TestCase
                 ['title' => 'Tweede aandachtspunt', 'body' => 'Werken aan het tweede afgesproken doel.'],
                 ['title' => 'Derde aandachtspunt', 'body' => 'Het derde afgesproken doel ondersteunen.'],
             ],
-            'observations' => ['Vergelijk de afgesproken signalen bij de evaluatie.'],
+            'observations' => ['Vergelijk de afgesproken signalen bij de evaluatie. Bespreek de veranderingen samen.'],
+            'expectation_follow_up' => "We bespreken de voortgang na twee weken.\nDaarna bepalen we samen het vervolg.",
         ];
         $payload['analysis']['summary'] = mb_substr($payload['analysis']['summary'], 0, 2100);
         $this->assertSame(2100, mb_strlen($payload['analysis']['summary']));
@@ -662,12 +663,14 @@ class AdminProtocolManagementTest extends TestCase
         $this->assertSame($payload['analysis']['summary'], $protocol->analysis->summary);
         $this->assertSame($payload['analysis']['focus_points'], $protocol->analysis->focus_points);
         $this->assertSame($payload['analysis']['observations'], $protocol->analysis->observations);
+        $this->assertSame($payload['analysis']['expectation_follow_up'], $protocol->analysis->expectation_follow_up);
         $this->assertSame('Restore the gut first.', $protocol->analysis->cause);
         $this->actingAs($this->admin, 'admin')->get('/admin/protocols/'.$protocol->id.'/edit')
             ->assertInertia(fn (Assert $page) => $page
                 ->where('protocol.analysis.summary', $payload['analysis']['summary'])
                 ->where('protocol.analysis.focus_points', $payload['analysis']['focus_points'])
-                ->where('protocol.analysis.observations', $payload['analysis']['observations']));
+                ->where('protocol.analysis.observations', $payload['analysis']['observations'])
+                ->where('protocol.analysis.expectation_follow_up', $payload['analysis']['expectation_follow_up']));
 
         foreach ($protocol->phases as $index => $phase) {
             $payload['phases'][$index]['id'] = $phase->id;
@@ -692,8 +695,9 @@ class AdminProtocolManagementTest extends TestCase
         $payload['analysis'] = ['cause' => 'Retained earlier notes.'];
         $this->actingAs($this->admin, 'admin')->put('/admin/protocols/'.$protocol->id, $payload)->assertRedirect()->assertSessionHasNoErrors();
         $this->assertSame('Bijgestelde, genuanceerde samenvatting.', $protocol->fresh()->analysis->summary);
+        $this->assertSame("We bespreken de voortgang na twee weken.\nDaarna bepalen we samen het vervolg.", $protocol->fresh()->analysis->expectation_follow_up);
 
-        $payload['analysis'] += ['summary' => null, 'focus_points' => [], 'observations' => []];
+        $payload['analysis'] += ['summary' => null, 'focus_points' => [], 'observations' => [], 'expectation_follow_up' => null];
         $this->actingAs($this->admin, 'admin')->put('/admin/protocols/'.$protocol->id, $payload)->assertRedirect()->assertSessionHasNoErrors();
         $this->assertNull($protocol->fresh()->analysis->summary);
         $this->assertSame([], $protocol->fresh()->analysis->focus_points);
@@ -706,8 +710,8 @@ class AdminProtocolManagementTest extends TestCase
         $payload = $this->payload();
         $payload['analysis'] += [
             'summary' => str_repeat('a', 2101),
-            'focus_points' => array_fill(0, 5, ['title' => 'Management', 'body' => 'Eerste doel. Tweede doel.']),
-            'observations' => [str_repeat('x', 161)],
+            'focus_points' => array_fill(0, 5, ['title' => 'Management', 'body' => 'Eerste doel. Tweede doel. Derde doel.']),
+            'observations' => [str_repeat('x', 321)],
         ];
         $this->actingAs($this->admin, 'admin')->post('/admin/protocols', $payload)
             ->assertSessionHasErrors(['analysis.summary', 'analysis.focus_points', 'analysis.focus_points.0.title', 'analysis.focus_points.0.body', 'analysis.observations.0']);
@@ -721,6 +725,16 @@ class AdminProtocolManagementTest extends TestCase
         $payload['analysis'] += ['summary' => 'Een korte persoonlijke samenvatting.', 'focus_points' => [], 'observations' => []];
         $this->actingAs($this->admin, 'admin')->post('/admin/protocols', $payload)
             ->assertSessionHasErrors(['analysis.observations']);
+    }
+
+    public function test_analysis_rejects_a_third_observation_sentence_and_an_oversized_follow_up(): void
+    {
+        $payload = $this->payload();
+        $payload['analysis'] += ['summary' => 'Een persoonlijke analyse.',
+            'observations' => ['Eerste observatie. Tweede observatie. Derde observatie.'],
+            'expectation_follow_up' => str_repeat('a', 2101)];
+        $this->actingAs($this->admin, 'admin')->post('/admin/protocols', $payload)
+            ->assertSessionHasErrors(['analysis.observations.0', 'analysis.expectation_follow_up']);
     }
 
     public function test_analysis_can_be_published_and_updated_without_removed_focus_fields(): void
