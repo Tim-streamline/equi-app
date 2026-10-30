@@ -222,6 +222,7 @@
         analysis: {
             cause: initialProtocol?.analysis?.cause ?? '',
             summary: initialProtocol?.analysis?.summary ?? '',
+            expectation_follow_up: initialProtocol?.analysis?.expectation_follow_up ?? '',
             observations: initialProtocol?.analysis?.observations ?? [],
         },
         advice: (initialProtocol?.analysis?.advice ?? []).map((row) => ({
@@ -1115,19 +1116,20 @@
                             </div>
                             <div class="mt-8">
                                 <div class="mb-4 flex items-center justify-between gap-3">
-                                    <div><h3 class="text-base font-bold">Waar letten we op?</h3><p class="mt-0.5 text-xs text-[#1B2A2A]/60">1–4 concrete observatiepunten voor de evaluatie. Beschrijf per punt in één korte zin waaraan je merkt of het de goede kant op gaat.</p></div>
+                                    <div><h3 class="text-base font-bold">Waar letten we op?</h3><p class="mt-0.5 text-xs text-[#1B2A2A]/60">1–4 concrete observatiepunten voor de evaluatie. Beschrijf per punt in maximaal twee korte zinnen waaraan je merkt of het de goede kant op gaat.</p></div>
                                     <Button type="button" variant="outline" class="shrink-0 rounded-full" onclick={addObservation} disabled={$form.analysis.observations.length >= 4}><Plus class="size-4" /> Observatie</Button>
                                 </div>
                                 {#if $form.errors['analysis.observations']}<p class="mb-3 text-sm text-destructive">{$form.errors['analysis.observations']}</p>{/if}
                                 <div class="space-y-3">
                                     {#each $form.analysis.observations as observation, index (index)}
                                         <div class="flex items-start gap-3">
-                                            <div class="flex-1"><Field label={`Observatiepunt ${index + 1}`} error={errorFor(`analysis.observations.${index}`)} hint={`${observation.length}/160 tekens`}><Textarea aria-label={`Observatiepunt ${index + 1}`} bind:value={$form.analysis.observations[index]} rows="2" maxlength="160" /></Field></div>
+                                            <div class="flex-1"><Field label={`Observatiepunt ${index + 1}`} error={errorFor(`analysis.observations.${index}`)} hint={`${observation.length}/320 tekens · maximaal twee zinnen`}><Textarea aria-label={`Observatiepunt ${index + 1}`} bind:value={$form.analysis.observations[index]} rows="3" maxlength="320" /></Field></div>
                                             <Button type="button" variant="ghost" size="icon" class="mt-6" onclick={() => ($form.analysis.observations = $form.analysis.observations.filter((_, i) => i !== index))} aria-label={`Observatiepunt ${index + 1} verwijderen`}><Trash2 class="size-4 text-destructive" /></Button>
                                         </div>
                                     {/each}
                                 </div>
                             </div>
+                            <div class="mt-7"><Field label="Verwachting en vervolg" error={$form.errors['analysis.expectation_follow_up']} hint="Beschrijf wat de eigenaar kan verwachten en wanneer jullie de voortgang evalueren."><Textarea aria-label="Verwachting en vervolg" bind:value={$form.analysis.expectation_follow_up} rows="5" maxlength="2100" /></Field></div>
                             {#if $form.analysis.cause || $form.advice.length}
                                 <details class="mt-8 border-t border-[#1B2A2A]/10 pt-5">
                                     <summary class="cursor-pointer text-sm font-semibold">Eerdere analyse en adviezen (naslag)</summary>
@@ -1156,6 +1158,7 @@
                                     <section class="rounded-2xl bg-[#EAFBF9] p-5"><h3 class="text-xs font-bold uppercase tracking-wider text-[#0E6F69]">Persoonlijke analyse</h3><p class="mt-3 max-w-[72ch] whitespace-pre-wrap break-words text-base leading-7">{$form.analysis.summary}</p></section>
                                     <section><h3 class="text-xs font-bold uppercase tracking-wider text-[#1B2A2A]/70">Waar letten we op?</h3><ul class="mt-3 list-disc space-y-2 pl-4 text-sm">{#each $form.analysis.observations as observation}<li>{observation}</li>{/each}</ul></section>
                                 {/if}
+                                {#if $form.analysis.expectation_follow_up}<section><h3 class="text-xs font-bold uppercase tracking-wider text-[#1B2A2A]/70">Verwachting en vervolg</h3><p class="mt-3 whitespace-pre-wrap break-words text-base leading-7">{$form.analysis.expectation_follow_up}</p></section>{/if}
                                 <section>
                                     <div class="text-[10px] font-bold uppercase tracking-[0.12em] text-[#108A82]">Planning</div>
                                     <div class="mt-3 space-y-5">

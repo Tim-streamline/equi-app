@@ -73,7 +73,8 @@ class ProtocolPreview
         }
         $protocol->setRelation('phases', $phases);
         $protocol->total_weeks = $latestEnd;
-        $analysis = new ProtocolAnalysis(($data['analysis'] ?? []) + ['focus_points' => $stored?->analysis?->focus_points ?? []]);
+        $analysis = new ProtocolAnalysis(($data['analysis'] ?? []) + ['focus_points' => $stored?->analysis?->focus_points ?? [],
+            'expectation_follow_up' => $stored?->analysis?->expectation_follow_up]);
         $analysis->setRelation('advice', new Collection);
         $protocol->setRelation('analysis', $analysis);
         foreach (['voeding', 'management', 'beweging'] as $category) {

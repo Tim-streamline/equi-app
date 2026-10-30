@@ -4436,6 +4436,7 @@
                     "link": null,
                     "options": null,
                     "show_if": {
+                        "komt-op-weide": ["Ja, seizoensgebonden","Ja, het hele jaar door","Anders, namelijk"],
                         "weide-bodem": "Anders, namelijk"
                     },
                     "flag_if": null,
@@ -4550,6 +4551,7 @@
                     "link": null,
                     "options": null,
                     "show_if": {
+                        "komt-op-weide": ["Ja, seizoensgebonden","Ja, het hele jaar door","Anders, namelijk"],
                         "weide-omschrijving": "Anders, namelijk"
                     },
                     "flag_if": null,
@@ -4776,6 +4778,7 @@
                         "Windbeschutting / bosrand / haag"
                     ],
                     "show_if": {
+                        "komt-op-weide": ["Ja, seizoensgebonden","Ja, het hele jaar door","Anders, namelijk"],
                         "weide-schuil": [
                             "Ja, altijd",
                             "Meestal wel",

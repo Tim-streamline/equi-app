@@ -98,7 +98,7 @@
         router.post(`/admin/feed-scanner/products/${record.id}/review`, { version_id: version.id, decision, notes });
     }
     function remove(record) {
-        if (confirm(`${record.brand} · ${record.name} definitief verwijderen? Dit kan niet ongedaan worden gemaakt.`)) router.delete(`/admin/feed-scanner/products/${record.id}`, { preserveScroll: true });
+        if (confirm(`Weet je zeker dat je dit wil verwijderen?\n\n${record.brand} · ${record.name}\n\nDit product en de bijbehorende scans, inzendingen, beoordelingen en etiketfoto's worden definitief verwijderd. Dit kan niet ongedaan worden gemaakt.`)) router.delete(`/admin/feed-scanner/products/${record.id}`, { data: { confirmed: true }, preserveScroll: true });
     }
     function archive(record) { if (confirm('Dit product archiveren? De historie blijft bewaard.')) router.post(`/admin/feed-scanner/products/${record.id}/archive`); }
     function move(index, step) { const rows = [...$form.ingredients]; [rows[index], rows[index + step]] = [rows[index + step], rows[index]]; $form.ingredients = rows; }
@@ -149,6 +149,7 @@
                     </div>
                 </div>
                 {#if latest?.review_notes}<p class="text-sm text-muted-foreground">Controle: {latest.review_notes}</p>{/if}
+                {#if canPublish && product.delete_blockers?.length}<p class="text-xs text-muted-foreground">Verwijderen nu niet mogelijk: {product.delete_blockers.join(', ')}.</p>{/if}
             </div>
         {:else}<p class="py-8 text-center text-muted-foreground">Geen producten gevonden.</p>{/each}
         <Pagination paginator={products} />

@@ -83,7 +83,10 @@
       "answer": "Je abonnement en je protocol zijn afzonderlijk. Overleg met je behandelaar over een vervolgprotocol. Eerdere protocollen blijven bij je paard bewaard."
     }
   ],
-  "closingTitle": "Jouw paard kan het je niet vertellen. Met een persoonlijk protocol weet je het toch.",
+  "closingLabel": "KLAAR OM TE BEGINNEN?",
+  "closingTitle": "Je hebt al genoeg tijd besteed aan zoeken. Tijd om stappen te zetten.",
+  "closingBody": "Gun jouw paard een aanpak die écht past. Met drie maanden EquiBoost werk je stap voor stap aan een betere gezondheid, met een plan dat meebeweegt met de voortgang van jouw paard.",
+  "closingButton": "Ja, ik wil starten met EquiBoost!",
   "confirmationTitle": "Persoonlijk protocol",
   "confirmationPlan": "Eenmalige aankoop",
   "confirmationProtocol": "Protocol op maat · 3 maanden",

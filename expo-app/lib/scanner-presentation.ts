@@ -28,5 +28,5 @@ export function matchesFeed(row: ScannerRow, query: string): boolean {
 
 export function feedCategory(category?: string): string {
   return ({ complete: 'Compleet paardenvoer', complementary: 'Aanvullend voer',
-    balancer: 'Balancer', mash: 'Slobber', feed: 'Paardenvoer', supplement: 'Supplement', herb: 'Kruiden' } as Record<string, string>)[category ?? ''] ?? 'Paardenvoer';
+    balancer: 'Balancer', mash: 'Slobber', roughage_replacer: 'Ruwvoer vervanger', feed: 'Paardenvoer', supplement: 'Supplement', herb: 'Kruiden' } as Record<string, string>)[category ?? ''] ?? 'Paardenvoer';
 }

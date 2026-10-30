@@ -36,6 +36,46 @@ class IntakeHousingSocialTest extends TestCase
         $booking->unsetRelation('answers');
     }
 
+    public function test_pasture_followups_ignore_old_answers_when_the_horse_no_longer_has_pasture_access(): void
+    {
+        $booking = $this->booking();
+        $this->answer($booking, 'huisvesting', 'komt-op-weide', 'Nee, nooit');
+        $this->answer($booking, 'huisvesting', 'weide-omschrijving', 'Anders, namelijk');
+        $this->answer($booking, 'huisvesting', 'weide-bodem', ['Anders, namelijk']);
+        $this->answer($booking, 'huisvesting', 'weide-schuil', 'Ja, altijd');
+        $followups = ['weide-omschrijving-anders', 'weide-bodem-anders', 'weide-schuil-soort'];
+        $visible = collect(app(IntakeReview::class)->forBooking($booking)['sections'])
+            ->flatMap(fn ($section) => $section['rows'])->pluck('key')->all();
+        $missing = array_column(app(IntakeProgress::class)->forBooking($booking->load('answers'))['missing'], 'field');
+        foreach ($followups as $key) {
+            $this->assertNotContains($key, $visible);
+            $this->assertNotContains($key, $missing);
+        }
+
+        $this->answer($booking, 'huisvesting', 'komt-op-weide', 'Ja, het hele jaar door');
+        $visible = collect(app(IntakeReview::class)->forBooking($booking)['sections'])
+            ->flatMap(fn ($section) => $section['rows'])->pluck('key')->all();
+        foreach ($followups as $key) {
+            $this->assertContains($key, $visible);
+        }
+    }
+
+    public function test_pasture_condition_upgrade_is_repeatable_and_preserves_admin_customizations(): void
+    {
+        $this->seed(IntakeQuestionnaireSeeder::class);
+        $field = IntakeField::where('key', 'weide-bodem-anders')->sole();
+        $field->update(['show_if' => ['weide-bodem' => 'Anders, namelijk']]);
+        $custom = IntakeField::where('key', 'weide-omschrijving-anders')->sole();
+        $custom->update(['show_if' => ['komt-op-weide' => 'Ja, seizoensgebonden']]);
+        $migration = require database_path('migrations/2026_10_30_000002_guard_pasture_followup_questions.php');
+        $migration->up();
+        $expected = $field->fresh()->show_if;
+        $this->assertArrayHasKey('komt-op-weide', $expected);
+        $migration->up();
+        $this->assertSame($expected, $field->fresh()->show_if);
+        $this->assertSame(['komt-op-weide' => 'Ja, seizoensgebonden'], $custom->fresh()->show_if);
+    }
+
     public function test_cross_section_followups_and_hidden_answers_use_the_same_rules_for_progress_review_and_pdf(): void
     {
         config(['intake.require_grouped_conditions' => true]);

@@ -28,9 +28,16 @@ class PlusPageTest extends TestCase
         $content = PlusPage::defaults(); $content['heroTitle'] = 'Aangepaste kop';
         $content['pageTitle'] = 'Mijn begeleiding'; $content['heroLabel'] = 'Mijn traject';
         $content['period'] = 'Mijn eerste prijsomschrijving'; $content['pricePeriod'] = 'Mijn tweede prijsomschrijving';
+        $content['closingLabel'] = 'Eigen afsluitend label'; $content['closingTitle'] = 'Eigen afsluitende kop';
+        $content['closingBody'] = 'Eigen afsluitende tekst'; $content['closingButton'] = 'Eigen afsluitende knop';
         $content['reviews'] = []; $content['faqs'] = []; $content['benefits'] = [];
         $this->post('/admin/plus-page', ['protocol_price_cents' => 19900, 'content' => json_encode($content), 'hero' => UploadedFile::fake()->image('hero.jpg'), 'portrait' => UploadedFile::fake()->image('shelley.png')])->assertRedirect()->assertSessionHasNoErrors();
         $page = PlusPage::current(); Storage::disk('local')->assertExists([$page->hero_path, $page->portrait_path]);
+        $this->getJson('/api/protocol-page')->assertOk()
+            ->assertJsonPath('content.closingLabel', 'Eigen afsluitend label')
+            ->assertJsonPath('content.closingTitle', 'Eigen afsluitende kop')
+            ->assertJsonPath('content.closingBody', 'Eigen afsluitende tekst')
+            ->assertJsonPath('content.closingButton', 'Eigen afsluitende knop');
         $this->getJson('/api/plus-page')->assertJsonPath('protocolPriceCents', 19900)->assertJsonPath('content.price', '€ 199')->assertJsonPath('content.heroTitle', 'Aangepaste kop')->assertJsonPath('content.pageTitle', 'Mijn begeleiding')->assertJsonPath('content.heroLabel', 'Mijn traject')->assertJsonPath('content.period', 'Mijn eerste prijsomschrijving')->assertJsonPath('content.pricePeriod', 'Mijn tweede prijsomschrijving')->assertJsonCount(0, 'content.reviews');
         $this->get('/api/plus-page/images/portrait')->assertOk()->assertHeader('Content-Type', 'image/png');
         $this->assertDatabaseCount('subscriptions', 0); $this->assertDatabaseCount('plans', 0);

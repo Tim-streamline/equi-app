@@ -13,7 +13,7 @@ use Illuminate\Validation\ValidationException;
 
 class FeedCatalog
 {
-    public const CATEGORIES = ['complete' => 'Compleet paardenvoer', 'complementary' => 'Aanvullend voer', 'balancer' => 'Balancer', 'mash' => 'Slobber'];
+    public const CATEGORIES = ['complete' => 'Compleet paardenvoer', 'complementary' => 'Aanvullend voer', 'balancer' => 'Balancer', 'mash' => 'Slobber', 'roughage_replacer' => 'Ruwvoer vervanger'];
 
     public const NUTRIENTS = ['sugar' => 'Suiker', 'starch' => 'Zetmeel', 'moisture' => 'Vocht', 'dry_matter' => 'Droge stof', 'protein' => 'Ruw eiwit', 'fibre' => 'Ruwe celstof', 'fat' => 'Ruw vet', 'ash' => 'Ruwe as', 'calcium' => 'Calcium', 'phosphorus' => 'Fosfor', 'selenium_total' => 'Selenium totaal'];
 

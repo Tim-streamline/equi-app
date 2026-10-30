@@ -71,16 +71,14 @@ export default function IntakeSectionScreen() {
     );
   }
 
-  // Progress within the current section — how far through the visible fields
+  // Progress within the current section — how far through applicable required fields
   // they are. `answeredCount` only counts values that are genuinely valid for
   // the field (e.g. a radio value still present in its options), so stale
   // answers from an earlier schema version don't inflate the tally.
   const { answered: filled, total } = answeredCount(section, answers, state.answers, noneOptions);
-  const pct = total ? Math.round((filled / total) * 100) : 0;
+  const pct = total ? Math.round((filled / total) * 100) : 100;
 
-  // Every visible question answered (not just the required ones) flips the
-  // counter from red to green.
-  const allAnswered = total > 0 && filled === total;
+  const allAnswered = filled === total;
   const photoSection = isPhotoSection(section);
 
   // Walking field number across the visible (non-sectionhead) fields so the

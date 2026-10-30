@@ -533,8 +533,9 @@ class ProtocolController extends Controller
         $summary = array_key_exists('summary', $content) ? $content['summary'] : $analysis?->summary;
         $focus = $content['focus_points'] ?? $analysis?->focus_points ?? [];
         $observations = $content['observations'] ?? $analysis?->observations ?? [];
+        $expectation = array_key_exists('expectation_follow_up', $content) ? $content['expectation_follow_up'] : $analysis?->expectation_follow_up;
 
-        if ($cause === '' && $adviceRows === [] && blank($summary) && $focus === [] && $observations === []) {
+        if ($cause === '' && $adviceRows === [] && blank($summary) && $focus === [] && $observations === [] && blank($expectation)) {
             $analysis?->delete();
 
             return;
@@ -542,7 +543,7 @@ class ProtocolController extends Controller
 
         $analysis ??= new ProtocolAnalysis(['protocol_id' => $protocol->id]);
         $analysis->fill(['protocol_id' => $protocol->id, 'cause' => $cause, 'summary' => $summary,
-            'focus_points' => $focus, 'observations' => $observations])->save();
+            'focus_points' => $focus, 'observations' => $observations, 'expectation_follow_up' => $expectation])->save();
         $adviceIds = [];
 
         foreach ($adviceRows as $order => $adviceData) {

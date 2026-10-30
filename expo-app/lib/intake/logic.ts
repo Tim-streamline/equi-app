@@ -306,7 +306,7 @@ export function missingRequired(
   );
 }
 
-/** Count of visible (non-sectionhead) fields that are genuinely answered. */
+/** Progress uses the same applicable questions as the completion check. */
 export function answeredCount(
   section: Section,
   answers: SectionAnswers,
@@ -317,7 +317,8 @@ export function answeredCount(
   total: number;
 } {
   if (allAnswers) answers = answersForSection(section, allAnswers);
-  const renderable = visibleFields(section, answers, allAnswers, noneOptions);
+  const renderable = visibleFields(section, answers, allAnswers, noneOptions)
+    .filter((f) => needsAnswer(f, answers[f.id]));
   const answered = renderable.filter((f) => isFieldAnswered(f, answers[f.id], allAnswers ?? { [f.answerSection ?? section.id]: answers }, section.id)).length;
   return { answered, total: renderable.length };
 }
