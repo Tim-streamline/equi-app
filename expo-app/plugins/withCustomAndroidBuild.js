@@ -75,4 +75,3 @@ const withCustomAndroidBuild = (config, opts = {}) => {
 };
 
 module.exports = withCustomAndroidBuild;
-module.exports.addFreshUpdatesManifest = addFreshUpdatesManifest;

@@ -63,10 +63,10 @@ VERSION=$(node -p "require('./app.json').expo.version")
 echo "==> Building & deploying v$VERSION"
 
 # --- build ------------------------------------------------------------------
-# An android/ generated before plugins/withCustomAndroidBuild.js learned the
-# expo-updates fix would reuse a stale asset manifest (new images render blank);
-# add the same Gradle snippet the plugin adds. No-op when it is already there.
-node -e "const fs=require('fs'),f='android/app/build.gradle';fs.writeFileSync(f,require('./plugins/withCustomAndroidBuild').addFreshUpdatesManifest(fs.readFileSync(f,'utf8')))"
+# Re-apply the config plugins to the existing android/ (no regeneration), so
+# plugin changes made after it was generated reach this build too, e.g. the
+# expo-updates fix in plugins/withCustomAndroidBuild.js. No-op when up to date.
+CI=1 npx expo prebuild --platform android --no-install
 (cd android && ./gradlew assembleRelease)
 [[ -f "$APK" ]] || { echo "error: expected APK not found at $APK"; exit 1; }
 
@@ -85,14 +85,23 @@ echo "==> Deployed v$VERSION"
 if [[ "$BUMP" -eq 1 ]]; then
   IFS=. read -r MAJ MIN PAT <<< "$VERSION"
   NEXT="$MAJ.$MIN.$((PAT + 1))"
-  CODE=$(grep -oE 'versionCode[[:space:]]+[0-9]+' "$GRADLE" | grep -oE '[0-9]+')
-  NEXT_CODE=$((CODE + 1))
+  # app.json is the source of truth: the prebuild step copies it into $GRADLE.
+  # Bump it in place (keeping its formatting) and fail loudly if that did not land.
+  NEXT_CODE=$(node -e '
+    const fs = require("fs");
+    const [file, next] = process.argv.slice(1);
+    const text = fs.readFileSync(file, "utf8");
+    const code = JSON.parse(text).expo.android.versionCode + 1;
+    const out = text.replace(/("version"\s*:\s*)"[^"]*"/, `$1"${next}"`).replace(/("versionCode"\s*:\s*)\d+/, `$1${code}`);
+    const { expo } = JSON.parse(out);
+    if (expo.version !== next || expo.android.versionCode !== code) { console.error("error: could not bump " + file); process.exit(1); }
+    fs.writeFileSync(file, out);
+    console.log(code);
+  ' "$APP_JSON" "$NEXT")
+  # Keep a direct gradle build (without prebuild) in step too.
+  sed -i -E "s/versionName \"[^\"]*\"/versionName \"$NEXT\"/; s/versionCode [0-9]+/versionCode $NEXT_CODE/" "$GRADLE"
 
-  sed -i "s/\"version\": \"$VERSION\"/\"version\": \"$NEXT\"/" "$APP_JSON"
-  sed -i "s/versionName \"$VERSION\"/versionName \"$NEXT\"/" "$GRADLE"
-  sed -i "s/versionCode $CODE/versionCode $NEXT_CODE/" "$GRADLE"
-
-  echo "==> Bumped version: $VERSION -> $NEXT (versionCode $CODE -> $NEXT_CODE). Next run ships v$NEXT."
+  echo "==> Bumped version: $VERSION -> $NEXT (versionCode $NEXT_CODE). Next run ships v$NEXT."
 fi
 
 echo "==> Done."

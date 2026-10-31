@@ -59,3 +59,15 @@ test('a quick tap after a finished change still crossfades cleanly without ghost
   assert.deepEqual(visible(t, 3), [0, 0, 0, 1]);
   assert.deepEqual(visible(t, 2), [0, 0, 1, 0]);
 });
+
+test('a chain of quick taps keeps every title that is still on screen fading, not just the last two', () => {
+  // Home → Community, then Protocol, then Bibliotheek, each before the pager comes to rest.
+  const toCommunity = nextTransition(settled(0), 3, false);
+  const toProtocol = nextTransition(toCommunity, 1, true);
+  const toLibrary = nextTransition(toProtocol, 2, true);
+  // Wherever the pager is, Home's title (two changes back) is as visible as it was.
+  for (let at = 0; at <= 3; at += 0.1) assert.equal(opacityAt(toLibrary, 0, at).toFixed(3), opacityAt(toProtocol, 0, at).toFixed(3), `Home at ${at.toFixed(1)}`);
+  assert.deepEqual(visible(toLibrary, 2), [0, 0, 1, 0], 'ends clean');
+  // Once the pager has come to rest, the next change starts fresh.
+  assert.deepEqual(nextTransition(toLibrary, 0, false).on, [1, 0, 1, 0]);
+});

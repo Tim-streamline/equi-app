@@ -27,6 +27,7 @@ function screen(homeUpsell) {
   intakes.partial.state.answers = { paard: { naam: 'Luna' } };
   let selected = 'purchased', ready = true, delivered = false;
   const activeProtocols = [];
+  let oldCachedResponse = false;
   const routes = [];
   const purchases = { purchased: [{ id: 'p1', title: 'Protocol Nova', status: 'draft', booking_id: 'i1', submitted_at: null }], unpurchased: [], submitted: [{ id: 'p2', title: 'Protocol Luna', status: 'draft', booking_id: 'i2', submitted_at: '2026-10-01' }], partial: [{ id: 'p3', title: 'Vervolgprotocol', status: 'draft', booking_id: 'i3', submitted_at: null }] };
   const jsx = (type, props) => typeof type === 'function' ? type(props) : ({ type, props });
@@ -44,7 +45,6 @@ function screen(homeUpsell) {
       useHorse: () => horses.find(horse => horse.id === selected) ?? {},
       useHorsesByOwner: () => horses,
       useActiveProtocolForHorse: () => delivered ? { id: 'protocol' } : null,
-      useHorsesWithActiveProtocol: () => horses.filter(horse => activeProtocols.includes(horse.id)),
     },
     // Home asks for every active horse (only the user id); Protocol for the selected horse.
     '@powersync/react': { useQuery: (sql, params) => {
@@ -56,7 +56,10 @@ function screen(homeUpsell) {
     '@/components/ui/Button': { Button: 'Button', PRIMARY_INK: '#083635' },
     '@/db/provider': { useDb: () => ({ selectHorse: id => { selected = id; } }) },
     '@/hooks/useHorseDashboard': { useHorseDashboard: () => ({
-      data: ready ? { horse: { id: selected }, greeting: selected ? 'Welkom, Tim' : 'Goedemorgen, Tim', hasPlus: !!selected && selected !== 'basic', showPlusUpsell: selected === 'unpurchased', homeUpsell, recommendations: selected ? [] : [1, 2, 3, 4].map(id => ({ id: `item-${id}`, title: `Item ${id}` })), protocol: activeProtocols.includes(selected) ? { statusLabel: `Actief voor ${selected}`, currentDay: 3, currentWeek: 1, progressPercent: 10 } : null } : null,
+      data: ready ? { horse: { id: selected }, greeting: selected ? 'Welkom, Tim' : 'Goedemorgen, Tim', hasPlus: !!selected && selected !== 'basic', showPlusUpsell: selected === 'unpurchased', homeUpsell, recommendations: selected ? [] : [1, 2, 3, 4].map(id => ({ id: `item-${id}`, title: `Item ${id}` })), protocol: activeProtocols.includes(selected) ? { statusLabel: `Actief voor ${selected}`, currentDay: 3, currentWeek: 1, progressPercent: 10 } : null,
+        // The server's per-horse summaries, sorted by name (older cached responses lack them).
+        ...(oldCachedResponse ? {} : { horseProtocols: horses.filter(horse => activeProtocols.includes(horse.id)).sort((a, b) => a.name.localeCompare(b.name))
+          .map(horse => ({ horseId: horse.id, horseName: horse.name, id: `p-${horse.id}`, statusLabel: `Actief voor ${horse.id}`, currentDay: 10, currentWeek: 2, progressPercent: 36 })) }) } : null,
       loading: !ready, refresh() {},
     }) },
     '@/hooks/useTabBarPadding': { useTabBarPadding: () => 76 },
@@ -80,7 +83,7 @@ function screen(homeUpsell) {
   // The selected horse is chosen elsewhere (Protocol); Home has no selector.
   const select = id => { selected = id; };
   return { render, entry, select, routes, intakes, purchases, activeProtocols, selected: () => selected,
-    set ready(value) { ready = value; }, set delivered(value) { delivered = value; }, clearHorse() { selected = ''; }, withoutHorse() { selected = ''; horses.length = 0; }, addHorse(id) { horses.push({ id, name: id, status: 'active' }); selected = id; },
+    set ready(value) { ready = value; }, set oldCachedResponse(value) { oldCachedResponse = value; }, set delivered(value) { delivered = value; }, clearHorse() { selected = ''; }, withoutHorse() { selected = ''; horses.length = 0; }, addHorse(id) { horses.push({ id, name: id, status: 'active' }); selected = id; },
   };
 }
 
@@ -173,9 +176,20 @@ test('Home shows an active protocol card for every horse that has one, with one 
   app.activeProtocols.push('purchased', 'partial');
   app.select('purchased');
   const tree = app.render();
-  assert.ok(tree.includes('Actief voor purchased'), 'the selected horse has its dashboard card');
-  assert.ok(text(tree).includes("partial's protocol"), 'another horse gets a card from local data');
-  tree.find(n => n?.type === 'Pressable' && text(n).includes("partial's protocol")).props.onPress();
+  const cards = tree.filter(n => n?.type === 'Pressable' && text(n).includes("'s protocol"));
+  assert.deepEqual(cards.map(card => text(card).split("'s protocol")[0]), ['partial', 'purchased'], 'one card per horse, in the server order');
+  assert.ok(text(cards[0]).includes('Actief voor partial') && text(cards[0]).includes('Dag 10 · Week 2'), 'every card uses its server summary');
+  cards[0].props.onPress();
   assert.equal(app.selected(), 'partial', 'Protocol opens on the horse of the card');
   assert.equal(app.routes.at(-1).pathname, '/(tabs)/(pager)/protocol');
+});
+
+test('an older cached dashboard without per-horse summaries still shows the selected horse\'s protocol', () => {
+  const app = screen();
+  app.activeProtocols.push('partial', 'purchased');
+  app.select('partial');
+  app.oldCachedResponse = true;
+  const cards = app.render().filter(n => n?.type === 'Pressable' && text(n).includes('Ga verder met het protocol'));
+  assert.equal(cards.length, 1);
+  assert.ok(text(cards[0]).includes('Actief voor partial'));
 });

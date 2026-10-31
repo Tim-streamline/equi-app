@@ -75,20 +75,71 @@ class HorseDashboard
             'plusOffer' => null,
             'seasonalTip' => $tip ? ['id' => $tip->id, 'intro' => Str::limit(trim(preg_replace('/\s+/u', ' ', strip_tags($tip->body))), 180), 'month' => $tip->month, 'title' => $tip->title ?: $tipItem?->title, 'body' => $tip->body, 'item' => $tipItem ? $itemData($tipItem) : null] : null,
             'recommendations' => $recommendations, 'protocol' => $data,
+            'horseProtocols' => $this->horseProtocols($user, $horse, $now),
         ];
+    }
+
+    /**
+     * Where a protocol stands on $now: day, week and progress since its start,
+     * and whether it starts soon, runs or has finished.
+     */
+    private function progress(Protocol $protocol, CarbonImmutable $now): array
+    {
+        $protocol->loadMissing('phases.weeks');
+        $start = $protocol->started_at ? CarbonImmutable::parse($protocol->started_at->toDateString(), $now->timezone)->startOfDay() : null;
+        $totalWeeks = max((int) $protocol->total_weeks, (int) $protocol->phases->flatMap->weeks->max('protocol_week_number'));
+        $totalDays = $totalWeeks * 7;
+        $elapsed = $start ? (int) $start->diffInDays($now->startOfDay(), false) + 1 : 0;
+        $day = max(0, min($totalDays, $elapsed));
+        $running = $elapsed > 0 && $elapsed <= $totalDays;
+
+        return [
+            'start' => $start, 'day' => $day, 'week' => $day > 0 ? (int) ceil($day / 7) : 0, 'totalWeeks' => $totalWeeks, 'running' => $running,
+            'progressPercent' => $totalDays ? (int) round($day / $totalDays * 100) : 0,
+            'statusLabel' => $elapsed > $totalDays ? 'Je protocol is afgerond' : ($running ? 'Je protocol is actief' : 'Je protocol start binnenkort'),
+        ];
+    }
+
+    /** The light version of protocol() for a card: progress, status and the active phases. */
+    public function summary(Protocol $protocol, CarbonImmutable $now): array
+    {
+        $progress = $this->progress($protocol, $now);
+        $availability = app(ProtocolPhaseAvailability::class);
+        $active = $protocol->phases->filter(fn ($phase) => $availability->forPhase($protocol, $phase, $now)['state'] === 'active');
+
+        return [
+            'id' => $protocol->id, 'currentDay' => $progress['day'], 'currentWeek' => $progress['week'],
+            'totalWeeks' => $progress['totalWeeks'], 'progressPercent' => $progress['progressPercent'],
+            'statusLabel' => $progress['statusLabel'], 'phaseLabel' => $active->pluck('title')->implode(' · '),
+        ];
+    }
+
+    /**
+     * Per horse the protocol in progress (the one the horse's dashboard shows):
+     * the user's active horses plus the selected one, sorted by name, so Home can
+     * show a card for each from this one response.
+     */
+    private function horseProtocols(User $user, ?Horse $horse, CarbonImmutable $now): array
+    {
+        $horses = $user->horses()->where('status', 'active')->get();
+        if ($horse && ! $horses->contains('id', $horse->id)) {
+            $horses->push($horse);
+        }
+        $latest = Protocol::query()->whereIn('horse_id', $horses->pluck('id'))->where('status', 'active')
+            ->whereNotNull('published_at')->where('published_at', '<=', $now)
+            ->orderByDesc('published_at')->with('phases.weeks')->get()->unique('horse_id')->keyBy('horse_id');
+
+        return $horses->filter(fn ($item) => $latest->has($item->id))
+            ->sortBy(fn ($item) => Str::lower(Str::ascii((string) $item->name)))
+            ->map(fn ($item) => ['horseId' => $item->id, 'horseName' => (string) $item->name] + $this->summary($latest->get($item->id), $now))
+            ->values()->all();
     }
 
     public function protocol(Protocol $protocol, CarbonImmutable $now, ?string $month = null, ?array $answers = null, bool $preview = false): array
     {
         $answers ??= $this->nutrition->answers($protocol);
         $protocol->loadMissing(['phases.weeks', 'phases.supplements.weeks', 'analysis.advice', 'voedingAdviezen', 'managementAdviezen', 'bewegingAdviezen']);
-        $start = $protocol->started_at ? CarbonImmutable::parse($protocol->started_at->toDateString(), $now->timezone)->startOfDay() : null;
-        $totalWeeks = max((int) $protocol->total_weeks, (int) $protocol->phases->flatMap->weeks->max('protocol_week_number'));
-        $totalDays = $totalWeeks * 7;
-        $elapsed = $start ? (int) $start->diffInDays($now->startOfDay(), false) + 1 : 0;
-        $day = max(0, min($totalDays, $elapsed));
-        $week = $day > 0 ? (int) ceil($day / 7) : 0;
-        $running = $elapsed > 0 && $elapsed <= $totalDays;
+        ['start' => $start, 'day' => $day, 'week' => $week, 'totalWeeks' => $totalWeeks, 'running' => $running, 'progressPercent' => $progressPercent, 'statusLabel' => $statusLabel] = $this->progress($protocol, $now);
         $phases = $protocol->phases->map(function ($phase) use ($protocol, $now, $preview) {
             $availability = app(ProtocolPhaseAvailability::class)->forPhase($protocol, $phase, $now);
             $weeks = $phase->weeks->pluck('protocol_week_number', 'id');
@@ -159,8 +210,7 @@ class HorseDashboard
 
         return [
             'id' => $protocol->id, 'title' => $protocol->title, 'currentDay' => $day, 'currentWeek' => $week,
-            'totalWeeks' => $totalWeeks, 'progressPercent' => $totalDays ? (int) round($day / $totalDays * 100) : 0,
-            'statusLabel' => $elapsed > $totalDays ? 'Je protocol is afgerond' : ($running ? 'Je protocol is actief' : 'Je protocol start binnenkort'),
+            'totalWeeks' => $totalWeeks, 'progressPercent' => $progressPercent, 'statusLabel' => $statusLabel,
             'todayLabel' => 'Week '.$week.' van '.$totalWeeks.' · '.$now->locale('nl')->translatedFormat('l j F'),
             'phaseLabel' => implode(' · ', array_column(array_filter($phases, fn ($p) => $p['state'] === 'active'), 'title')),
             'phases' => $phases, 'today' => ['items' => $today->all(), 'done' => $done, 'total' => $today->count(), 'percentage' => $today->isEmpty() ? 0 : (int) round($done / $today->count() * 100)],

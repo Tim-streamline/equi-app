@@ -11,18 +11,16 @@ export type PagerScreenOptions = {
 
 /**
  * Shows `action` in the shared header while this pager page is visible, for
- * actions that depend on page state (static ones go in the layout's screen
- * options). Pass an element memoized with `useMemo`: it is re-published only
- * when that element changes, and removed again when the page unmounts.
+ * actions that depend on page state. Pass an element memoized with `useMemo`:
+ * it is re-published only when that element changes, and removed again when
+ * the page unmounts. Pages whose action is static set it in the layout's
+ * screen options instead (this hook would clear that on unmount).
  */
 export function useHeaderAction(action: ReactNode) {
   const navigation = useNavigation();
   useEffect(() => {
-    const options: PagerScreenOptions = { headerAction: action == null ? undefined : () => action };
-    navigation.setOptions(options);
+    const set = (headerAction: PagerScreenOptions['headerAction']) => navigation.setOptions({ headerAction } satisfies PagerScreenOptions);
+    set(action == null ? undefined : () => action);
+    return () => set(undefined);
   }, [navigation, action]);
-  useEffect(() => () => {
-    const options: PagerScreenOptions = { headerAction: undefined };
-    navigation.setOptions(options);
-  }, [navigation]);
 }

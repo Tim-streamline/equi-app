@@ -15,9 +15,9 @@ import { router } from "expo-router";
 import { ArrowRight } from "lucide-react-native";
 import { useTabBarPadding } from "@/hooks/useTabBarPadding";
 import { useHorseDashboard } from "@/hooks/useHorseDashboard";
-import { useCurrentUser, useHorse, useHorsesWithActiveProtocol } from "@/db/hooks";
+import { useCurrentUser, useHorse } from "@/db/hooks";
 import { useDb } from "@/db/provider";
-import { libraryPath, type HorseDashboard } from "@/lib/horse-dashboard";
+import { libraryPath, type HorseDashboard, type HorseProtocolSummary } from "@/lib/horse-dashboard";
 import { SeasonalTipCard } from "@/components/home/SeasonalTipCard";
 import { useHomePreferences } from "@/hooks/useHomePreferences";
 import { seasonalTipVisible } from "@/lib/home-preferences";
@@ -31,7 +31,6 @@ export default function HomeScreen() {
   const horse = useHorse();
   const user = useCurrentUser();
   const hasHorse = !!horse.id;
-  const otherProtocolHorses = useHorsesWithActiveProtocol().filter((item) => item.id !== horse.id);
   const hour = new Date().getHours();
   const greeting = `${hour < 12 ? 'Goedemorgen' : hour < 18 ? 'Goedemiddag' : 'Goedenavond'}${user.name ? `, ${String(user.name).trim().split(/\s+/)[0]}` : ''}`;
   const padBottom = useTabBarPadding();
@@ -73,9 +72,7 @@ export default function HomeScreen() {
         </Text>
         {/* Every horse's intake gets its own card; Home does not depend on a selected horse for this. */}
         <PurchasedProtocols allHorses />
-        {/* The selected horse's protocol comes with Home's dashboard; other horses get a light card from local data. */}
-        {hasHorse && data?.protocol && <ProtocolCard data={data} />}
-        {otherProtocolHorses.map((item) => <OtherProtocolCard key={item.id} horseId={item.id} name={String(item.name ?? '')} />)}
+        {protocolCards(data).map((card) => <ProtocolCard key={card.horseId} {...card} />)}
         {!hasHorse && <View className="mb-5 rounded-2xl bg-white p-5">
           <Text className="mb-2 font-semi text-[20px] text-ink">Je paard toevoegen aan {BRAND_NAME}?</Text>
           <Text className="mb-4 text-[14px] text-ink-70">Voeg je paard toe aan je account, zodat je alle gegevens op één plek kunt bewaren.</Text>
@@ -132,45 +129,19 @@ export default function HomeScreen() {
   );
 }
 
-/** The selected horse's active protocol, with progress from Home's dashboard. */
-function ProtocolCard({ data }: { data: HorseDashboard }) {
-  const protocol = data.protocol!;
-  return (
-    <Pressable
-      accessibilityRole="button"
-      onPress={() =>
-        router.push({
-          pathname: "/(tabs)/(pager)/protocol",
-          params: { tab: "vandaag", t: String(Date.now()) },
-        })
-      }
-      className="mb-4 rounded-[22px] bg-white p-5"
-    >
-      <Text className="text-[10px] uppercase tracking-[1.3px] text-ink-70">
-        {data.horse.name}&apos;s protocol
-      </Text>
-      <Text className="mt-3 font-bold text-[18px] text-ink">
-        {protocol.statusLabel}
-      </Text>
-      <Text className="mt-1 text-[13px] text-ink-70">
-        Dag {protocol.currentDay} · Week {protocol.currentWeek}
-        {protocol.phaseLabel ? ` · ${protocol.phaseLabel}` : ""}
-      </Text>
-      <View className="mt-4 h-1.5 overflow-hidden rounded-full bg-ink-8">
-        <View
-          className="h-full bg-mint-500"
-          style={{ width: `${protocol.progressPercent}%` }}
-        />
-      </View>
-      <Text className="mt-4 font-semi text-[14px] text-teal-600">
-        Ga verder met het protocol →
-      </Text>
-    </Pressable>
-  );
+/**
+ * One card per horse with a protocol in progress, all from the dashboard's
+ * summaries (one source, sorted by name by the server). Older cached responses
+ * only have the selected horse's protocol.
+ */
+function protocolCards(data: HorseDashboard | null): HorseProtocolSummary[] {
+  if (!data) return [];
+  if (data.horseProtocols) return data.horseProtocols;
+  return data.protocol ? [{ ...data.protocol, horseId: data.horse.id, horseName: data.horse.name }] : [];
 }
 
-/** Another horse's active protocol (from local data; no extra dashboard request). */
-function OtherProtocolCard({ horseId, name }: { horseId: string; name: string }) {
+/** A horse's protocol in progress; opens Protocol on that horse. */
+function ProtocolCard({ horseId, horseName, statusLabel, currentDay, currentWeek, phaseLabel, progressPercent }: HorseProtocolSummary) {
   const { selectHorse } = useDb();
   return (
     <Pressable
@@ -186,9 +157,21 @@ function OtherProtocolCard({ horseId, name }: { horseId: string; name: string })
       className="mb-4 rounded-[22px] bg-white p-5"
     >
       <Text className="text-[10px] uppercase tracking-[1.3px] text-ink-70">
-        {name}&apos;s protocol
+        {horseName ? `${horseName}'s protocol` : "Protocol"}
       </Text>
-      <Text className="mt-3 font-bold text-[18px] text-ink">Actief protocol</Text>
+      <Text className="mt-3 font-bold text-[18px] text-ink">
+        {statusLabel}
+      </Text>
+      <Text className="mt-1 text-[13px] text-ink-70">
+        Dag {currentDay} · Week {currentWeek}
+        {phaseLabel ? ` · ${phaseLabel}` : ""}
+      </Text>
+      <View className="mt-4 h-1.5 overflow-hidden rounded-full bg-ink-8">
+        <View
+          className="h-full bg-mint-500"
+          style={{ width: `${progressPercent}%` }}
+        />
+      </View>
       <Text className="mt-4 font-semi text-[14px] text-teal-600">
         Ga verder met het protocol →
       </Text>

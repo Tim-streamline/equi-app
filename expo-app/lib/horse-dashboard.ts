@@ -119,6 +119,18 @@ export type DashboardProtocol = {
     expectationFollowUp?: string | null;
   } | null;
 };
+/** A protocol card on Home: the server's summary of one horse's protocol in progress. */
+export type HorseProtocolSummary = {
+  horseId: string;
+  horseName: string;
+  id: string;
+  statusLabel: string;
+  currentDay: number;
+  currentWeek: number;
+  progressPercent: number;
+  phaseLabel?: string;
+};
+
 export type HorseDashboard = {
   generatedAt: string;
   timezone?: string;
@@ -147,6 +159,8 @@ export type HorseDashboard = {
   } | null;
   recommendations: LibraryRecommendation[];
   protocol: DashboardProtocol | null;
+  /** Per horse with a protocol in progress, sorted by name (absent in older cached responses). */
+  horseProtocols?: HorseProtocolSummary[];
 };
 
 // A response/cache from a previous selection must never appear under the new horse.

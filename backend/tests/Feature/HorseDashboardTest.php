@@ -337,6 +337,34 @@ class HorseDashboardTest extends TestCase
             ->assertJsonPath('protocol.today.total', 1);
     }
 
+    public function test_home_lists_the_protocol_in_progress_for_every_horse_sorted_by_name(): void
+    {
+        $template = ProtocolTemplate::create(['name' => 'Other protocol']);
+        $protocolFor = fn (Horse $horse, array $attributes) => $horse->protocols()->create($attributes + [
+            'protocol_template_id' => $template->id, 'title' => 'Other', 'status' => 'active',
+            'published_at' => now()->subDay(), 'total_weeks' => 6, 'current_week' => 1,
+        ]);
+        $soon = Horse::create(['owner_id' => $this->owner->id, 'name' => 'Émile', 'weight_kg' => 500, 'status' => 'active']);
+        $protocolFor($soon, ['started_at' => now()->addDays(3)->toDateString()]);
+        $scheduled = Horse::create(['owner_id' => $this->owner->id, 'name' => 'Zorro', 'weight_kg' => 500, 'status' => 'active']);
+        $protocolFor($scheduled, ['published_at' => now()->addWeek(), 'started_at' => now()->toDateString()]);
+        $archived = Horse::create(['owner_id' => $this->owner->id, 'name' => 'Archived', 'weight_kg' => 500, 'status' => 'archived']);
+        $protocolFor($archived, ['started_at' => now()->toDateString()]);
+        $stranger = Horse::create(['owner_id' => User::factory()->create()->id, 'name' => 'Stranger', 'weight_kg' => 500, 'status' => 'active']);
+        $protocolFor($stranger, ['started_at' => now()->toDateString()]);
+
+        $response = $this->getJson('/api/horses/'.$this->horse->id.'/dashboard?timezone=Europe/Amsterdam')->assertOk();
+        $list = $response->json('horseProtocols');
+
+        $this->assertSame(['Émile', 'Test Horse'], array_column($list, 'horseName'), 'own active horses only, published protocols only, by name');
+        $this->assertSame('Je protocol start binnenkort', $list[0]['statusLabel']);
+        $this->assertSame(0, $list[0]['currentDay']);
+        // The selected horse's card says exactly what its full protocol view says.
+        foreach (['id', 'currentDay', 'currentWeek', 'totalWeeks', 'progressPercent', 'statusLabel', 'phaseLabel'] as $key) {
+            $this->assertSame($response->json('protocol.'.$key), $list[1][$key], $key);
+        }
+    }
+
     public function test_locked_phase_content_is_redacted_from_every_dashboard_list_until_exact_boundary(): void
     {
         $this->protocol->update(['published_at' => '2026-08-15 00:00:00']);
