@@ -63,6 +63,10 @@ VERSION=$(node -p "require('./app.json').expo.version")
 echo "==> Building & deploying v$VERSION"
 
 # --- build ------------------------------------------------------------------
+# An android/ generated before plugins/withCustomAndroidBuild.js learned the
+# expo-updates fix would reuse a stale asset manifest (new images render blank);
+# add the same Gradle snippet the plugin adds. No-op when it is already there.
+node -e "const fs=require('fs'),f='android/app/build.gradle';fs.writeFileSync(f,require('./plugins/withCustomAndroidBuild').addFreshUpdatesManifest(fs.readFileSync(f,'utf8')))"
 (cd android && ./gradlew assembleRelease)
 [[ -f "$APK" ]] || { echo "error: expected APK not found at $APK"; exit 1; }
 

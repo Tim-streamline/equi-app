@@ -24,12 +24,14 @@ export default function PagerLayout() {
     // Static canvas painted once behind the pager. Scenes stay transparent and
     // navigation is handled exclusively through the bottom menu. Tabs mount on
     // first visit so app start only renders Home. The tab bar slot sits above
-    // the pages: it renders the shared header there (which owns the top
-    // safe-area inset) and the bottom menu, which positions itself at the bottom.
+    // the pages and renders the shared header (which owns the top safe-area
+    // inset); the bottom menu comes after the pages, so screen readers reach
+    // header, page and menu in that order.
     <View style={{ flex: 1, backgroundColor: '#FBF8F3' }}>
       <MaterialTopTabs
         tabBarPosition="top"
-        tabBar={(props) => <><AppHeader {...props} /><PagerTabBar {...props} /></>}
+        tabBar={(props) => <AppHeader {...props} />}
+        layout={({ children, state, navigation }) => <>{children}<PagerTabBar state={state} navigation={navigation} /></>}
         screenOptions={{ swipeEnabled: false, lazy: true, sceneStyle: { backgroundColor: 'transparent' } }}
       >
         <MaterialTopTabs.Screen name="home" options={HOME} />

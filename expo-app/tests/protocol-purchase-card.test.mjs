@@ -14,14 +14,14 @@ function app() {
   const jsx = (type, props) => ({ type, props });
   const dependencies = {
     ...Object.fromEntries(['View', 'Text', 'Pressable', 'ScrollView', 'ActivityIndicator', 'PurchasedProtocols', 'Button'].map(name => [name, name])),
-    useState: initial => [initial, () => {}], useEffect() {}, useRef: initial => ({ current: initial }),
+    useState: initial => [initial, () => {}], useEffect() {}, useMemo: fn => fn(), useRef: initial => ({ current: initial }),
     useLocalSearchParams: () => ({}), protocolTab: () => null,
     useDb: () => ({ selectHorse() {} }),
     useHorseDashboard: () => ({ horseId, data, refresh() {} }),
     useTabBarPadding: () => 76,
     ...Object.fromEntries(['HorseSwitcher', 'OfflineStrip', 'IconButton', 'ShoppingBag', 'ProtocolTabs'].map(name => [name, name])),
     ...Object.fromEntries(['Today', 'Calendar', 'Nutrition', 'CareAdvice', 'ProtocolAnalysis', 'Sheet', 'WeeklySheet', 'Supplement', 'Label'].map(name => [name, name])),
-    HEADER_ICON: '#466362', useHeaderAction: action => { header = action?.(); },
+    HEADER_ICON: '#466362', useHeaderAction: action => { header = action; },
     router: { push: route => routes.push(route) },
   };
   const exports = {};

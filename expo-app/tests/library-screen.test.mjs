@@ -39,7 +39,7 @@ function screen() {
     'react-native-safe-area-context': { SafeAreaView: 'SafeAreaView' },
     'expo-router': { useLocalSearchParams: () => ({}), router: { push() {} } },
     '@/components/ui/OfflineStrip': { OfflineStrip: 'OfflineStrip' },
-    '@/components/navigation/headerActions': { useHeaderAction: action => { header = action?.(); } },
+    '@/components/navigation/headerActions': { useHeaderAction: action => { header = action; } },
     'lucide-react-native': { Search: 'Search', ChevronDown: 'ChevronDown', Check: 'Check', X: 'X', SlidersHorizontal: 'SlidersHorizontal', ChevronLeft: 'ChevronLeft' },
     '@/components/library/LibraryCard': { LibraryCard: 'LibraryCard' },
     '@/components/ui/Chip': { Chip: 'Chip' },

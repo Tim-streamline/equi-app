@@ -64,7 +64,7 @@ function Cell({
   );
 }
 
-export function PagerTabBar({ state, navigation }: MaterialTopTabBarProps) {
+export function PagerTabBar({ state, navigation }: Pick<MaterialTopTabBarProps, 'state' | 'navigation'>) {
   const insets = useSafeAreaInsets();
   const cells: ReactNode[] = [];
   state.routes.forEach((route, index) => {
@@ -103,8 +103,7 @@ export function PagerTabBar({ state, navigation }: MaterialTopTabBarProps) {
   );
 
   return (
-    // Rendered before the pages (the header shares this slot), so zIndex keeps it on top.
-    <View accessibilityRole="tablist" style={{ position: 'absolute', left: 0, right: 0, bottom: 0, zIndex: 1 }}>
+    <View accessibilityRole="tablist" style={{ position: 'absolute', left: 0, right: 0, bottom: 0 }}>
       <BlurView
         intensity={Platform.OS === 'ios' ? 60 : 100}
         tint="light"

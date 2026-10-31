@@ -1,5 +1,5 @@
 import { KeyboardScrollView as ScrollView, KeyboardTextInput as TextInput, KeyboardViewport } from '@/components/ui/KeyboardForm';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { View, Text, Pressable, ActivityIndicator, FlatList, Modal, useWindowDimensions } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -76,7 +76,8 @@ export default function LibraryScreen() {
     : `Toon ${filteredList.length} ${filteredList.length === 1 ? 'item' : 'items'}`;
   // The credit balance lives in the shared header, only while Bibliotheek is visible.
   const credits = liveAccess?.credits;
-  useHeaderAction(credits == null ? undefined : () => <CreditsChip credits={credits} />, [credits]);
+  const creditsChip = useMemo(() => credits == null ? null : <CreditsChip credits={credits} />, [credits]);
+  useHeaderAction(creditsChip);
   return <View className="flex-1">
     <View style={{ flex: 1 }}>
       {!!accessError && !liveAccess && <OfflineStrip message={accessError} onRetry={() => void refreshAccess()} />}

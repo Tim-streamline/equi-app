@@ -1,4 +1,4 @@
-import { useMemo, useState, type ReactNode } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { View, Text, Animated, type StyleProp, type ViewStyle } from 'react-native';
 import { router } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -14,35 +14,75 @@ type Position = MaterialTopTabBarProps['position'];
 
 // How far a title slides while it fades; it moves the same way as the page.
 const SLIDE = 14;
-const HIDDEN = { opacity: 0 };
-const VISIBLE = { opacity: 1 };
+// Measured on a Pixel 7: about 150 ms for one page, 330 ms for three.
+const pagerMoveMs = (pages: number) => 120 + 80 * pages;
 
 /**
- * Style for page `index`'s slot while the pager moves from page `from` to `to`.
- * The old page fades and slides out over the first half of the move, the new
- * one in over the second half, so the two never overlap. Pages passed on the
- * way (jumping several tabs) stay hidden.
+ * Which titles (and header actions) take part in the current page change, in
+ * plain numbers. A page with `on[page]` is visible while the pager is within
+ * `width[page]` of it, fading out linearly towards that distance; other pages
+ * stay hidden (opacity = on × (1 − |position − page| / width), clamped). Only
+ * these numbers change on a page change, never the pager position they are
+ * compared with, so no JS knowledge of where the pager is (which it cannot
+ * read) is needed.
  */
-function pageFade(position: Position, index: number, from: number, to: number) {
-  if (index !== from && index !== to) return HIDDEN;
-  if (from === to) return VISIBLE;
-  const leaving = index === from;
-  const direction = Math.sign(to - from);
-  const middle = (from + to) / 2;
-  const [start, end] = leaving ? [from, middle] : [middle, to];
-  const opacity = leaving ? [1, 0] : [0, 1];
-  const offset = leaving ? [0, -SLIDE * direction] : [SLIDE * direction, 0];
-  // interpolate() needs an increasing input range.
-  const ascending = start < end;
-  const inputRange = ascending ? [start, end] : [end, start];
-  const ordered = (values: number[]) => (ascending ? values : [...values].reverse());
-  return {
-    opacity: position.interpolate({ inputRange, outputRange: ordered(opacity), extrapolate: 'clamp' }),
-    transform: [{ translateX: position.interpolate({ inputRange, outputRange: ordered(offset), extrapolate: 'clamp' }) }],
-  };
+type Transition = { from: number; to: number; on: number[]; width: number[] };
+
+function settled(to: number, count: number): Transition {
+  return { from: to, to, on: Array.from({ length: count }, (_, page) => (page === to ? 1 : 0)), width: Array<number>(count).fill(0.5) };
 }
 
-/** One page's title or action, stacked with the other pages' and faded by `pageFade`. */
+/**
+ * The change towards page `to` after `previous`. The page left behind fades out
+ * by halfway, the new page fades in from halfway, so the two never overlap and
+ * pages passed on the way stay hidden.
+ *
+ * When the change `interrupted` a running one, the pager is somewhere between
+ * the previous pages, so those keep (at most) the windows they had: whatever
+ * is visible keeps fading from where it is instead of jumping, and is gone by
+ * the time the new page is reached.
+ */
+function nextTransition(previous: Transition, to: number, interrupted: boolean): Transition {
+  const { from: older, to: leaving } = previous;
+  const half = Math.max(Math.abs(to - leaving) / 2, 0.5);
+  // Never wider than the distance to the new page, so nothing is left visible there.
+  const keep = (page: number) => Math.min(Math.max(previous.width[page], half), Math.max(Math.abs(to - page), 0.5));
+  const on = previous.on.map((_, page) => (page === to || page === leaving || (interrupted && page === older) ? 1 : 0));
+  const width = previous.width.map((value, page) => {
+    if (page === to) return half;
+    if (page === leaving) return interrupted ? keep(page) : half;
+    if (interrupted && page === older) return keep(page);
+    return value;
+  });
+  return { from: leaving, to, on, width };
+}
+
+/**
+ * Native animation graph for the header slots, built once. A page change only
+ * sets the `on` and `width` values (`apply`); styles never change, so the
+ * native driver keeps full control even when a change interrupts a running one.
+ */
+function createSlotAnimations(position: Position, count: number, index: number) {
+  const initial = settled(index, count);
+  const on = initial.on.map(value => new Animated.Value(value));
+  const width = initial.width.map(value => new Animated.Value(value));
+  const styles = on.map((visible, page) => {
+    // Signed distance from this page in multiples of its window: 0 here, ±1 at the window edge.
+    const offset = Animated.divide(Animated.add(position, -page), width[page]);
+    const distance = offset.interpolate({ inputRange: [-1, 0, 1], outputRange: [1, 0, 1], extrapolate: 'clamp' });
+    return {
+      opacity: Animated.multiply(visible, distance.interpolate({ inputRange: [0, 1], outputRange: [1, 0], extrapolate: 'clamp' })),
+      transform: [{ translateX: offset.interpolate({ inputRange: [-1, 0, 1], outputRange: [SLIDE, 0, -SLIDE], extrapolate: 'clamp' }) }],
+    };
+  });
+  const apply = (t: Transition) => {
+    t.on.forEach((value, page) => on[page].setValue(value));
+    t.width.forEach((value, page) => width[page].setValue(value));
+  };
+  return { styles, apply, initial };
+}
+
+/** One page's title or action, stacked with the other pages' and faded by `createSlotAnimations`. */
 function PageSlot({ hidden, style, children }: { hidden: boolean; style: StyleProp<ViewStyle>; children: ReactNode }) {
   return (
     <Animated.View
@@ -64,20 +104,28 @@ const TITLE = { includeFontPadding: false, fontFamily: 'SourceSans3_700Bold', fo
  * jump when switching tabs; the pages must not add the top safe-area inset again.
  *
  * Each page's title and action come from its screen options (`title`,
- * `headerAction`) and follow the pager scroll via `pageFade`. Actions are laid
+ * `headerAction`) and follow the pager scroll via `createSlotAnimations`. Actions are laid
  * out against the account button, which never moves.
  */
 export function AppHeader({ state, descriptors, position }: MaterialTopTabBarProps) {
   const index = state.index;
-  // The pages the current (or last) transition runs between.
-  const [transition, setTransition] = useState({ from: index, to: index });
-  if (transition.to !== index) setTransition({ from: transition.to, to: index });
-  const { from, to } = transition;
   const count = state.routes.length;
-  const fades = useMemo(
-    () => Array.from({ length: count }, (_, page) => pageFade(position, page, from, to)),
-    [position, from, to, count],
-  );
+  // The pager's position node and page count are fixed for the header's lifetime.
+  const [{ styles, apply, initial }] = useState(() => createSlotAnimations(position, count, index));
+  const transition = useRef(initial);
+  const changedAt = useRef(0);
+  useEffect(() => {
+    if (transition.current.to === index) return;
+    // JS cannot read the pager's position, so a change that comes while the previous
+    // move is probably still running is treated as interrupting it.
+    const now = Date.now();
+    const previous = transition.current;
+    const interrupted = now - changedAt.current < pagerMoveMs(Math.abs(previous.to - previous.from));
+    transition.current = nextTransition(previous, index, interrupted);
+    changedAt.current = now;
+    apply(transition.current);
+  }, [index, apply]);
+  const to = index;
   return (
     <SafeAreaView edges={['top']}>
       {/* Hairline separates the bar from content scrolling underneath. */}
@@ -86,7 +134,7 @@ export function AppHeader({ state, descriptors, position }: MaterialTopTabBarPro
           {state.routes.map((route, page) => {
             const options = descriptors[route.key].options as PagerScreenOptions;
             return (
-              <PageSlot key={route.key} hidden={page !== to} style={[{ left: 0, right: 0 }, fades[page]]}>
+              <PageSlot key={route.key} hidden={page !== to} style={[{ left: 0, right: 0 }, styles[page]]}>
                 <Text accessibilityRole="header" numberOfLines={1} maxFontSizeMultiplier={1.3} style={TITLE}>
                   {options.title ?? route.name}
                 </Text>
@@ -100,10 +148,10 @@ export function AppHeader({ state, descriptors, position }: MaterialTopTabBarPro
           {state.routes.map((route, page) => {
             const action = (descriptors[route.key].options as PagerScreenOptions).headerAction;
             if (!action) return null;
-            return <PageSlot key={route.key} hidden={page !== to} style={[{ right: 0 }, fades[page]]}>{action()}</PageSlot>;
+            return <PageSlot key={route.key} hidden={page !== to} style={[{ right: 0 }, styles[page]]}>{action()}</PageSlot>;
           })}
         </View>
-        <IconButton accessibilityLabel="Account openen" onPress={() => router.push('/(tabs)/account')}>
+        <IconButton accessibilityLabel="Account openen" hitSlop={0} onPress={() => router.push('/(tabs)/account')}>
           <UserRound size={22} color={HEADER_ICON} />
         </IconButton>
       </View>

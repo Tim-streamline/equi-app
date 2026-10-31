@@ -47,18 +47,16 @@ function screen(homeUpsell) {
       useHorsesWithActiveProtocol: () => horses.filter(horse => activeProtocols.includes(horse.id)),
     },
     // Home asks for every active horse (only the user id); Protocol for the selected horse.
-    '@powersync/react': { useQuery: (_sql, params) => {
+    '@powersync/react': { useQuery: (sql, params) => {
       assert.equal(params.at(-1), 'u');
-      const [horse, allHorses] = params;
-      const rows = (allHorses ? horses : horses.filter(item => item.id === horse)).flatMap(item => (purchases[item.id] ?? []).map(row => ({ ...row, horse_id: item.id, horse_name: item.name })));
+      const allHorses = sql === 'all-horses';
+      const rows = (allHorses ? horses : horses.filter(item => item.id === params[0])).flatMap(item => (purchases[item.id] ?? []).map(row => ({ ...row, horse_id: item.id, horse_name: item.name })));
       return { data: rows };
     } },
     '@/components/ui/Button': { Button: 'Button', PRIMARY_INK: '#083635' },
     '@/db/provider': { useDb: () => ({ selectHorse: id => { selected = id; } }) },
-    '@/hooks/useHorseDashboard': { useHorseDashboard: (_month, forHorse) => forHorse ? ({
-      data: ready ? { horse: { id: forHorse, name: forHorse }, protocol: activeProtocols.includes(forHorse) ? { statusLabel: `Actief voor ${forHorse}`, currentDay: 3, currentWeek: 1, progressPercent: 10 } : null } : null,
-    }) : ({
-      data: ready ? { horse: { id: selected }, greeting: selected ? 'Welkom, Tim' : 'Goedemorgen, Tim', hasPlus: !!selected && selected !== 'basic', showPlusUpsell: selected === 'unpurchased', homeUpsell, recommendations: selected ? [] : [1, 2, 3, 4].map(id => ({ id: `item-${id}`, title: `Item ${id}` })), protocol: null } : null,
+    '@/hooks/useHorseDashboard': { useHorseDashboard: () => ({
+      data: ready ? { horse: { id: selected }, greeting: selected ? 'Welkom, Tim' : 'Goedemorgen, Tim', hasPlus: !!selected && selected !== 'basic', showPlusUpsell: selected === 'unpurchased', homeUpsell, recommendations: selected ? [] : [1, 2, 3, 4].map(id => ({ id: `item-${id}`, title: `Item ${id}` })), protocol: activeProtocols.includes(selected) ? { statusLabel: `Actief voor ${selected}`, currentDay: 3, currentWeek: 1, progressPercent: 10 } : null } : null,
       loading: !ready, refresh() {},
     }) },
     '@/hooks/useTabBarPadding': { useTabBarPadding: () => 76 },
@@ -74,6 +72,7 @@ function screen(homeUpsell) {
   };
   modules['./LaminitisSafetyNotice'] = { LaminitisSafetyNotice: () => null };
   modules['@/components/ui/OfflineStrip'] = { OfflineStrip: 'OfflineStrip' };
+  modules['@/lib/intake/protocol-queries'] = { PROTOCOLS_FOR_HORSE: 'for-horse', PROTOCOLS_FOR_ALL_HORSES: 'all-horses' };
   modules['@/components/intake/PurchasedProtocols'] = load('../components/intake/PurchasedProtocols.tsx', modules);
   const home = load('../app/(tabs)/(pager)/home.tsx', modules);
   const render = () => flatten(home.default());
@@ -169,14 +168,14 @@ test('an intake card of another horse selects that horse before opening its inta
   assert.deepEqual(app.routes.at(-1), { pathname: '/intake', params: { bookingId: 'i3' } });
 });
 
-test('Home shows an active protocol card for every horse that has one', () => {
+test('Home shows an active protocol card for every horse that has one, with one dashboard request', () => {
   const app = screen();
   app.activeProtocols.push('purchased', 'partial');
-  app.select('unpurchased');
+  app.select('purchased');
   const tree = app.render();
-  assert.ok(tree.includes('Actief voor purchased'));
-  assert.ok(tree.includes('Actief voor partial'));
-  tree.find(n => n?.type === 'Pressable' && text(n).includes('Actief voor partial')).props.onPress();
+  assert.ok(tree.includes('Actief voor purchased'), 'the selected horse has its dashboard card');
+  assert.ok(text(tree).includes("partial's protocol"), 'another horse gets a card from local data');
+  tree.find(n => n?.type === 'Pressable' && text(n).includes("partial's protocol")).props.onPress();
   assert.equal(app.selected(), 'partial', 'Protocol opens on the horse of the card');
   assert.equal(app.routes.at(-1).pathname, '/(tabs)/(pager)/protocol');
 });

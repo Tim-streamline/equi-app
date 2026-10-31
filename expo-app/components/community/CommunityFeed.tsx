@@ -17,7 +17,7 @@ import { IconButton } from '@/components/ui/IconButton';
 /** Community's header action (see the pager layout): the muted authors list. */
 export function MutedAuthorsButton() {
   return (
-    <IconButton accessibilityLabel="Gedempte auteurs" onPress={() => router.push('/(tabs)/community/mutes')}>
+    <IconButton accessibilityLabel="Gedempte auteurs" hitSlop={0} onPress={() => router.push('/(tabs)/community/mutes')}>
       <BellOff size={22} color={HEADER_ICON} />
     </IconButton>
   );

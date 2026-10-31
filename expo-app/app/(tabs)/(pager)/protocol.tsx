@@ -1,7 +1,7 @@
 import { PurchasedProtocols } from '@/components/intake/PurchasedProtocols';
 import { KeyboardTextInput as TextInput, KeyboardViewport as KeyboardAvoidingView, KeyboardScrollView } from '@/components/ui/KeyboardForm';
 import { LibraryThumbnail } from "@/components/library/LibraryThumbnail";
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import {
   View,
   Text,
@@ -71,7 +71,8 @@ export default function ProtocolListScreen() {
   const handledLink = useRef<string | null>(null);
   const [month, setMonth] = useState<string>();
   const { data, error, refresh, horseId } = useHorseDashboard(month);
-  const [orders, setOrders] = useState<DashboardSupplement[] | null>(null);
+  // 'all' is the protocol's full order list; otherwise a phase's or notice's items.
+  const [orders, setOrders] = useState<DashboardSupplement[] | 'all' | null>(null);
   const [phase, setPhase] = useState<DashboardPhase | null>(null);
   const [weeklyOpen, setWeeklyOpen] = useState(false);
   const padBottom = useTabBarPadding();
@@ -110,21 +111,22 @@ export default function ProtocolListScreen() {
   // Keep an open sheet in sync when a therapist changes the schedule or content.
   const visiblePhase = phase ? protocol?.phases.find((item) => item.id === phase.id && item.accessible) : null;
 
-  const visibleOrders = orders?.map((item) => protocol?.orderItems.find((current) => current.id === item.id)).filter((item): item is DashboardSupplement => !!item);
+  const visibleOrders = orders === 'all' ? protocol?.orderItems : orders?.map((item) => protocol?.orderItems.find((current) => current.id === item.id)).filter((item): item is DashboardSupplement => !!item);
   const linkedPhases = protocol?.phases.filter((item) => item.accessible && requestedPhases?.split(',').includes(item.id)) ?? [];
 
   // The selected horse and the order list live in the shared header, only while Protocol is visible.
-  const orderItems = protocol?.orderItems;
-  useHeaderAction(() => (
+  const hasOrders = !!protocol;
+  const headerAction = useMemo(() => (
     <View className="flex-row items-center">
       <HorseSwitcher openSignal={horsePicker} />
-      {orderItems && (
-        <IconButton accessibilityLabel="Open bestellijst" onPress={() => setOrders(orderItems)}>
+      {hasOrders && (
+        <IconButton accessibilityLabel="Open bestellijst" hitSlop={0} onPress={() => setOrders("all")}>
           <ShoppingBag size={22} color={HEADER_ICON} />
         </IconButton>
       )}
     </View>
-  ), [horsePicker, orderItems]);
+  ), [horsePicker, hasOrders]);
+  useHeaderAction(headerAction);
 
   return (
     <View className="flex-1 bg-canvas">

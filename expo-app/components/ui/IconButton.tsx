@@ -8,9 +8,11 @@ type Props = {
   size?: number;
   className?: string;
   accessibilityLabel?: string;
+  /** Extra touch area around the button; use 0 where buttons sit close together. */
+  hitSlop?: number;
 };
 
-export function IconButton({ children, onPress, tone = 'light', size = 44, className = '', accessibilityLabel }: Props) {
+export function IconButton({ children, onPress, tone = 'light', size = 44, className = '', accessibilityLabel, hitSlop = 8 }: Props) {
   return (
     <Pressable
       onPress={onPress}
@@ -18,7 +20,7 @@ export function IconButton({ children, onPress, tone = 'light', size = 44, class
       accessibilityLabel={accessibilityLabel}
       className={`items-center justify-center rounded-full ${tone === 'deep' ? 'active:bg-white/10' : 'active:bg-ink-8'} ${className}`}
       style={{ width: size, height: size }}
-      hitSlop={8}
+      hitSlop={hitSlop}
     >
       {children}
     </Pressable>

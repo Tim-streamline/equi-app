@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { DatabaseSync } from 'node:sqlite';
 import test from 'node:test';
+import { PROTOCOLS_FOR_ALL_HORSES, PROTOCOLS_FOR_HORSE } from '../lib/intake/protocol-queries.ts';
 import ts from 'typescript';
 
 test('purchased protocol query runs against the device schema and retains unfinished intakes', () => {
@@ -35,17 +36,21 @@ test('purchased protocol query runs against the device schema and retains unfini
     insertHorse.run('rolo', 'Rolo', 'active'); insertHorse.run('nova', 'Nova', 'active'); insertHorse.run('gone', 'Gone', 'archived');
     insertProtocol.run('gone-horse', 'gone', 'gone-horse', 'draft', '2026-10-17');
     insertIntake.run('intake-gone-horse', 'gone-horse', 'owner', 'gone', 'pending', null);
-    const component = readFileSync(new URL('../components/intake/PurchasedProtocols.tsx', import.meta.url), 'utf8');
-    const query = db.prepare(component.match(/`(\s*SELECT[\s\S]*?)`/)[1]);
-    const rows = query.all('rolo', 0, 'owner');
+    const rows = db.prepare(PROTOCOLS_FOR_HORSE).all('rolo', 'owner');
     assert.deepEqual(rows.map(row => row.id), ['draft', 'finished']);
     assert.equal(rows[0].booking_id, 'intake-draft');
     assert.equal(rows[0].submitted_at, null);
     assert.equal(rows[0].horse_name, 'Rolo');
     // Home: every active horse of the user, each intake its own row.
-    const all = query.all(null, 1, 'owner');
+    const all = db.prepare(PROTOCOLS_FOR_ALL_HORSES).all('owner');
     assert.deepEqual(all.map(row => [row.id, row.horse_id, row.horse_name]), [['other-horse', 'nova', 'Nova'], ['draft', 'rolo', 'Rolo'], ['finished', 'rolo', 'Rolo']]);
   } finally {
     db.close();
   }
+});
+
+test('both intake queries filter on an indexable column, without OR flags', () => {
+  assert.match(PROTOCOLS_FOR_HORSE, /WHERE p\.horse_id = \?\s+AND i\.user_id = \?/);
+  assert.match(PROTOCOLS_FOR_ALL_HORSES, /WHERE h\.status = 'active'\s+AND i\.user_id = \?/);
+  for (const query of [PROTOCOLS_FOR_HORSE, PROTOCOLS_FOR_ALL_HORSES]) assert.doesNotMatch(query, /\bOR\b/);
 });
