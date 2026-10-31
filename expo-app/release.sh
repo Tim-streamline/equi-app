@@ -63,11 +63,6 @@ VERSION=$(node -p "require('./app.json').expo.version")
 echo "==> Building & deploying v$VERSION"
 
 # --- build ------------------------------------------------------------------
-# expo-updates' createReleaseUpdatesResources task has no file inputs, so Gradle
-# keeps reusing its first app.manifest; assets added later (e.g. new images)
-# are then missing from the embedded update and render blank. Remove the output
-# so the manifest is regenerated on every release build.
-rm -rf android/app/build/generated/assets/createReleaseUpdatesResources
 (cd android && ./gradlew assembleRelease)
 [[ -f "$APK" ]] || { echo "error: expected APK not found at $APK"; exit 1; }
 

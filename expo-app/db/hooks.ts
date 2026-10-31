@@ -13,6 +13,7 @@ import { IDS } from './ids';
 import { useDb } from '@/db/provider';
 import {
   ACTIVE_PROTOCOL_SQL,
+  HORSES_WITH_ACTIVE_PROTOCOL_SQL,
   buildProtocolPlan,
   type ProtocolSupplementIntakeRow,
 } from '@/lib/protocol-plan';
@@ -159,6 +160,11 @@ export function useActiveProtocolForHorse(horseId?: string) {
   const id = horseId ?? fallback;
   const rows = useCamelQuery(ACTIVE_PROTOCOL_SQL, [id]);
   return rows[0] ?? null;
+}
+
+export function useHorsesWithActiveProtocol(): Indexed[] {
+  const uid = useCurrentUserId();
+  return useCamelQuery(HORSES_WITH_ACTIVE_PROTOCOL_SQL, [uid]);
 }
 
 export function useProtocolPhases(protocolId: string) {

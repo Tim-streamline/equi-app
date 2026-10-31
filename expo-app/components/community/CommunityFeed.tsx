@@ -11,8 +11,17 @@ import { Action, Pagination, ResourceState } from './Common';
 import { useDb } from '@/db/provider';
 import { selectionHaptic } from '@/lib/haptics';
 import { OfflineStrip } from '@/components/ui/OfflineStrip';
-import { HeaderButton, HEADER_ICON } from '@/components/ui/AppHeader';
-import { useHeaderAction } from '@/components/navigation/headerActions';
+import { HEADER_ICON } from '@/components/ui/AppHeader';
+import { IconButton } from '@/components/ui/IconButton';
+
+/** Community's header action (see the pager layout): the muted authors list. */
+export function MutedAuthorsButton() {
+  return (
+    <IconButton accessibilityLabel="Gedempte auteurs" onPress={() => router.push('/(tabs)/community/mutes')}>
+      <BellOff size={22} color={HEADER_ICON} />
+    </IconButton>
+  );
+}
 
 export function CommunityFeed() {
   const [category, setCategory] = useState('');
@@ -21,12 +30,6 @@ export function CommunityFeed() {
   const { data, error, refresh, refreshing } = useCommunityResource<CommunityFeedData>(communityQuery(category, bookmarked, page));
   const padBottom = useTabBarPadding();
   const { isLoggedIn } = useDb();
-  // Muted authors live in the shared header, only while Community is visible.
-  useHeaderAction('community', (
-    <HeaderButton label="Gedempte auteurs" onPress={() => router.push('/(tabs)/community/mutes')}>
-      <BellOff size={22} color={HEADER_ICON} />
-    </HeaderButton>
-  ));
   return <View className="flex-1 bg-canvas">
     {!!error && <OfflineStrip message={error} stale={!!data} onRetry={() => void refresh()} />}
     <ScrollView contentContainerStyle={{ paddingTop: 16, paddingBottom: padBottom }} refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => void refresh()} />}>

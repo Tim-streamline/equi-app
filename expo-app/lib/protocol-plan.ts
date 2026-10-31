@@ -8,6 +8,17 @@ export const ACTIVE_PROTOCOL_SQL = `
   LIMIT 1
 `;
 
+/** Active horses of an owner that have a published active protocol (Home lists one card each). */
+export const HORSES_WITH_ACTIVE_PROTOCOL_SQL = `
+  SELECT DISTINCT h.id, h.name
+  FROM horses h JOIN protocols p ON p.horse_id = h.id
+  WHERE h.owner_id = ?
+    AND h.status = 'active'
+    AND p.status = 'active'
+    AND p.published_at IS NOT NULL
+  ORDER BY h.name
+`;
+
 type Row = { id: string; [key: string]: unknown };
 
 export type ProtocolPlanSupplement = Row & {

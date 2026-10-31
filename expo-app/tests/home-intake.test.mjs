@@ -26,6 +26,7 @@ function screen(homeUpsell) {
   intakes.submitted.state.submittedAt = '2026-09-29T12:00:00Z';
   intakes.partial.state.answers = { paard: { naam: 'Luna' } };
   let selected = 'purchased', ready = true, delivered = false;
+  const activeProtocols = [];
   const routes = [];
   const purchases = { purchased: [{ id: 'p1', title: 'Protocol Nova', status: 'draft', booking_id: 'i1', submitted_at: null }], unpurchased: [], submitted: [{ id: 'p2', title: 'Protocol Luna', status: 'draft', booking_id: 'i2', submitted_at: '2026-10-01' }], partial: [{ id: 'p3', title: 'Vervolgprotocol', status: 'draft', booking_id: 'i3', submitted_at: null }] };
   const jsx = (type, props) => typeof type === 'function' ? type(props) : ({ type, props });
@@ -43,16 +44,20 @@ function screen(homeUpsell) {
       useHorse: () => horses.find(horse => horse.id === selected) ?? {},
       useHorsesByOwner: () => horses,
       useActiveProtocolForHorse: () => delivered ? { id: 'protocol' } : null,
+      useHorsesWithActiveProtocol: () => horses.filter(horse => activeProtocols.includes(horse.id)),
     },
     // Home asks for every active horse (only the user id); Protocol for the selected horse.
     '@powersync/react': { useQuery: (_sql, params) => {
       assert.equal(params.at(-1), 'u');
-      if (params.length > 1) return { data: purchases[params[0]] ?? [] };
-      return { data: horses.flatMap(horse => (purchases[horse.id] ?? []).map(row => ({ ...row, horse_name: horse.name }))) };
+      const [horse, allHorses] = params;
+      const rows = (allHorses ? horses : horses.filter(item => item.id === horse)).flatMap(item => (purchases[item.id] ?? []).map(row => ({ ...row, horse_id: item.id, horse_name: item.name })));
+      return { data: rows };
     } },
     '@/components/ui/Button': { Button: 'Button', PRIMARY_INK: '#083635' },
     '@/db/provider': { useDb: () => ({ selectHorse: id => { selected = id; } }) },
-    '@/hooks/useHorseDashboard': { useHorseDashboard: () => ({
+    '@/hooks/useHorseDashboard': { useHorseDashboard: (_month, forHorse) => forHorse ? ({
+      data: ready ? { horse: { id: forHorse, name: forHorse }, protocol: activeProtocols.includes(forHorse) ? { statusLabel: `Actief voor ${forHorse}`, currentDay: 3, currentWeek: 1, progressPercent: 10 } : null } : null,
+    }) : ({
       data: ready ? { horse: { id: selected }, greeting: selected ? 'Welkom, Tim' : 'Goedemorgen, Tim', hasPlus: !!selected && selected !== 'basic', showPlusUpsell: selected === 'unpurchased', homeUpsell, recommendations: selected ? [] : [1, 2, 3, 4].map(id => ({ id: `item-${id}`, title: `Item ${id}` })), protocol: null } : null,
       loading: !ready, refresh() {},
     }) },
@@ -69,14 +74,13 @@ function screen(homeUpsell) {
   };
   modules['./LaminitisSafetyNotice'] = { LaminitisSafetyNotice: () => null };
   modules['@/components/ui/OfflineStrip'] = { OfflineStrip: 'OfflineStrip' };
-  modules['@/components/navigation/headerActions'] = { useHeaderAction() {} };
   modules['@/components/intake/PurchasedProtocols'] = load('../components/intake/PurchasedProtocols.tsx', modules);
   const home = load('../app/(tabs)/(pager)/home.tsx', modules);
   const render = () => flatten(home.default());
   const entry = () => render().find(node => node?.type === 'Button' && node.props.title === 'Intake openen');
   // The selected horse is chosen elsewhere (Protocol); Home has no selector.
   const select = id => { selected = id; };
-  return { render, entry, select, routes, intakes, purchases,
+  return { render, entry, select, routes, intakes, purchases, activeProtocols, selected: () => selected,
     set ready(value) { ready = value; }, set delivered(value) { delivered = value; }, clearHorse() { selected = ''; }, withoutHorse() { selected = ''; horses.length = 0; }, addHorse(id) { horses.push({ id, name: id, status: 'active' }); selected = id; },
   };
 }
@@ -154,4 +158,25 @@ test('an account without a horse has personal greeting, one add action, and four
   assert.equal(app.entry(), undefined);
   app.addHorse('purchased');
   assert.ok(app.entry(), 'a newly added horse with a purchased intake shows its card');
+});
+
+test('an intake card of another horse selects that horse before opening its intake', () => {
+  const app = screen();
+  app.select('unpurchased');
+  const partial = app.render().filter(n => n?.type === 'Button' && n.props.title === 'Intake openen')[1];
+  partial.props.onPress();
+  assert.equal(app.selected(), 'partial', 'the intake looks up its booking under the selected horse');
+  assert.deepEqual(app.routes.at(-1), { pathname: '/intake', params: { bookingId: 'i3' } });
+});
+
+test('Home shows an active protocol card for every horse that has one', () => {
+  const app = screen();
+  app.activeProtocols.push('purchased', 'partial');
+  app.select('unpurchased');
+  const tree = app.render();
+  assert.ok(tree.includes('Actief voor purchased'));
+  assert.ok(tree.includes('Actief voor partial'));
+  tree.find(n => n?.type === 'Pressable' && text(n).includes('Actief voor partial')).props.onPress();
+  assert.equal(app.selected(), 'partial', 'Protocol opens on the horse of the card');
+  assert.equal(app.routes.at(-1).pathname, '/(tabs)/(pager)/protocol');
 });

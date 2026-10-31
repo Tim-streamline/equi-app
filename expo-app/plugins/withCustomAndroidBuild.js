@@ -10,8 +10,14 @@
 //      the default 2 GB. We bump org.gradle.jvmargs in gradle.properties
 //      so release builds finish. expo-build-properties doesn't expose
 //      this knob, so we patch the file directly during prebuild.
+//
+//   3. Fresh expo-updates asset manifest. Its create*UpdatesResources
+//      Gradle tasks declare no file inputs, so Gradle keeps reusing the
+//      first app.manifest; images added later are missing from the
+//      embedded update and render blank in release builds. Marking the
+//      tasks never up to date fixes every build path (CLI, Studio, CI).
 
-const { withDangerousMod } = require('@expo/config-plugins');
+const { withAppBuildGradle, withDangerousMod } = require('@expo/config-plugins');
 const fs = require('fs');
 const path = require('path');
 
@@ -38,10 +44,22 @@ function patchGradleHeap(projectRoot, jvmargs) {
   fs.writeFileSync(file, contents);
 }
 
-module.exports = (config, opts = {}) => {
+const FRESH_MANIFEST_MARKER = '// expo-updates: always regenerate app.manifest';
+const FRESH_MANIFEST = `
+${FRESH_MANIFEST_MARKER} (see plugins/withCustomAndroidBuild.js)
+tasks.matching { it.name.startsWith('create') && it.name.endsWith('UpdatesResources') }.configureEach {
+    outputs.upToDateWhen { false }
+}
+`;
+
+function addFreshUpdatesManifest(buildGradle) {
+  return buildGradle.includes(FRESH_MANIFEST_MARKER) ? buildGradle : buildGradle + FRESH_MANIFEST;
+}
+
+const withCustomAndroidBuild = (config, opts = {}) => {
   const debugLabel = opts.debugLabel ?? `${require('../constants/brand.json').name} (dev)`;
   const jvmargs = opts.jvmargs ?? '-Xmx6144m -XX:MaxMetaspaceSize=1024m';
-  return withDangerousMod(config, [
+  const withFiles = withDangerousMod(config, [
     'android',
     async (cfg) => {
       const projectRoot = cfg.modRequest.projectRoot;
@@ -50,4 +68,11 @@ module.exports = (config, opts = {}) => {
       return cfg;
     },
   ]);
+  return withAppBuildGradle(withFiles, (cfg) => {
+    cfg.modResults.contents = addFreshUpdatesManifest(cfg.modResults.contents);
+    return cfg;
+  });
 };
+
+module.exports = withCustomAndroidBuild;
+module.exports.addFreshUpdatesManifest = addFreshUpdatesManifest;

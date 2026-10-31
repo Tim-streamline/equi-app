@@ -49,8 +49,10 @@ export async function dashboardRequest(path: string, body?: object) {
   }
 }
 
-export function useHorseDashboard(month?: string) {
-  const horseId = useCurrentHorseId();
+/** Dashboard of the selected horse, or of `forHorseId` when given. */
+export function useHorseDashboard(month?: string, forHorseId?: string) {
+  const selectedHorseId = useCurrentHorseId();
+  const horseId = forHorseId ?? selectedHorseId;
   const { currentUserId, syncStatus } = useDb();
   const key = `horse-dashboard:v3:${currentUserId}:${horseId}:${month ?? "today"}`;
   const [snapshot, setSnapshot] = useState<{

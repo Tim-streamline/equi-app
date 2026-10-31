@@ -76,16 +76,7 @@ export default function LibraryScreen() {
     : `Toon ${filteredList.length} ${filteredList.length === 1 ? 'item' : 'items'}`;
   // The credit balance lives in the shared header, only while Bibliotheek is visible.
   const credits = liveAccess?.credits;
-  useHeaderAction('library', credits == null ? null : (
-    <Pressable accessibilityRole="button" accessibilityLabel={`Je credits: ${credits}. Credits bekijken`}
-      onPress={() => router.push('/(tabs)/account/credits')} className="h-11 justify-center">
-      <View className="rounded-pill bg-[#E7F5F3] px-3 py-1">
-        <Text accessibilityLiveRegion="polite" maxFontSizeMultiplier={1.3} className="font-semi text-[14px] leading-[18px] text-teal-700">
-          {credits} {credits === 1 ? 'credit' : 'credits'}
-        </Text>
-      </View>
-    </Pressable>
-  ));
+  useHeaderAction(credits == null ? undefined : () => <CreditsChip credits={credits} />, [credits]);
   return <View className="flex-1">
     <View style={{ flex: 1 }}>
       {!!accessError && !liveAccess && <OfflineStrip message={accessError} onRetry={() => void refreshAccess()} />}
@@ -210,4 +201,18 @@ function FilterChoice({ label, selected, onPress }: { label: string; selected: b
 
 function CardGap() {
   return <View style={{ height: 12 }} />;
+}
+
+/** Bibliotheek's header action: the credit balance, opening the credits page. */
+function CreditsChip({ credits }: { credits: number }) {
+  return (
+    <Pressable accessibilityRole="button" accessibilityLabel={`Je credits: ${credits}. Credits bekijken`}
+      onPress={() => router.push('/(tabs)/account/credits')} className="h-11 justify-center">
+      <View className="rounded-pill bg-[#E7F5F3] px-3 py-1">
+        <Text accessibilityLiveRegion="polite" maxFontSizeMultiplier={1.3} className="font-semi text-[14px] leading-[18px] text-teal-700">
+          {credits} {credits === 1 ? 'credit' : 'credits'}
+        </Text>
+      </View>
+    </Pressable>
+  );
 }

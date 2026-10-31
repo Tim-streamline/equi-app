@@ -15,15 +15,14 @@ import { router } from "expo-router";
 import { ArrowRight } from "lucide-react-native";
 import { useTabBarPadding } from "@/hooks/useTabBarPadding";
 import { useHorseDashboard } from "@/hooks/useHorseDashboard";
-import { useCurrentUser, useHorse } from "@/db/hooks";
-import { libraryPath, type HorseDashboard } from "@/lib/horse-dashboard";
+import { useCurrentUser, useHorse, useHorsesWithActiveProtocol } from "@/db/hooks";
+import { useDb } from "@/db/provider";
+import { libraryPath } from "@/lib/horse-dashboard";
 import { SeasonalTipCard } from "@/components/home/SeasonalTipCard";
 import { useHomePreferences } from "@/hooks/useHomePreferences";
 import { seasonalTipVisible } from "@/lib/home-preferences";
 import { BRAND_NAME } from "@/constants/brand";
-import { ConnectionStatus } from "@/components/ui/ConnectionStatus";
 import { OfflineStrip } from "@/components/ui/OfflineStrip";
-import { useHeaderAction } from "@/components/navigation/headerActions";
 import { ShelbyChatButton } from "@/components/shelby/ShelbyChatButton";
 import { Button, PRIMARY_INK } from "@/components/ui/Button";
 
@@ -32,9 +31,9 @@ export default function HomeScreen() {
   const horse = useHorse();
   const user = useCurrentUser();
   const hasHorse = !!horse.id;
+  const protocolHorses = useHorsesWithActiveProtocol();
   const hour = new Date().getHours();
   const greeting = `${hour < 12 ? 'Goedemorgen' : hour < 18 ? 'Goedemiddag' : 'Goedenavond'}${user.name ? `, ${String(user.name).trim().split(/\s+/)[0]}` : ''}`;
-  useHeaderAction("home", <ConnectionStatus />);
   const padBottom = useTabBarPadding();
   const [refreshing, setRefreshing] = useState(false);
   const seasonal = data?.seasonalTip;
@@ -74,6 +73,7 @@ export default function HomeScreen() {
         </Text>
         {/* Every horse's intake gets its own card; Home does not depend on a selected horse for this. */}
         <PurchasedProtocols allHorses />
+        {protocolHorses.map((item) => <ProtocolCard key={item.id} horseId={item.id} />)}
         {!hasHorse && <View className="mb-5 rounded-2xl bg-white p-5">
           <Text className="mb-2 font-semi text-[20px] text-ink">Je paard toevoegen aan {BRAND_NAME}?</Text>
           <Text className="mb-4 text-[14px] text-ink-70">Voeg je paard toe aan je account, zodat je alle gegevens op één plek kunt bewaren.</Text>
@@ -82,7 +82,6 @@ export default function HomeScreen() {
         {loading && <ActivityIndicator color="#18BAB0" />}
         {data && (
           <>
-            {hasHorse && data.protocol && <ProtocolCard data={data} />}
             {seasonalCard}
             <View className="mb-3 mt-2 flex-row items-center justify-between gap-2">
               <Text accessibilityRole="header" className="flex-1 font-semi text-[16px] text-ink">
@@ -109,6 +108,8 @@ export default function HomeScreen() {
                 onPress={() => router.push("/protocol-purchase")}
                 className="rounded-[22px] bg-[#FFF0EC] p-5"
               >
+                {/* Home has no horse selector, so say which horse the offer is for. */}
+                {!!data.horse.name && <Text className="mb-1 font-semi text-[14px] text-ink-70">Voor {data.horse.name}</Text>}
                 <Text className="font-semi text-[17px] leading-[23px] text-ink">
                   {data.homeUpsell?.title ?? 'Twijfel je wat jouw paard écht nodig heeft?'}
                 </Text>
@@ -129,17 +130,23 @@ export default function HomeScreen() {
   );
 }
 
-function ProtocolCard({ data }: { data: HorseDashboard }) {
-  const protocol = data.protocol!;
+/** Active protocol of one horse; Home shows one per horse that has one. */
+function ProtocolCard({ horseId }: { horseId: string }) {
+  const { data } = useHorseDashboard(undefined, horseId);
+  const { selectHorse } = useDb();
+  const protocol = data?.protocol;
+  if (!data || !protocol) return null;
   return (
     <Pressable
       accessibilityRole="button"
-      onPress={() =>
+      onPress={() => {
+        // Protocol shows the selected horse.
+        selectHorse(horseId);
         router.push({
           pathname: "/(tabs)/(pager)/protocol",
           params: { tab: "vandaag", t: String(Date.now()) },
-        })
-      }
+        });
+      }}
       className="mb-4 rounded-[22px] bg-white p-5"
     >
       <Text className="text-[10px] uppercase tracking-[1.3px] text-ink-70">

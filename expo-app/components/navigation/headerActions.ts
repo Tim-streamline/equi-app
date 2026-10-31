@@ -1,30 +1,25 @@
-import { useEffect, useSyncExternalStore, type ReactNode } from 'react';
+import { useEffect, type DependencyList, type ReactNode } from 'react';
+import { useNavigation } from 'expo-router';
+
+/** Options of the main pager pages; the shared header reads them from the navigator. */
+export type PagerScreenOptions = {
+  /** Page name in the header. */
+  title?: string;
+  /** Page-specific control in the header's right slot. */
+  headerAction?: () => ReactNode;
+};
 
 /**
- * Page actions for the right slot of the shared header, keyed by pager route.
- * Pages hand over their own action; only the header subscribes, so updating an
- * action re-renders the header and never the pages themselves.
+ * Shows `action` in the shared header while this pager page is visible, for
+ * actions that depend on page state (static ones go in the layout's screen
+ * options). Like `useEffect`, it is only re-published when `deps` change.
  */
-let actions: Readonly<Record<string, ReactNode>> = {};
-const listeners = new Set<() => void>();
-
-function update(route: string, node: ReactNode | undefined) {
-  const next = { ...actions };
-  if (node === undefined) delete next[route];
-  else next[route] = node;
-  actions = next;
-  listeners.forEach(listener => listener());
-}
-
-/** Show `node` in the header while `route` is the visible page. */
-export function useHeaderAction(route: string, node: ReactNode) {
-  useEffect(() => update(route, node), [route, node]);
-  useEffect(() => () => update(route, undefined), [route]);
-}
-
-export function useHeaderActions() {
-  return useSyncExternalStore(
-    listener => { listeners.add(listener); return () => { listeners.delete(listener); }; },
-    () => actions,
-  );
+export function useHeaderAction(action: (() => ReactNode) | undefined, deps: DependencyList) {
+  const navigation = useNavigation();
+  useEffect(() => {
+    const options: PagerScreenOptions = { headerAction: action };
+    navigation.setOptions(options);
+    // `action` is a fresh closure every render; `deps` says when it really changed.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [navigation, ...deps]);
 }

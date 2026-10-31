@@ -36,15 +36,15 @@ test('purchased protocol query runs against the device schema and retains unfini
     insertProtocol.run('gone-horse', 'gone', 'gone-horse', 'draft', '2026-10-17');
     insertIntake.run('intake-gone-horse', 'gone-horse', 'owner', 'gone', 'pending', null);
     const component = readFileSync(new URL('../components/intake/PurchasedProtocols.tsx', import.meta.url), 'utf8');
-    const [selectedHorse, allHorses] = [...component.matchAll(/`(\s*SELECT[\s\S]*?)`/g)].map(match => match[1]);
-    const rows = db.prepare(selectedHorse).all('rolo', 'owner');
+    const query = db.prepare(component.match(/`(\s*SELECT[\s\S]*?)`/)[1]);
+    const rows = query.all('rolo', 0, 'owner');
     assert.deepEqual(rows.map(row => row.id), ['draft', 'finished']);
     assert.equal(rows[0].booking_id, 'intake-draft');
     assert.equal(rows[0].submitted_at, null);
     assert.equal(rows[0].horse_name, 'Rolo');
     // Home: every active horse of the user, each intake its own row.
-    const all = db.prepare(allHorses).all('owner');
-    assert.deepEqual(all.map(row => [row.id, row.horse_name]), [['other-horse', 'Nova'], ['draft', 'Rolo'], ['finished', 'Rolo']]);
+    const all = query.all(null, 1, 'owner');
+    assert.deepEqual(all.map(row => [row.id, row.horse_id, row.horse_name]), [['other-horse', 'nova', 'Nova'], ['draft', 'rolo', 'Rolo'], ['finished', 'rolo', 'Rolo']]);
   } finally {
     db.close();
   }

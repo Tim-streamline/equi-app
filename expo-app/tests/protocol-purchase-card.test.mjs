@@ -19,9 +19,9 @@ function app() {
     useDb: () => ({ selectHorse() {} }),
     useHorseDashboard: () => ({ horseId, data, refresh() {} }),
     useTabBarPadding: () => 76,
-    ...Object.fromEntries(['HorseSwitcher', 'OfflineStrip', 'HeaderButton', 'ShoppingBag', 'ProtocolTabs'].map(name => [name, name])),
+    ...Object.fromEntries(['HorseSwitcher', 'OfflineStrip', 'IconButton', 'ShoppingBag', 'ProtocolTabs'].map(name => [name, name])),
     ...Object.fromEntries(['Today', 'Calendar', 'Nutrition', 'CareAdvice', 'ProtocolAnalysis', 'Sheet', 'WeeklySheet', 'Supplement', 'Label'].map(name => [name, name])),
-    HEADER_ICON: '#466362', useHeaderAction: (route, node) => { assert.equal(route, 'protocol'); header = node; },
+    HEADER_ICON: '#466362', useHeaderAction: action => { header = action?.(); },
     router: { push: route => routes.push(route) },
   };
   const exports = {};
@@ -65,9 +65,9 @@ test('without a horse the protocol tab explains why it is empty and offers to ad
 test('the selected horse and the order list sit in the header bar', () => {
   const screen = app();
   assert.ok(screen.headerAction().some(node => node.type === 'HorseSwitcher'));
-  assert.ok(!screen.headerAction().some(node => node.type === 'HeaderButton'), 'no order list without a protocol');
+  assert.ok(!screen.headerAction().some(node => node.type === 'IconButton'), 'no order list without a protocol');
   screen.data = { horse: { id: 'rolo', name: 'Rolo' }, showPlusUpsell: false, protocol: { id: 'p1', orderItems: [], phases: [] } };
-  const orders = screen.headerAction().find(node => node.type === 'HeaderButton');
-  assert.equal(orders.props.label, 'Open bestellijst');
+  const orders = screen.headerAction().find(node => node.type === 'IconButton');
+  assert.equal(orders.props.accessibilityLabel, 'Open bestellijst');
   assert.ok(screen.headerAction().some(node => node.type === 'HorseSwitcher'));
 });

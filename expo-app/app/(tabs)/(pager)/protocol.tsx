@@ -49,7 +49,8 @@ import { CareAdvice } from "@/components/protocol/CareAdvice";
 import { ProtocolTabs } from "@/components/protocol/ProtocolTabs";
 import { HorseSwitcher } from "@/components/horse/HorseSwitcher";
 import { OfflineStrip } from "@/components/ui/OfflineStrip";
-import { HeaderButton, HEADER_ICON } from "@/components/ui/AppHeader";
+import { HEADER_ICON } from "@/components/ui/AppHeader";
+import { IconButton } from "@/components/ui/IconButton";
 import { useHeaderAction } from "@/components/navigation/headerActions";
 import { accessibleNotificationPhase } from "@/lib/protocol-notifications";
 import { useDb } from "@/db/provider";
@@ -113,16 +114,17 @@ export default function ProtocolListScreen() {
   const linkedPhases = protocol?.phases.filter((item) => item.accessible && requestedPhases?.split(',').includes(item.id)) ?? [];
 
   // The selected horse and the order list live in the shared header, only while Protocol is visible.
-  useHeaderAction("protocol", (
+  const orderItems = protocol?.orderItems;
+  useHeaderAction(() => (
     <View className="flex-row items-center">
       <HorseSwitcher openSignal={horsePicker} />
-      {protocol && (
-        <HeaderButton label="Open bestellijst" onPress={() => setOrders(protocol.orderItems)}>
+      {orderItems && (
+        <IconButton accessibilityLabel="Open bestellijst" onPress={() => setOrders(orderItems)}>
           <ShoppingBag size={22} color={HEADER_ICON} />
-        </HeaderButton>
+        </IconButton>
       )}
     </View>
-  ));
+  ), [horsePicker, orderItems]);
 
   return (
     <View className="flex-1 bg-canvas">
