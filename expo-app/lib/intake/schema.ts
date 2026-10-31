@@ -5327,6 +5327,7 @@ export const INTAKE_SCHEMA: Section[] = [
         "type": "radio",
         "required": true,
         "options": [
+          "Nooit",
           "Zelden (minder dan één keer per week)",
           "Enkele keren per week",
           "Dagelijks",
@@ -5426,6 +5427,7 @@ export const INTAKE_SCHEMA: Section[] = [
           "Anders, namelijk..."
         ],
         "showIf": {
+          "$not": {"sociaal.wegjagen-frequentie": "Nooit"},
           "$all": [
             {
               "$all": [
@@ -5514,6 +5516,7 @@ export const INTAKE_SCHEMA: Section[] = [
         "lines": 2,
         "required": true,
         "showIf": {
+          "$not": {"sociaal.wegjagen-frequentie": "Nooit"},
           "$all": [
             {
               "$all": [
@@ -5611,6 +5614,7 @@ export const INTAKE_SCHEMA: Section[] = [
           "Weet ik niet"
         ],
         "showIf": {
+          "$not": {"sociaal.wegjagen-frequentie": "Nooit"},
           "$all": [
             {
               "$all": [
@@ -5699,6 +5703,7 @@ export const INTAKE_SCHEMA: Section[] = [
         "lines": 2,
         "required": true,
         "showIf": {
+          "$not": {"sociaal.wegjagen-frequentie": "Nooit"},
           "$all": [
             {
               "$all": [
@@ -5796,6 +5801,7 @@ export const INTAKE_SCHEMA: Section[] = [
           "Anders, namelijk..."
         ],
         "showIf": {
+          "$not": {"sociaal.wegjagen-frequentie": "Nooit"},
           "$all": [
             {
               "$all": [
@@ -5885,6 +5891,7 @@ export const INTAKE_SCHEMA: Section[] = [
         "lines": 2,
         "required": true,
         "showIf": {
+          "$not": {"sociaal.wegjagen-frequentie": "Nooit"},
           "$all": [
             {
               "$all": [
@@ -6045,6 +6052,9 @@ export const INTAKE_SCHEMA: Section[] = [
         "label": "Heeft jouw paard direct contact met deze dieren?",
         "type": "radio",
         "required": true,
+        "showIf": {
+          "andere-diersoorten": "any-checked"
+        },
         "options": [
           "Ja, regelmatig",
           "Soms",

@@ -36,6 +36,89 @@ class IntakeHousingSocialTest extends TestCase
         $booking->unsetRelation('answers');
     }
 
+    public function test_never_chased_hides_details_from_review_and_required_progress(): void
+    {
+        config(['intake.require_grouped_conditions' => true]);
+        $booking = $this->booking();
+        $this->assertSame('Nooit', IntakeField::where('key', 'wegjagen-frequentie')->sole()->options[0]);
+        $this->answer($booking, 'huisvesting', 'leefruimte-paarden', 3);
+        $this->answer($booking, 'sociaal', 'sociaal-spanning', ['Wegjagen bij voer']);
+        $this->answer($booking, 'sociaal', 'wegjagen-frequentie', 'Nooit');
+        foreach (['wegjagen-gedrag', 'wegjagen-reactie', 'wegjagen-momenten'] as $key) {
+            $this->answer($booking, 'sociaal', $key, ['Anders, namelijk...']);
+        }
+        $visible = collect(app(IntakeReview::class)->forBooking($booking)['sections'])
+            ->flatMap(fn ($section) => $section['rows'])->pluck('key')->all();
+        $missing = array_column(app(IntakeProgress::class)->forBooking($booking->load('answers'))['missing'], 'field');
+        $this->assertContains('wegjagen-frequentie', $visible);
+        foreach (['wegjagen-gedrag', 'wegjagen-reactie', 'wegjagen-momenten'] as $key) {
+            $this->assertNotContains($key, $visible);
+            $this->assertNotContains($key.'-anders', $visible);
+            $this->assertNotContains($key, $missing);
+            $this->assertNotContains($key.'-anders', $missing);
+        }
+
+        $this->answer($booking, 'sociaal', 'wegjagen-frequentie', 'Dagelijks');
+        $missing = array_column(app(IntakeProgress::class)->forBooking($booking->load('answers'))['missing'], 'field');
+        $this->assertContains('wegjagen-gedrag-anders', $missing);
+    }
+
+    public function test_never_chased_upgrade_preserves_options_and_visibility_and_is_repeatable(): void
+    {
+        $this->seed(IntakeQuestionnaireSeeder::class);
+        $frequency = IntakeField::where('key', 'wegjagen-frequentie')->sole();
+        $frequency->update(['options' => ['Dagelijks', 'Eigen optie']]);
+        $detail = IntakeField::where('key', 'wegjagen-gedrag')->sole();
+        $original = ['$not' => ['sociaal.sociaal-positie' => 'Eigen keuze']];
+        $detail->update(['show_if' => $original]);
+        $migration = require database_path('migrations/2026_10_30_000004_add_never_chased_intake_option.php');
+        $migration->up();
+        $expected = ['$all' => [$original, ['$not' => ['sociaal.wegjagen-frequentie' => 'Nooit']]]];
+        $this->assertSame($expected, $detail->fresh()->show_if);
+        $this->assertSame(['Nooit', 'Dagelijks', 'Eigen optie'], $frequency->fresh()->options);
+        $migration->up();
+        $this->assertSame($expected, $detail->fresh()->show_if);
+        $this->assertSame(['Nooit', 'Dagelijks', 'Eigen optie'], $frequency->fresh()->options);
+    }
+
+    public function test_other_species_contact_is_hidden_and_not_required_without_other_animals(): void
+    {
+        $booking = $this->booking();
+        $contact = 'andere-diersoorten-contact';
+        foreach ([[], ['Geen andere diersoorten'], ['Runderen'], ['Anders, namelijk']] as $species) {
+            $this->answer($booking, 'sociaal', 'andere-diersoorten', $species);
+            $visible = collect(app(IntakeReview::class)->forBooking($booking)['sections'])
+                ->flatMap(fn ($section) => $section['rows'])->pluck('key')->all();
+            $missing = array_column(app(IntakeProgress::class)->forBooking($booking->load('answers'))['missing'], 'field');
+            $expected = in_array('Runderen', $species, true) || in_array('Anders, namelijk', $species, true);
+            $this->assertSame($expected, in_array($contact, $visible, true));
+            $this->assertSame($expected, in_array($contact, $missing, true));
+        }
+
+        $this->answer($booking, 'sociaal', $contact, 'Ja, regelmatig');
+        $this->answer($booking, 'sociaal', 'andere-diersoorten', ['Geen andere diersoorten']);
+        $visible = collect(app(IntakeReview::class)->forBooking($booking)['sections'])
+            ->flatMap(fn ($section) => $section['rows'])->pluck('key')->all();
+        $this->assertNotContains($contact, $visible);
+        $this->assertSame('"Ja, regelmatig"', $booking->answers()->where('field_id', $contact)->value('value'));
+    }
+
+    public function test_species_contact_upgrade_preserves_customized_visibility(): void
+    {
+        $this->seed(IntakeQuestionnaireSeeder::class);
+        $field = IntakeField::where('key', 'andere-diersoorten-contact')->sole();
+        $field->update(['show_if' => null]);
+        $migration = require database_path('migrations/2026_10_30_000003_condition_other_species_contact_question.php');
+        $migration->up();
+        $this->assertSame(['andere-diersoorten' => 'any-checked'], $field->fresh()->show_if);
+        $migration->up();
+        $this->assertSame(['andere-diersoorten' => 'any-checked'], $field->fresh()->show_if);
+        $custom = ['andere-diersoorten' => ['Runderen']];
+        $field->update(['show_if' => $custom]);
+        $migration->up();
+        $this->assertSame($custom, $field->fresh()->show_if);
+    }
+
     public function test_pasture_followups_ignore_old_answers_when_the_horse_no_longer_has_pasture_access(): void
     {
         $booking = $this->booking();
