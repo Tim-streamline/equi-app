@@ -4,7 +4,8 @@ import { BlurView } from 'expo-blur';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Home, ClipboardList, ScanLine, BookOpen, MessageCircle } from 'lucide-react-native';
 import type { MaterialTopTabBarProps } from '@react-navigation/material-top-tabs';
-import { ComponentType, ReactNode } from 'react';
+import { ComponentType, ReactNode, useEffect } from 'react';
+import type { PagerProgress } from '@/components/ui/AppHeader';
 
 type IconCmp = ComponentType<{ size?: number; color?: string; strokeWidth?: number }>;
 
@@ -64,8 +65,13 @@ function Cell({
   );
 }
 
-export function PagerTabBar({ state, navigation }: MaterialTopTabBarProps) {
+export function PagerTabBar({ state, navigation, position, onPager }: MaterialTopTabBarProps & { onPager?: (pager: PagerProgress) => void }) {
   const insets = useSafeAreaInsets();
+  // `position` is a stable animated node; only the settled index changes.
+  const routeNames = state.routes.map(route => route.name).join(',');
+  useEffect(() => {
+    onPager?.({ position, index: state.index, routes: routeNames.split(',') });
+  }, [onPager, position, state.index, routeNames]);
   const cells: ReactNode[] = [];
   state.routes.forEach((route, index) => {
     const Icon = ICONS[route.name];

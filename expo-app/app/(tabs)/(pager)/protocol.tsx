@@ -26,11 +26,9 @@ import {
   LockKeyhole,
 } from "lucide-react-native";
 import { Button } from "@/components/ui/Button";
-import { Avatar } from "@/components/ui/Avatar";
 import { useTabBarPadding } from "@/hooks/useTabBarPadding";
 import {
   useStoreMutations,
-  useCurrentUser,
   useSupplementIntakesForDate,
 } from "@/db/hooks";
 import {
@@ -49,13 +47,18 @@ import {
 import { ProtocolAnalysis } from "@/components/protocol/ProtocolAnalysis";
 import { CareAdvice } from "@/components/protocol/CareAdvice";
 import { ProtocolTabs } from "@/components/protocol/ProtocolTabs";
+import { HorseSwitcher } from "@/components/horse/HorseSwitcher";
+import { OfflineStrip } from "@/components/ui/OfflineStrip";
+import { HeaderButton, HEADER_ICON } from "@/components/ui/AppHeader";
+import { useHeaderAction } from "@/components/navigation/headerActions";
 import { accessibleNotificationPhase } from "@/lib/protocol-notifications";
 import { useDb } from "@/db/provider";
 import { protocolTab, type ProtocolTab } from "@/lib/protocol-tabs";
 import { selectionHaptic } from "@/lib/haptics";
 
 export default function ProtocolListScreen() {
-  const { tab: tabParam, t: nonce, horseId: requestedHorse, protocolId: requestedProtocol, phaseIds: requestedPhases } = useLocalSearchParams<{
+  const { tab: tabParam, t: nonce, horseId: requestedHorse, protocolId: requestedProtocol, phaseIds: requestedPhases, horsePicker } = useLocalSearchParams<{
+    horsePicker?: string;
     tab?: string;
     t?: string;
     horseId?: string;
@@ -67,7 +70,6 @@ export default function ProtocolListScreen() {
   const handledLink = useRef<string | null>(null);
   const [month, setMonth] = useState<string>();
   const { data, error, refresh, horseId } = useHorseDashboard(month);
-  const user = useCurrentUser();
   const [orders, setOrders] = useState<DashboardSupplement[] | null>(null);
   const [phase, setPhase] = useState<DashboardPhase | null>(null);
   const [weeklyOpen, setWeeklyOpen] = useState(false);
@@ -109,58 +111,26 @@ export default function ProtocolListScreen() {
 
   const visibleOrders = orders?.map((item) => protocol?.orderItems.find((current) => current.id === item.id)).filter((item): item is DashboardSupplement => !!item);
   const linkedPhases = protocol?.phases.filter((item) => item.accessible && requestedPhases?.split(',').includes(item.id)) ?? [];
-  const sub =
-    tab === "vandaag"
-      ? protocol?.todayLabel
-      : tab === "kalender"
-        ? protocol?.calendar.label
-        : tab === "voeding"
-          ? "Basisvoeding"
-          : tab === "zorg"
-            ? "Zorgadviezen"
-            : "Analyse";
+
+  // The selected horse and the order list live in the shared header, only while Protocol is visible.
+  useHeaderAction("protocol", (
+    <View className="flex-row items-center">
+      <HorseSwitcher openSignal={horsePicker} />
+      {protocol && (
+        <HeaderButton label="Open bestellijst" onPress={() => setOrders(protocol.orderItems)}>
+          <ShoppingBag size={22} color={HEADER_ICON} />
+        </HeaderButton>
+      )}
+    </View>
+  ));
 
   return (
-    <SafeAreaView edges={["top"]} className="flex-1 bg-canvas">
-      <View className="flex-row items-center justify-between gap-3 px-5 pb-3 pt-1">
-        <View className="flex-1">
-          <Text className="font-bold text-[26px] leading-[30px] text-ink">
-            {data?.horse.name || "Protocol"}
-          </Text>
-          <Text className="mt-0.5 text-[13px] text-ink-70">{sub}</Text>
-        </View>
-        {protocol && (
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel="Open bestellijst"
-            onPress={() => setOrders(protocol.orderItems)}
-            className="h-[38px] w-[38px] items-center justify-center rounded-xl border border-ink-15 bg-white"
-          >
-            <ShoppingBag size={19} color="#127A79" />
-          </Pressable>
-        )}
-        <Avatar
-          initial={String(user.name ?? "")
-            .charAt(0)
-            .toUpperCase()}
-          size={38}
-        />
-      </View>
-      {!!error && (
-        <Pressable
-          onPress={() => void refresh()}
-          className="mx-5 mb-3 rounded-xl bg-[#FFF3DF] p-3"
-        >
-          <Text className="text-[12px] text-[#7A5A16]">
-            {data ? "Laatst opgehaalde gegevens. " : ""}
-            {error} Tik om opnieuw te proberen.
-          </Text>
-        </Pressable>
-      )}
+    <View className="flex-1 bg-canvas">
+      {!!error && <OfflineStrip message={error} stale={!!data} onRetry={() => void refresh()} />}
       {!data && !error && <ActivityIndicator color="#18BAB0" />}
       {!protocol && (
         <ScrollView
-          contentContainerStyle={{ padding: 20, paddingBottom: padBottom }}
+          contentContainerStyle={{ padding: 20, paddingTop: 16, paddingBottom: padBottom }}
         >
           <PurchasedProtocols />
           {!horseId && !!data && (
@@ -300,7 +270,7 @@ export default function ProtocolListScreen() {
           />
         </>
       )}
-    </SafeAreaView>
+    </View>
   );
 }
 
@@ -379,6 +349,9 @@ function Today({
   };
   return (
     <>
+      <Text accessibilityRole="header" className="mb-3 font-bold text-[20px] leading-[26px] text-ink">
+        {protocol.todayLabel}
+      </Text>
       {protocol.today.total > 0 && (
         <View className="mb-4">
           <Card>

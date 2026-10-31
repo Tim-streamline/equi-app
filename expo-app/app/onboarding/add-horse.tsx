@@ -11,7 +11,8 @@ import { useDb } from '@/db/provider';
 
 export default function AddHorseScreen() {
   const { returnTo } = useLocalSearchParams<{ returnTo?: string }>();
-  const destination = returnTo === 'horse-picker' ? { pathname: '/(tabs)/(pager)/home' as const, params: { horsePicker: String(Date.now()) } } : '/(tabs)/(pager)/home' as const;
+  // The horse picker lives on Protocol; return there with the picker open again.
+  const destination = returnTo === 'horse-picker' ? { pathname: '/(tabs)/(pager)/protocol' as const, params: { horsePicker: String(Date.now()) } } : '/(tabs)/(pager)/home' as const;
   const { isLoggedIn, currentUserId, selectHorse } = useDb();
   const { upsertHorse } = useStoreMutations();
   const [name, setName] = useState('');

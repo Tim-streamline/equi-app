@@ -20,7 +20,7 @@ function screen() {
   ];
   const localAccess = { grants: [], isLoading: true };
   const bookmarks = { itemIds: ['paid'], pendingIds: [], error: null };
-  let refreshes = 0;
+  let refreshes = 0, header = null;
   const resource = { data: { hasPlus: false, unlockedIds: [], credits: 7 }, error: null, refresh: () => refreshes++ };
   const jsx = (type, props) => typeof type === 'function' ? type(props) : ({ type, props });
   const modules = {
@@ -37,7 +37,9 @@ function screen() {
       useWindowDimensions: () => ({ width: 400, height: 800 }),
     },
     'react-native-safe-area-context': { SafeAreaView: 'SafeAreaView' },
-    'expo-router': { useLocalSearchParams: () => ({}) },
+    'expo-router': { useLocalSearchParams: () => ({}), router: { push() {} } },
+    '@/components/ui/OfflineStrip': { OfflineStrip: 'OfflineStrip' },
+    '@/components/navigation/headerActions': { useHeaderAction: (route, node) => { assert.equal(route, 'library'); header = node; } },
     'lucide-react-native': { Search: 'Search', ChevronDown: 'ChevronDown', Check: 'Check', X: 'X', SlidersHorizontal: 'SlidersHorizontal', ChevronLeft: 'ChevronLeft' },
     '@/components/library/LibraryCard': { LibraryCard: 'LibraryCard' },
     '@/components/ui/Chip': { Chip: 'Chip' },
@@ -63,7 +65,8 @@ function screen() {
   const press = label => { const node = render().find(node => node.type === 'Pressable' && node.props.accessibilityLabel === label); assert.ok(node, label); node.props.onPress(); };
   const ids = () => render().filter(node => node.type === 'LibraryCard').map(node => node.props.item.id);
   const category = label => { press('Filters openen'); press(label); press('Filters sluiten'); };
-  return { render, press, category, ids, bookmarks, resource, localAccess, groups, categories, history, refreshes: () => refreshes, focused: () => focused };
+  const headerAction = () => { render(); return flatten(header); };
+  return { render, headerAction, press, category, ids, bookmarks, resource, localAccess, groups, categories, history, refreshes: () => refreshes, focused: () => focused };
 }
 
 test('filters are grouped, combine within/across groups, count live, and persist as removable chips', () => {
@@ -106,6 +109,6 @@ test('unlocked filters use account-scoped synced grants offline, with loading an
  assert.deepEqual(app.ids(),['paid']);app.localAccess.grants=[];assert.deepEqual(app.ids(),[]);
 });
 test('credit balance remains visible and missing saved data does not show a misleading zero count', () => {
- const app=screen();assert.ok(app.render().some(n=>Array.isArray(n.props.children)&&n.props.children.join('')==='Je credits: 7'));
+ const app=screen();const credits=app.headerAction();assert.ok(credits.some(n=>n.props.accessibilityLabel==='Je credits: 7. Credits bekijken'));assert.ok(credits.some(n=>Array.isArray(n.props.children)&&n.props.children.join('')==='7 credits'));
  app.bookmarks.itemIds=null;app.category('Opgeslagen');app.press('Filters openen');app.press('Terug naar bibliotheek');
 });

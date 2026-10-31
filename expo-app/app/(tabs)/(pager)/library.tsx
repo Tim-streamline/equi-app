@@ -1,10 +1,12 @@
 import { KeyboardScrollView as ScrollView, KeyboardTextInput as TextInput, KeyboardViewport } from '@/components/ui/KeyboardForm';
 import { useEffect, useRef, useState } from 'react';
 import { View, Text, Pressable, ActivityIndicator, FlatList, Modal, useWindowDimensions } from 'react-native';
-import { useLocalSearchParams } from 'expo-router';
+import { router, useLocalSearchParams } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Search, X, Check, SlidersHorizontal, ChevronLeft } from 'lucide-react-native';
 import { LibraryCard } from '@/components/library/LibraryCard';
+import { OfflineStrip } from '@/components/ui/OfflineStrip';
+import { useHeaderAction } from '@/components/navigation/headerActions';
 import { useLibraryResource } from '@/hooks/useLibraryResource';
 import { useLibraryAccessRecords } from '@/hooks/useLibraryAccessRecords';
 import { useLibraryBookmarks } from '@/hooks/useLibraryBookmarks';
@@ -72,9 +74,46 @@ export default function LibraryScreen() {
   const closeFilters = () => setFiltersOpen(false);
   const resultsLabel = waiting || filterError ? 'Terug naar bibliotheek'
     : `Toon ${filteredList.length} ${filteredList.length === 1 ? 'item' : 'items'}`;
+  // The credit balance lives in the shared header, only while Bibliotheek is visible.
+  const credits = liveAccess?.credits;
+  useHeaderAction('library', credits == null ? null : (
+    <Pressable accessibilityRole="button" accessibilityLabel={`Je credits: ${credits}. Credits bekijken`}
+      onPress={() => router.push('/(tabs)/account/credits')} className="h-11 justify-center">
+      <View className="rounded-pill bg-[#E7F5F3] px-3 py-1">
+        <Text accessibilityLiveRegion="polite" maxFontSizeMultiplier={1.3} className="font-semi text-[14px] leading-[18px] text-teal-700">
+          {credits} {credits === 1 ? 'credit' : 'credits'}
+        </Text>
+      </View>
+    </Pressable>
+  ));
   return <View className="flex-1">
-    <SafeAreaView edges={['top']} style={{ flex: 1 }}>
+    <View style={{ flex: 1 }}>
+      {!!accessError && !liveAccess && <OfflineStrip message={accessError} onRetry={() => void refreshAccess()} />}
       <KeyboardViewport style={{ flex: 1 }}>
+        {/* Search stays under the header while the cards scroll. */}
+        <View className="px-5 pb-3 pt-4">
+          <View className="flex-row items-center gap-3">
+            <View className="flex-1 flex-row items-center gap-2.5 rounded-pill border border-ink-8 bg-white pl-3.5 pr-1" style={{ minWidth: 0 }}>
+              <Search size={18} color="rgba(27,42,42,0.5)" />
+              <TextInput ref={searchInput} value={searchQuery} onChangeText={setSearchQuery}
+                accessibilityLabel="Zoek in de bibliotheek" placeholder={fontScale >= 1.3 ? 'Zoeken' : placeholder} placeholderTextColor="rgba(27,42,42,0.55)"
+                returnKeyType="search" maxFontSizeMultiplier={1.4} className="flex-1 py-3 font-sans text-[16px] text-ink" />
+              {searchQuery.length > 0 && <Pressable accessibilityRole="button" accessibilityLabel="Zoekterm wissen"
+                onPress={() => { setSearchQuery(''); searchInput.current?.focus(); }}
+                style={{ width: 44, height: 44, alignItems: 'center', justifyContent: 'center' }}><X size={18} color="#879392" /></Pressable>}
+            </View>
+            <Pressable accessibilityRole="button" accessibilityLabel="Filters openen"
+              accessibilityHint={`${chips.length} actieve filters`}
+              accessibilityState={{ expanded: filtersOpen }} aria-expanded={filtersOpen}
+              onPress={() => { searchInput.current?.blur(); setFiltersOpen(true); }}
+              className="h-12 w-12 items-center justify-center rounded-pill bg-teal-700">
+              <SlidersHorizontal size={22} color="#FBF8F3" />
+              {chips.length > 0 && <View className="absolute -right-1 -top-1 min-w-5 items-center rounded-pill border-2 border-canvas bg-mint-500 px-1">
+                <Text className="font-bold text-[11px] text-teal-900" maxFontSizeMultiplier={1.2}>{chips.length}</Text>
+              </View>}
+            </Pressable>
+          </View>
+        </View>
         {/* Virtualized grid: only cards near the viewport render, which keeps long libraries smooth on older phones. */}
         <FlatList
           key={columns}
@@ -88,35 +127,6 @@ export default function LibraryScreen() {
           initialNumToRender={6}
           windowSize={7}
           ListHeaderComponent={<>
-            <View className="px-5 pb-3 pt-1.5">
-              <View className="mb-3 flex-row items-center justify-between">
-                <Text accessibilityRole="header" className="font-bold text-[22px] text-ink">Bibliotheek</Text>
-                {liveAccess ? <Text accessibilityLiveRegion="polite" className="font-semi text-[15px] text-teal-700">Je credits: {liveAccess.credits}</Text>
-                  : accessError ? <Pressable accessibilityRole="button" onPress={() => void refreshAccess()}><Text className="text-[13px] text-teal-700">Saldo opnieuw laden</Text></Pressable>
-                  : <ActivityIndicator accessibilityLabel="Credits laden" color="#127A79" />}
-              </View>
-              <View className="flex-row items-center gap-3">
-                <View className="flex-1 flex-row items-center gap-2.5 rounded-pill border border-ink-8 bg-white pl-3.5 pr-1" style={{ minWidth: 0 }}>
-                  <Search size={18} color="rgba(27,42,42,0.5)" />
-                  <TextInput ref={searchInput} value={searchQuery} onChangeText={setSearchQuery}
-                    accessibilityLabel="Zoek in de bibliotheek" placeholder={fontScale >= 1.3 ? 'Zoeken' : placeholder} placeholderTextColor="rgba(27,42,42,0.55)"
-                    returnKeyType="search" maxFontSizeMultiplier={1.4} className="flex-1 py-3 font-sans text-[16px] text-ink" />
-                  {searchQuery.length > 0 && <Pressable accessibilityRole="button" accessibilityLabel="Zoekterm wissen"
-                    onPress={() => { setSearchQuery(''); searchInput.current?.focus(); }}
-                    style={{ width: 44, height: 44, alignItems: 'center', justifyContent: 'center' }}><X size={18} color="#879392" /></Pressable>}
-                </View>
-                <Pressable accessibilityRole="button" accessibilityLabel="Filters openen"
-                  accessibilityHint={`${chips.length} actieve filters`}
-                  accessibilityState={{ expanded: filtersOpen }} aria-expanded={filtersOpen}
-                  onPress={() => { searchInput.current?.blur(); setFiltersOpen(true); }}
-                  className="h-12 w-12 items-center justify-center rounded-pill bg-teal-700">
-                  <SlidersHorizontal size={22} color="#FBF8F3" />
-                  {chips.length > 0 && <View className="absolute -right-1 -top-1 min-w-5 items-center rounded-pill border-2 border-canvas bg-mint-500 px-1">
-                    <Text className="font-bold text-[11px] text-teal-900" maxFontSizeMultiplier={1.2}>{chips.length}</Text>
-                  </View>}
-                </Pressable>
-              </View>
-            </View>
             <View className="flex-row flex-wrap items-center gap-2 px-5 pb-3">
               {chips.map(chip => <Pressable key={chip.key} accessibilityRole="button"
                 accessibilityLabel={`Verwijder filter: ${chip.label}`} onPress={chip.remove}
@@ -145,7 +155,7 @@ export default function LibraryScreen() {
           renderItem={({ item }) => <LibraryCard item={item} access={access} showBookmark={savedOnly} wide={columns === 1} />}
         />
       </KeyboardViewport>
-    </SafeAreaView>
+    </View>
     {filtersOpen && <Modal transparent animationType="fade" statusBarTranslucent navigationBarTranslucent onRequestClose={closeFilters}>
       <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: 'rgba(27,42,42,0.35)' }}>
         <SafeAreaView accessibilityViewIsModal accessibilityLabel="Filters" style={{ width: '100%', maxWidth: width >= 768 ? 560 : undefined,

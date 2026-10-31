@@ -1,34 +1,29 @@
 import { PurchasedProtocols } from '@/components/intake/PurchasedProtocols';
 import { IntakeEntryCard } from "@/components/intake/IntakeEntryCard";
 import { LibraryCard } from "@/components/library/LibraryCard";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import {
   View,
   Text,
   ScrollView,
   Pressable,
-  Modal,
   ActivityIndicator,
   RefreshControl,
   Alert,
 } from "react-native";
-import { router, useLocalSearchParams } from "expo-router";
-import { SafeAreaView } from "react-native-safe-area-context";
-import {
-  ArrowRight,
-  ChevronDown,
-  UserRound,
-} from "lucide-react-native";
+import { router } from "expo-router";
+import { ArrowRight } from "lucide-react-native";
 import { useTabBarPadding } from "@/hooks/useTabBarPadding";
 import { useHorseDashboard } from "@/hooks/useHorseDashboard";
-import { useCurrentUser, useHorse, useHorsesByOwner } from "@/db/hooks";
-import { useDb } from "@/db/provider";
+import { useCurrentUser, useHorse } from "@/db/hooks";
 import { libraryPath, type HorseDashboard } from "@/lib/horse-dashboard";
 import { SeasonalTipCard } from "@/components/home/SeasonalTipCard";
 import { useHomePreferences } from "@/hooks/useHomePreferences";
 import { seasonalTipVisible } from "@/lib/home-preferences";
-import { ConnectionStatus } from "@/components/ui/ConnectionStatus";
 import { BRAND_NAME } from "@/constants/brand";
+import { ConnectionStatus } from "@/components/ui/ConnectionStatus";
+import { OfflineStrip } from "@/components/ui/OfflineStrip";
+import { useHeaderAction } from "@/components/navigation/headerActions";
 import { ShelbyChatButton } from "@/components/shelby/ShelbyChatButton";
 import { Button, PRIMARY_INK } from "@/components/ui/Button";
 
@@ -39,11 +34,7 @@ export default function HomeScreen() {
   const hasHorse = !!horse.id;
   const hour = new Date().getHours();
   const greeting = `${hour < 12 ? 'Goedemorgen' : hour < 18 ? 'Goedemiddag' : 'Goedenavond'}${user.name ? `, ${String(user.name).trim().split(/\s+/)[0]}` : ''}`;
-  const horses = useHorsesByOwner().filter((item) => item.status === "active");
-  const { selectHorse } = useDb();
-  const [pickerOpen, setPickerOpen] = useState(false);
-  const { horsePicker } = useLocalSearchParams<{ horsePicker?: string }>();
-  useEffect(() => { if (horsePicker) setPickerOpen(true); }, [horsePicker]);
+  useHeaderAction("home", <ConnectionStatus />);
   const padBottom = useTabBarPadding();
   const [refreshing, setRefreshing] = useState(false);
   const seasonal = data?.seasonalTip;
@@ -60,7 +51,8 @@ export default function HomeScreen() {
     />
   );
   return (
-    <SafeAreaView edges={["top"]} className="flex-1 bg-canvas">
+    <View className="flex-1 bg-canvas">
+      {!!error && <OfflineStrip message={error} stale={!!data} onRetry={() => void refresh()} />}
       <ScrollView
         contentContainerStyle={{
           paddingHorizontal: 20,
@@ -77,58 +69,11 @@ export default function HomeScreen() {
           />
         }
       >
-        <View className="mb-5 mt-2 flex-row items-center justify-between">
-          <Text className="font-semi text-[12px] tracking-[2px] text-teal-600">
-            {BRAND_NAME}
-          </Text>
-          <View className="flex-row items-center gap-4">
-            <ConnectionStatus />
-            <Pressable
-              accessibilityRole="button"
-              onPress={() => router.push("/(tabs)/account")}
-              accessibilityLabel="Account openen"
-              className="-mr-3 h-11 w-11 items-center justify-center rounded-full active:bg-ink-8"
-            >
-              <UserRound size={20} color="#466362" />
-            </Pressable>
-          </View>
-        </View>
-        <View className="mb-5 flex-row items-center justify-between gap-3">
-          <Text className="flex-1 font-bold text-[25px] leading-[29px] text-ink">
-            {data?.greeting ?? greeting}
-          </Text>
-          {hasHorse ? <Pressable
-            accessibilityRole="button"
-            accessibilityLabel="Wissel paard"
-            onPress={() => setPickerOpen(true)}
-            className="min-h-11 max-w-[45%] flex-row items-center gap-2 rounded-full bg-white px-3 py-2"
-          >
-            <View className="h-7 w-7 items-center justify-center rounded-full bg-mint-500">
-              <Text className="font-semi text-[12px] text-teal-900" maxFontSizeMultiplier={1.2}>
-                {String(horse.name ?? "").charAt(0)}
-              </Text>
-            </View>
-            <Text
-              numberOfLines={1}
-              className="shrink font-semi text-[13px] text-ink"
-            >
-              {horse.name ?? "Kies paard"}
-            </Text>
-            <ChevronDown size={14} color="#536C6B" />
-          </Pressable> : null}
-        </View>
-        {hasHorse && <PurchasedProtocols />}
-        {!!error && (
-          <Pressable
-            onPress={() => void refresh()}
-            className="mb-4 rounded-xl bg-[#FFF3DF] p-3"
-          >
-            <Text className="text-[12px] text-[#7A5A16]">
-              {data ? "Laatst opgehaalde gegevens. " : ""}
-              {error} Tik om opnieuw te proberen.
-            </Text>
-          </Pressable>
-        )}
+        <Text className="mb-5 mt-4 font-bold text-[25px] leading-[29px] text-ink">
+          {data?.greeting ?? greeting}
+        </Text>
+        {/* Every horse's intake gets its own card; Home does not depend on a selected horse for this. */}
+        <PurchasedProtocols allHorses />
         {!hasHorse && <View className="mb-5 rounded-2xl bg-white p-5">
           <Text className="mb-2 font-semi text-[20px] text-ink">Je paard toevoegen aan {BRAND_NAME}?</Text>
           <Text className="mb-4 text-[14px] text-ink-70">Voeg je paard toe aan je account, zodat je alle gegevens op één plek kunt bewaren.</Text>
@@ -140,7 +85,7 @@ export default function HomeScreen() {
             {hasHorse && data.protocol && <ProtocolCard data={data} />}
             {seasonalCard}
             <View className="mb-3 mt-2 flex-row items-center justify-between gap-2">
-              <Text className="flex-1 font-semi text-[10px] uppercase tracking-[1.2px] text-ink-70">
+              <Text accessibilityRole="header" className="flex-1 font-semi text-[16px] text-ink">
                 Ontdek in de bibliotheek
               </Text>
 
@@ -180,60 +125,7 @@ export default function HomeScreen() {
       </ScrollView>
       <ShelbyChatButton bottom={padBottom}
         onPress={() => router.push({ pathname: "/nova-chat", params: { horseId: horse.id, protocolId: data?.protocol?.id ?? "" } })} />
-      <Modal
-        visible={hasHorse && pickerOpen}
-        transparent
-        animationType="slide"
-        onRequestClose={() => setPickerOpen(false)}
-      >
-        <Pressable
-          onPress={() => setPickerOpen(false)}
-          className="flex-1 justify-end bg-black/30 active:opacity-100"
-        >
-          <Pressable
-            onPress={(e) => e.stopPropagation()}
-            className="max-h-[75%] rounded-t-[28px] bg-canvas p-5 active:opacity-100"
-          >
-            <Text className="mb-4 font-bold text-[20px] text-ink">
-              Kies je paard
-            </Text>
-            <ScrollView>
-              {horses.map((item) => (
-                <Pressable
-                  key={item.id}
-                  accessibilityRole="button"
-                  accessibilityState={{ selected: item.id === horse.id }}
-                  onPress={() => {
-                    selectHorse(item.id);
-                    setPickerOpen(false);
-                  }}
-                  className="mb-2 rounded-2xl bg-white p-4"
-                >
-                  <Text className="font-semi text-[16px] text-ink">
-                    {item.name}
-                  </Text>
-                </Pressable>
-              ))}
-            </ScrollView>
-            <SafeAreaView edges={["bottom"]}>
-              <Pressable accessibilityRole="button" accessibilityLabel="Paard toevoegen vanuit paardenlijst"
-                onPress={() => { setPickerOpen(false); router.push({ pathname: '/onboarding/add-horse', params: { returnTo: 'horse-picker' } }); }}
-                className="mt-3 rounded-full border border-mint-500 p-3">
-                <Text className="text-center font-semi text-teal-600">+ Paard toevoegen</Text>
-              </Pressable>
-              <Pressable
-                onPress={() => setPickerOpen(false)}
-                className="mt-2 rounded-full bg-mint-500 p-3"
-              >
-                <Text className="text-center font-bold text-teal-900">
-                  Sluiten
-                </Text>
-              </Pressable>
-            </SafeAreaView>
-          </Pressable>
-        </Pressable>
-      </Modal>
-    </SafeAreaView>
+    </View>
   );
 }
 

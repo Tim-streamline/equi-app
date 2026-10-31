@@ -38,7 +38,7 @@ function Dot({ color, pulse }: { color: string; pulse: boolean }) {
 
   return (
     <Animated.View
-      style={[{ width: 7, height: 7, borderRadius: 4, backgroundColor: color }, style]}
+      style={[{ width: 8, height: 8, borderRadius: 4, backgroundColor: color }, style]}
     />
   );
 }
@@ -48,9 +48,9 @@ export function ConnectionStatus() {
   const cfg = CONFIG[syncStatus] ?? CONFIG.idle;
 
   return (
-    <View className="flex-row items-center gap-1.5 rounded-pill bg-ink-8 px-2.5 py-1">
+    <View className="flex-row items-center gap-2 rounded-pill bg-ink-8 px-3 py-1">
       <Dot color={cfg.dot} pulse={cfg.pulse} />
-      <Text className="font-medium text-[11px] text-ink-70">{cfg.label}</Text>
+      <Text maxFontSizeMultiplier={1.3} className="font-medium text-[14px] leading-[18px] text-ink-70">{cfg.label}</Text>
     </View>
   );
 }

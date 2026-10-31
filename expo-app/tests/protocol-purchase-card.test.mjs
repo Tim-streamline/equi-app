@@ -10,14 +10,18 @@ const flatten = node => Array.isArray(node) ? node.flatMap(flatten) : node && ty
 function app() {
   let horseId = 'rolo', data = { horse: { id: 'rolo', name: 'Rolo' }, showPlusUpsell: true, protocol: null };
   const routes = [];
+  let header;
   const jsx = (type, props) => ({ type, props });
   const dependencies = {
-    ...Object.fromEntries(['SafeAreaView', 'View', 'Text', 'Pressable', 'ScrollView', 'ActivityIndicator', 'Avatar', 'PurchasedProtocols', 'Button'].map(name => [name, name])),
+    ...Object.fromEntries(['View', 'Text', 'Pressable', 'ScrollView', 'ActivityIndicator', 'PurchasedProtocols', 'Button'].map(name => [name, name])),
     useState: initial => [initial, () => {}], useEffect() {}, useRef: initial => ({ current: initial }),
     useLocalSearchParams: () => ({}), protocolTab: () => null,
     useDb: () => ({ selectHorse() {} }),
     useHorseDashboard: () => ({ horseId, data, refresh() {} }),
-    useCurrentUser: () => ({ name: 'Tim' }), useTabBarPadding: () => 76,
+    useTabBarPadding: () => 76,
+    ...Object.fromEntries(['HorseSwitcher', 'OfflineStrip', 'HeaderButton', 'ShoppingBag', 'ProtocolTabs'].map(name => [name, name])),
+    ...Object.fromEntries(['Today', 'Calendar', 'Nutrition', 'CareAdvice', 'ProtocolAnalysis', 'Sheet', 'WeeklySheet', 'Supplement', 'Label'].map(name => [name, name])),
+    HEADER_ICON: '#466362', useHeaderAction: (route, node) => { assert.equal(route, 'protocol'); header = node; },
     router: { push: route => routes.push(route) },
   };
   const exports = {};
@@ -25,6 +29,7 @@ function app() {
   return {
     card: () => flatten(exports.default()).find(node => node?.props?.accessibilityRole === 'link'), routes,
     addHorse: () => flatten(exports.default()).find(node => node?.type === 'Button' && node.props.title === 'Paard toevoegen'),
+    headerAction: () => { exports.default(); return flatten(header); },
     set horseId(value) { horseId = value; }, set data(value) { data = value; },
   };
 }
@@ -55,4 +60,14 @@ test('without a horse the protocol tab explains why it is empty and offers to ad
   screen.horseId = ''; screen.data = { horse: { id: '', name: '' }, showPlusUpsell: false };
   screen.addHorse().props.onPress();
   assert.deepEqual(screen.routes, ['/onboarding/add-horse']);
+});
+
+test('the selected horse and the order list sit in the header bar', () => {
+  const screen = app();
+  assert.ok(screen.headerAction().some(node => node.type === 'HorseSwitcher'));
+  assert.ok(!screen.headerAction().some(node => node.type === 'HeaderButton'), 'no order list without a protocol');
+  screen.data = { horse: { id: 'rolo', name: 'Rolo' }, showPlusUpsell: false, protocol: { id: 'p1', orderItems: [], phases: [] } };
+  const orders = screen.headerAction().find(node => node.type === 'HeaderButton');
+  assert.equal(orders.props.label, 'Open bestellijst');
+  assert.ok(screen.headerAction().some(node => node.type === 'HorseSwitcher'));
 });

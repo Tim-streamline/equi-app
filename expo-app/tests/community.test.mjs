@@ -28,6 +28,10 @@ test('community replaces Account as the rightmost primary destination', () => {
   assert.match(layout, /name="community"/);
   assert.doesNotMatch(layout, /name="account"/);
   assert.ok(existsSync(new URL('../app/(tabs)/account/index.tsx', import.meta.url)));
-  const home = readFileSync(new URL('../app/(tabs)/(pager)/home.tsx', import.meta.url), 'utf8');
-  assert.match(home, /router.push\("\/\(tabs\)\/account"\)/);
+  // Account stays reachable from every tab through the shared header.
+  assert.match(layout, /<AppHeader pager=\{pager\} \/>/);
+  const header = readFileSync(new URL('../components/ui/AppHeader.tsx', import.meta.url), 'utf8');
+  assert.match(header, /router.push\('\/\(tabs\)\/account'\)/);
+  // The header names the current page; Home carries the brand name.
+  assert.match(header, /home: BRAND_NAME,\s+protocol: 'Protocol',\s+library: 'Bibliotheek',\s+community: 'Community'/);
 });

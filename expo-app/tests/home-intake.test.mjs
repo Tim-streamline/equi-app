@@ -44,7 +44,12 @@ function screen(homeUpsell) {
       useHorsesByOwner: () => horses,
       useActiveProtocolForHorse: () => delivered ? { id: 'protocol' } : null,
     },
-    '@powersync/react': { useQuery: (_sql, [horse, user]) => { assert.equal(user, 'u'); return { data: purchases[horse] ?? [] }; } },
+    // Home asks for every active horse (only the user id); Protocol for the selected horse.
+    '@powersync/react': { useQuery: (_sql, params) => {
+      assert.equal(params.at(-1), 'u');
+      if (params.length > 1) return { data: purchases[params[0]] ?? [] };
+      return { data: horses.flatMap(horse => (purchases[horse.id] ?? []).map(row => ({ ...row, horse_name: horse.name }))) };
+    } },
     '@/components/ui/Button': { Button: 'Button', PRIMARY_INK: '#083635' },
     '@/db/provider': { useDb: () => ({ selectHorse: id => { selected = id; } }) },
     '@/hooks/useHorseDashboard': { useHorseDashboard: () => ({
@@ -63,15 +68,14 @@ function screen(homeUpsell) {
     '@/components/shelby/ShelbyChatButton': { ShelbyChatButton: 'ShelbyChatButton' },
   };
   modules['./LaminitisSafetyNotice'] = { LaminitisSafetyNotice: () => null };
+  modules['@/components/ui/OfflineStrip'] = { OfflineStrip: 'OfflineStrip' };
+  modules['@/components/navigation/headerActions'] = { useHeaderAction() {} };
   modules['@/components/intake/PurchasedProtocols'] = load('../components/intake/PurchasedProtocols.tsx', modules);
   const home = load('../app/(tabs)/(pager)/home.tsx', modules);
   const render = () => flatten(home.default());
   const entry = () => render().find(node => node?.type === 'Button' && node.props.title === 'Intake openen');
-  const select = id => {
-    const row = render().find(node => node?.type === 'Pressable' && node.props.accessibilityState && text(node) === id);
-    assert.ok(row, `Horse picker option ${id}`);
-    row.props.onPress();
-  };
+  // The selected horse is chosen elsewhere (Protocol); Home has no selector.
+  const select = id => { selected = id; };
   return { render, entry, select, routes, intakes, purchases,
     set ready(value) { ready = value; }, set delivered(value) { delivered = value; }, clearHorse() { selected = ''; }, withoutHorse() { selected = ''; horses.length = 0; }, addHorse(id) { horses.push({ id, name: id, status: 'active' }); selected = id; },
   };
@@ -104,12 +108,18 @@ test('Home lists the purchased protocol and opens its exact intake', () => {
   app.entry().props.onPress();
   assert.deepEqual(app.routes, [{ pathname: '/intake', params: { bookingId: 'i1' } }]);
 });
-test('selected horse determines purchased intakes, including when dashboard is offline', () => {
-  const app = screen(); app.select('unpurchased'); assert.equal(app.entry(), undefined);
-  app.select('partial'); app.ready = false; assert.ok(app.entry());
-  app.entry().props.onPress();
+test('Home shows every horse\'s intake as its own card, whichever horse is selected and also offline', () => {
+  const app = screen();
+  const open = () => app.render().filter(n => n?.type === 'Button' && n.props.title === 'Intake openen');
+  for (const horse of ['unpurchased', 'partial']) {
+    app.select(horse); app.ready = false;
+    assert.equal(open().length, 2, 'Nova and the follow-up intake each have a card');
+  }
+  const tree = app.render();
+  for (const title of ['Protocol Nova', 'Protocol Luna', 'Vervolgprotocol']) assert.ok(tree.includes(title));
+  assert.ok(tree.includes('partial'), 'a custom title is labelled with its horse');
+  open()[1].props.onPress();
   assert.deepEqual(app.routes, [{ pathname: '/intake', params: { bookingId: 'i3' } }]);
-  app.select('submitted'); assert.equal(app.entry(), undefined);
   assert.ok(text(app.render()).includes('Je intake is verstuurd.'));
   assert.ok(text(app.render()).includes('Intake ingestuurd op 1 oktober 2026'));
   app.render().find(n => n?.type === 'Button' && n.props.title === 'Intake bekijken').props.onPress();
@@ -119,7 +129,7 @@ test('finished protocols stay visible alongside a newly purchased intake', () =>
   const app = screen();
   app.purchases.purchased.push({ id: 'old', title: 'Vorig protocol', status: 'completed', booking_id: 'old-intake', submitted_at: null });
   assert.ok(app.render().includes('Vorig protocol')); assert.ok(app.render().includes('Afgerond'));
-  assert.equal(app.render().filter(n => n?.type === 'Button' && n.props.title === 'Intake openen').length, 1);
+  assert.equal(app.render().filter(n => n?.type === 'Button' && n.props.title === 'Intake openen').length, 2, 'only the two open intakes, not the finished protocol');
 });
 
 test('an account without a horse has personal greeting, one add action, and four library items without protocol tasks', () => {
@@ -139,9 +149,9 @@ test('an account without a horse has personal greeting, one add action, and four
   actions[0].props.onPress();
   assert.deepEqual(app.routes, ['/onboarding/add-horse']);
   app.addHorse('unpurchased');
-  assert.ok(app.render().some(node => node?.props?.accessibilityLabel === 'Wissel paard'));
+  assert.ok(!app.render().some(node => node?.props?.accessibilityLabel === 'Wissel paard'), 'Home has no horse selector');
   assert.ok(!text(app.render()).includes('Je paard toevoegen aan EquiApp?'));
   assert.equal(app.entry(), undefined);
   app.addHorse('purchased');
-  assert.ok(app.entry(), 'Switching to a horse shows its purchased intake');
+  assert.ok(app.entry(), 'a newly added horse with a purchased intake shows its card');
 });

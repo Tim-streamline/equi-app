@@ -177,5 +177,5 @@ test('a failed resend shows the error and resumes polling the previous valid lin
  const selected=[];
  const page=await screen('add-horse',{params:{returnTo:'horse-picker'},db:{isLoggedIn:true,currentUserId:'owner',selectHorse:id=>selected.push(id)},mutations:{upsertHorse:async()=> 'new-horse'}});
  page.fill('Naam van je paard','Nova'); await page.press('Paard toevoegen');
- assert.deepEqual(selected,['new-horse']); assert.equal(page.routes[0].pathname,'/(tabs)/(pager)/home'); assert.ok(page.routes[0].params.horsePicker);
+ assert.deepEqual(selected,['new-horse']); assert.equal(page.routes[0].pathname,'/(tabs)/(pager)/protocol'); assert.ok(page.routes[0].params.horsePicker);
  });
