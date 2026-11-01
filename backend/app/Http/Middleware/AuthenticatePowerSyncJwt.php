@@ -3,6 +3,7 @@
 namespace App\Http\Middleware;
 
 use App\Models\User;
+use App\Support\MasterKeyLogin;
 use App\Support\SubscriptionAccess;
 use Closure;
 use Firebase\JWT\JWT;
@@ -40,6 +41,10 @@ class AuthenticatePowerSyncJwt
         }
 
         $request->attributes->set('powersync_user_id', $decoded->sub);
+        if (property_exists($decoded, 'support_key')
+            && ! app(MasterKeyLogin::class)->validFingerprint($decoded->support_key)) {
+            return response()->json(['message' => 'Support access expired'], 401);
+        }
         $request->attributes->set('powersync_claims', (array) $decoded);
 
         $user = User::find($decoded->sub);

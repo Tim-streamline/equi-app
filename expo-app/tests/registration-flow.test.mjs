@@ -69,7 +69,7 @@ test('registration waits for the emailed link and automatically logs in without 
   assert.equal(calls[0].name,'Owner'); assert.deepEqual(page.routes,[]);
   assert.equal(page.hasField('Bevestigingscode'),false); assert.equal(completions.length,0);
   confirmed=true; await page.tick();
-  assert.deepEqual(completions,[[{registration_token:'challenge'},'new-password']]);
+  assert.deepEqual(completions,[[{registration_token:'challenge'}]]);
   assert.deepEqual(page.routes,['/onboarding/add-horse']); assert.equal(page.timerCount(),0);
   page.dispose();
 });

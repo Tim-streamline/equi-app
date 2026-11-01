@@ -138,9 +138,16 @@ class IntakeSubmissionMailTest extends TestCase
         foreach (['540 kg', 'Hooi', '12 kg', 'Jeuk', 'Hoesten', 'hoef.png', 'file:///'] as $text) {
             $this->assertStringContainsString($text, $html);
         }
-        foreach (['Private therapist notes', 'Hidden stale answer', 'Hidden question', '/admin/intake-media'] as $text) {
+        foreach (['Private therapist notes', '/admin/intake-media'] as $text) {
             $this->assertStringNotContainsString($text, $html);
         }
+        // A hidden question's answer is kept, but only after the current answers, marked as no longer applicable.
+        [$current, $historical] = explode('<h2>2. Eerder ingevuld · Jouw paard</h2>', $html, 2) + [1 => ''];
+        foreach (['Hidden stale answer', 'Hidden question'] as $text) {
+            $this->assertStringNotContainsString($text, $current);
+            $this->assertStringContainsString($text, $historical);
+        }
+        $this->assertStringContainsString('Eerder ingevuld, nu niet van toepassing. Geen actuele bevinding.', $historical);
         $this->get('/admin/bookings/'.$this->booking->id.'/answers.pdf')->assertRedirect('/admin/login');
         $this->actingAs(AdminUser::create(['name' => 'Admin', 'email' => 'admin@example.test', 'password' => 'password', 'role' => 'owner', 'active' => true]), 'admin');
         $response = $this->get('/admin/bookings/'.$this->booking->id.'/answers.pdf')->assertOk()->assertHeader('Content-Type', 'application/pdf');

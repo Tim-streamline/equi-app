@@ -2,8 +2,8 @@
 
 namespace App\Support;
 
-use App\Models\IntakeBooking;
 use App\Models\IntakeAttachment;
+use App\Models\IntakeBooking;
 use App\Models\IntakeQuestionnaire;
 
 class IntakeProgress
@@ -23,14 +23,16 @@ class IntakeProgress
         $attachments = IntakeAttachment::where('booking_id', $booking->id)->get()->keyBy('id');
         $conditions = app(IntakeConditions::class);
         $requireGrouped = (bool) config('intake.require_grouped_conditions', false);
+        $visibility = $review->effectiveAnswers($questionnaire?->sections ?? [], $answers, $questionnaire?->none_options ?? []);
         foreach ($questionnaire?->sections ?? [] as $section) {
             $sectionAnswers = $review->sectionAnswers($section, $answers);
+            $visibleAnswers = $review->sectionAnswers($section, $visibility);
             foreach ($section->fields as $field) {
                 $value = $sectionAnswers[$field->key] ?? null;
                 if ($field->type === 'sectionhead') {
                     continue;
                 }
-                if (! $review->visible($field->show_if, $sectionAnswers, $answers, $questionnaire->none_options ?? [])) {
+                if (! $review->visible($field->show_if, $visibleAnswers, $visibility, $questionnaire->none_options ?? [])) {
                     continue;
                 }
                 // Older app versions hide these questions, so they must not block those owners.
@@ -45,7 +47,9 @@ class IntakeProgress
                 }
                 $total++;
                 $answered = ! $review->empty($value);
-                if ($field->type === 'month_year') $answered = app(IntakeDates::class)->answered($value, $field->date_config ?? []);
+                if ($field->type === 'month_year') {
+                    $answered = app(IntakeDates::class)->answered($value, $field->date_config ?? []);
+                }
                 if ($field->type === 'text') {
                     $answered = $field->lines && is_array($value)
                         ? count(array_filter($value, fn ($line) => is_string($line) && trim($line) !== '')) > 0
@@ -68,12 +72,19 @@ class IntakeProgress
                 if ($field->type === 'repeater') {
                     $answered = is_array($value) && count(array_filter($value, fn ($row) => is_array($row) && count(array_filter($row, fn ($v, $key) => ! str_starts_with((string) $key, '_') && is_string($v) && trim($v) !== '', ARRAY_FILTER_USE_BOTH)) > 0)) > 0;
                     foreach (is_array($value) ? $value : [] as $entry) {
-                        if (! is_array($entry)) continue;
+                        if (! is_array($entry)) {
+                            continue;
+                        }
                         foreach ($field->repeater_sub ?? [] as $sub) {
-                            if (($sub['type'] ?? '') !== 'month_year') continue;
+                            if (($sub['type'] ?? '') !== 'month_year') {
+                                continue;
+                            }
                             $date = $entry[$sub['id']] ?? null;
                             if ($date !== null && $date !== '') {
-                                if (! app(IntakeDates::class)->answered($date, $sub['dateConfig'] ?? [])) { $answered = false; break 2; }
+                                if (! app(IntakeDates::class)->answered($date, $sub['dateConfig'] ?? [])) {
+                                    $answered = false;
+                                    break 2;
+                                }
                                 $answered = true;
                             }
                         }

@@ -101,6 +101,25 @@ class RegistrationTest extends TestCase
         $this->postJson('/api/auth/login', ['email' => $user->email, 'password' => 'password-for-test'])->assertOk();
     }
 
+    public function test_native_registration_returns_a_device_token_when_the_app_asks_for_one(): void
+    {
+        $proof = $this->beginRegistration();
+        $this->get(Mail::sent(RegistrationConfirmation::class)->last()->confirmationUrl)->assertOk();
+        $token = $this->postJson('/api/auth/register/complete', [...$proof, 'device_name' => 'android'])->assertCreated()->json('device_token');
+        $this->postJson('/api/auth/token', ['device_token' => $token])->assertOk()->assertJsonPath('user.email', 'new.owner@example.test');
+    }
+
+    public function test_a_retried_native_registration_replaces_the_device_token_of_the_lost_response(): void
+    {
+        $proof = $this->beginRegistration();
+        $this->get(Mail::sent(RegistrationConfirmation::class)->last()->confirmationUrl)->assertOk();
+        $lost = $this->postJson('/api/auth/register/complete', [...$proof, 'device_name' => 'android'])->assertCreated()->json('device_token');
+        $kept = $this->postJson('/api/auth/register/complete', [...$proof, 'device_name' => 'android'])->assertCreated()->json('device_token');
+        $this->postJson('/api/auth/token', ['device_token' => $lost])->assertUnauthorized();
+        $this->postJson('/api/auth/token', ['device_token' => $kept])->assertOk();
+        $this->assertDatabaseCount('personal_access_tokens', 1);
+    }
+
     public function test_email_confirmation_creates_an_account_without_the_registration_page(): void
     {
         $this->beginRegistration();

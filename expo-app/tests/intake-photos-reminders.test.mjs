@@ -48,7 +48,7 @@ test('the regular section renderer displays newly configured photo questions in 
    'lucide-react-native': {ChevronLeft: 'ChevronLeft', X: 'X'},
    '@/components/intake/LaminitisSafetyNotice': { LaminitisSafetyNotice: 'LaminitisSafetyNotice' },
     '@/components/ui/Button': {Button: 'Button'}, '@/components/ui/IconButton': {IconButton: 'IconButton'},
-   '@/components/intake/IntakeScrollView': {IntakeScrollView: 'Scroll'}, '@/components/intake/IntakeField': {IntakeField: 'Field'},
+   '@/components/intake/IntakeScrollView': {IntakeScrollView: 'Scroll'}, '@/components/intake/UnsavedNotice': {UnsavedNotice: 'UnsavedNotice'}, '@/components/intake/IntakeField': {IntakeField: 'Field'},
    '@/lib/intake/schema-provider': {useIntakeSchema: () => ({schema: [section], noneOptions: []})},
    '@/lib/intake/logic': modules['./logic'], '@/lib/intake/submission': {formatIntakeDate: () => '16 oktober 2026'},
     '@/lib/intake/store': {useIntake: () => ({state: {answers: {}}, trackActivity() {}})},

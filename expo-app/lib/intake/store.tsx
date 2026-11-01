@@ -25,9 +25,16 @@ type Ctx = {
   trackActivity: (section: string, field?: string) => void;
   ensureBooking: () => Promise<string>; horseId: string; bookingId: string | null;
   submissionBlocks: SubmissionBlock[];
+  /** True while a local write keeps failing; later answers wait behind it until it succeeds. */
+  unsaved: boolean; retrySave: () => void;
 };
 const IntakeContext = createContext<Ctx | null>(null);
 const newId = () => typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function' ? crypto.randomUUID() : 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => { const r = Math.random() * 16 | 0; return (c === 'x' ? r : (r & 3) | 8).toString(16); });
+// A local write covers one answer, one section ({ section }) or the whole intake ({}).
+type WriteScope = { section?: string; field?: string };
+type PendingWrite = { scope: WriteScope; run: (bookingId: string) => Promise<unknown> };
+const supersedes = (newer: WriteScope, older: WriteScope) =>
+  (newer.section === undefined || newer.section === older.section) && (newer.field === undefined || newer.field === older.field);
 function decode(raw: string | null): FieldValue { try { return JSON.parse(raw ?? 'null'); } catch { return raw ?? ''; } }
 
 export function IntakeProvider({ children }: { children: ReactNode }) {
@@ -57,10 +64,12 @@ function HorseIntakeProvider({ userId, horseId, selectedId, children }: { userId
   liveAnswers.current = state.answers;
   const dirty = useRef(false);
   const [submitting, setSubmitting] = useState(false);
+  const [unsaved, setUnsaved] = useState(false);
   const locked = useRef(false);
   const mounted = useRef(true);
   useEffect(() => { mounted.current = true; return () => { mounted.current = false; }; }, []);
   const queue = useRef<Promise<unknown>>(Promise.resolve());
+  const pendingWrites = useRef<PendingWrite[]>([]);
   const { data: bookings, isLoading: bookingLoading } = useQuery<{ id: string; submitted_at: string | null; completed_at: string | null; updated_at: string | null }>(selectedId ? 'SELECT id, submitted_at, completed_at, updated_at FROM intake_bookings WHERE user_id = ? AND horse_id = ? AND id = ? AND status != \'cancelled\'' : bookingQuery, selectedId ? [userId, horseId, selectedId] : [userId, horseId]);
   const booking = bookings?.[0];
   const { data: answers, isLoading: answersLoading } = useQuery<{ section_id: string; field_id: string; value: string | null; updated_at: string }>(
@@ -108,11 +117,62 @@ function HorseIntakeProvider({ userId, horseId, selectedId, children }: { userId
   const trackActivity = useCallback((section: string, field?: string) => {
     void ensureBooking().then(id => dashboardRequest(`/api/intakes/${id}/activity`, { section, field })).catch(() => {});
   }, [ensureBooking]);
-  const enqueue = useCallback((task: () => Promise<unknown>) => {
-    const work = queue.current.then(task);
-    queue.current = work.catch(error => { Alert.alert('Intake niet opgeslagen', error instanceof Error ? error.message : 'Probeer opnieuw.'); });
+  // Replays resolve the booking at run time: a write queued before the booking synced must succeed once it has.
+  const currentEnsureBooking = useRef(ensureBooking);
+  currentEnsureBooking.current = ensureBooking;
+  const reportedWrites = useRef(new WeakSet<PendingWrite>());
+  const enqueue = useCallback((write?: PendingWrite) => {
+    if (write) {
+      // A newer write to the same answer, section or whole intake supersedes a retained one.
+      pendingWrites.current = pendingWrites.current.filter(pending => !supersedes(write.scope, pending.scope));
+      pendingWrites.current.push(write);
+    }
+    let alert = true;
+    const work = queue.current.then(async () => {
+      // Retain failed local writes in order. Successful autosaves never need replaying.
+      // A failing write only holds back the writes that overlap it, so other answers still save.
+      let bookingId: Promise<string> | undefined;
+      const attempted = new Set<PendingWrite>();
+      const held: PendingWrite[] = [];
+      const failed: PendingWrite[] = [];
+      let failure: { error: unknown } | undefined;
+      for (let next; (next = pendingWrites.current.find(other => !attempted.has(other)));) {
+        const pending = next;
+        attempted.add(pending);
+        if (held.some(other => supersedes(other.scope, pending.scope) || supersedes(pending.scope, other.scope))) {
+          held.push(pending);
+          continue;
+        }
+        try {
+          await pending.run(await (bookingId ??= currentEnsureBooking.current()));
+          pendingWrites.current = pendingWrites.current.filter(other => other !== pending);
+        } catch (error) {
+          if (!pendingWrites.current.includes(pending)) continue;
+          held.push(pending);
+          failed.push(pending);
+          failure ??= { error };
+        }
+      }
+      if (failure) {
+        // Report each failing write once, not again on every replay.
+        alert = failed.some(pending => !reportedWrites.current.has(pending));
+        failed.forEach(pending => reportedWrites.current.add(pending));
+        throw failure.error;
+      }
+      if (mounted.current) setUnsaved(false);
+    });
+    queue.current = work.catch(error => {
+      // The alert is shown once per failing write; the persistent indicator covers the edits queued behind it.
+      if (mounted.current) setUnsaved(true);
+      if (alert) Alert.alert('Intake niet opgeslagen', error instanceof Error ? error.message : 'Probeer opnieuw.');
+    });
     return work;
   }, []);
+  // An explicit retry that fails again is reported again, so the button never looks inert.
+  const retrySave = useCallback(() => {
+    reportedWrites.current = new WeakSet();
+    void enqueue().catch(() => {});
+  }, [enqueue]);
   const setField = useCallback<Ctx['setField']>((section, field, value) => {
     if (locked.current) return;
     if (liveAnswers.current[section]?.[field] === value) return;
@@ -121,12 +181,11 @@ function HorseIntakeProvider({ userId, horseId, selectedId, children }: { userId
     const nextAnswers = liveAnswers.current;
     liveAnswers.current = nextAnswers;
     setState(prev => ({ ...prev, answers: nextAnswers }));
-    void enqueue(async () => {
-      const id = await ensureBooking();
+    void enqueue({ scope: { section, field }, run: async id => {
       await saveAnswer(powersync, id, section, field, value, newId);
       setState(prev => ({ ...prev, savedAt: new Date().toISOString() }));
-    }).catch(() => {});
-  }, [enqueue, ensureBooking, powersync]);
+    } }).catch(() => {});
+  }, [enqueue, powersync]);
   const submissionBlocks = useMemo(() => evaluateSubmissionBlocks(schema, state.answers, noneOptions), [schema, state.answers, noneOptions]);
   const resetSection = useCallback<Ctx['resetSection']>(section => {
     if (locked.current) return;
@@ -134,11 +193,9 @@ function HorseIntakeProvider({ userId, horseId, selectedId, children }: { userId
     const answers = { ...liveAnswers.current, [section]: {} };
     liveAnswers.current = answers;
     setState(prev => ({ ...prev, answers }));
-    void enqueue(async () => {
-      const id = await ensureBooking();
-      await powersync.execute('DELETE FROM intake_answers WHERE response_id = ? AND section_id = ?', [id, section]);
-    }).catch(() => {});
-  }, [enqueue, ensureBooking, powersync]);
+    void enqueue({ scope: { section }, run: id =>
+      powersync.execute('DELETE FROM intake_answers WHERE response_id = ? AND section_id = ?', [id, section]) }).catch(() => {});
+  }, [enqueue, powersync]);
   const submit = useCallback(async () => {
     const blocks = evaluateSubmissionBlocks(schema, liveAnswers.current, noneOptions);
     if (blocks.length) throw new Error(blocks.map(block => block.message).join('\n'));
@@ -151,14 +208,10 @@ function HorseIntakeProvider({ userId, horseId, selectedId, children }: { userId
       if (!mounted.current || revision !== accountSession.revision) throw new Error('Je sessie is gewijzigd.');
     };
     try {
-      await queue.current;
+      await enqueue();
       checkSession();
       const id = await ensureBooking();
-      // Retry any failed local save before waiting for the upload queue.
-      for (const [section, values] of Object.entries(liveAnswers.current)) for (const [field, value] of Object.entries(values)) {
-        checkSession();
-        await saveAnswer(powersync, id, section, field, value, newId);
-      }
+      // Only wait for existing autosaves/uploads; completion must not rewrite answers.
       await waitForIntakeUploads(powersync, checkSession);
       checkSession();
       const result = await dashboardRequest(`/api/intakes/${id}/submit`, {});
@@ -171,21 +224,18 @@ function HorseIntakeProvider({ userId, horseId, selectedId, children }: { userId
     } finally {
       if (mounted.current) setSubmitting(false);
     }
-  }, [ensureBooking, powersync, state.answers, state.submittedAt, completedAt, schema, noneOptions]);
+  }, [enqueue, ensureBooking, powersync, state.submittedAt, completedAt, schema, noneOptions]);
   const reset = useCallback(() => {
     if (locked.current) return;
     dirty.current = true;
     const retained: IntakeAnswers = {};
     liveAnswers.current = retained;
     setState({ ...EMPTY, answers: retained });
-    void enqueue(async () => {
-      const id = await ensureBooking();
-      await powersync.writeTransaction(async tx => {
-        await tx.execute('DELETE FROM intake_answers WHERE response_id = ?', [id]);
-        await tx.execute("UPDATE intake_bookings SET intake_status = 'draft', submitted_at = NULL, updated_at = ? WHERE id = ?", [new Date().toISOString(), id]);
-      });
-    }).catch(() => {});
-  }, [enqueue, ensureBooking, powersync]);
+    void enqueue({ scope: {}, run: id => powersync.writeTransaction(async tx => {
+      await tx.execute('DELETE FROM intake_answers WHERE response_id = ?', [id]);
+      await tx.execute("UPDATE intake_bookings SET intake_status = 'draft', submitted_at = NULL, updated_at = ? WHERE id = ?", [new Date().toISOString(), id]);
+    }) }).catch(() => {});
+  }, [enqueue, powersync]);
   const refresh = useRef({ state, submitting, ensureBooking });
   refresh.current = { state, submitting, ensureBooking };
   useEffect(() => registerRefreshProtection({
@@ -196,6 +246,7 @@ function HorseIntakeProvider({ userId, horseId, selectedId, children }: { userId
         drain: async () => {
           let pending;
           do { pending = queue.current; await pending; } while (pending !== queue.current);
+          await enqueue();
         },
         checkSession: () => {
           if (!mounted.current || revision !== accountSession.revision) throw new Error('Je sessie is gewijzigd. Probeer opnieuw.');
@@ -205,10 +256,10 @@ function HorseIntakeProvider({ userId, horseId, selectedId, children }: { userId
         save: (id, section, field, value) => saveAnswer(powersync, id, section, field, value, newId),
       });
     },
-  }), [powersync]);
+  }), [enqueue, powersync]);
   useEffect(() => { refreshProtectionChanged(); }, [submitting]);
   const bookingId = booking?.id ?? null;
-  const value = useMemo(() => ({ state, loaded, submitting, setField, resetSection, submit, reset, ensureBooking, trackActivity, horseId, bookingId, submissionBlocks }), [state, loaded, submitting, setField, resetSection, submit, reset, ensureBooking, trackActivity, horseId, bookingId, submissionBlocks]);
+  const value = useMemo(() => ({ state, loaded, submitting, setField, resetSection, submit, reset, ensureBooking, trackActivity, horseId, bookingId, submissionBlocks, unsaved, retrySave }), [state, loaded, submitting, setField, resetSection, submit, reset, ensureBooking, trackActivity, horseId, bookingId, submissionBlocks, unsaved, retrySave]);
   return <IntakeContext.Provider value={value}>{children}</IntakeContext.Provider>;
 }
 export function useIntake(): Ctx { const context = useContext(IntakeContext); if (!context) throw new Error('useIntake must be inside IntakeProvider'); return context; }

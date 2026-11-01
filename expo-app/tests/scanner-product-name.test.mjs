@@ -5,7 +5,7 @@ import vm from 'node:vm';
 import ts from 'typescript';
 
 // Execute the screen's upload handler so these tests cover wiring as well as name selection.
-const source = readFileSync(new URL('../app/(tabs)/scanner/index.tsx', import.meta.url), 'utf8');
+const source = readFileSync(new URL('../app/(tabs)/(pager)/scan.tsx', import.meta.url), 'utf8');
 const handler = ts.transpileModule(source.slice(source.indexOf('  async function persistPhoto('), source.indexOf('  async function continueAnalysis(')), {
   compilerOptions: { target: ts.ScriptTarget.ES2022 },
 }).outputText;

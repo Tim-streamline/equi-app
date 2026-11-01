@@ -69,7 +69,7 @@ test('the design inspector redirects without loading data unless explicitly enab
       '@/components/scanner/ScannerProcessingStates': {},
     });
     assert.equal(Preview().type, 'Redirect');
-    assert.equal(Preview().props.href, '/(tabs)/scanner');
+    assert.equal(Preview().props.href, '/(tabs)/(pager)/scan');
   } finally {
     if (previous === undefined) delete process.env.EXPO_PUBLIC_SCANNER_DESIGN_PREVIEW;
     else process.env.EXPO_PUBLIC_SCANNER_DESIGN_PREVIEW = previous;

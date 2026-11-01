@@ -29,6 +29,7 @@ test('every intake section uses the save-and-return label and returns to the exi
     '@/components/intake/LaminitisSafetyNotice': { LaminitisSafetyNotice: 'LaminitisSafetyNotice' },
     '@/components/ui/Button': { Button: 'Button' }, '@/components/ui/IconButton': { IconButton: 'IconButton' },
     '@/components/intake/IntakeScrollView': { IntakeScrollView: 'IntakeScrollView' },
+    '@/components/intake/UnsavedNotice': { UnsavedNotice: 'UnsavedNotice' },
     '@/components/intake/IntakeField': { IntakeField: 'IntakeField' },
     '@/lib/intake/schema': intake['./schema'],
     '@/lib/intake/schema-provider': { useIntakeSchema: () => ({ schema, noneOptions }) },

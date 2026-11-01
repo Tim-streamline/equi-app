@@ -13,9 +13,10 @@ import { Check, ChevronLeft, CloudUpload, X } from 'lucide-react-native';
 import { Button } from '@/components/ui/Button';
 import { IconButton } from '@/components/ui/IconButton';
 import { IntakeScrollView } from '@/components/intake/IntakeScrollView';
+import { UnsavedNotice } from '@/components/intake/UnsavedNotice';
 import { IntakeField } from '@/components/intake/IntakeField';
 import { useIntakeSchema } from '@/lib/intake/schema-provider';
-import { visibleFieldsForRender, answeredCount, answersForSection, isPhotoSection, isSectionComplete } from '@/lib/intake/logic';
+import { visibleFieldsForRender, answeredCount, answersForSection, effectiveAnswers, isPhotoSection, isSectionComplete } from '@/lib/intake/logic';
 import { useIntake } from '@/lib/intake/store';
 
 export default function IntakeSectionScreen() {
@@ -40,9 +41,10 @@ export default function IntakeSectionScreen() {
   // Filter fields by showIf, but keep sectionheads since they wrap visible
   // children — the renderer just skips numbering them. Hook lives above the
   // missing-section guard so the order stays stable across renders.
+  const visibility = useMemo(() => effectiveAnswers(state.answers, schema, noneOptions), [state.answers, schema, noneOptions]);
   const visible = useMemo(
-    () => (section ? visibleFieldsForRender(section, answers, state.answers, noneOptions) : []),
-    [section, answers, state.answers, noneOptions],
+    () => (section ? visibleFieldsForRender(section, answers, visibility, noneOptions) : []),
+    [section, answers, visibility, noneOptions],
   );
   const scrollToRequestedField = useCallback(() => {
     if (!requestedField || scrollRequest.current.completed || !scroll.current) return;
@@ -75,7 +77,7 @@ export default function IntakeSectionScreen() {
   // they are. `answeredCount` only counts values that are genuinely valid for
   // the field (e.g. a radio value still present in its options), so stale
   // answers from an earlier schema version don't inflate the tally.
-  const { answered: filled, total } = answeredCount(section, answers, state.answers, noneOptions);
+  const { answered: filled, total } = answeredCount(section, answers, visibility, noneOptions);
   const pct = total ? Math.round((filled / total) * 100) : 100;
 
   const allAnswered = filled === total;
@@ -119,6 +121,8 @@ export default function IntakeSectionScreen() {
             <View className="h-full rounded-pill bg-mint-500" style={{ width: `${pct}%` }} />
           </View>
         </View>}
+
+        <UnsavedNotice className="mx-4 mt-3" />
 
         <IntakeScrollView scrollRef={scroll} memoryKey={requestedField ? undefined : `${bookingId ?? ''}:${section.id}`} footer={
         <View
@@ -166,7 +170,7 @@ export default function IntakeSectionScreen() {
               </View>
             )}
 
-            {photoSection && isSectionComplete(section, answers, state.answers, noneOptions) && (
+            {photoSection && isSectionComplete(section, answers, visibility, noneOptions) && (
               <Text className="mb-4 font-semi text-teal-600">Foto’s compleet ✓</Text>
             )}
             {visible.map((f) => {

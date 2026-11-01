@@ -4,7 +4,7 @@ import { router, useLocalSearchParams } from 'expo-router';
 import { BookOpen, ChevronDown, ChevronRight, ChevronUp, Leaf } from 'lucide-react-native';
 import { useScanIngredients, useScanResult } from '@/db/hooks';
 import { legacyScanScore, scanScoreLabel } from '@/lib/scanner-presentation';
-import { C, FeedIcon, ScannerButton, ScannerFrame, ScannerStepProgress, ScanScore, s } from '@/components/scanner/ScannerUI';
+import { C, FeedIcon, openScanner, ScannerButton, ScannerFrame, ScannerStepProgress, ScanScore, s } from '@/components/scanner/ScannerUI';
 import { AnalyticalConstituents, MissingDataCard, SugarStarchCard } from '@/components/scanner/ScannerAnalysisStates';
 import { useFeedScanResult } from '@/hooks/useFeedScanResult';
 import { FeedScanResult } from '@/components/scanner/FeedScanResult';
@@ -19,7 +19,7 @@ export default function ScannerResultScreen() {
   const score = legacyScanScore(scan?.score);
   const remote = useFeedScanResult(id ?? '');
   if (remote.loading) return <ScannerFrame title="Voeranalyse"><Text style={s.body}>Beoordeling ophalen…</Text></ScannerFrame>;
-  if (remote.result) return <ScannerFrame title="Voeranalyse"><ScannerStepProgress step={4} /><FeedScanResult result={remote.result} /><ScannerButton title="Ander voer bekijken" variant="outline" onPress={() => router.navigate('/(tabs)/scanner')} /></ScannerFrame>;
+  if (remote.result) return <ScannerFrame title="Voeranalyse"><ScannerStepProgress step={4} /><FeedScanResult result={remote.result} /><ScannerButton title="Ander voer bekijken" variant="outline" onPress={() => openScanner()} /></ScannerFrame>;
   if (['Voorlopig', 'Gecontroleerd'].includes(scan?.rating ?? '')) return <ScannerFrame title="Voeranalyse"><Text style={s.heading}>Beoordeling ophalen</Text><Text style={s.body}>{remote.error || 'Maak verbinding om de volledige bevindingen bij deze inzending te bekijken.'}</Text><ScannerButton title="Naar scanhistorie" onPress={() => router.replace('/(tabs)/scanner/history')} /></ScannerFrame>;
   return <ScannerFrame title="Voeranalyse">
     {!!remote.error && <Text accessibilityRole="alert" style={s.small}>{remote.error}</Text>}
@@ -43,8 +43,8 @@ export default function ScannerResultScreen() {
       <AnalyticalConstituents rows={[]} />
       <Text style={[s.eyebrow, { marginTop: 8 }]}>Lees verder in de bibliotheek</Text>
       <Pressable accessibilityRole="button" onPress={() => router.navigate('/(tabs)/(pager)/library')} style={s.row}><View style={{ backgroundColor: C.deep, borderRadius: 12, padding: 13 }}><BookOpen size={22} color="#fff" /></View><View style={{ flex: 1 }}><Text style={s.rowTitle}>Meer over paardenvoeding</Text><Text style={s.small}>Ontdek de artikelen en video’s</Text></View><ChevronRight size={18} color={C.muted} /></Pressable>
-      {!!scan.productId && <ScannerButton title="Heeft jouw verpakking een andere samenstelling?" variant="text" onPress={() => router.push({ pathname: '/(tabs)/scanner', params: { mode: 'variant', productId: scan.productId } })} />}
-      <ScannerButton title="Ander voer bekijken" variant="outline" icon={<Leaf size={19} color={C.teal} />} onPress={() => router.navigate('/(tabs)/scanner')} />
+      {!!scan.productId && <ScannerButton title="Heeft jouw verpakking een andere samenstelling?" variant="text" onPress={() => openScanner({ mode: 'variant', productId: scan.productId })} />}
+      <ScannerButton title="Ander voer bekijken" variant="outline" icon={<Leaf size={19} color={C.teal} />} onPress={() => openScanner()} />
     </>}
   </ScannerFrame>;
 }

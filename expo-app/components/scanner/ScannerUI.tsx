@@ -23,7 +23,7 @@ export function ScannerFrame({ title, onBack, children, header = true, scroll = 
     <StatusBar style="dark" />
     <SafeAreaView edges={['top', 'left', 'right']} style={{ flex: 1 }}>
       {header && <View style={s.header}>
-        <RoundButton label="Terug" onPress={onBack ?? (() => router.canGoBack() ? router.back() : router.replace('/(tabs)/scanner'))}><ChevronLeft size={22} color={C.ink} /></RoundButton>
+        <RoundButton label="Terug" onPress={onBack ?? (() => router.canGoBack() ? router.back() : openScanner())}><ChevronLeft size={22} color={C.ink} /></RoundButton>
         {headerContent ?? <Text style={[s.headerTitle, largeTitle && { textAlign: 'left', fontSize: 24, fontFamily: 'SourceSans3_700Bold' }]}>{title}</Text>}
         {!headerContent && (showHistory ? <RoundButton label="Scanhistorie" onPress={() => router.push('/(tabs)/scanner/history')}><History size={20} color={C.ink} /></RoundButton> : !largeTitle && <View style={{ width: 44 }} />)}
       </View>}
@@ -34,10 +34,12 @@ export function ScannerFrame({ title, onBack, children, header = true, scroll = 
   </View>;
 }
 
-/** Leaves the full-screen scanner; it opens over the tabs as a modal. */
-export function closeScanner() {
-  if (router.canGoBack()) router.back();
-  else router.replace('/(tabs)/(pager)/home');
+/**
+ * Returns to the Scan page in the pager, closing the scanner screens on top of
+ * it. `params` resume a submission or start a variant scan there.
+ */
+export function openScanner(params?: { submissionId?: string; mode?: 'variant'; productId?: string }) {
+  router.dismissTo({ pathname: '/(tabs)/(pager)/scan', params: params && { ...params, t: String(Date.now()) } });
 }
 
 export function RoundButton({ label, onPress, children }: { label: string; onPress: () => void; children: ReactNode }) {
@@ -69,11 +71,15 @@ export function ScanScore({ value, size = 48 }: { value: unknown; size?: number 
   </View>;
 }
 
-export function ScanRow({ scan, compact = false }: { scan: ScannerRow; compact?: boolean }) {
+/** A scan that opens its result: a card on its own, or a row in a `grouped` list (`divider` above all but the first). */
+export function ScanRow({ scan, grouped = false, divider = false }: { scan: ScannerRow; grouped?: boolean; divider?: boolean }) {
   return <Pressable cssInterop={false} accessibilityRole="button" accessibilityLabel={`${scan.brand ?? ''} ${scan.productName ?? 'Scan'} bekijken`}
-    onPress={() => router.push({ pathname: '/(tabs)/scanner/result', params: { id: scan.id } })} style={({ pressed }) => [s.row, { paddingVertical: compact ? 10 : 12, opacity: pressed ? 0.7 : 1 }]}>
-    <ScanScore value={scan.score} size={compact ? 44 : 48} />
-    <View style={{ flex: 1, gap: 2 }}><Text style={[s.rowTitle, compact && { fontSize: 15 }]} numberOfLines={2}>{scan.productName || 'Voeranalyse'}</Text><Text style={s.small}>{[scan.brand, scan.whenLabel].filter(Boolean).join(' · ')}</Text></View>
+    onPress={() => router.push({ pathname: '/(tabs)/scanner/result', params: { id: scan.id } })}
+    style={({ pressed }) => grouped
+      ? [s.groupedRow, divider && { borderTopWidth: 1, borderTopColor: C.border }, pressed && { backgroundColor: C.border }]
+      : [s.row, { opacity: pressed ? 0.7 : 1 }]}>
+    <ScanScore value={scan.score} size={grouped ? 44 : 48} />
+    <View style={{ flex: 1, gap: 2 }}><Text style={[s.rowTitle, grouped && { fontSize: 15, fontFamily: 'SourceSans3_600SemiBold' }]} numberOfLines={2}>{scan.productName || 'Voeranalyse'}</Text><Text style={s.small}>{[scan.brand, scan.whenLabel].filter(Boolean).join(' · ')}</Text></View>
     <ChevronRight size={18} color={C.muted} />
   </Pressable>;
 }
@@ -95,6 +101,7 @@ export const s = StyleSheet.create({
   eyebrow: { fontSize: 12, letterSpacing: 1.7, color: C.muted, fontFamily: 'SourceSans3_700Bold', textTransform: 'uppercase' },
   card: { backgroundColor: '#fff', borderWidth: 1, borderColor: C.border, borderRadius: 24, padding: 18, gap: 12 },
   row: { backgroundColor: '#fff', borderWidth: 1, borderColor: C.border, borderRadius: 16, padding: 12, flexDirection: 'row', alignItems: 'center', gap: 12 },
+  groupedRow: { minHeight: 68, flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: 16, paddingVertical: 12 },
   rowTitle: { fontSize: 16, lineHeight: 20, fontFamily: 'SourceSans3_700Bold', color: C.ink },
   note: { borderRadius: 16, padding: 14, backgroundColor: C.pale },
   input: { flex: 1, minWidth: 0, minHeight: 50, color: C.ink, fontSize: 16, fontFamily: 'SourceSans3_400Regular', paddingHorizontal: 14, paddingVertical: 10 },

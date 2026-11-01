@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { Text, View } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useCurrentUserId } from '@/db/hooks';
-import { ScannerFrame, ScannerButton, ScannerStepProgress, s } from '@/components/scanner/ScannerUI';
+import { openScanner, ScannerFrame, ScannerButton, ScannerStepProgress, s } from '@/components/scanner/ScannerUI';
 import { ScannerProcessingState } from '@/components/scanner/ScannerProcessingStates';
 import { scannerRequest, type FeedSubmission } from '@/lib/feed-scanner-api';
 import { successHaptic } from '@/lib/haptics';
@@ -28,7 +28,7 @@ export default function ScannerProcessingScreen() {
         if (!alive) return;
         setState(current);
         if (current.status === 'completed' && current.scan_result_id) { successHaptic(); router.replace({ pathname: '/(tabs)/scanner/result', params: { id: current.scan_result_id } }); }
-        else if (current.workflow_version === 2 && ['awaiting_composition', 'candidate', 'needs_photos'].includes(current.status)) router.replace({ pathname: '/(tabs)/scanner', params: { submissionId: current.id } });
+        else if (current.workflow_version === 2 && ['awaiting_composition', 'candidate', 'needs_photos'].includes(current.status)) openScanner({ submissionId: current.id });
       } catch (e) { if (alive) setError(e instanceof Error ? e.message : 'Verwerken is niet gelukt.'); }
       finally { if (alive) setBusy(false); }
     }
@@ -44,7 +44,7 @@ export default function ScannerProcessingScreen() {
         if (controller.signal.aborted) return;
         setState(current);
         if (current.status === 'completed' && current.scan_result_id) { successHaptic(); router.replace({ pathname: '/(tabs)/scanner/result', params: { id: current.scan_result_id } }); }
-        else if (current.workflow_version === 2 && ['candidate', 'needs_photos'].includes(current.status)) router.replace({ pathname: '/(tabs)/scanner', params: { submissionId: current.id } });
+        else if (current.workflow_version === 2 && ['candidate', 'needs_photos'].includes(current.status)) openScanner({ submissionId: current.id });
       }).catch(() => {});
     }, 4000);
     return () => { clearInterval(timer); controller.abort(); };

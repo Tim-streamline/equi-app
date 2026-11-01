@@ -1,11 +1,15 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { BackHandler, Image, Modal, Platform, Pressable, Text, TextInput, useWindowDimensions, View } from 'react-native';
+import { BackHandler, Image, Modal, Platform, Pressable, Text, useWindowDimensions, View } from 'react-native';
 import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
 import * as ImagePicker from 'expo-image-picker';
-import { Camera, CheckCircle2, ChevronRight, History, ImagePlus, Plus, ScanLine, Search, Upload, X } from 'lucide-react-native';
+import { Camera, CheckCircle2, ChevronLeft, ChevronRight, ImagePlus, Plus, ScanLine, Search, Upload, X } from 'lucide-react-native';
 import { PhotoReplacementSheet, ScannerPhotoCard } from '@/components/scanner/ScannerPhotoCard';
 import { useCurrentUserId, useScannerProducts } from '@/db/hooks';
-import { C, closeScanner, FeedIcon, RoundButton, ScannerButton, ScannerFrame, ScannerNote, ScannerStepProgress, ScanRow, s } from '@/components/scanner/ScannerUI';
+import { C, FeedIcon, RoundButton, ScannerButton, ScannerNote, ScannerStepProgress, ScanRow, s } from '@/components/scanner/ScannerUI';
+import { KeyboardScrollView as ScrollView, KeyboardTextInput as TextInput, KeyboardViewport } from '@/components/ui/KeyboardForm';
+import { Button } from '@/components/ui/Button';
+import { IconButton } from '@/components/ui/IconButton';
+import { useTabBarPadding } from '@/hooks/useTabBarPadding';
 import { feedCategory, matchesFeed, type ScannerRow } from '@/lib/scanner-presentation';
 import { scannerRequest, scannerUuid, uploadFeedPhoto, type FeedSubmission } from '@/lib/feed-scanner-api';
 import { useScannerHistory } from '@/hooks/useScannerHistory';
@@ -15,7 +19,10 @@ type Screen = 'start' | 'search' | 'found' | 'photos';
 type Photos = Record<string, ImagePicker.ImagePickerAsset>;
 
 export default function ScannerScreen() {
-  const params = useLocalSearchParams<{ mode?: string; productId?: string; designState?: string; submissionId?: string }>();
+  // Other screens open this page with `openScanner`; `t` makes a repeated request (same submission or product) count again.
+  const params = useLocalSearchParams<{ mode?: string; productId?: string; designState?: string; submissionId?: string; t?: string }>();
+  const padBottom = useTabBarPadding();
+  const footerPadBottom = useTabBarPadding(8);
   const products = useScannerProducts();
   const { scans } = useScannerHistory();
   const userId = useCurrentUserId();
@@ -63,12 +70,13 @@ export default function ScannerScreen() {
     setError('');
     void scannerRequest<FeedSubmission>(`/submissions/${params.submissionId}`).then(current => {
       if (!alive) return;
-      if (current.status === 'completed' && current.scan_result_id) { router.replace({ pathname: '/(tabs)/scanner/result', params: { id: current.scan_result_id } }); return; }
-      if (['checking', 'processing', 'review_required'].includes(current.status)) { router.replace({ pathname: '/(tabs)/scanner/processing', params: { id: current.id } }); return; }
+      // Leaving for another screen: this page must not keep an earlier scan, or the opened submission's id.
+      if (current.status === 'completed' && current.scan_result_id) { resetScan(); router.push({ pathname: '/(tabs)/scanner/result', params: { id: current.scan_result_id } }); return; }
+      if (['checking', 'processing', 'review_required'].includes(current.status)) { resetScan(); router.push({ pathname: '/(tabs)/scanner/processing', params: { id: current.id } }); return; }
       submission.current = current; setRecognition(current); setPhotos({}); uploadedAssets.current = {}; setPhotoStep(resumePhotoStep(current)); setName(current.submitted_name || current.suggested_name || ''); setScreen('photos'); setSubmitted(false);
     }).catch(e => { if (alive) setError(e.message); });
     return () => { alive = false; };
-  }, [params.submissionId, userId]);
+  }, [params.submissionId, params.t, userId]);
   useEffect(() => {
     if (!designPreview) return;
     const key = `${userId}:${params.designState}`;
@@ -84,23 +92,21 @@ export default function ScannerScreen() {
   useEffect(() => {
     if (params.mode !== 'variant' || !params.productId) { handledVariant.current = ''; return; }
     const product = products.find(item => item.id === params.productId);
-    const key = `${userId}:${params.productId}`;
+    const key = `${userId}:${params.productId}:${params.t}`;
     if (!product || handledVariant.current === key) return;
     handledVariant.current = key;
     setSelected(product); setName(`${product.brand ?? ''} ${product.name ?? ''}`.trim());
     submission.current = null; clientId.current = scannerUuid(); setRecognition(null); setSubmitted(false);
     setPhotos({}); uploadedAssets.current = {}; setPhotoStep('composition'); setVariant(true); setUnknownFeed(false); setScreen('photos');
-  }, [params.mode, params.productId, products, userId]);
+  }, [params.mode, params.productId, params.t, products, userId]);
 
+  // Steps back within the scan; the start screen is a pager page and has no back.
   const back = useCallback(() => {
     setError('');
     if (sending || picking) return;
     if (screen === 'photos' && !candidate && photoStep !== 'composition') { setPhotoStep(photoStep === 'front' ? 'analysis' : 'composition'); return; }
-    if (screen === 'photos' && variant && router.canGoBack()) { router.back(); return; }
-    if (screen === 'start') {
-      if (router.canGoBack()) router.back();
-      else router.replace('/(tabs)/(pager)/home');
-    } else setScreen(screen === 'found' ? 'search' : screen === 'photos' && query ? 'search' : 'start');
+    if (screen === 'photos' && variant) { resetScan(); return; }
+    setScreen(screen === 'found' ? 'search' : screen === 'photos' && query ? 'search' : 'start');
   }, [screen, query, variant, photoStep, candidate, sending, picking]);
   useFocusEffect(useCallback(() => {
     const subscription = BackHandler.addEventListener('hardwareBackPress', () => {
@@ -236,89 +242,128 @@ export default function ScannerScreen() {
       : photoStep === 'front' ? <ScannerButton title={busy ? 'Foto’s versturen…' : 'Start de analyse'} disabled={busy || !!missingPhotos || !name.trim() || designPreview} onPress={() => void submit()} />
       : hasPhoto('composition') && !unreadable ? <ScannerButton disabled={busy || designPreview} title={busy ? 'Ingrediëntenlijst controleren…' : additional ? 'Verder naar de analysefoto' : 'Ingrediëntenlijst controleren'} onPress={() => void submit()} /> : null}
   </View> : undefined;
-  const searchInput = <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', borderWidth: 1.5, borderColor: focused ? C.mint : 'rgba(27,42,42,0.15)', borderRadius: 14, backgroundColor: '#fff', paddingLeft: 14 }}>
-    <Search size={18} color={C.teal} /><TextInput autoFocus value={query} onChangeText={setQuery} placeholder="Merk of productnaam" accessibilityLabel="Merk of productnaam" placeholderTextColor={C.muted} onFocus={() => setFocused(true)} onBlur={() => setFocused(false)} style={[s.input, { fontSize: 17 }, Platform.OS === 'web' ? { outlineStyle: 'none' } as any : undefined]} />
-    {!!query && <RoundButton label="Zoekopdracht wissen" onPress={() => setQuery('')}><X size={14} color={C.muted} /></RoundButton>}
+  // Same search pill as Bibliotheek.
+  const searchInput = <View className="flex-1 flex-row items-center gap-2.5 rounded-pill border border-ink-8 bg-white pl-3.5 pr-1" style={{ minWidth: 0 }}>
+    <Search size={18} color="rgba(27,42,42,0.5)" />
+    <TextInput autoFocus value={query} onChangeText={setQuery} placeholder="Merk of productnaam" accessibilityLabel="Merk of productnaam" placeholderTextColor="rgba(27,42,42,0.55)"
+      returnKeyType="search" maxFontSizeMultiplier={1.4} className="flex-1 py-3 font-sans text-[16px] text-ink" />
+    {!!query && <Pressable accessibilityRole="button" accessibilityLabel="Zoekopdracht wissen" onPress={() => setQuery('')}
+      style={{ width: 44, height: 44, alignItems: 'center', justifyContent: 'center' }}><X size={18} color="#879392" /></Pressable>}
   </View>;
   const foundActions = screen === 'found' && selected ? <>
     <ScannerButton title="Controleer de ingrediëntenlijst" icon={<ImagePlus size={20} color="#fff" />} onPress={() => { submission.current = null; clientId.current = scannerUuid(); setRecognition(null); setPhotos({}); uploadedAssets.current = {}; setPhotoStep('composition'); setSubmitted(false); setName(`${selected.brand ?? ''} ${selected.name ?? ''}`.trim()); setUnknownFeed(false); setVariant(false); setScreen('photos'); }} />
     <ScannerButton title="Dit is niet mijn voer" variant="text" onPress={() => setScreen('search')} />
   </> : undefined;
 
-  return <ScannerFrame title="" header={screen !== 'start'} onBack={back} showHistory={false} headerContent={screen === 'search' ? searchInput : undefined} footer={foundActions ?? photoActions}>
-    {designPreview && <Text style={[s.small, { color: C.teal }]}>Ontwerpstand · alleen lokale vormcontrole</Text>}
-    {!!error && <Text accessibilityRole="alert" style={[s.body, { color: C.danger }]}>{error}</Text>}
-    {!!error && submitted && !sending && <ScannerButton title="Nieuwe inzending starten" variant="outline" onPress={() => { resetScan(); setError(''); }} />}
-    {screen === 'start' && <>
-      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingTop: 8, paddingLeft: 4 }}>
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginLeft: -4 }}>
-          <View style={{ borderRadius: 24, backgroundColor: '#fff', borderWidth: 1, borderColor: C.border }}><RoundButton label="Scanner sluiten" onPress={closeScanner}><X size={20} color={C.ink} /></RoundButton></View>
-          <Text style={[s.eyebrow, { fontSize: 14, color: C.teal }]}>Voerscanner</Text>
-        </View>
-        <View style={{ borderRadius: 24, backgroundColor: '#fff', borderWidth: 1, borderColor: C.border }}><RoundButton label="Scanhistorie" onPress={() => router.push('/(tabs)/scanner/history')}><History size={20} color={C.ink} /></RoundButton></View>
-      </View>
-      <Text style={[s.title, { paddingHorizontal: 4, paddingTop: 2 }, compact && { fontSize: 26, lineHeight: 29 }]}>Welk voer wil je scannen?</Text>
-      <Text style={[s.body, { color: C.muted, paddingHorizontal: 4, marginBottom: 6 }]}>Ontdek wat er écht in paardenvoer zit en hoe de samenstelling scoort!</Text>
-      <ScannerStepProgress step={1} />
-      <View style={{ backgroundColor: C.deep, borderRadius: 22, padding: compact ? 16 : 20, gap: compact ? 12 : 16, overflow: 'hidden' }}>
-        <View style={{ flexDirection: 'row', gap: 12, alignItems: 'flex-start' }}>
-          <View style={{ width: 44, height: 44, borderRadius: 14, backgroundColor: 'rgba(255,255,255,0.14)', alignItems: 'center', justifyContent: 'center' }}><ScanLine size={22} color="#fff" /></View>
-          <View style={{ flex: 1 }}><Text style={[s.heading, { color: '#fff', fontSize: 19, lineHeight: 23 }]}>Scan de ingrediëntenlijst</Text><Text style={[s.small, { fontSize: 14, lineHeight: 20, color: 'rgba(255,255,255,0.85)', marginTop: 3 }]}>Maak een foto van het gedeelte op de verpakking waar alle ingrediënten staan vermeld. Zoek op de zak naar “Samenstelling” of “Ingrediënten”. Een screenshot van een webshop mag ook.</Text></View>
-        </View>
-        {/* Side by side the labels no longer fit with large system text. */}
-        <View style={{ flexDirection: fontScale >= 1.3 ? 'column' : 'row', gap: 8 }}>
-          <View style={{ flex: fontScale >= 1.3 ? undefined : 1.3 }}><ScannerButton title="Camera" variant="white" disabled={picking} icon={<Camera size={20} color={C.deep} />} onPress={() => void pick('composition', true)} /></View>
-          <View style={{ flex: fontScale >= 1.3 ? undefined : 1 }}><ScannerButton title="Uploaden" variant="dark-outline" disabled={picking} icon={<Upload size={19} color="#fff" />} onPress={() => void pick('composition', false)} /></View>
-        </View>
-        <Pressable accessibilityRole="button" onPress={() => { setExampleType('ingredients'); setExampleOpen(true); }} style={{ minHeight: 44, justifyContent: 'center' }}>
-          <Text style={[s.small, { color: '#fff', textDecorationLine: 'underline' }]}>Klik hier voor een voorbeeld van een ingrediëntenlijst.</Text>
-        </Pressable>
-      </View>
-      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: 8, paddingVertical: 4 }}><View style={{ height: 1, backgroundColor: 'rgba(27,42,42,0.15)', flex: 1 }} /><Text style={s.small}>of</Text><View style={{ height: 1, backgroundColor: 'rgba(27,42,42,0.15)', flex: 1 }} /></View>
-      <Pressable accessibilityRole="button" accessibilityLabel="Zoek op merk of productnaam" onPress={() => setScreen('search')} style={[s.row, { minHeight: 56, paddingHorizontal: 16, borderColor: 'rgba(27,42,42,0.15)' }]}><Search size={20} color={C.teal} /><Text style={[s.body, { fontSize: 17, color: C.muted }]}>Zoek op merk of productnaam</Text></Pressable>
-      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 10 }}><Text style={s.eyebrow}>Laatst gescand</Text><Pressable accessibilityRole="button" onPress={() => router.push('/(tabs)/scanner/history')} style={{ minHeight: 44, minWidth: 44, alignItems: 'flex-end', justifyContent: 'center' }}><Text style={[s.body, { color: C.teal, fontFamily: 'SourceSans3_700Bold' }]}>Alles »</Text></Pressable></View>
-      <View style={{ gap: 8 }}>{scans.slice(0, 3).map(scan => <ScanRow key={scan.id} scan={scan} compact />)}{!scans.length && <View style={s.card}><Text style={s.rowTitle}>Hier verschijnen straks jouw scans!</Text><Text style={s.small}>Scan je eerste voer en ontdek hoe de samenstelling scoort.</Text></View>}</View>
-    </>}
-    {screen === 'search' && <>
-      <Text style={[s.eyebrow, { marginTop: 6 }]}>{query.trim() ? `${filtered.length} resultaten` : 'Zoek in de voercatalogus'}</Text>
-      {filtered.map(product => <Pressable key={product.id} accessibilityRole="button" onPress={() => { setSelected(product); setScreen('found'); }} style={s.row}>
-        <FeedIcon /><View style={{ flex: 1, gap: 2 }}><Text style={s.small}>{product.brand}</Text><Text style={s.rowTitle}>{product.name}</Text><Text style={s.small}>{feedCategory(product.category)}</Text></View><ChevronRight size={18} color={C.muted} />
-      </Pressable>)}
-      {!filtered.length && <View style={{ padding: 16, gap: 6 }}><Text style={s.heading}>{query.trim() ? 'Geen voer gevonden' : 'Nog geen producten beschikbaar'}</Text><Text style={s.body}>Controleer de spelling, of voeg foto’s van het etiket toe.</Text></View>}
-      {!!query.trim() && <Pressable accessibilityRole="button" onPress={() => { resetScan(); setName(query.trim()); setUnknownFeed(true); setVariant(false); setScreen('photos'); }} style={[s.row, { borderStyle: 'dashed', borderColor: C.teal, backgroundColor: C.pale, padding: 16 }]}>
-        <View style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: C.teal, alignItems: 'center', justifyContent: 'center' }}><Plus size={18} color="#fff" /></View><View style={{ flex: 1 }}><Text style={s.rowTitle}>Staat jouw voer er niet bij?</Text><Text style={s.small}>Foto’s toevoegen voor “{query.trim()}”</Text></View>
-      </Pressable>}
-    </>}
-    {screen === 'found' && selected && <>
-      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: 4 }}><CheckCircle2 size={20} color={C.teal} /><Text style={[s.body, { color: C.teal, fontFamily: 'SourceSans3_700Bold' }]}>Gevonden in de voerdatabase</Text></View>
-      <View style={[s.card, { padding: 0, gap: 0, overflow: 'hidden', boxShadow: '0 12px 32px rgba(18,122,121,0.08)' }]}>
-        <View style={{ aspectRatio: 4 / 3, backgroundColor: C.pale, alignItems: 'center', justifyContent: 'center' }}><FeedIcon size={116} /></View>
-        <View style={{ paddingHorizontal: 20, paddingTop: 18, paddingBottom: 20, gap: 4 }}>
-          <View style={{ alignSelf: 'flex-start', borderRadius: 20, backgroundColor: '#F4EFE7', paddingHorizontal: 10, paddingVertical: 4, marginBottom: 8 }}><Text style={[s.small, { color: C.ink, fontFamily: 'SourceSans3_700Bold', fontSize: 12 }]}>{feedCategory(selected.category)}</Text></View>
-          <Text style={[s.small, { fontSize: 14 }]}>{selected.brand}</Text><Text style={[s.heading, { fontSize: 26, lineHeight: 30 }]}>{selected.name}</Text>
-        </View>
-      </View>
-      {!previousScan && <ScannerNote>Voor dit product is nog geen voeranalyse beschikbaar in jouw scanhistorie.</ScannerNote>}
-    </>}
-    {screen === 'photos' && <>
-      <ScannerStepProgress step={candidate || photoStep === 'composition' ? 1 : photoStep === 'analysis' ? 2 : 3} />
-      <View style={{ paddingHorizontal: 4, paddingBottom: 6 }}>
-        <Text style={[s.title, { fontSize: 28, lineHeight: 31 }]}>{candidate ? 'Is dit jouw voer?' : unreadable ? 'Maak een nieuwe foto' : photoStep === 'analysis' ? 'Geen zekere productmatch' : photoStep === 'front' ? 'Nog één foto!' : 'Scan de ingrediëntenlijst'}</Text>
-        <Text style={[s.body, { color: C.muted, marginTop: 8 }]}>{candidate ? 'Dit is het voer dat we hebben gedetecteerd. Klopt dat? Een overeenkomst in ingrediënten betekent niet automatisch dat het recept gelijk is.' : unreadable ? 'We konden de tekst op deze foto niet lezen. Maak een scherpe foto van de volledige ingrediëntenlijst, zonder schittering.' : photoStep === 'analysis' ? 'We herkennen dit voer op dit moment nog niet. Maak twee extra foto’s zodat we het voer kunnen analyseren en je een voorlopige beoordeling kunnen geven.' : photoStep === 'front' ? 'Maak een foto van de voorkant van de verpakking en type hieronder het merk en de productnaam.' : 'Maak een foto van het gedeelte op de verpakking waar alle ingrediënten staan vermeld. Zoek op de zak naar “Samenstelling” of “Ingrediënten”.'}</Text>
-      </View>
-      {candidate && <View style={s.card}><Text style={s.small}>{recognition?.recognition?.brand}</Text><Text style={s.heading}>{recognition?.recognition?.name}</Text><Text style={s.eyebrow}>Ingrediëntenlijst van dit product</Text><Text style={s.body}>{recognition?.recognition?.reference_composition}</Text><Text style={s.body}>Controleer ook merk, productnaam, verhoudingen, toevoegingen en voedingswaarden op jouw verpakking. Dezelfde productnaam bewijst niet dat het recept gelijk is. Bij twijfel of een verschil kies je voor aanvullende foto’s.</Text><ScannerButton title="Ik twijfel · aanvullende foto’s toevoegen" variant="outline" disabled={sending} onPress={() => void chooseKnown('changed')} /></View>}
-      {!candidate && photoStep !== 'composition' && <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: 4 }}><CheckCircle2 size={18} color={C.teal} /><Text style={[s.small, { flex: 1 }]}>Ingrediëntenlijst ontvangen</Text><Pressable accessibilityRole="button" disabled={busy} onPress={() => setReplaceKey('composition')} style={{ minHeight: 44, justifyContent: 'center' }}><Text style={[s.small, { color: C.teal }]}>Vervangen</Text></Pressable></View>}
-      {!candidate && photoStep === 'front' && <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: 4 }}><CheckCircle2 size={18} color={C.teal} /><Text style={[s.small, { flex: 1 }]}>Analysefoto ontvangen</Text><Pressable accessibilityRole="button" disabled={busy} onPress={() => { setPhotoStep('analysis'); setReplaceKey('analysis'); }} style={{ minHeight: 44, justifyContent: 'center' }}><Text style={[s.small, { color: C.teal }]}>Vervangen</Text></Pressable></View>}
-      {!candidate && <ScannerPhotoCard title={photoStep === 'analysis' ? 'Fotografeer de analyse' : photoStep === 'front' ? 'Voorkant verpakking' : 'Ingrediëntenlijst'}
-        detail={photoStep === 'analysis' ? 'Fotografeer de lijst waarop alle voedingswaarden, zoals suiker, zetmeel, eiwit, vet en ruwe celstof staan.' : photoStep === 'front' ? 'Zorg dat het merk en de productnaam zichtbaar zijn.' : unreadable ? 'Probeer het opnieuw met een beter leesbare foto.' : 'De volledige lijst, inclusief eventuele toevoegingen.'}
-        uri={photos[photoStep]?.uri} submissionId={recognition?.id} photoId={recognition?.photo_ids?.[photoStep]} phase={uploadingKey === photoStep ? 'uploading' : pickingKey === photoStep ? 'selecting' : unreadable && photoStep === 'composition' ? 'empty' : hasPhoto(photoStep) ? 'selected' : 'empty'} disabled={busy}
-        onCamera={() => void pick(photoStep, true)} onUpload={() => void pick(photoStep, false)} onReplace={() => setReplaceKey(photoStep)} />}
-      {!candidate && photoStep === 'analysis' && <Pressable accessibilityRole="button" onPress={() => { setExampleType('analysis'); setExampleOpen(true); }} style={{ minHeight: 44, justifyContent: 'center', paddingHorizontal: 4 }}><Text style={[s.small, { color: C.teal, textDecorationLine: 'underline' }]}>Klik hier voor een voorbeeld van een analyse.</Text></Pressable>}
-      {!candidate && photoStep === 'front' && <View style={{ gap: 6 }}><Text style={[s.small, { fontFamily: 'SourceSans3_700Bold' }]}>Merk en productnaam</Text><View style={{ backgroundColor: '#fff', borderWidth: 1, borderRadius: 14, borderColor: focused ? C.mint : C.border }}><TextInput editable={!busy} value={name} maxLength={255} onChangeText={setName} placeholder="Vitalbix Nutrimash" accessibilityLabel="Merk en productnaam" onFocus={() => setFocused(true)} onBlur={() => setFocused(false)} style={[s.input, Platform.OS === 'web' ? { outlineStyle: 'none' } as any : undefined]} /></View></View>}
-      <PhotoReplacementSheet visible={replaceKey !== null} onClose={() => setReplaceKey(null)}
-        onCamera={() => { const key = replaceKey; setReplaceKey(null); if (key) void pick(key, true); }}
-        onUpload={() => { const key = replaceKey; setReplaceKey(null); if (key) void pick(key, false); }} />
-    </>}
+  const footer = foundActions ?? photoActions;
+  const openHistory = () => router.push('/(tabs)/scanner/history');
+
+  // Laid out like the other pager pages: the shared header and bottom menu stay,
+  // the steps of a scan replace the start screen underneath the header.
+  return <View className="flex-1">
+    <KeyboardViewport style={{ flex: 1 }}>
+      {screen !== 'start' && <View className="flex-row items-center gap-2 pl-2 pr-5 pt-3">
+        <IconButton accessibilityLabel="Terug" hitSlop={0} onPress={back}><ChevronLeft size={26} color="#127A79" /></IconButton>
+        {screen === 'search' && searchInput}
+      </View>}
+      <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={{ paddingHorizontal: 20, paddingTop: screen === 'start' ? 16 : 8, paddingBottom: footer ? 24 : padBottom, gap: 12, flexGrow: 1 }}>
+        {designPreview && <Text style={[s.small, { color: C.teal }]}>Ontwerpstand · alleen lokale vormcontrole</Text>}
+        {!!error && <Text accessibilityRole="alert" style={[s.body, { color: C.danger }]}>{error}</Text>}
+        {!!error && submitted && !sending && <ScannerButton title="Nieuwe inzending starten" variant="outline" onPress={() => { resetScan(); setError(''); }} />}
+        {screen === 'start' && <>
+          <View className="mb-1">
+            <Text accessibilityRole="header" className={`font-bold text-ink ${compact ? 'text-[23px] leading-[27px]' : 'text-[25px] leading-[29px]'}`}>Welk voer wil je scannen?</Text>
+            <Text className="mt-1.5 text-[14px] leading-[21px] text-ink-70">Ontdek wat er écht in paardenvoer zit en hoe de samenstelling scoort.</Text>
+          </View>
+          <View className={`rounded-[22px] bg-teal-500 ${compact ? 'p-4' : 'p-5'}`}>
+            <View className="flex-row items-start gap-3">
+              <View className="h-11 w-11 items-center justify-center rounded-2xl bg-white/15"><ScanLine size={22} color="#fff" /></View>
+              <View className="flex-1">
+                <Text className="font-semi text-[19px] leading-[25px] text-white">Scan de ingrediëntenlijst</Text>
+                <Text className="mt-1 text-[14px] leading-[21px] text-white/90">Fotografeer het deel van de verpakking met “Samenstelling” of “Ingrediënten”. Een screenshot van een webshop mag ook.</Text>
+              </View>
+            </View>
+            {/* Side by side the labels no longer fit with large system text. */}
+            <View className="mt-4 gap-2" style={{ flexDirection: fontScale >= 1.3 ? 'column' : 'row' }}>
+              <View style={{ flex: fontScale >= 1.3 ? undefined : 1 }}>
+                <Button title="Camera" variant="light" disabled={picking} leading={<Camera size={20} color="#0D5C5B" />} onPress={() => void pick('composition', true)} />
+              </View>
+              <View style={{ flex: fontScale >= 1.3 ? undefined : 1 }}>
+                <Pressable accessibilityRole="button" accessibilityState={{ disabled: picking }} disabled={picking} onPress={() => void pick('composition', false)}
+                  className={`min-h-[52px] w-full flex-row items-center justify-center gap-2 rounded-pill border border-white/40 px-6 py-3.5 active:bg-white/10 ${picking ? 'opacity-40' : ''}`}>
+                  <Upload size={19} color="#fff" />
+                  <Text className="font-semi text-base text-white">Uploaden</Text>
+                </Pressable>
+              </View>
+            </View>
+            <Pressable accessibilityRole="button" onPress={() => { setExampleType('ingredients'); setExampleOpen(true); }} className="mt-2 min-h-11 justify-center">
+              <Text className="font-semi text-[14px] text-white">Bekijk een voorbeeld →</Text>
+            </Pressable>
+          </View>
+          <Text accessibilityRole="header" className="mt-3 font-semi text-[16px] text-ink">Of zoek in de voercatalogus</Text>
+          <Pressable accessibilityRole="button" accessibilityLabel="Zoek op merk of productnaam" onPress={() => setScreen('search')}
+            className="min-h-[48px] flex-row items-center gap-2.5 rounded-pill border border-ink-8 bg-white px-3.5 py-3">
+            <Search size={18} color="rgba(27,42,42,0.5)" />
+            <Text maxFontSizeMultiplier={1.4} className="flex-1 text-[16px] text-ink-50">Merk of productnaam</Text>
+          </Pressable>
+          <View className="mt-3 flex-row items-center justify-between gap-2">
+            <Text accessibilityRole="header" className="flex-1 font-semi text-[16px] text-ink">Laatst gescand</Text>
+            {scans.length > 0 && <Pressable accessibilityRole="button" accessibilityLabel="Alle scans bekijken" onPress={openHistory} className="min-h-11 justify-center">
+              <Text className="font-semi text-[14px] text-teal-600">Alles bekijken →</Text>
+            </Pressable>}
+          </View>
+          <View className="overflow-hidden rounded-[22px] bg-white">
+            {scans.slice(0, 3).map((scan, index) => <ScanRow key={scan.id} scan={scan} grouped divider={index > 0} />)}
+            {!scans.length && <View className="p-5">
+              <Text className="font-semi text-[16px] text-ink">Hier verschijnen straks jouw scans</Text>
+              <Text className="mt-1 text-[14px] leading-5 text-ink-70">Scan je eerste voer en ontdek hoe de samenstelling scoort.</Text>
+            </View>}
+          </View>
+        </>}
+        {screen === 'search' && <>
+          <Text style={[s.eyebrow, { marginTop: 6 }]}>{query.trim() ? `${filtered.length} resultaten` : 'Zoek in de voercatalogus'}</Text>
+          {filtered.map(product => <Pressable key={product.id} accessibilityRole="button" onPress={() => { setSelected(product); setScreen('found'); }} style={s.row}>
+            <FeedIcon /><View style={{ flex: 1, gap: 2 }}><Text style={s.small}>{product.brand}</Text><Text style={s.rowTitle}>{product.name}</Text><Text style={s.small}>{feedCategory(product.category)}</Text></View><ChevronRight size={18} color={C.muted} />
+          </Pressable>)}
+          {!filtered.length && <View style={{ padding: 16, gap: 6 }}><Text style={s.heading}>{query.trim() ? 'Geen voer gevonden' : 'Nog geen producten beschikbaar'}</Text><Text style={s.body}>Controleer de spelling, of voeg foto’s van het etiket toe.</Text></View>}
+          {!!query.trim() && <Pressable accessibilityRole="button" onPress={() => { resetScan(); setName(query.trim()); setUnknownFeed(true); setVariant(false); setScreen('photos'); }} style={[s.row, { borderStyle: 'dashed', borderColor: C.teal, backgroundColor: C.pale, padding: 16 }]}>
+            <View style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: C.teal, alignItems: 'center', justifyContent: 'center' }}><Plus size={18} color="#fff" /></View><View style={{ flex: 1 }}><Text style={s.rowTitle}>Staat jouw voer er niet bij?</Text><Text style={s.small}>Foto’s toevoegen voor “{query.trim()}”</Text></View>
+          </Pressable>}
+        </>}
+        {screen === 'found' && selected && <>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: 4 }}><CheckCircle2 size={20} color={C.teal} /><Text style={[s.body, { color: C.teal, fontFamily: 'SourceSans3_700Bold' }]}>Gevonden in de voerdatabase</Text></View>
+          <View style={[s.card, { padding: 0, gap: 0, overflow: 'hidden', boxShadow: '0 12px 32px rgba(18,122,121,0.08)' }]}>
+            <View style={{ aspectRatio: 4 / 3, backgroundColor: C.pale, alignItems: 'center', justifyContent: 'center' }}><FeedIcon size={116} /></View>
+            <View style={{ paddingHorizontal: 20, paddingTop: 18, paddingBottom: 20, gap: 4 }}>
+              <View style={{ alignSelf: 'flex-start', borderRadius: 20, backgroundColor: '#F4EFE7', paddingHorizontal: 10, paddingVertical: 4, marginBottom: 8 }}><Text style={[s.small, { color: C.ink, fontFamily: 'SourceSans3_700Bold', fontSize: 12 }]}>{feedCategory(selected.category)}</Text></View>
+              <Text style={[s.small, { fontSize: 14 }]}>{selected.brand}</Text><Text style={[s.heading, { fontSize: 26, lineHeight: 30 }]}>{selected.name}</Text>
+            </View>
+          </View>
+          {!previousScan && <ScannerNote>Voor dit product is nog geen voeranalyse beschikbaar in jouw scanhistorie.</ScannerNote>}
+        </>}
+        {screen === 'photos' && <>
+          <ScannerStepProgress step={candidate || photoStep === 'composition' ? 1 : photoStep === 'analysis' ? 2 : 3} />
+          <View style={{ paddingHorizontal: 4, paddingBottom: 6 }}>
+            <Text style={[s.title, { fontSize: 28, lineHeight: 31 }]}>{candidate ? 'Is dit jouw voer?' : unreadable ? 'Maak een nieuwe foto' : photoStep === 'analysis' ? 'Geen zekere productmatch' : photoStep === 'front' ? 'Nog één foto!' : 'Scan de ingrediëntenlijst'}</Text>
+            <Text style={[s.body, { color: C.muted, marginTop: 8 }]}>{candidate ? 'Dit is het voer dat we hebben gedetecteerd. Klopt dat? Een overeenkomst in ingrediënten betekent niet automatisch dat het recept gelijk is.' : unreadable ? 'We konden de tekst op deze foto niet lezen. Maak een scherpe foto van de volledige ingrediëntenlijst, zonder schittering.' : photoStep === 'analysis' ? 'We herkennen dit voer op dit moment nog niet. Maak twee extra foto’s zodat we het voer kunnen analyseren en je een voorlopige beoordeling kunnen geven.' : photoStep === 'front' ? 'Maak een foto van de voorkant van de verpakking en type hieronder het merk en de productnaam.' : 'Maak een foto van het gedeelte op de verpakking waar alle ingrediënten staan vermeld. Zoek op de zak naar “Samenstelling” of “Ingrediënten”.'}</Text>
+          </View>
+          {candidate && <View style={s.card}><Text style={s.small}>{recognition?.recognition?.brand}</Text><Text style={s.heading}>{recognition?.recognition?.name}</Text><Text style={s.eyebrow}>Ingrediëntenlijst van dit product</Text><Text style={s.body}>{recognition?.recognition?.reference_composition}</Text><Text style={s.body}>Controleer ook merk, productnaam, verhoudingen, toevoegingen en voedingswaarden op jouw verpakking. Dezelfde productnaam bewijst niet dat het recept gelijk is. Bij twijfel of een verschil kies je voor aanvullende foto’s.</Text><ScannerButton title="Ik twijfel · aanvullende foto’s toevoegen" variant="outline" disabled={sending} onPress={() => void chooseKnown('changed')} /></View>}
+          {!candidate && photoStep !== 'composition' && <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: 4 }}><CheckCircle2 size={18} color={C.teal} /><Text style={[s.small, { flex: 1 }]}>Ingrediëntenlijst ontvangen</Text><Pressable accessibilityRole="button" disabled={busy} onPress={() => setReplaceKey('composition')} style={{ minHeight: 44, justifyContent: 'center' }}><Text style={[s.small, { color: C.teal }]}>Vervangen</Text></Pressable></View>}
+          {!candidate && photoStep === 'front' && <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: 4 }}><CheckCircle2 size={18} color={C.teal} /><Text style={[s.small, { flex: 1 }]}>Analysefoto ontvangen</Text><Pressable accessibilityRole="button" disabled={busy} onPress={() => { setPhotoStep('analysis'); setReplaceKey('analysis'); }} style={{ minHeight: 44, justifyContent: 'center' }}><Text style={[s.small, { color: C.teal }]}>Vervangen</Text></Pressable></View>}
+          {!candidate && <ScannerPhotoCard title={photoStep === 'analysis' ? 'Fotografeer de analyse' : photoStep === 'front' ? 'Voorkant verpakking' : 'Ingrediëntenlijst'}
+            detail={photoStep === 'analysis' ? 'Fotografeer de lijst waarop alle voedingswaarden, zoals suiker, zetmeel, eiwit, vet en ruwe celstof staan.' : photoStep === 'front' ? 'Zorg dat het merk en de productnaam zichtbaar zijn.' : unreadable ? 'Probeer het opnieuw met een beter leesbare foto.' : 'De volledige lijst, inclusief eventuele toevoegingen.'}
+            uri={photos[photoStep]?.uri} submissionId={recognition?.id} photoId={recognition?.photo_ids?.[photoStep]} phase={uploadingKey === photoStep ? 'uploading' : pickingKey === photoStep ? 'selecting' : unreadable && photoStep === 'composition' ? 'empty' : hasPhoto(photoStep) ? 'selected' : 'empty'} disabled={busy}
+            onCamera={() => void pick(photoStep, true)} onUpload={() => void pick(photoStep, false)} onReplace={() => setReplaceKey(photoStep)} />}
+          {!candidate && photoStep === 'analysis' && <Pressable accessibilityRole="button" onPress={() => { setExampleType('analysis'); setExampleOpen(true); }} style={{ minHeight: 44, justifyContent: 'center', paddingHorizontal: 4 }}><Text style={[s.small, { color: C.teal, textDecorationLine: 'underline' }]}>Klik hier voor een voorbeeld van een analyse.</Text></Pressable>}
+          {!candidate && photoStep === 'front' && <View style={{ gap: 6 }}><Text style={[s.small, { fontFamily: 'SourceSans3_700Bold' }]}>Merk en productnaam</Text><View style={{ backgroundColor: '#fff', borderWidth: 1, borderRadius: 14, borderColor: focused ? C.mint : C.border }}><TextInput editable={!busy} value={name} maxLength={255} onChangeText={setName} placeholder="Vitalbix Nutrimash" accessibilityLabel="Merk en productnaam" onFocus={() => setFocused(true)} onBlur={() => setFocused(false)} style={[s.input, Platform.OS === 'web' ? { outlineStyle: 'none' } as any : undefined]} /></View></View>}
+          <PhotoReplacementSheet visible={replaceKey !== null} onClose={() => setReplaceKey(null)}
+            onCamera={() => { const key = replaceKey; setReplaceKey(null); if (key) void pick(key, true); }}
+            onUpload={() => { const key = replaceKey; setReplaceKey(null); if (key) void pick(key, false); }} />
+        </>}
+      </ScrollView>
+      {/* Step actions stay in view, above the bottom menu. */}
+      {footer && <View style={{ paddingHorizontal: 20, paddingTop: 12, paddingBottom: footerPadBottom, gap: 4 }}>{footer}</View>}
+    </KeyboardViewport>
     <Modal visible={exampleOpen} transparent animationType="fade" onRequestClose={() => setExampleOpen(false)}>
       <View style={{ flex: 1, backgroundColor: 'rgba(13,42,42,0.65)', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
         <View accessibilityViewIsModal style={{ width: '100%', maxWidth: exampleType === 'analysis' ? 600 : 900, padding: 16, gap: 14, backgroundColor: C.canvas, borderRadius: 20 }}>
@@ -329,5 +374,6 @@ export default function ScannerScreen() {
         </View>
       </View>
     </Modal>
-  </ScannerFrame>;
+  </View>;
 }
+

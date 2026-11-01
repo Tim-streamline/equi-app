@@ -16,11 +16,11 @@ const STATES = [
   ['replace', 'Foto vervangen'], ['variant', 'Andere samenstelling'],
 ] as const;
 type State = typeof STATES[number][0];
-const LIVE: Partial<Record<State, string>> = { start: '/scanner?designState=start', search: '/scanner?designState=search', found: '/scanner?designState=found', unknown: '/scanner?designState=unknown', history: '/scanner/history', variant: '/scanner?designState=variant' };
+const LIVE: Partial<Record<State, string>> = { start: '/scan?designState=start', search: '/scan?designState=search', found: '/scan?designState=found', unknown: '/scan?designState=unknown', history: '/scanner/history', variant: '/scan?designState=variant' };
 
 // Opt-in local design inspector. It cannot be opened in normal production builds.
 export default function ScannerDesignPreview() {
-  if (Platform.OS !== 'web' || process.env.EXPO_PUBLIC_SCANNER_DESIGN_PREVIEW !== 'true') return <Redirect href="/(tabs)/scanner" />;
+  if (Platform.OS !== 'web' || process.env.EXPO_PUBLIC_SCANNER_DESIGN_PREVIEW !== 'true') return <Redirect href="/(tabs)/(pager)/scan" />;
   return <DesignInspector />;
 }
 

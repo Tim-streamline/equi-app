@@ -13,7 +13,8 @@ export async function preserveIntakeForRefresh(options: {
   if (!answers) return;
   const id = await options.ensureBooking();
   options.checkSession();
-  // Re-save the latest in-memory answers, including any earlier failed local save.
+  // Re-save the latest in-memory answers as a final safeguard. drain() has already replayed every
+  // retained local write, and rejects while one still fails: upserts alone cannot redo a cleared section.
   for (const [section, values] of Object.entries(answers)) for (const [field, value] of Object.entries(values)) {
     options.checkSession();
     await options.save(id, section, field, value);

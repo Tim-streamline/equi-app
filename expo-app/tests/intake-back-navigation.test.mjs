@@ -25,6 +25,7 @@ function setup() {
     'lucide-react-native': {},
     '@/components/ui/IconButton': { IconButton: 'IconButton' },
     '@/components/intake/SubmissionBlockNotice': { SubmissionBlockNotice: 'SubmissionBlockNotice' },
+    '@/components/intake/UnsavedNotice': { UnsavedNotice: 'UnsavedNotice' },
     '@/components/ui/Button': { Button: 'Button' },
     '@/components/intake/MissingQuestionsModal': { MissingQuestionsModal: 'MissingQuestionsModal' },
     '@/components/intake/IntakeScrollView': { IntakeScrollView: 'IntakeScrollView' },
@@ -33,7 +34,7 @@ function setup() {
     '@/lib/intake/submission': {formatIntakeDate: () => '16 oktober 2026'},
     '@/lib/intake/store': { useIntake: () => ({ submissionBlocks: [], state: { answers: {} }, trackActivity() {} }), formatSavedAgo: () => null },
     '@/lib/intake/logic': { intakeProgress: () => ({done: 0, total: 1, pct: 0}), nextSectionId: () => 'photos',
-      answersForSection: () => ({}), answeredCount: () => ({ answered: 0, total: 0 }), isSectionComplete: () => false, isPhotoSection: () => false, visibleFieldsForRender: () => [], missingRequired: () => [] },
+      answersForSection: () => ({}), effectiveAnswers: answers => answers, answeredCount: () => ({ answered: 0, total: 0 }), isSectionComplete: () => false, isPhotoSection: () => false, visibleFieldsForRender: () => [], missingRequired: () => [] },
     'expo-router': { useLocalSearchParams: () => ({ id: 'photos' }), router: {
       replace: path => events.push(['replace', path]), dismissTo: path => events.push(['dismissTo', path]),
       back: () => assert.fail('must not walk the nested intake history'),

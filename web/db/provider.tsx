@@ -20,7 +20,7 @@ type DbContextValue = {
   powersync: PowerSyncDatabase; isLoggedIn: boolean; isConnected: boolean;
   syncStatus: SyncStatus; currentUserId: string | null; selectedHorseId: string | null;
   refreshSubscriptionAccess: (signal: AbortSignal) => Promise<void>;
-  selectHorse: (id: string) => void; login: (email: string, password: string) => Promise<void>; register: (input: RegistrationInput) => Promise<RegistrationChallenge>; completeRegistration: (input: RegistrationCompletion, password: string) => Promise<void>; logout: () => Promise<void>;
+  selectHorse: (id: string) => void; login: (email: string, password: string) => Promise<void>; register: (input: RegistrationInput) => Promise<RegistrationChallenge>; completeRegistration: (input: RegistrationCompletion) => Promise<void>; logout: () => Promise<void>;
 };
 const DbContext = createContext<DbContextValue | null>(null);
 function mapStatus(status: PsSyncStatus): SyncStatus {

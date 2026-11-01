@@ -23,6 +23,8 @@ Schedule::command('credits:grant-test-monthly')->hourly()->withoutOverlapping();
 
 Schedule::command('intakes:send-submission-notifications')->everyMinute()->withoutOverlapping();
 
+Schedule::command('sanctum:prune-expired --hours=24')->daily();
+
 Schedule::call(fn () => DB::table('pending_registrations')->where('expires_at', '<=', now())->delete())->hourly();
 
 Schedule::command('intakes:send-reminders')->everyFifteenMinutes()->withoutOverlapping();

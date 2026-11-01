@@ -12453,7 +12453,6 @@
                     "answer_aliases": null,
                     "submission_blocks": null,
                     "show_if": {
-                        "$not": {"sociaal.wegjagen-frequentie": "Nooit"},
                         "$all": [
                             {
                                 "$all": [
@@ -12524,6 +12523,38 @@
                                         ]
                                     }
                                 ]
+                            },
+                            {
+                                "$not": {
+                                    "$all": [
+                                        {
+                                            "sociaal.wegjagen-frequentie": "Nooit"
+                                        },
+                                        {
+                                            "$not": {
+                                                "$any": [
+                                                    {
+                                                        "sociaal.sociaal-spanning": [
+                                                            "Mijn paard wordt regelmatig weggejaagd / gepest"
+                                                        ]
+                                                    },
+                                                    {
+                                                        "sociaal.sociaal-positie": [
+                                                            "…zelf wordt weggejaagd",
+                                                            "…soms wegjaagt en soms wordt weggejaagd"
+                                                        ]
+                                                    },
+                                                    {
+                                                        "huisvesting.rust-weggejaagd": [
+                                                            "Af en toe",
+                                                            "Regelmatig"
+                                                        ]
+                                                    }
+                                                ]
+                                            }
+                                        }
+                                    ]
+                                }
                             }
                         ]
                     },
@@ -12561,7 +12592,6 @@
                     "answer_aliases": null,
                     "submission_blocks": null,
                     "show_if": {
-                        "$not": {"sociaal.wegjagen-frequentie": "Nooit"},
                         "$all": [
                             {
                                 "$all": [
@@ -12639,6 +12669,38 @@
                             },
                             {
                                 "sociaal.wegjagen-gedrag": "Anders, namelijk..."
+                            },
+                            {
+                                "$not": {
+                                    "$all": [
+                                        {
+                                            "sociaal.wegjagen-frequentie": "Nooit"
+                                        },
+                                        {
+                                            "$not": {
+                                                "$any": [
+                                                    {
+                                                        "sociaal.sociaal-spanning": [
+                                                            "Mijn paard wordt regelmatig weggejaagd / gepest"
+                                                        ]
+                                                    },
+                                                    {
+                                                        "sociaal.sociaal-positie": [
+                                                            "…zelf wordt weggejaagd",
+                                                            "…soms wegjaagt en soms wordt weggejaagd"
+                                                        ]
+                                                    },
+                                                    {
+                                                        "huisvesting.rust-weggejaagd": [
+                                                            "Af en toe",
+                                                            "Regelmatig"
+                                                        ]
+                                                    }
+                                                ]
+                                            }
+                                        }
+                                    ]
+                                }
                             }
                         ]
                     },
@@ -12680,7 +12742,6 @@
                     "answer_aliases": null,
                     "submission_blocks": null,
                     "show_if": {
-                        "$not": {"sociaal.wegjagen-frequentie": "Nooit"},
                         "$all": [
                             {
                                 "$all": [
@@ -12751,6 +12812,38 @@
                                         ]
                                     }
                                 ]
+                            },
+                            {
+                                "$not": {
+                                    "$all": [
+                                        {
+                                            "sociaal.wegjagen-frequentie": "Nooit"
+                                        },
+                                        {
+                                            "$not": {
+                                                "$any": [
+                                                    {
+                                                        "sociaal.sociaal-spanning": [
+                                                            "Mijn paard wordt regelmatig weggejaagd / gepest"
+                                                        ]
+                                                    },
+                                                    {
+                                                        "sociaal.sociaal-positie": [
+                                                            "…zelf wordt weggejaagd",
+                                                            "…soms wegjaagt en soms wordt weggejaagd"
+                                                        ]
+                                                    },
+                                                    {
+                                                        "huisvesting.rust-weggejaagd": [
+                                                            "Af en toe",
+                                                            "Regelmatig"
+                                                        ]
+                                                    }
+                                                ]
+                                            }
+                                        }
+                                    ]
+                                }
                             }
                         ]
                     },
@@ -12788,7 +12881,6 @@
                     "answer_aliases": null,
                     "submission_blocks": null,
                     "show_if": {
-                        "$not": {"sociaal.wegjagen-frequentie": "Nooit"},
                         "$all": [
                             {
                                 "$all": [
@@ -12866,6 +12958,38 @@
                             },
                             {
                                 "sociaal.wegjagen-reactie": "Anders, namelijk..."
+                            },
+                            {
+                                "$not": {
+                                    "$all": [
+                                        {
+                                            "sociaal.wegjagen-frequentie": "Nooit"
+                                        },
+                                        {
+                                            "$not": {
+                                                "$any": [
+                                                    {
+                                                        "sociaal.sociaal-spanning": [
+                                                            "Mijn paard wordt regelmatig weggejaagd / gepest"
+                                                        ]
+                                                    },
+                                                    {
+                                                        "sociaal.sociaal-positie": [
+                                                            "…zelf wordt weggejaagd",
+                                                            "…soms wegjaagt en soms wordt weggejaagd"
+                                                        ]
+                                                    },
+                                                    {
+                                                        "huisvesting.rust-weggejaagd": [
+                                                            "Af en toe",
+                                                            "Regelmatig"
+                                                        ]
+                                                    }
+                                                ]
+                                            }
+                                        }
+                                    ]
+                                }
                             }
                         ]
                     },
@@ -12907,7 +13031,6 @@
                     "answer_aliases": null,
                     "submission_blocks": null,
                     "show_if": {
-                        "$not": {"sociaal.wegjagen-frequentie": "Nooit"},
                         "$all": [
                             {
                                 "$all": [
@@ -12978,6 +13101,38 @@
                                         ]
                                     }
                                 ]
+                            },
+                            {
+                                "$not": {
+                                    "$all": [
+                                        {
+                                            "sociaal.wegjagen-frequentie": "Nooit"
+                                        },
+                                        {
+                                            "$not": {
+                                                "$any": [
+                                                    {
+                                                        "sociaal.sociaal-spanning": [
+                                                            "Mijn paard wordt regelmatig weggejaagd / gepest"
+                                                        ]
+                                                    },
+                                                    {
+                                                        "sociaal.sociaal-positie": [
+                                                            "…zelf wordt weggejaagd",
+                                                            "…soms wegjaagt en soms wordt weggejaagd"
+                                                        ]
+                                                    },
+                                                    {
+                                                        "huisvesting.rust-weggejaagd": [
+                                                            "Af en toe",
+                                                            "Regelmatig"
+                                                        ]
+                                                    }
+                                                ]
+                                            }
+                                        }
+                                    ]
+                                }
                             }
                         ]
                     },
@@ -13016,7 +13171,6 @@
                     "answer_aliases": null,
                     "submission_blocks": null,
                     "show_if": {
-                        "$not": {"sociaal.wegjagen-frequentie": "Nooit"},
                         "$all": [
                             {
                                 "$all": [
@@ -13094,6 +13248,38 @@
                             },
                             {
                                 "sociaal.wegjagen-momenten": "Anders, namelijk..."
+                            },
+                            {
+                                "$not": {
+                                    "$all": [
+                                        {
+                                            "sociaal.wegjagen-frequentie": "Nooit"
+                                        },
+                                        {
+                                            "$not": {
+                                                "$any": [
+                                                    {
+                                                        "sociaal.sociaal-spanning": [
+                                                            "Mijn paard wordt regelmatig weggejaagd / gepest"
+                                                        ]
+                                                    },
+                                                    {
+                                                        "sociaal.sociaal-positie": [
+                                                            "…zelf wordt weggejaagd",
+                                                            "…soms wegjaagt en soms wordt weggejaagd"
+                                                        ]
+                                                    },
+                                                    {
+                                                        "huisvesting.rust-weggejaagd": [
+                                                            "Af en toe",
+                                                            "Regelmatig"
+                                                        ]
+                                                    }
+                                                ]
+                                            }
+                                        }
+                                    ]
+                                }
                             }
                         ]
                     },

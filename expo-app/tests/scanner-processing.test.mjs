@@ -22,7 +22,7 @@ async function openProcessing(status, start) {
     },
     '@/db/hooks': { useCurrentUserId: () => 'owner' },
     '@/lib/haptics': { successHaptic: () => {} },
-    '@/components/scanner/ScannerUI': { ScannerFrame: 'Frame', ScannerButton: 'Button', ScannerStepProgress: 'Progress', s: {} },
+    '@/components/scanner/ScannerUI': { openScanner: () => {}, ScannerFrame: 'Frame', ScannerButton: 'Button', ScannerStepProgress: 'Progress', s: {} },
     '@/components/scanner/ScannerProcessingStates': { ScannerProcessingState: 'Processing' },
     '@/lib/feed-scanner-api': {
       scannerRequest: async (path, body) => {

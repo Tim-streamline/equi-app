@@ -264,6 +264,46 @@ export function showField(
   return true;
 }
 
+/**
+ * The answers as the showIf rules should see them: an answer to a question
+ * that is itself hidden counts as unanswered, so the follow-ups of a hidden
+ * question hide too, however deep the chain. Passes repeat until nothing
+ * changes, because a rule can refer to a later question, exactly like
+ * `IntakeReview::effectiveAnswers` on the server. Stored answers stay
+ * untouched; pass the result as `allAnswers` to the evaluators.
+ */
+export function effectiveAnswers(
+  answers: IntakeAnswers,
+  schema: Section[] = INTAKE_SCHEMA,
+  noneOptions: readonly string[] = INTAKE_NONE_OPTIONS,
+): IntakeAnswers {
+  // Every pass that changes anything removes an answer, so this ends.
+  for (let result = answers; ;) {
+    const next = hideAnswersOnce(result, schema, noneOptions);
+    if (next === result) return result;
+    result = next;
+  }
+}
+
+/** One in-order pass; returns `answers` itself when every answered conditional question is visible. */
+function hideAnswersOnce(answers: IntakeAnswers, schema: Section[], noneOptions: readonly string[]): IntakeAnswers {
+  let result = answers;
+  for (const section of schema) {
+    let values: SectionAnswers | undefined;
+    for (const field of section.fields) {
+      const source = field.answerSection ?? section.id;
+      if (!field.showIf || !Object.prototype.hasOwnProperty.call(result[source] ?? {}, field.id)) continue;
+      values ??= answersForSection(section, result);
+      if (showField({ ...field, photoConfig: undefined }, values, result, noneOptions)) continue;
+      const { [field.id]: _hidden, ...rest } = result[source]!;
+      result = { ...result, [source]: rest };
+      values = { ...values };
+      delete values[field.id];
+    }
+  }
+  return result;
+}
+
 /** Visible (non-sectionhead) fields for a section, after applying showIf. */
 export function visibleFields(
   section: Section,
@@ -361,6 +401,7 @@ export function intakeProgress(
 } {
   const total = schema.length;
   let done = 0;
+  answers = effectiveAnswers(answers, schema, noneOptions);
   for (const sec of schema) {
     const a = answersForSection(sec, answers);
     if (isSectionComplete(sec, a, answers, noneOptions)) done++;
@@ -374,6 +415,7 @@ export function nextSectionId(
   schema: Section[] = INTAKE_SCHEMA,
   noneOptions: readonly string[] = INTAKE_NONE_OPTIONS,
 ): string {
+  answers = effectiveAnswers(answers, schema, noneOptions);
   for (const sec of schema) {
     const a = answersForSection(sec, answers);
     if (!isSectionComplete(sec, a, answers, noneOptions)) return sec.id;
@@ -403,10 +445,16 @@ export function fieldCritical(field: Field, value: unknown): boolean {
 }
 
 /** Whether the entire intake is blocked from auto-start because of a critical answer. */
-export function hasCriticalAnswers(answers: IntakeAnswers, schema: Section[] = INTAKE_SCHEMA): boolean {
+export function hasCriticalAnswers(
+  answers: IntakeAnswers,
+  schema: Section[] = INTAKE_SCHEMA,
+  noneOptions: readonly string[] = INTAKE_NONE_OPTIONS,
+): boolean {
+  // Like the flag tally, answers to questions the user can no longer see do not count.
+  answers = effectiveAnswers(answers, schema, noneOptions);
   for (const sec of schema) {
     const a = answersForSection(sec, answers);
-    for (const f of sec.fields) {
+    for (const f of visibleFields(sec, a, answers, noneOptions)) {
       if (fieldCritical(f, a[f.id])) return true;
     }
   }
@@ -420,6 +468,7 @@ export function countFlags(
   noneOptions: readonly string[] = INTAKE_NONE_OPTIONS,
 ): number {
   let n = 0;
+  answers = effectiveAnswers(answers, schema, noneOptions);
   for (const sec of schema) {
     const a = answersForSection(sec, answers);
     for (const f of visibleFields(sec, a, answers, noneOptions)) {
@@ -431,6 +480,7 @@ export function countFlags(
 
 /** Reminder thresholds count applicable mandatory questions, never rounded section percentages. */
 export function requiredProgress(answers: IntakeAnswers, schema: Section[] = INTAKE_SCHEMA, noneOptions = INTAKE_NONE_OPTIONS) {
+  answers = effectiveAnswers(answers, schema, noneOptions);
   const required = schema.flatMap(section => visibleFields(section, answersForSection(section, answers), answers, noneOptions)
     .filter(field => needsAnswer(field, answersForSection(section, answers)[field.id])).map(field => ({ section, field })));
   const missing = required.filter(({ section, field }) => !isFieldAnswered(field, answersForSection(section, answers)[field.id], answers, section.id));

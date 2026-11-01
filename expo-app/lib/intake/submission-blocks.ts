@@ -1,9 +1,10 @@
 import type { IntakeAnswers, Section } from './schema';
-import { answersForSection, visibleFields } from './logic';
+import { answersForSection, effectiveAnswers, visibleFields } from './logic';
 
 export type SubmissionBlock = { section: string; field: string; label: string; answer: string; message: string };
 
 export function submissionBlocks(schema: Section[], answers: IntakeAnswers, noneOptions: readonly string[]): SubmissionBlock[] {
+  answers = effectiveAnswers(answers, schema, noneOptions);
   return schema.flatMap(section => {
     const values = answersForSection(section, answers);
     return visibleFields(section, values, answers, noneOptions).flatMap(field => {

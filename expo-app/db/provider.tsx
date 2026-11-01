@@ -28,6 +28,7 @@ import { LaravelConnector } from './connector';
 import { refreshSubscriptionConnection } from './refresh-subscription';
 import {
   clearCredentials,
+  deviceCredentials,
   loadCredentials,
   login as loginRequest,
   register as registerRequest,
@@ -35,6 +36,7 @@ import {
   type RegistrationInput,
   type RegistrationChallenge,
   type RegistrationCompletion,
+  revokeDeviceToken,
   saveCredentials,
   type LoginResponse,
 } from './auth';
@@ -64,7 +66,7 @@ type DbContextValue = {
   selectHorse: (id: string) => void;
   login: (email: string, password: string) => Promise<void>;
   register: (input: RegistrationInput) => Promise<RegistrationChallenge>;
-  completeRegistration: (input: RegistrationCompletion, password: string) => Promise<void>;
+  completeRegistration: (input: RegistrationCompletion) => Promise<void>;
   logout: () => Promise<void>;
   refreshSubscriptionAccess: (signal: AbortSignal) => Promise<void>;
 };
@@ -138,12 +140,7 @@ export function DbProvider({ children }: { children: ReactNode }) {
     (email: string, password: string) => accountSession.transition(async () => {
       if (!powersync) throw new Error('Database not ready');
       const res: LoginResponse = await loginRequest(email, password);
-      await saveCredentials({
-        email,
-        password,
-        userId: String(res.user.id),
-        endpoint: res.endpoint,
-      });
+      await saveCredentials(deviceCredentials(res));
       setIsLoggedIn(true);
       setCurrentUserId(String(res.user.id));
       await connectToBackend(powersync);
@@ -158,10 +155,10 @@ export function DbProvider({ children }: { children: ReactNode }) {
     connectedRef.current = true;
     await refreshSubscriptionConnection(powersync, connector, signal => connector.fetchCredentials(signal), signal);
   }, [powersync, currentUserId]);
-  const completeRegistration = useCallback((input: RegistrationCompletion, password: string) => accountSession.transition(async () => {
+  const completeRegistration = useCallback((input: RegistrationCompletion) => accountSession.transition(async () => {
     if (!powersync) throw new Error('Database not ready');
     const res = await completeRegistrationRequest(input);
-    await saveCredentials({ email: res.user.email, password, userId: String(res.user.id), endpoint: res.endpoint });
+    await saveCredentials(deviceCredentials(res));
     setCurrentUserId(String(res.user.id));
     selectHorse(null);
     setIsLoggedIn(true);
@@ -185,7 +182,15 @@ export function DbProvider({ children }: { children: ReactNode }) {
     } catch (err) {
       if (__DEV__) console.warn('[provider] disconnect failed', err);
     }
-    await clearCredentials();
+    // Sign this device out on the server too; offline, the unused token expires on its own.
+    // Unreadable secure storage must still leave the app signed out.
+    const creds = await loadCredentials().catch(() => null);
+    if (creds && 'deviceToken' in creds) void revokeDeviceToken(creds.deviceToken);
+    try {
+      await clearCredentials();
+    } catch (err) {
+      captureException(err, { tags: { operation: 'auth.logout' } });
+    }
     setIsLoggedIn(false);
     setCurrentUserId(null);
     selectHorse(null);

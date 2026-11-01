@@ -20,6 +20,7 @@ class IntakeReview
             $answers[$answer->section_id][$answer->field_id] = json_last_error() === JSON_ERROR_NONE ? $decoded : $answer->value;
         }
         $none = $questionnaire?->none_options ?? ['geen'];
+        $visibility = $this->effectiveAnswers($questionnaire?->sections ?? [], $answers, $none);
         $submissionBlocks = app(IntakeSubmissionBlocks::class)->forBooking($booking);
         $sections = [];
         $historicalSections = [];
@@ -33,10 +34,13 @@ class IntakeReview
             $rows = [];
             $historicalRows = [];
             $sectionAnswers = $this->sectionAnswers($section, $answers);
+            $visibleAnswers = $this->sectionAnswers($section, $visibility);
             foreach ($section->fields as $field) {
                 $value = $sectionAnswers[$field->key] ?? null;
-                $historical = ! $section->active || ! $field->active || ! $this->visible($field->show_if, $sectionAnswers, $answers, $none);
-                if ($historical && ($field->type === 'sectionhead' || $this->empty($value))) continue;
+                $historical = ! $section->active || ! $field->active || ! $this->visible($field->show_if, $visibleAnswers, $visibility, $none);
+                if ($historical && ($field->type === 'sectionhead' || $this->empty($value))) {
+                    continue;
+                }
                 if (($field->photo_config['existing_only'] ?? false) && ! $photos->references($value)) {
                     continue;
                 }
@@ -79,10 +83,15 @@ class IntakeReview
                 if ($field->type === 'repeater' && is_array($value)) {
                     $row['structured_value'] = $value;
                     $row['value'] = array_map(function ($entry) use ($field) {
-                        if (! is_array($entry)) return $entry;
-                        foreach ($field->repeater_sub ?? [] as $sub) {
-                            if (($sub['type'] ?? '') === 'month_year' && isset($entry[$sub['id']])) $entry[$sub['id']] = app(IntakeDates::class)->format($entry[$sub['id']]);
+                        if (! is_array($entry)) {
+                            return $entry;
                         }
+                        foreach ($field->repeater_sub ?? [] as $sub) {
+                            if (($sub['type'] ?? '') === 'month_year' && isset($entry[$sub['id']])) {
+                                $entry[$sub['id']] = app(IntakeDates::class)->format($entry[$sub['id']]);
+                            }
+                        }
+
                         return $entry;
                     }, $value);
                 }
@@ -147,6 +156,7 @@ class IntakeReview
                 if ($historical) {
                     $row['flagged_options'] = [];
                     $historicalRows[] = $row;
+
                     continue;
                 }
                 $rows[] = $row;
@@ -158,11 +168,15 @@ class IntakeReview
                 }
             }
             $questions = array_values(array_filter($rows, fn ($r) => $r['type'] !== 'sectionhead'));
-            if ($historicalRows) $historicalSections[] = ['id' => $section->key, 'nr' => $section->order, 'title' => $section->title,
-                'rows' => $historicalRows, 'intro' => 'Eerder ingevuld, nu verborgen of gearchiveerd. Niet als actuele bevinding gebruiken.', 'count' => count($historicalRows), 'flags' => 0];
-            if ($section->active) $sections[] = ['id' => $section->key, 'nr' => $section->order, 'title' => $section->title,
-                'intro' => $section->intro, 'rows' => $rows, 'count' => count($questions),
-                'flags' => count(array_filter($questions, fn ($r) => $r['flagged']))];
+            if ($historicalRows) {
+                $historicalSections[] = ['id' => $section->key, 'nr' => $section->order, 'title' => $section->title,
+                    'rows' => $historicalRows, 'intro' => 'Eerder ingevuld, nu verborgen of gearchiveerd. Niet als actuele bevinding gebruiken.', 'count' => count($historicalRows), 'flags' => 0];
+            }
+            if ($section->active) {
+                $sections[] = ['id' => $section->key, 'nr' => $section->order, 'title' => $section->title,
+                    'intro' => $section->intro, 'rows' => $rows, 'count' => count($questions),
+                    'flags' => count(array_filter($questions, fn ($r) => $r['flagged']))];
+            }
         }
         // Retain metadata entered through the retired custom photo screen in
         // historical reviews. It no longer defines questions or completion rules.
@@ -191,6 +205,41 @@ class IntakeReview
             'accepted' => array_values(array_intersect($booking->accepted_triggers ?? [], array_column($triggers, 'id'))),
             'owner_reported_inputs' => $signalInputs,
             'notes' => $booking->review_notes ?? '', 'updated_at' => $booking->review_updated_at?->toISOString()];
+    }
+
+    /**
+     * The answers as the visibility rules should see them: an answer to a question that is itself
+     * hidden counts as unanswered, so the follow-ups of a hidden question hide too, however deep the
+     * chain. Passes repeat until nothing changes, because a rule can refer to a later question,
+     * exactly like effectiveAnswers() in the app.
+     * Stored answers stay untouched; use the result only to evaluate show_if.
+     */
+    public function effectiveAnswers(iterable $sections, array $answers, array $none): array
+    {
+        // Every pass that changes anything removes an answer, so this ends.
+        do {
+            $changed = false;
+            foreach ($sections as $section) {
+                if (! $section->active) {
+                    continue;
+                }
+                $values = null;
+                foreach ($section->fields as $field) {
+                    $source = $field->answer_section_key ?? $section->key;
+                    if (! $field->active || ! $field->show_if || ! array_key_exists($field->key, $answers[$source] ?? [])) {
+                        continue;
+                    }
+                    $values ??= $this->sectionAnswers($section, $answers);
+                    if ($this->visible($field->show_if, $values, $answers, $none)) {
+                        continue;
+                    }
+                    unset($answers[$source][$field->key], $values[$field->key]);
+                    $changed = true;
+                }
+            }
+        } while ($changed);
+
+        return $answers;
     }
 
     public function sectionAnswers(IntakeSection $section, array $answers): array
@@ -251,16 +300,25 @@ class IntakeReview
         foreach ($conditions ?? [] as $key => $condition) {
             if ($key === '$all' || $key === '$any') {
                 $results = array_map(fn ($rule) => $this->visible($rule, $section, $answers, $none), $condition);
-                if ($key === '$all' ? in_array(false, $results, true) : ! in_array(true, $results, true)) return false;
+                if ($key === '$all' ? in_array(false, $results, true) : ! in_array(true, $results, true)) {
+                    return false;
+                }
+
                 continue;
             }
             if ($key === '$not') {
-                if ($this->visible($condition, $section, $answers, $none)) return false;
+                if ($this->visible($condition, $section, $answers, $none)) {
+                    return false;
+                }
+
                 continue;
             }
             $value = str_contains($key, '.') ? data_get($answers, $key) : ($section[$key] ?? null);
             if (is_array($condition) && array_key_exists('gte', $condition)) {
-                if (! is_numeric($value) || (float) $value < (float) $condition['gte']) return false;
+                if (! is_numeric($value) || (float) $value < (float) $condition['gte']) {
+                    return false;
+                }
+
                 continue;
             }
             $options = is_array($condition) ? $condition : [$condition];

@@ -1,7 +1,7 @@
 // Final review screen: lists each section with an edit shortcut and submits
 // the intake. Automatic attention points remain part of the internal review.
 
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { View, Text, ScrollView, Pressable, Alert } from 'react-native';
 import { router } from 'expo-router';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -17,6 +17,7 @@ import {
   isSectionComplete,
   missingRequired,
   answersForSection,
+  effectiveAnswers,
 } from '@/lib/intake/logic';
 import { useIntake } from '@/lib/intake/store';
 import { successHaptic } from '@/lib/haptics';
@@ -25,12 +26,14 @@ export default function IntakeSubmit() {
   const insets = useSafeAreaInsets();
   const { state, submit, submitting, submissionBlocks } = useIntake();
   const { schema, noneOptions } = useIntakeSchema();
-  const critical = hasCriticalAnswers(state.answers, schema);
+  // Answers to hidden questions do not reveal their follow-up questions.
+  const visibility = useMemo(() => effectiveAnswers(state.answers, schema, noneOptions), [state.answers, schema, noneOptions]);
+  const critical = useMemo(() => hasCriticalAnswers(state.answers, schema, noneOptions), [state.answers, schema, noneOptions]);
   const [showMissing, setShowMissing] = useState(false);
 
   const missingBySection = schema.map((s) => {
     const a = answersForSection(s, state.answers);
-    const fields = missingRequired(s, a, state.answers, noneOptions);
+    const fields = missingRequired(s, a, visibility, noneOptions);
     return { section: s, fields };
   }).filter((item) => item.fields.length > 0);
 
@@ -86,8 +89,8 @@ export default function IntakeSubmit() {
           <View className="mb-4 overflow-hidden rounded-2xl border border-ink-8 bg-white">
             {schema.map((s, i) => {
               const a = answersForSection(s, state.answers);
-              const done = isSectionComplete(s, a, state.answers, noneOptions);
-              const missingFields = missingRequired(s, a, state.answers, noneOptions);
+              const done = isSectionComplete(s, a, visibility, noneOptions);
+              const missingFields = missingRequired(s, a, visibility, noneOptions);
               const missing = missingFields.length;
               const first = missingFields[0];
               return (

@@ -4,8 +4,8 @@ export default function TabsLayout() {
   return (
     <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: '#FBF8F3' } }}>
       <Stack.Screen name="(pager)" />
-      {/* Full-screen task over the tabs: closes with its own button or Android back. */}
-      <Stack.Screen name="scanner" options={{ presentation: 'fullScreenModal', animation: 'slide_from_bottom' }} />
+      {/* Scan history, progress and results; the scanner itself is the pager's Scan page. */}
+      <Stack.Screen name="scanner" />
       <Stack.Screen name="protocol/log-entry" />
       <Stack.Screen name="library/article/[id]" />
       <Stack.Screen name="library/video/[id]" />

@@ -16,7 +16,9 @@ const synced = modules['./config'].buildIntakeSchema(snapshot.sections.map(s => 
 const followups = ['wegjagen-frequentie', 'wegjagen-gedrag', 'wegjagen-reactie', 'wegjagen-momenten'];
 for (const [name, schema] of [['offline bootstrap', modules['./schema'].INTAKE_SCHEMA], ['admin configuration', seed.sections], ['synced configuration', synced]]) {
   const social = schema.find(s => s.id === 'sociaal'), housing = schema.find(s => s.id === 'huisvesting');
-  const visible = answers => modules['./logic'].visibleFields(social, answers.sociaal ?? {}, answers).map(f => f.id);
+  // As the intake screens do: answers to hidden questions do not reveal their follow-ups.
+  const effective = answers => modules['./logic'].effectiveAnswers(answers, schema);
+  const visible = answers => modules['./logic'].visibleFields(social, answers.sociaal ?? {}, effective(answers)).map(f => f.id);
   test(`${name}: Nooit is first and hides every chasing detail from required progress, including cached answers`, () => {
     const logic = modules['./logic'];
     const frequency = social.fields.find(f => f.id === 'wegjagen-frequentie');
@@ -30,19 +32,45 @@ for (const [name, schema] of [['offline bootstrap', modules['./schema'].INTAKE_S
       if (cached) for (const f of details) values[f.id] = f.type === 'multi' ? ['Anders, namelijk...'] : 'Een eerder antwoord';
       assert.ok(visible(answers).includes(frequency.id));
       assert.ok(details.every(f => !visible(answers).includes(f.id)));
-      assert.deepEqual(logic.missingRequired(pair, values, answers), []);
-      assert.deepEqual(logic.answeredCount(pair, values, answers), { answered: 1, total: 1 });
-      assert.equal(logic.isSectionComplete(pair, values, answers), true);
+      assert.deepEqual(logic.missingRequired(pair, values, effective(answers)), []);
+      assert.deepEqual(logic.answeredCount(pair, values, effective(answers)), { answered: 1, total: 1 });
+      assert.equal(logic.isSectionComplete(pair, values, effective(answers)), true);
     }
     for (const option of frequency.options.slice(1)) {
       values[frequency.id] = option;
       for (const f of details) delete values[f.id];
       for (const id of ['wegjagen-gedrag', 'wegjagen-reactie', 'wegjagen-momenten']) {
         assert.ok(visible(answers).includes(id), option);
-        assert.ok(logic.missingRequired(pair, values, answers).some(f => f.id === id), option);
+        assert.ok(logic.missingRequired(pair, values, effective(answers)).some(f => f.id === id), option);
       }
-      assert.deepEqual(logic.answeredCount(pair, values, answers), { answered: 1, total: 4 });
+      assert.deepEqual(logic.answeredCount(pair, values, effective(answers)), { answered: 1, total: 4 });
     }
+  });
+  test(`${name}: Nooit keeps the chasing details when the owner already said the horse itself is chased`, () => {
+    const chased = [
+      { sociaal: { 'sociaal-spanning': ['Mijn paard wordt regelmatig weggejaagd / gepest'] } },
+      { sociaal: { 'sociaal-positie': '…zelf wordt weggejaagd' } },
+      { sociaal: { 'sociaal-positie': '…soms wegjaagt en soms wordt weggejaagd' } },
+      { huisvesting: { 'rust-weggejaagd': 'Regelmatig' } },
+    ];
+    for (const signal of chased) {
+      const answers = { huisvesting: { 'leefruimte-paarden': 3, ...signal.huisvesting },
+        sociaal: { ...signal.sociaal, 'wegjagen-frequentie': 'Nooit', 'wegjagen-gedrag': ['Anders, namelijk...'] } };
+      for (const id of ['wegjagen-frequentie', 'wegjagen-gedrag', 'wegjagen-gedrag-anders', 'wegjagen-reactie', 'wegjagen-momenten']) {
+        assert.ok(visible(answers).includes(id), `${id} with ${JSON.stringify(signal)}`);
+      }
+    }
+  });
+  test(`${name}: a follow-up hides with its hidden parent, even with a cached answer for the parent`, () => {
+    const answers = { huisvesting: { 'leefruimte-paarden': 3 },
+      sociaal: { 'sociaal-spanning': ['Wegjagen bij voer'], 'wegjagen-frequentie': 'Dagelijks', 'wegjagen-reactie': ['Anders, namelijk...'] } };
+    assert.ok(visible(answers).includes('wegjagen-reactie-anders'));
+    // The owner no longer reports tension: the frequency question and all its follow-ups disappear.
+    answers.sociaal['sociaal-spanning'] = [];
+    assert.ok(!visible(answers).includes('wegjagen-frequentie'));
+    assert.ok(!visible(answers).includes('wegjagen-reactie-anders'));
+    assert.equal(effective(answers).sociaal['wegjagen-reactie'], undefined);
+    assert.deepEqual(answers.sociaal['wegjagen-reactie'], ['Anders, namelijk...'], 'stored answers stay untouched');
   });
   test(`${name}: species contact is required only when another animal species is selected`, () => {
     const logic = modules['./logic'];
@@ -141,3 +169,22 @@ for (const [name, schema] of [['offline bootstrap', modules['./schema'].INTAKE_S
     assert.equal(modules['./logic'].isFieldRequired(map), false);
   });
 }
+
+test('a question hidden by a later section also hides its own follow-ups', () => {
+  const { effectiveAnswers, visibleFields } = modules['./logic'];
+  // An earlier question depends on a later one, which is itself hidden.
+  const schema = [
+    { id: 'early', fields: [
+      { id: 'rest', type: 'radio', showIf: { 'late.group': 'yes' } },
+      { id: 'rest-details', type: 'text', showIf: { rest: 'often' } },
+    ] },
+    { id: 'late', fields: [{ id: 'stable', type: 'radio' }, { id: 'group', type: 'radio', showIf: { stable: 'yes' } }] },
+  ];
+  const answers = { early: { rest: 'often', 'rest-details': 'Cached' }, late: { stable: 'yes', group: 'yes' } };
+  const shown = values => visibleFields(schema[0], values.early, effectiveAnswers(values, schema, [])).map(f => f.id);
+  assert.deepEqual(shown(answers), ['rest', 'rest-details']);
+  const hidden = { ...answers, late: { stable: 'no', group: 'yes' } };
+  assert.deepEqual(effectiveAnswers(hidden, schema, []), { early: {}, late: { stable: 'no' } });
+  assert.deepEqual(shown(hidden), []);
+  assert.equal(effectiveAnswers(answers, schema, []), answers);
+});

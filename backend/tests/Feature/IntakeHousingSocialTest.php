@@ -27,6 +27,7 @@ class IntakeHousingSocialTest extends TestCase
         $this->seed(IntakeQuestionnaireSeeder::class);
         $user = User::factory()->create();
         $horse = Horse::create(['owner_id' => $user->id, 'name' => 'Housing tests']);
+
         return IntakeBooking::create(['user_id' => $user->id, 'horse_id' => $horse->id]);
     }
 
@@ -34,6 +35,22 @@ class IntakeHousingSocialTest extends TestCase
     {
         $booking->answers()->updateOrCreate(['section_id' => $section, 'field_id' => $key], ['value' => json_encode($value)]);
         $booking->unsetRelation('answers');
+    }
+
+    private function visibleKeys(IntakeBooking $booking): array
+    {
+        return collect(app(IntakeReview::class)->forBooking($booking)['sections'])
+            ->flatMap(fn ($section) => $section['rows'])->pluck('key')->all();
+    }
+
+    private function missingKeys(IntakeBooking $booking): array
+    {
+        return array_column(app(IntakeProgress::class)->forBooking($booking->load('answers'))['missing'], 'field');
+    }
+
+    private function neverChasedMigration(): object
+    {
+        return require database_path('migrations/2026_10_30_000004_add_never_chased_intake_option.php');
     }
 
     public function test_never_chased_hides_details_from_review_and_required_progress(): void
@@ -47,9 +64,8 @@ class IntakeHousingSocialTest extends TestCase
         foreach (['wegjagen-gedrag', 'wegjagen-reactie', 'wegjagen-momenten'] as $key) {
             $this->answer($booking, 'sociaal', $key, ['Anders, namelijk...']);
         }
-        $visible = collect(app(IntakeReview::class)->forBooking($booking)['sections'])
-            ->flatMap(fn ($section) => $section['rows'])->pluck('key')->all();
-        $missing = array_column(app(IntakeProgress::class)->forBooking($booking->load('answers'))['missing'], 'field');
+        $visible = $this->visibleKeys($booking);
+        $missing = $this->missingKeys($booking);
         $this->assertContains('wegjagen-frequentie', $visible);
         foreach (['wegjagen-gedrag', 'wegjagen-reactie', 'wegjagen-momenten'] as $key) {
             $this->assertNotContains($key, $visible);
@@ -59,8 +75,62 @@ class IntakeHousingSocialTest extends TestCase
         }
 
         $this->answer($booking, 'sociaal', 'wegjagen-frequentie', 'Dagelijks');
-        $missing = array_column(app(IntakeProgress::class)->forBooking($booking->load('answers'))['missing'], 'field');
-        $this->assertContains('wegjagen-gedrag-anders', $missing);
+        $this->assertContains('wegjagen-gedrag-anders', $this->missingKeys($booking));
+    }
+
+    public function test_never_chased_keeps_details_when_the_owner_already_said_the_horse_is_chased(): void
+    {
+        config(['intake.require_grouped_conditions' => true]);
+        $booking = $this->booking();
+        $this->answer($booking, 'huisvesting', 'leefruimte-paarden', 3);
+        $this->answer($booking, 'sociaal', 'sociaal-spanning', ['Mijn paard wordt regelmatig weggejaagd / gepest']);
+        $this->answer($booking, 'sociaal', 'wegjagen-frequentie', 'Nooit');
+        $this->answer($booking, 'sociaal', 'wegjagen-gedrag', ['Anders, namelijk...']);
+        // The contradiction stays visible to the therapist instead of silently dropping the details.
+        foreach (['wegjagen-gedrag', 'wegjagen-gedrag-anders', 'wegjagen-reactie', 'wegjagen-momenten'] as $key) {
+            $this->assertContains($key, $this->visibleKeys($booking));
+        }
+        $this->assertContains('wegjagen-reactie', $this->missingKeys($booking));
+    }
+
+    public function test_followups_of_a_hidden_question_hide_with_it_everywhere(): void
+    {
+        config(['intake.require_grouped_conditions' => true]);
+        $booking = $this->booking();
+        $this->answer($booking, 'huisvesting', 'leefruimte-paarden', 3);
+        $this->answer($booking, 'sociaal', 'sociaal-spanning', ['Wegjagen bij voer']);
+        $this->answer($booking, 'sociaal', 'wegjagen-frequentie', 'Dagelijks');
+        $this->answer($booking, 'sociaal', 'wegjagen-reactie', ['Anders, namelijk...']);
+        $field = IntakeField::where('key', 'wegjagen-reactie-anders')->sole();
+        // Without the parent chain, only the hidden parent's answer would show this question.
+        $field->update(['show_if' => ['wegjagen-reactie' => 'Anders, namelijk...']]);
+        $this->assertContains('wegjagen-reactie-anders', $this->missingKeys($booking));
+
+        $this->answer($booking, 'sociaal', 'sociaal-spanning', []);
+        $this->assertNotContains('wegjagen-reactie', $this->visibleKeys($booking));
+        $this->assertNotContains('wegjagen-reactie-anders', $this->visibleKeys($booking));
+        $this->assertNotContains('wegjagen-reactie-anders', $this->missingKeys($booking));
+        $this->assertSame('["Anders, namelijk..."]', $booking->answers()->where('field_id', 'wegjagen-reactie')->value('value'));
+    }
+
+    public function test_a_question_hidden_by_a_later_section_also_hides_its_followups(): void
+    {
+        $booking = $this->booking();
+        // An admin makes the later question conditional; rust-weggejaagd already depends on it.
+        IntakeField::where('key', 'sociaal-leven')->sole()->update(['show_if' => ['sociaal-stabiel' => 'Ja']]);
+        IntakeField::where('key', 'bodem-leefomgeving')->sole()->update(['show_if' => ['rust-weggejaagd' => 'Regelmatig']]);
+        $this->answer($booking, 'sociaal', 'sociaal-stabiel', 'Ja');
+        $this->answer($booking, 'sociaal', 'sociaal-leven', ['Kleine groep (2–5 paarden)']);
+        $this->answer($booking, 'huisvesting', 'rust-weggejaagd', 'Regelmatig');
+        $this->answer($booking, 'huisvesting', 'bodem-leefomgeving', ['Gras']);
+        $this->assertContains('rust-weggejaagd', $this->visibleKeys($booking));
+        $this->assertContains('bodem-leefomgeving', $this->visibleKeys($booking));
+
+        $this->answer($booking, 'sociaal', 'sociaal-stabiel', 'Nee');
+        $this->assertNotContains('sociaal-leven', $this->visibleKeys($booking));
+        $this->assertNotContains('rust-weggejaagd', $this->visibleKeys($booking));
+        $this->assertNotContains('bodem-leefomgeving', $this->visibleKeys($booking));
+        $this->assertNotContains('bodem-leefomgeving', $this->missingKeys($booking));
     }
 
     public function test_never_chased_upgrade_preserves_options_and_visibility_and_is_repeatable(): void
@@ -68,17 +138,63 @@ class IntakeHousingSocialTest extends TestCase
         $this->seed(IntakeQuestionnaireSeeder::class);
         $frequency = IntakeField::where('key', 'wegjagen-frequentie')->sole();
         $frequency->update(['options' => ['Dagelijks', 'Eigen optie']]);
-        $detail = IntakeField::where('key', 'wegjagen-gedrag')->sole();
-        $original = ['$not' => ['sociaal.sociaal-positie' => 'Eigen keuze']];
-        $detail->update(['show_if' => $original]);
-        $migration = require database_path('migrations/2026_10_30_000004_add_never_chased_intake_option.php');
-        $migration->up();
-        $expected = ['$all' => [$original, ['$not' => ['sociaal.wegjagen-frequentie' => 'Nooit']]]];
-        $this->assertSame($expected, $detail->fresh()->show_if);
+        $guard = fn (string $never) => ['$not' => ['$all' => [['sociaal.wegjagen-frequentie' => $never], ['$not' => ['$any' => [
+            ['sociaal.sociaal-spanning' => ['Mijn paard wordt regelmatig weggejaagd / gepest']],
+            ['sociaal.sociaal-positie' => ['…zelf wordt weggejaagd', '…soms wegjaagt en soms wordt weggejaagd']],
+            ['huisvesting.rust-weggejaagd' => ['Af en toe', 'Regelmatig']],
+        ]]]]]];
+        $first = ['$not' => ['sociaal.wegjagen-frequentie' => 'Nooit']];
+        $group = ['$not' => ['sociaal.sociaal-positie' => 'Eigen keuze']];
+        $all = ['$all' => [['sociaal.sociaal-positie' => 'Eigen keuze'], ['huisvesting.leefruimte-paarden' => ['gte' => 2]]]];
+        $plain = ['sociaal.sociaal-positie' => ['Eigen keuze']];
+        $chain = ['$all' => [$all, ['sociaal.wegjagen-gedrag' => 'Anders, namelijk...']]];
+        $cases = [
+            // Field => [condition before, expected condition after]
+            'wegjagen-gedrag' => [$group, ['$all' => [$group, $guard('Nooit')]]],
+            'wegjagen-reactie' => [$all, ['$all' => [...$all['$all'], $guard('Nooit')]]],
+            // Null and plain rules would become grouped, so they are left as the administrator set them.
+            'wegjagen-momenten' => [null, null],
+            // Follow-ups keep the guard too: older apps do not hide them with their hidden parent.
+            'wegjagen-gedrag-anders' => [$chain, ['$all' => [...$chain['$all'], $guard('Nooit')]]],
+            // An administrator's own single-child group stays grouped and gets the guard.
+            'wegjagen-momenten-anders' => [['$all' => [$plain]], ['$all' => [$plain, $guard('Nooit')]]],
+        ];
+        foreach ($cases as $key => [$before]) {
+            IntakeField::where('key', $key)->update(['show_if' => $before === null ? null : json_encode($before)]);
+        }
+
+        $this->neverChasedMigration()->up();
+        foreach ($cases as $key => [, $after]) {
+            $this->assertSame($after, IntakeField::where('key', $key)->sole()->show_if, $key);
+        }
         $this->assertSame(['Nooit', 'Dagelijks', 'Eigen optie'], $frequency->fresh()->options);
-        $migration->up();
-        $this->assertSame($expected, $detail->fresh()->show_if);
-        $this->assertSame(['Nooit', 'Dagelijks', 'Eigen optie'], $frequency->fresh()->options);
+
+        // Running again changes nothing and does not touch the rows.
+        $updated = IntakeField::pluck('updated_at', 'key');
+        $this->travel(1)->minutes();
+        $this->neverChasedMigration()->up();
+        foreach ($cases as $key => [, $after]) {
+            $this->assertSame($after, IntakeField::where('key', $key)->sole()->show_if, $key);
+        }
+        $this->assertEquals($updated, IntakeField::pluck('updated_at', 'key'));
+
+        // Databases that ran the first version get the first guard replaced, and plain rules restored.
+        IntakeField::where('key', 'wegjagen-gedrag')->update(['show_if' => json_encode([...$first, ...$all])]);
+        IntakeField::where('key', 'wegjagen-momenten')->update(['show_if' => json_encode([...$first, ...$plain])]);
+        IntakeField::where('key', 'wegjagen-reactie')->update(['show_if' => json_encode(['$all' => [$group, $first]])]);
+        IntakeField::where('key', 'wegjagen-gedrag-anders')->update(['show_if' => json_encode([...$first, ...$chain])]);
+        (require database_path('migrations/2026_10_31_000001_refine_never_chased_intake_conditions.php'))->up();
+        $this->assertSame(['$all' => [...$all['$all'], $guard('Nooit')]], IntakeField::where('key', 'wegjagen-gedrag')->sole()->show_if);
+        $this->assertSame($plain, IntakeField::where('key', 'wegjagen-momenten')->sole()->show_if);
+        $this->assertSame(['$all' => [$group, $guard('Nooit')]], IntakeField::where('key', 'wegjagen-reactie')->sole()->show_if);
+        $this->assertSame(['$all' => [...$chain['$all'], $guard('Nooit')]], IntakeField::where('key', 'wegjagen-gedrag-anders')->sole()->show_if);
+
+        // A 'never' option the administrator already added is reused, not duplicated.
+        $frequency->update(['options' => ['Dagelijks', 'nooit weggejaagd']]);
+        IntakeField::where('key', 'wegjagen-gedrag')->update(['show_if' => json_encode($group)]);
+        $this->neverChasedMigration()->up();
+        $this->assertSame(['Dagelijks', 'nooit weggejaagd'], $frequency->fresh()->options);
+        $this->assertSame(['$all' => [$group, $guard('nooit weggejaagd')]], IntakeField::where('key', 'wegjagen-gedrag')->sole()->show_if);
     }
 
     public function test_other_species_contact_is_hidden_and_not_required_without_other_animals(): void
@@ -87,9 +203,8 @@ class IntakeHousingSocialTest extends TestCase
         $contact = 'andere-diersoorten-contact';
         foreach ([[], ['Geen andere diersoorten'], ['Runderen'], ['Anders, namelijk']] as $species) {
             $this->answer($booking, 'sociaal', 'andere-diersoorten', $species);
-            $visible = collect(app(IntakeReview::class)->forBooking($booking)['sections'])
-                ->flatMap(fn ($section) => $section['rows'])->pluck('key')->all();
-            $missing = array_column(app(IntakeProgress::class)->forBooking($booking->load('answers'))['missing'], 'field');
+            $visible = $this->visibleKeys($booking);
+            $missing = $this->missingKeys($booking);
             $expected = in_array('Runderen', $species, true) || in_array('Anders, namelijk', $species, true);
             $this->assertSame($expected, in_array($contact, $visible, true));
             $this->assertSame($expected, in_array($contact, $missing, true));
@@ -97,8 +212,7 @@ class IntakeHousingSocialTest extends TestCase
 
         $this->answer($booking, 'sociaal', $contact, 'Ja, regelmatig');
         $this->answer($booking, 'sociaal', 'andere-diersoorten', ['Geen andere diersoorten']);
-        $visible = collect(app(IntakeReview::class)->forBooking($booking)['sections'])
-            ->flatMap(fn ($section) => $section['rows'])->pluck('key')->all();
+        $visible = $this->visibleKeys($booking);
         $this->assertNotContains($contact, $visible);
         $this->assertSame('"Ja, regelmatig"', $booking->answers()->where('field_id', $contact)->value('value'));
     }
@@ -127,17 +241,15 @@ class IntakeHousingSocialTest extends TestCase
         $this->answer($booking, 'huisvesting', 'weide-bodem', ['Anders, namelijk']);
         $this->answer($booking, 'huisvesting', 'weide-schuil', 'Ja, altijd');
         $followups = ['weide-omschrijving-anders', 'weide-bodem-anders', 'weide-schuil-soort'];
-        $visible = collect(app(IntakeReview::class)->forBooking($booking)['sections'])
-            ->flatMap(fn ($section) => $section['rows'])->pluck('key')->all();
-        $missing = array_column(app(IntakeProgress::class)->forBooking($booking->load('answers'))['missing'], 'field');
+        $visible = $this->visibleKeys($booking);
+        $missing = $this->missingKeys($booking);
         foreach ($followups as $key) {
             $this->assertNotContains($key, $visible);
             $this->assertNotContains($key, $missing);
         }
 
         $this->answer($booking, 'huisvesting', 'komt-op-weide', 'Ja, het hele jaar door');
-        $visible = collect(app(IntakeReview::class)->forBooking($booking)['sections'])
-            ->flatMap(fn ($section) => $section['rows'])->pluck('key')->all();
+        $visible = $this->visibleKeys($booking);
         foreach ($followups as $key) {
             $this->assertContains($key, $visible);
         }
@@ -208,7 +320,7 @@ class IntakeHousingSocialTest extends TestCase
         $this->assertContains('wegjagen-frequentie', $missing());
     }
 
-        public function test_optional_map_and_archived_answers_remain_accessible_in_review_and_export(): void
+    public function test_optional_map_and_archived_answers_remain_accessible_in_review_and_export(): void
     {
         Storage::fake('local');
         $booking = $this->booking();
@@ -257,8 +369,12 @@ class IntakeHousingSocialTest extends TestCase
         $this->answer($booking, 'huisvesting', 'buiten-droog-liggen', 'Alleen in bepaalde delen van het jaar');
         $before = $booking->answers()->first()->fresh()->getAttributes();
         $patch = json_decode(file_get_contents(database_path('data/housing-social-2026-10-27.json')), true);
-        foreach ($patch['sections'] as $section) foreach ($section['fields'] as $change) {
-            if (! $change['existing']) IntakeField::where('key', $change['definition']['id'])->delete();
+        foreach ($patch['sections'] as $section) {
+            foreach ($section['fields'] as $change) {
+                if (! $change['existing']) {
+                    IntakeField::where('key', $change['definition']['id'])->delete();
+                }
+            }
         }
         $migration = require database_path('migrations/2026_10_27_000002_expand_housing_and_social_intake.php');
         $migration->up();

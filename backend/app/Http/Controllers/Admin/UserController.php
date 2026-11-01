@@ -7,6 +7,7 @@ use App\Models\DataExport;
 use App\Models\User;
 use App\Models\UserRestriction;
 use App\Support\AuditLogger;
+use App\Support\DeviceTokens;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
@@ -103,6 +104,7 @@ class UserController extends Controller
     public function disable(Request $request, User $user): RedirectResponse
     {
         $user->update(['disabled_at' => Carbon::now()]);
+        app(DeviceTokens::class)->revokeAll($user);
         AuditLogger::log('disable', $user, reason: $request->input('reason'));
 
         return back()->with('success', 'Account disabled.');
@@ -122,6 +124,7 @@ class UserController extends Controller
         $user->password = Hash::make($temp);
         $user->remember_token = Str::random(60);
         $user->save();
+        app(DeviceTokens::class)->revokeAll($user);
         AuditLogger::log('reset_password', $user);
 
         // In production this would dispatch a reset email; for the console we

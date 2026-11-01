@@ -1,5 +1,4 @@
 import { Pressable, Text, View, Platform } from 'react-native';
-import { router } from 'expo-router';
 import { BlurView } from 'expo-blur';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Home, ClipboardList, ScanLine, BookOpen, MessageCircle } from 'lucide-react-native';
@@ -11,6 +10,7 @@ type IconCmp = ComponentType<{ size?: number; color?: string; strokeWidth?: numb
 const ICONS: Record<string, IconCmp> = {
   home: Home,
   protocol: ClipboardList,
+  scan: ScanLine,
   library: BookOpen,
   community: MessageCircle,
 };
@@ -18,6 +18,7 @@ const ICONS: Record<string, IconCmp> = {
 const LABELS: Record<string, string> = {
   home: 'Home',
   protocol: 'Protocol',
+  scan: 'Scan',
   library: 'Bibliotheek',
   community: 'Community',
 };
@@ -30,22 +31,19 @@ function Cell({
   label,
   focused,
   onPress,
-  action = false,
 }: {
   icon: IconCmp;
   label: string;
   focused: boolean;
   onPress: () => void;
-  /** Opens something instead of switching tabs (Scan). */
-  action?: boolean;
 }) {
   const color = focused ? ACTIVE : INACTIVE;
   return (
     <Pressable
       onPress={onPress}
-      accessibilityRole={action ? "button" : "tab"}
+      accessibilityRole="tab"
       accessibilityLabel={label}
-      accessibilityState={action ? undefined : { selected: focused }}
+      accessibilityState={{ selected: focused }}
       style={{ flex: 1, minHeight: 48, alignItems: 'center', justifyContent: 'center', gap: 2, paddingVertical: 4 }}
     >
       <Icon size={22} color={color} strokeWidth={focused ? 2.4 : 2} />
@@ -85,22 +83,6 @@ export function PagerTabBar({ state, navigation }: Pick<MaterialTopTabBarProps, 
       <Cell key={route.key} icon={Icon} label={LABELS[route.name]} focused={focused} onPress={onPress} />,
     );
   });
-
-  // Inject the Scan action in the center — it is not a pager page; it pushes the
-  // full-screen camera over the pager.
-  const mid = Math.ceil(cells.length / 2);
-  cells.splice(
-    mid,
-    0,
-    <Cell
-      key="scan-action"
-      icon={ScanLine}
-      label="Scan"
-      focused={false}
-      action
-      onPress={() => router.push('/(tabs)/scanner')}
-    />,
-  );
 
   return (
     <View accessibilityRole="tablist" style={{ position: 'absolute', left: 0, right: 0, bottom: 0 }}>

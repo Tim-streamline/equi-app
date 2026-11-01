@@ -2,9 +2,11 @@
 
 use App\Http\Controllers\CommunityController;
 use App\Http\Controllers\CreditController;
+use App\Http\Controllers\FeedScanController;
 use App\Http\Controllers\HorseDashboardController;
 use App\Http\Controllers\IntakeActivityController;
 use App\Http\Controllers\IntakeAttachmentController;
+use App\Http\Controllers\IntakeSubmissionController;
 use App\Http\Controllers\LibraryAttachmentController;
 use App\Http\Controllers\LibraryController;
 use App\Http\Controllers\PasswordResetController;
@@ -13,6 +15,7 @@ use App\Http\Controllers\PlusUpgradeController;
 use App\Http\Controllers\PowerSyncAuthController;
 use App\Http\Controllers\PushTokenController;
 use App\Http\Controllers\RegistrationController;
+use App\Http\Controllers\ShelbyChatController;
 use App\Http\Controllers\SubscriptionController;
 use App\Http\Controllers\SyncController;
 use App\Http\Controllers\WebPushController;
@@ -42,7 +45,9 @@ Route::post('/api/auth/forgot-password', [PasswordResetController::class, 'reque
 Route::get('/web-session/password/reset/{token}', [PasswordResetController::class, 'show'])->name('password.reset');
 Route::post('/web-session/password/reset', [PasswordResetController::class, 'reset'])->middleware('throttle:10,1,password-reset-submit:')->name('password.update');
 
-Route::post('/api/auth/login', [PowerSyncAuthController::class, 'login']);
+Route::post('/api/auth/login', [PowerSyncAuthController::class, 'login'])->middleware('throttle:customer-login');
+Route::post('/api/auth/token', [PowerSyncAuthController::class, 'token'])->middleware('throttle:device-token');
+Route::post('/api/auth/logout', [PowerSyncAuthController::class, 'logout'])->middleware('throttle:60,1,device-logout:');
 
 // Write-back endpoint hit by BackendConnector.uploadData() — applies a batch
 // of CRUD ops against the Postgres source of truth, gated by a valid
@@ -51,8 +56,8 @@ Route::middleware(AuthenticatePowerSyncJwt::class)
     ->post('/api/sync/upload', [SyncController::class, 'upload']);
 
 Route::middleware(AuthenticatePowerSyncJwt::class)->group(function () {
-    Route::post('api/shelby/messages', [\App\Http\Controllers\ShelbyChatController::class, 'store'])->middleware('throttle:shelby-message');
-    Route::prefix('api/feed-scanner')->controller(\App\Http\Controllers\FeedScanController::class)->group(function () {
+    Route::post('api/shelby/messages', [ShelbyChatController::class, 'store'])->middleware('throttle:shelby-message');
+    Route::prefix('api/feed-scanner')->controller(FeedScanController::class)->group(function () {
         Route::get('scans', 'scans');
         Route::get('scans/{id}', 'result')->whereUuid('id');
         Route::post('submissions', 'store')->middleware('throttle:feed-scan-create');
@@ -73,7 +78,7 @@ Route::middleware(AuthenticatePowerSyncJwt::class)->group(function () {
     Route::post('/api/protocol-purchases/create', [PlusUpgradeController::class, 'create'])->middleware('throttle:30,1');
     Route::get('/api/plus/access', [PlusUpgradeController::class, 'state']);
     Route::post('/api/plus/start', [PlusUpgradeController::class, 'start']);
-    Route::post('/api/intakes/{id}/submit', [\App\Http\Controllers\IntakeSubmissionController::class, 'store'])->whereUuid('id');
+    Route::post('/api/intakes/{id}/submit', [IntakeSubmissionController::class, 'store'])->whereUuid('id');
     Route::post('/api/intakes/{id}/attachments', [IntakeAttachmentController::class, 'store'])->whereUuid('id')->middleware('throttle:60,1');
     Route::get('/api/intake-media/{attachment}', [IntakeAttachmentController::class, 'show'])->whereUuid('attachment');
     Route::get('/api/notifications/web-push', [WebPushController::class, 'config']);
@@ -123,7 +128,7 @@ Route::prefix('web-session')->controller(WebSessionController::class)->group(fun
     Route::post('/register/complete', [RegistrationController::class, 'complete'])->name('web-session.register.complete')->middleware('throttle:10,1,registration-complete:');
     Route::post('/forgot-password', [PasswordResetController::class, 'requestLink'])->middleware('throttle:5,1,password-reset:');
     Route::get('/csrf', 'csrf');
-    Route::post('/login', 'login')->middleware('throttle:10,1');
+    Route::post('/login', 'login')->middleware('throttle:customer-login');
     Route::post('/token', 'token');
     Route::post('/logout', 'logout');
     Route::get('/media/{media}', [CommunityController::class, 'media'])

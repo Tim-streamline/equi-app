@@ -17,11 +17,12 @@ const text=node=>Array.isArray(node)?node.map(text).join(''):node&&typeof node==
 function overview(answers,submittedAt=null,s={id:'test',nr:0,title:'Test',fields:[{id:'required',type:'text'},{id:'optional',type:'text',optional:true}]},screenName='overview',blocks=[]) {
  let submissions=0; const routes=[]; const states=[]; let cursor=0;
  const modules={
-  react:{useEffect(){},useState:initial=>{const index=cursor++;if(!(index in states))states[index]=initial;return [states[index],next=>{states[index]=typeof next==='function'?next(states[index]):next;}];}}, 'react/jsx-runtime':{jsx,jsxs:jsx},
+  react:{useEffect(){},useMemo:fn=>fn(),useState:initial=>{const index=cursor++;if(!(index in states))states[index]=initial;return [states[index],next=>{states[index]=typeof next==='function'?next(states[index]):next;}];}}, 'react/jsx-runtime':{jsx,jsxs:jsx},
   'react-native':{Text:'Text',View:'View',Pressable:'Pressable',ScrollView:'ScrollView'},
   'react-native-safe-area-context':{SafeAreaView:'SafeAreaView',useSafeAreaInsets:()=>({bottom:0})}, 'lucide-react-native':{},
   'expo-router':{router:{replace(){},push:route=>routes.push(route)},useNavigation:()=>({canGoBack:()=>false})},
   '@/components/intake/SubmissionBlockNotice': { SubmissionBlockNotice: 'SubmissionBlockNotice' },
+  '@/components/intake/UnsavedNotice': { UnsavedNotice: 'UnsavedNotice' },
     '@/components/ui/Button':{Button:'Button',PRIMARY_INK:'#083635'}, '@/components/ui/IconButton':{IconButton:'IconButton'}, '@/lib/haptics':{successHaptic(){}},
   '@/components/intake/MissingQuestionsModal':{MissingQuestionsModal:'MissingQuestionsModal'},
   '@/lib/intake/submission':{formatIntakeDate},'@/lib/intake/logic':logic,

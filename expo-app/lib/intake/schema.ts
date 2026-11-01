@@ -5427,7 +5427,6 @@ export const INTAKE_SCHEMA: Section[] = [
           "Anders, namelijk..."
         ],
         "showIf": {
-          "$not": {"sociaal.wegjagen-frequentie": "Nooit"},
           "$all": [
             {
               "$all": [
@@ -5498,6 +5497,38 @@ export const INTAKE_SCHEMA: Section[] = [
                   ]
                 }
               ]
+            },
+            {
+              "$not": {
+                "$all": [
+                  {
+                    "sociaal.wegjagen-frequentie": "Nooit"
+                  },
+                  {
+                    "$not": {
+                      "$any": [
+                        {
+                          "sociaal.sociaal-spanning": [
+                            "Mijn paard wordt regelmatig weggejaagd / gepest"
+                          ]
+                        },
+                        {
+                          "sociaal.sociaal-positie": [
+                            "…zelf wordt weggejaagd",
+                            "…soms wegjaagt en soms wordt weggejaagd"
+                          ]
+                        },
+                        {
+                          "huisvesting.rust-weggejaagd": [
+                            "Af en toe",
+                            "Regelmatig"
+                          ]
+                        }
+                      ]
+                    }
+                  }
+                ]
+              }
             }
           ]
         },
@@ -5516,7 +5547,6 @@ export const INTAKE_SCHEMA: Section[] = [
         "lines": 2,
         "required": true,
         "showIf": {
-          "$not": {"sociaal.wegjagen-frequentie": "Nooit"},
           "$all": [
             {
               "$all": [
@@ -5594,6 +5624,38 @@ export const INTAKE_SCHEMA: Section[] = [
             },
             {
               "sociaal.wegjagen-gedrag": "Anders, namelijk..."
+            },
+            {
+              "$not": {
+                "$all": [
+                  {
+                    "sociaal.wegjagen-frequentie": "Nooit"
+                  },
+                  {
+                    "$not": {
+                      "$any": [
+                        {
+                          "sociaal.sociaal-spanning": [
+                            "Mijn paard wordt regelmatig weggejaagd / gepest"
+                          ]
+                        },
+                        {
+                          "sociaal.sociaal-positie": [
+                            "…zelf wordt weggejaagd",
+                            "…soms wegjaagt en soms wordt weggejaagd"
+                          ]
+                        },
+                        {
+                          "huisvesting.rust-weggejaagd": [
+                            "Af en toe",
+                            "Regelmatig"
+                          ]
+                        }
+                      ]
+                    }
+                  }
+                ]
+              }
             }
           ]
         }
@@ -5614,7 +5676,6 @@ export const INTAKE_SCHEMA: Section[] = [
           "Weet ik niet"
         ],
         "showIf": {
-          "$not": {"sociaal.wegjagen-frequentie": "Nooit"},
           "$all": [
             {
               "$all": [
@@ -5685,6 +5746,38 @@ export const INTAKE_SCHEMA: Section[] = [
                   ]
                 }
               ]
+            },
+            {
+              "$not": {
+                "$all": [
+                  {
+                    "sociaal.wegjagen-frequentie": "Nooit"
+                  },
+                  {
+                    "$not": {
+                      "$any": [
+                        {
+                          "sociaal.sociaal-spanning": [
+                            "Mijn paard wordt regelmatig weggejaagd / gepest"
+                          ]
+                        },
+                        {
+                          "sociaal.sociaal-positie": [
+                            "…zelf wordt weggejaagd",
+                            "…soms wegjaagt en soms wordt weggejaagd"
+                          ]
+                        },
+                        {
+                          "huisvesting.rust-weggejaagd": [
+                            "Af en toe",
+                            "Regelmatig"
+                          ]
+                        }
+                      ]
+                    }
+                  }
+                ]
+              }
             }
           ]
         },
@@ -5703,7 +5796,6 @@ export const INTAKE_SCHEMA: Section[] = [
         "lines": 2,
         "required": true,
         "showIf": {
-          "$not": {"sociaal.wegjagen-frequentie": "Nooit"},
           "$all": [
             {
               "$all": [
@@ -5781,6 +5873,38 @@ export const INTAKE_SCHEMA: Section[] = [
             },
             {
               "sociaal.wegjagen-reactie": "Anders, namelijk..."
+            },
+            {
+              "$not": {
+                "$all": [
+                  {
+                    "sociaal.wegjagen-frequentie": "Nooit"
+                  },
+                  {
+                    "$not": {
+                      "$any": [
+                        {
+                          "sociaal.sociaal-spanning": [
+                            "Mijn paard wordt regelmatig weggejaagd / gepest"
+                          ]
+                        },
+                        {
+                          "sociaal.sociaal-positie": [
+                            "…zelf wordt weggejaagd",
+                            "…soms wegjaagt en soms wordt weggejaagd"
+                          ]
+                        },
+                        {
+                          "huisvesting.rust-weggejaagd": [
+                            "Af en toe",
+                            "Regelmatig"
+                          ]
+                        }
+                      ]
+                    }
+                  }
+                ]
+              }
             }
           ]
         }
@@ -5801,7 +5925,6 @@ export const INTAKE_SCHEMA: Section[] = [
           "Anders, namelijk..."
         ],
         "showIf": {
-          "$not": {"sociaal.wegjagen-frequentie": "Nooit"},
           "$all": [
             {
               "$all": [
@@ -5872,6 +5995,38 @@ export const INTAKE_SCHEMA: Section[] = [
                   ]
                 }
               ]
+            },
+            {
+              "$not": {
+                "$all": [
+                  {
+                    "sociaal.wegjagen-frequentie": "Nooit"
+                  },
+                  {
+                    "$not": {
+                      "$any": [
+                        {
+                          "sociaal.sociaal-spanning": [
+                            "Mijn paard wordt regelmatig weggejaagd / gepest"
+                          ]
+                        },
+                        {
+                          "sociaal.sociaal-positie": [
+                            "…zelf wordt weggejaagd",
+                            "…soms wegjaagt en soms wordt weggejaagd"
+                          ]
+                        },
+                        {
+                          "huisvesting.rust-weggejaagd": [
+                            "Af en toe",
+                            "Regelmatig"
+                          ]
+                        }
+                      ]
+                    }
+                  }
+                ]
+              }
             }
           ]
         },
@@ -5891,7 +6046,6 @@ export const INTAKE_SCHEMA: Section[] = [
         "lines": 2,
         "required": true,
         "showIf": {
-          "$not": {"sociaal.wegjagen-frequentie": "Nooit"},
           "$all": [
             {
               "$all": [
@@ -5969,6 +6123,38 @@ export const INTAKE_SCHEMA: Section[] = [
             },
             {
               "sociaal.wegjagen-momenten": "Anders, namelijk..."
+            },
+            {
+              "$not": {
+                "$all": [
+                  {
+                    "sociaal.wegjagen-frequentie": "Nooit"
+                  },
+                  {
+                    "$not": {
+                      "$any": [
+                        {
+                          "sociaal.sociaal-spanning": [
+                            "Mijn paard wordt regelmatig weggejaagd / gepest"
+                          ]
+                        },
+                        {
+                          "sociaal.sociaal-positie": [
+                            "…zelf wordt weggejaagd",
+                            "…soms wegjaagt en soms wordt weggejaagd"
+                          ]
+                        },
+                        {
+                          "huisvesting.rust-weggejaagd": [
+                            "Af en toe",
+                            "Regelmatig"
+                          ]
+                        }
+                      ]
+                    }
+                  }
+                ]
+              }
             }
           ]
         }

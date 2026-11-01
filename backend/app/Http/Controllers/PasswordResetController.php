@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\User;
 use App\Notifications\CustomerPasswordReset;
+use App\Support\DeviceTokens;
 use Illuminate\Auth\Events\PasswordReset;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
@@ -45,6 +46,7 @@ class PasswordResetController extends Controller
             $user->password = $password;
             $user->remember_token = Str::random(60);
             $user->save();
+            app(DeviceTokens::class)->revokeAll($user);
             event(new PasswordReset($user));
         });
         if ($status !== Password::PASSWORD_RESET) {

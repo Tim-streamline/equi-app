@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Support\MonthlyTestCredits;
 use Database\Factories\UserFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Hidden;
@@ -11,6 +12,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use Laravel\Sanctum\HasApiTokens;
 
 #[Fillable([
     'name',
@@ -29,11 +31,11 @@ use Illuminate\Notifications\Notifiable;
 class User extends Authenticatable
 {
     /** @use HasFactory<UserFactory> */
-    use HasFactory, HasUuids, Notifiable;
+    use HasApiTokens, HasFactory, HasUuids, Notifiable;
 
     protected static function booted(): void
     {
-        static::created(fn (User $user) => app(\App\Support\MonthlyTestCredits::class)->grant($user));
+        static::created(fn (User $user) => app(MonthlyTestCredits::class)->grant($user));
     }
 
     protected function casts(): array

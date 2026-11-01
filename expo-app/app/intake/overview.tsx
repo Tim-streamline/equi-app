@@ -1,6 +1,7 @@
 import { Button } from '@/components/ui/Button';
 import { MissingQuestionsModal } from '@/components/intake/MissingQuestionsModal';
 import { SubmissionBlockNotice } from '@/components/intake/SubmissionBlockNotice';
+import { UnsavedNotice } from '@/components/intake/UnsavedNotice';
 import { formatIntakeDate } from '@/lib/intake/submission';
 import { isPhotoSection } from '@/lib/intake/logic';
 // Section overview "hub" — shows progress, auto-save state, and the intake
@@ -8,7 +9,7 @@ import { isPhotoSection } from '@/lib/intake/logic';
 // section detail screen. Reachable from welcome.tsx or directly from the
 // home/protocol-tab entry points when the customer has already started.
 
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { View, Text, ScrollView, Pressable } from 'react-native';
 import { router, useNavigation } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -20,6 +21,7 @@ import { useIntakeSchema } from '@/lib/intake/schema-provider';
 import {
   answeredCount,
   answersForSection,
+  effectiveAnswers,
   intakeProgress,
   isSectionComplete,
   missingRequired,
@@ -35,9 +37,11 @@ export default function IntakeOverview() {
   const [submitError, setSubmitError] = useState('');
   const [showMissing, setShowMissing] = useState(false);
   const { schema, disclaimerShort, noneOptions } = useIntakeSchema();
+  // Answers to hidden questions do not reveal their follow-up questions.
+  const visibility = useMemo(() => effectiveAnswers(state.answers, schema, noneOptions), [state.answers, schema, noneOptions]);
   const missingBySection = schema.map(section => ({
     section,
-    fields: missingRequired(section, answersForSection(section, state.answers), state.answers, noneOptions),
+    fields: missingRequired(section, answersForSection(section, state.answers), visibility, noneOptions),
   })).filter(item => item.fields.length > 0);
   const onSubmit = async () => {
     setSubmitError('');
@@ -48,8 +52,9 @@ export default function IntakeOverview() {
     try { await submit(); router.replace('/intake/sent'); }
     catch (error) { setSubmitError(error instanceof Error ? error.message : 'Intake niet verstuurd. Probeer opnieuw.'); }
   };
-  const { done, total, pct } = intakeProgress(state.answers, schema, noneOptions);
-  const upcomingId = nextSectionId(state.answers, schema, noneOptions);
+  // Keep the per-minute "saved ago" re-render from re-evaluating every showIf.
+  const { done, total, pct } = useMemo(() => intakeProgress(state.answers, schema, noneOptions), [state.answers, schema, noneOptions]);
+  const upcomingId = useMemo(() => nextSectionId(state.answers, schema, noneOptions), [state.answers, schema, noneOptions]);
 
   // Re-render the "X min geleden" label every minute without blocking input.
   const [, setNow] = useState(0);
@@ -112,6 +117,8 @@ export default function IntakeOverview() {
             )}
           </View>
 
+          <UnsavedNotice className="mx-4 mb-4" />
+
           <View className="mx-4 mb-4 flex-row gap-3 rounded-2xl border border-[#E8C98A] bg-[#FBE9C6] p-3.5">
             <AlertTriangle size={18} color="#8C6420" style={{ marginTop: 1 }} />
             <View className="flex-1">
@@ -134,9 +141,9 @@ export default function IntakeOverview() {
           <View className="mx-4 gap-2">
             {schema.map((s) => {
               const a = answersForSection(s, state.answers);
-              const progress = answeredCount(s, a, state.answers, noneOptions);
+              const progress = answeredCount(s, a, visibility, noneOptions);
               const status: Status =
-                isSectionComplete(s, a, state.answers, noneOptions)
+                isSectionComplete(s, a, visibility, noneOptions)
                   ? 'done'
                   : s.id === upcomingId
                     ? 'active'

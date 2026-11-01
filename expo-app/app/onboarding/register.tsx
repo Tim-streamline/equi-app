@@ -59,7 +59,7 @@ export default function RegisterScreen() {
       finish: async () => {
         submitting.current = true;
         setFinishing(true);
-        try { await completeRef.current(input, password); }
+        try { await completeRef.current(input); }
         finally {
           submitting.current = false;
           if (!controller.signal.aborted) setFinishing(false);
@@ -74,7 +74,7 @@ export default function RegisterScreen() {
       }
     });
     return () => controller.abort();
-  }, [challenge, password, busy]);
+  }, [challenge, busy]);
   const locked = busy || finishing;
   if (isLoggedIn) return <Redirect href="/onboarding/add-horse" />;
   return <SafeAreaView className="flex-1 bg-teal-900">

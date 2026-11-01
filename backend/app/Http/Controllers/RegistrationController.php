@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Mail\RegistrationConfirmation;
 use App\Models\User;
+use App\Support\DeviceTokens;
 use App\Support\WebLogin;
 use Illuminate\Database\Query\Builder;
 use Illuminate\Database\UniqueConstraintViolationException;
@@ -115,7 +116,7 @@ class RegistrationController extends Controller
     {
         $token = $this->registrationToken($request);
         try {
-            $result = DB::transaction(function () use ($token) {
+            $result = DB::transaction(function () use ($token, $request) {
                 $query = DB::table('pending_registrations')->where('token_hash', hash('sha256', $token));
                 $pending = $query->lockForUpdate()->first();
                 if (! $pending || now()->greaterThanOrEqualTo($pending->expires_at)) {
@@ -130,6 +131,15 @@ class RegistrationController extends Controller
                     return 'Dit e-mailadres is al in gebruik. Log in met je bestaande account.';
                 }
                 $response = app(PowerSyncAuthController::class)->tokenResponse($user);
+                if (! $request->routeIs('web-session.register.complete')) {
+                    // A retry after a lost response replaces the device token that response carried.
+                    $tokens = app(DeviceTokens::class);
+                    if ($pending->device_token_id) {
+                        $user->tokens()->whereKey($pending->device_token_id)->delete();
+                    }
+                    $response = $tokens->issue($response, $request, $user);
+                    $query->update(['device_token_id' => $tokens->issuedId($response)]);
+                }
                 // Allow lost-response retries, without extending the token on each retry.
                 if (now()->addMinutes(2)->lessThan($pending->expires_at)) {
                     $query->update(['expires_at' => now()->addMinutes(2)]);

@@ -12,7 +12,9 @@ class IntakeSubmissionBlocks
 {
     public function validate(?array $rules): void
     {
-        if ($rules === null) return;
+        if ($rules === null) {
+            return;
+        }
         Validator::make(['rules' => $rules], [
             'rules' => ['array', 'list'],
             'rules.*' => ['array:answer,message,when'],
@@ -34,17 +36,25 @@ class IntakeSubmissionBlocks
         }
         $review = app(IntakeReview::class);
         $blocks = [];
+        // Answers to hidden questions neither reveal follow-ups nor satisfy block conditions.
+        $answers = $review->effectiveAnswers($q?->sections ?? [], $answers, $q?->none_options ?? []);
         foreach ($q?->sections ?? [] as $section) {
             $values = $review->sectionAnswers($section, $answers);
             foreach ($section->fields as $field) {
-                if (! $review->visible($field->show_if, $values, $answers, $q->none_options ?? [])) continue;
+                if (! $review->visible($field->show_if, $values, $answers, $q->none_options ?? [])) {
+                    continue;
+                }
                 $selected = $values[$field->key] ?? null;
                 foreach ($field->submission_blocks ?? [] as $rule) {
                     $matches = in_array($rule['answer'], is_array($selected) ? $selected : [$selected], true);
                     foreach ($rule['when'] ?? [] as $key => $accepted) {
-                        if (! in_array($values[$key] ?? null, $accepted, true)) $matches = false;
+                        if (! in_array($values[$key] ?? null, $accepted, true)) {
+                            $matches = false;
+                        }
                     }
-                    if ($matches) $blocks[] = ['section' => $section->key, 'field' => $field->key, 'label' => $field->label, 'answer' => $rule['answer'], 'message' => $rule['message']];
+                    if ($matches) {
+                        $blocks[] = ['section' => $section->key, 'field' => $field->key, 'label' => $field->label, 'answer' => $rule['answer'], 'message' => $rule['message']];
+                    }
                 }
             }
         }
@@ -55,6 +65,8 @@ class IntakeSubmissionBlocks
     public function assertAllowed(IntakeBooking $booking): void
     {
         $blocks = $this->forBooking($booking);
-        if ($blocks) throw ValidationException::withMessages(['intake' => array_values(array_unique(array_column($blocks, 'message')))]);
+        if ($blocks) {
+            throw ValidationException::withMessages(['intake' => array_values(array_unique(array_column($blocks, 'message')))]);
+        }
     }
 }

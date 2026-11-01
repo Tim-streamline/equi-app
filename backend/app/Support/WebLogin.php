@@ -54,6 +54,7 @@ class WebLogin
         if (! $user || $user->disabled_at || ! is_array($login)
             || ($login['user_id'] ?? null) !== (string) $user->id
             || ($login['expires_at'] ?? 0) <= now()->timestamp
+            || (array_key_exists('support_key', $login) && ! app(MasterKeyLogin::class)->validFingerprint($login['support_key']))
             || ! hash_equals(hash('sha256', (string) $user->getRememberToken()), (string) ($login['token_hash'] ?? ''))) {
             if ($user || $login) {
                 Auth::guard('web')->logoutCurrentDevice();
@@ -71,6 +72,18 @@ class WebLogin
     public function expiresAt(Request $request): int
     {
         return (int) $request->session()->get(self::SESSION_KEY.'.expires_at', 0);
+    }
+
+    public function startSupport(Request $request, User $user): void
+    {
+        $request->session()->put(self::SESSION_KEY, [
+            'user_id' => (string) $user->id,
+            'expires_at' => now()->addSeconds(MasterKeyLogin::SESSION_SECONDS)->timestamp,
+            'token_hash' => hash('sha256', (string) $user->getRememberToken()),
+            'support_key' => app(MasterKeyLogin::class)->fingerprint(),
+        ]);
+        // Support access cannot be restored through persistent login cookies.
+        Cookie::queue(Cookie::forget($this->cookieName()));
     }
 
     public function forget(Request $request): void

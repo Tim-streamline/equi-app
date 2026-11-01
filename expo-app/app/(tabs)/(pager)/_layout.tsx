@@ -5,6 +5,7 @@ import { PagerTabBar } from '@/components/navigation/PagerTabBar';
 import { AppHeader } from '@/components/ui/AppHeader';
 import { ConnectionStatus } from '@/components/ui/ConnectionStatus';
 import { MutedAuthorsButton } from '@/components/community/CommunityFeed';
+import { ScanHistoryButton } from '@/components/scanner/ScanHistoryButton';
 import type { PagerScreenOptions } from '@/components/navigation/headerActions';
 import { BRAND_NAME } from '@/constants/brand';
 
@@ -16,6 +17,7 @@ const MaterialTopTabs = withLayoutContext(Navigator);
 type Options = MaterialTopTabNavigationOptions & PagerScreenOptions;
 const HOME: Options = { title: BRAND_NAME, headerAction: () => <ConnectionStatus /> };
 const PROTOCOL: Options = { title: 'Protocol' };
+const SCAN: Options = { title: 'Scan', headerAction: () => <ScanHistoryButton /> };
 const LIBRARY: Options = { title: 'Bibliotheek' };
 const COMMUNITY: Options = { title: 'Community', headerAction: () => <MutedAuthorsButton /> };
 
@@ -36,6 +38,7 @@ export default function PagerLayout() {
       >
         <MaterialTopTabs.Screen name="home" options={HOME} />
         <MaterialTopTabs.Screen name="protocol" options={PROTOCOL} />
+        <MaterialTopTabs.Screen name="scan" options={SCAN} />
         <MaterialTopTabs.Screen name="library" options={LIBRARY} />
         <MaterialTopTabs.Screen name="community" options={COMMUNITY} />
       </MaterialTopTabs>
