@@ -45,6 +45,7 @@ import {
 } from "@/lib/horse-dashboard";
 
 import { ProtocolAnalysis } from "@/components/protocol/ProtocolAnalysis";
+import { ProtocolOrderList } from "@/components/protocol/ProtocolOrderList";
 import { CareAdvice } from "@/components/protocol/CareAdvice";
 import { ProtocolTabs } from "@/components/protocol/ProtocolTabs";
 import { HorseSwitcher } from "@/components/horse/HorseSwitcher";
@@ -58,7 +59,8 @@ import { protocolTab, type ProtocolTab } from "@/lib/protocol-tabs";
 import { selectionHaptic } from "@/lib/haptics";
 
 export default function ProtocolListScreen() {
-  const { tab: tabParam, t: nonce, horseId: requestedHorse, protocolId: requestedProtocol, phaseIds: requestedPhases, horsePicker } = useLocalSearchParams<{
+  const { tab: tabParam, t: nonce, horseId: requestedHorse, protocolId: requestedProtocol, phaseIds: requestedPhases, horsePicker, orderList: requestedOrderList } = useLocalSearchParams<{
+    orderList?: string;
     horsePicker?: string;
     tab?: string;
     t?: string;
@@ -69,6 +71,7 @@ export default function ProtocolListScreen() {
   const [tab, setTab] = useState<ProtocolTab>(protocolTab(tabParam) ?? "vandaag");
   const { selectHorse } = useDb();
   const handledLink = useRef<string | null>(null);
+  const handledOrderLink = useRef<string | null>(null);
   const [month, setMonth] = useState<string>();
   const { data, error, refresh, horseId } = useHorseDashboard(month);
   // 'all' is the protocol's full order list; otherwise a phase's or notice's items.
@@ -87,6 +90,13 @@ export default function ProtocolListScreen() {
     setMonth(undefined);
   }, [horseId]);
   const protocol = data?.protocol;
+  useEffect(() => {
+    if (requestedOrderList !== '1' || !protocol || horseId !== requestedHorse || protocol.id !== requestedProtocol) return;
+    const key = `${requestedHorse}:${requestedProtocol}:${nonce}`;
+    if (handledOrderLink.current === key) return;
+    handledOrderLink.current = key;
+    setOrders('all');
+  }, [requestedOrderList, protocol, horseId, requestedHorse, requestedProtocol, nonce]);
   const openPhase = (selected: DashboardPhase) => {
     if (!selected.accessible) {
       Alert.alert("Deze fase is nog niet toegankelijk", "Je kunt deze fase vanaf één week voor de start bekijken.");
@@ -111,7 +121,8 @@ export default function ProtocolListScreen() {
   // Keep an open sheet in sync when a therapist changes the schedule or content.
   const visiblePhase = phase ? protocol?.phases.find((item) => item.id === phase.id && item.accessible) : null;
 
-  const visibleOrders = orders === 'all' ? protocol?.orderItems : orders?.map((item) => protocol?.orderItems.find((current) => current.id === item.id)).filter((item): item is DashboardSupplement => !!item);
+  const visibleOrders = orders === 'all' ? protocol?.orderItems : protocol?.orderItems.filter((item) =>
+    orders?.some((selected) => item.selectionIds?.includes(selected.id) || item.id === selected.id));
   const linkedPhases = protocol?.phases.filter((item) => item.accessible && requestedPhases?.split(',').includes(item.id)) ?? [];
 
   // The selected horse and the order list live in the shared header, only while Protocol is visible.
@@ -180,7 +191,8 @@ export default function ProtocolListScreen() {
             }}
           >
             {tab === "vandaag" && (
-              <Today
+              protocol.preparing ? <ProtocolPreparation key={`${horseId}:${protocol.id}`}
+                protocol={protocol} horseId={horseId} horseName={data.horse.name} onOrder={() => setOrders('all')} onRefresh={refresh} /> : <Today
                 protocol={protocol}
                 date={data.date}
                 horseId={horseId}
@@ -214,17 +226,7 @@ export default function ProtocolListScreen() {
             title="Bestellijst"
             onClose={() => setOrders(null)}
           >
-            {visibleOrders?.length ? (
-              <View className="gap-2">
-                {visibleOrders.map((item) => (
-                  <Supplement key={item.id} item={item} />
-                ))}
-              </View>
-            ) : (
-              <Text className="py-5 text-[14px] text-ink-70">
-                Er staan geen producten op deze bestellijst.
-              </Text>
-            )}
+            <ProtocolOrderList items={visibleOrders ?? []} discount={protocol.orderDiscount} />
           </Sheet>
           <Sheet
             visible={!!visiblePhase}
@@ -315,6 +317,67 @@ function Supplement({ item }: { item: DashboardSupplement }) {
       )}
     </View>
   );
+}
+
+function ProtocolPreparation({ protocol, horseId, horseName, onOrder, onRefresh }: {
+  protocol: DashboardProtocol;
+  horseId: string;
+  horseName?: string;
+  onOrder: () => void;
+  onRefresh: () => Promise<void>;
+}) {
+  const [confirm, setConfirm] = useState(false);
+  const [starting, setStarting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const busy = useRef(false);
+  const start = async () => {
+    if (busy.current) return;
+    busy.current = true;
+    setStarting(true);
+    setError(null);
+    try {
+      await dashboardRequest(`/api/horses/${horseId}/protocol-start`, {
+        protocol_id: protocol.id, confirmed: true, timezone: deviceTimezone(),
+      });
+      await onRefresh();
+      setConfirm(false);
+    } catch {
+      setError('Je protocol kon niet worden gestart. Controleer je verbinding en probeer het opnieuw.');
+    } finally {
+      busy.current = false;
+      setStarting(false);
+    }
+  };
+  return <View className="gap-5">
+    <Text accessibilityRole="header" className="font-bold text-[24px] leading-[30px] text-ink">Je herstelplan{horseName ? ` voor ${horseName}` : ''} staat klaar</Text>
+    <View className="gap-4">
+      <Text className="text-[16px] leading-[24px] text-ink-70">Je herstelplan bestaat uit adviezen over <Text className="font-semi text-ink">voeding, beweging, huisvesting en management</Text>, plus een <Text className="font-semi text-ink">herstelprotocol</Text> waarmee je het lichaam stap voor stap ondersteunt bij herstel van binnenuit.</Text>
+      <Text className="text-[16px] leading-[24px] text-ink-70">De verschillende onderdelen zijn <Text className="font-semi text-ink">bewust op elkaar afgestemd</Text>. Het resultaat hangt daarom af van hoe consequent je <Text className="font-semi text-ink">álle adviezen opvolgt</Text>.</Text>
+      <Text className="text-[16px] leading-[24px] text-ink-70">Bekijk eerst welke kruiden en andere producten je voor de <Text className="font-semi text-ink">eerste fase</Text> nodig hebt en zorg dat je die <Text className="font-semi text-ink">in huis hebt voordat je begint</Text>. Daarna kun je het protocol starten.</Text>
+    </View>
+    <Card>
+      <Text className="mb-2 font-bold text-[19px] text-ink">Wat heb je nodig voor fase 1?</Text>
+      <Text className="mb-4 text-[16px] leading-[24px] text-ink-70">Bekijk je complete bestellijst met alle producten en hoeveelheden.</Text>
+      <Pressable accessibilityRole="button" accessibilityLabel="Open bestellijst" onPress={onOrder}>
+        <Text className="font-semi text-[16px] text-teal-600">Bekijk je bestellijst →</Text>
+      </Pressable>
+    </Card>
+    <View className="mt-2 gap-5 rounded-[22px] border border-mint-100 bg-mint-50 p-5">
+      <Text className="font-bold text-[20px] text-ink">Heb je alles in huis?</Text>
+      <Text className="text-[16px] leading-[24px] text-ink-70">Start je protocol op de dag dat je daadwerkelijk met alle producten uit de eerste fase begint. Klik die dag op de button hieronder.</Text>
+      <View className="mt-1 w-full self-center">
+        <Button title="Ik start vandaag" className="min-h-[56px] justify-center" textClassName="text-center font-semi text-[17px]" onPress={() => { setError(null); setConfirm(true); }} />
+      </View>
+    </View>
+    <Sheet visible={confirm} title="Vandaag wordt dag 1 van je protocol" onClose={() => { if (!busy.current) setConfirm(false); }}>
+      <Text className="mb-5 text-[16px] leading-[24px] text-ink-70">Weet je zeker dat je vandaag wilt beginnen?</Text>
+      {!!error && <Text accessibilityRole="alert" className="mb-4 text-[14px] text-danger">{error}</Text>}
+      <View className="gap-3">
+        <Button title={starting ? 'Protocol starten…' : 'Ja, start mijn protocol'} disabled={starting} onPress={() => void start()} />
+        <Button title="Nog niet" variant="ghost" disabled={starting} onPress={() => setConfirm(false)} />
+      </View>
+    </Sheet>
+  </View>;
 }
 
 function Today({
@@ -550,6 +613,7 @@ function Calendar({
   };
   return (
     <>
+      {protocol.preparing && <View className="mb-4"><Text accessibilityRole="header" className="font-bold text-[20px] text-ink">Nog niet gestart</Text><Text className="mt-2 text-[15px] leading-[22px] text-ink-70">Je planning begint zodra je bij Vandaag je protocol start.</Text></View>}
       <Card>
         <View className="mb-4 flex-row items-center justify-between">
           <Pressable

@@ -96,7 +96,7 @@ class HorseDashboard
         return [
             'start' => $start, 'day' => $day, 'week' => $day > 0 ? (int) ceil($day / 7) : 0, 'totalWeeks' => $totalWeeks, 'running' => $running,
             'progressPercent' => $totalDays ? (int) round($day / $totalDays * 100) : 0,
-            'statusLabel' => $elapsed > $totalDays ? 'Je protocol is afgerond' : ($running ? 'Je protocol is actief' : 'Je protocol start binnenkort'),
+            'statusLabel' => ! $start ? 'Je protocol staat klaar' : ($elapsed > $totalDays ? 'Je protocol is afgerond' : ($running ? 'Je protocol is actief' : 'Je protocol start binnenkort')),
         ];
     }
 
@@ -109,6 +109,7 @@ class HorseDashboard
 
         return [
             'id' => $protocol->id, 'currentDay' => $progress['day'], 'currentWeek' => $progress['week'],
+            'preparing' => ! $progress['start'], 'startedAt' => $progress['start']?->toDateString(),
             'totalWeeks' => $progress['totalWeeks'], 'progressPercent' => $progress['progressPercent'],
             'statusLabel' => $progress['statusLabel'], 'phaseLabel' => $active->pluck('title')->implode(' · '),
         ];
@@ -202,7 +203,7 @@ class HorseDashboard
             if ($iso < $now->toDateString() && $historicalDays->has($iso)) {
                 $state = $history->state($historicalDays->get($iso));
             }
-            $cells[] = ['available' => $iso < $now->toDateString() && $historicalDays->has($iso), 'date' => $iso, 'day' => $dayNumber, 'state' => $state, 'isToday' => $iso === $now->toDateString()];
+            $cells[] = ['available' => (bool) $start && $iso < $now->toDateString() && $historicalDays->has($iso), 'date' => $iso, 'day' => $dayNumber, 'state' => $state, 'isToday' => (bool) $start && $iso === $now->toDateString()];
         }
         while (count($cells) % 7) {
             $cells[] = null;
@@ -210,12 +211,14 @@ class HorseDashboard
 
         return [
             'id' => $protocol->id, 'title' => $protocol->title, 'currentDay' => $day, 'currentWeek' => $week,
+            'preparing' => ! $start, 'startedAt' => $start?->toDateString(),
             'totalWeeks' => $totalWeeks, 'progressPercent' => $progressPercent, 'statusLabel' => $statusLabel,
-            'todayLabel' => 'Week '.$week.' van '.$totalWeeks.' · '.$now->locale('nl')->translatedFormat('l j F'),
+            'todayLabel' => ! $start ? 'Je protocol staat klaar' : 'Week '.$week.' van '.$totalWeeks.' · '.$now->locale('nl')->translatedFormat('l j F'),
             'phaseLabel' => implode(' · ', array_column(array_filter($phases, fn ($p) => $p['state'] === 'active'), 'title')),
             'phases' => $phases, 'today' => ['items' => $today->all(), 'done' => $done, 'total' => $today->count(), 'percentage' => $today->isEmpty() ? 0 : (int) round($done / $today->count() * 100)],
             'notifications' => $notifications,
-            'orderItems' => $allSupplements->filter(fn ($s) => count($s['weekNumbers']) > 0)->values()->all(),
+            'orderItems' => app(ProtocolOrderList::class)->forProtocol($protocol),
+            'orderDiscount' => ProtocolOrderList::DISCOUNT,
             'calendar' => ['month' => $monthDate->format('Y-m'), 'label' => $monthDate->locale('nl')->translatedFormat('F Y'), 'previousMonth' => $monthDate->subMonth()->format('Y-m'), 'nextMonth' => $monthDate->addMonth()->format('Y-m'), 'cells' => $cells],
             'nutrition' => $this->nutrition->forProtocol($protocol, $answers) + ['advice' => $protocol->voedingAdviezen->map(fn ($a) => ['id' => $a->id, 'title' => $a->title, 'description' => $a->description])->values()->all()],
             'management' => $this->management($protocol),

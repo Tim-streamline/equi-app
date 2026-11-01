@@ -43,6 +43,26 @@ class HorseDashboardController extends Controller
         return response()->json(['saved' => true]);
     }
 
+    public function startProtocol(Request $request, Horse $horse, HorseDashboard $dashboard)
+    {
+        $user = $this->owner($request, $horse);
+        $data = $request->validate(['protocol_id' => ['required', 'uuid'],
+            'confirmed' => ['required', 'accepted'], 'timezone' => ['sometimes', 'timezone']]);
+        $now = CarbonImmutable::now($data['timezone'] ?? 'Europe/Amsterdam');
+
+        DB::transaction(function () use ($horse, $data, $now) {
+            // Match the protocol editor's lock order and serialize competing starts.
+            \App\Support\LibrarySyncLock::acquire();
+            $protocol = $horse->protocols()->whereKey($data['protocol_id'])->where('status', 'active')
+                ->whereNotNull('published_at')->where('published_at', '<=', $now)->lockForUpdate()->firstOrFail();
+            if (! $protocol->started_at) {
+                $protocol->update(['started_at' => $now->toDateString(), 'current_week' => 1]);
+            }
+        });
+
+        return response()->json($dashboard->build($user, $horse, $now));
+    }
+
     public function day(Request $request, Horse $horse, ProtocolDayHistory $history)
     {
         $this->owner($request, $horse);

@@ -57,8 +57,10 @@ class ProtocolPreview
             foreach ($row['supplements'] as $selection) {
                 $source = $snapshot?->supplements->firstWhere('id', $selection['id'] ?? null)
                     ?? $definition->supplements->firstWhere('id', $selection['supplement_id']);
-                $item = new ProtocolPhaseSupplement($source->only(['name', 'description', 'supplement_type', 'dosis_type', 'dosis', 'unit']));
+                $item = new ProtocolPhaseSupplement($source->only(['name', 'description', 'supplement_type', 'dosis_type', 'dosis', 'unit', 'administrations_per_day']));
                 $item->id = $selection['id'] ?? (string) Str::uuid();
+                $item->supplement_id = $source instanceof \App\Models\Supplement ? $source->id : $source->supplement_id;
+                $item->setRelation('supplement', $source instanceof \App\Models\Supplement ? $source : $source->supplement);
                 $item->dosage = ($selection['dosage_mode'] ?? 'manual') === 'automatic'
                     ? app(ProtocolDosage::class)->calculate($item, $weight) : ($selection['dosage'] ?? null);
                 $item->instructions = $selection['instructions'] ?? null;

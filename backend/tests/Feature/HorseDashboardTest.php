@@ -73,6 +73,53 @@ class HorseDashboardTest extends TestCase
         ]);
     }
 
+    public function test_published_unstarted_protocol_has_preparation_and_order_list_without_active_days_or_phases(): void
+    {
+        $this->protocol->update(['started_at' => null]);
+        $data = $this->getJson('/api/horses/'.$this->horse->id.'/dashboard?timezone=Europe/Amsterdam')
+            ->assertOk()->assertJsonPath('protocol.preparing', true)
+            ->assertJsonPath('protocol.startedAt', null)->assertJsonPath('protocol.currentDay', 0)
+            ->assertJsonPath('protocol.currentWeek', 0)->assertJsonPath('protocol.today.total', 0)
+            ->assertJsonPath('protocol.todayLabel', 'Je protocol staat klaar')->json('protocol');
+        $this->assertCount(2, $data['orderItems']);
+        $this->assertSame([], $data['notifications']);
+        foreach ($data['phases'] as $phase) {
+            $this->assertSame('Nog niet gestart', $phase['statusLabel']);
+            $this->assertNull($phase['currentPhaseWeek']);
+            $this->assertNull($phase['startsAt']);
+            $this->assertNull($phase['availableAt']);
+        }
+        $this->assertFalse(collect($data['calendar']['cells'])->filter()->contains('isToday', true));
+        $this->assertDatabaseCount('protocol_day_snapshots', 0);
+    }
+
+    public function test_owner_explicitly_starts_on_the_local_date_and_retries_do_not_move_day_one(): void
+    {
+        $this->protocol->update(['started_at' => null]);
+        $url = '/api/horses/'.$this->horse->id.'/protocol-start';
+        $body = ['protocol_id' => $this->protocol->id, 'timezone' => 'Europe/Amsterdam'];
+        $this->postJson($url, $body)->assertUnprocessable();
+        $this->assertNull($this->protocol->fresh()->started_at);
+        $this->postJson($url, $body + ['confirmed' => true])->assertOk()
+            ->assertJsonPath('protocol.preparing', false)->assertJsonPath('protocol.startedAt', '2026-08-28')
+            ->assertJsonPath('protocol.currentDay', 1)->assertJsonPath('protocol.currentWeek', 1)
+            ->assertJsonPath('protocol.phases.0.currentPhaseWeek', 1);
+        $this->travel(2)->days();
+        $this->postJson($url, $body + ['confirmed' => true])->assertOk()
+            ->assertJsonPath('protocol.startedAt', '2026-08-28')->assertJsonPath('protocol.currentDay', 3);
+    }
+
+    public function test_other_owners_and_unpublished_protocols_cannot_start(): void
+    {
+        $this->protocol->update(['started_at' => null, 'published_at' => null]);
+        $url = '/api/horses/'.$this->horse->id.'/protocol-start';
+        $body = ['protocol_id' => $this->protocol->id, 'confirmed' => true];
+        $this->postJson($url, $body)->assertNotFound();
+        $other = Horse::create(['owner_id' => User::factory()->create()->id, 'name' => 'Other', 'status' => 'active']);
+        $this->postJson('/api/horses/'.$other->id.'/protocol-start', $body)->assertNotFound();
+        $this->assertNull($this->protocol->fresh()->started_at);
+    }
+
     public function test_home_promotion_defaults_and_admin_edits_reach_the_dashboard(): void
     {
         $content = \App\Models\PlusPage::defaults();

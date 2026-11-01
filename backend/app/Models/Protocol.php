@@ -56,6 +56,11 @@ class Protocol extends Model
                 $this->intake()->create(['horse_id' => $this->horse_id, 'user_id' => $this->horse->owner_id,
                     'status' => 'pending', 'intake_status' => 'draft']);
             }
+            if ($saved && $this->published_at) {
+                // Publishing finishes intake review, independently of the trajectory's status.
+                $this->intake()->whereNotNull('submitted_at')->whereIn('status', ['pending', 'confirmed'])
+                    ->update(['status' => 'done', 'updated_at' => now()]);
+            }
 
             return $saved;
         });

@@ -312,10 +312,6 @@ class SaveProtocolRequest extends FormRequest
             }
 
             if ($this->boolean('published')) {
-                if (! $this->filled('started_at')) {
-                    $validator->errors()->add('started_at', 'Een gepubliceerd protocol heeft een startdatum nodig.');
-                }
-
                 $submittedPhases = collect($this->input('phases', []));
                 $missingRequiredDefinitions = $protocol
                     ? collect()

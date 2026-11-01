@@ -21,6 +21,7 @@
                 "supplements": [
                     {
                         "name": "Gekookt (bio) lijnzaad",
+                        "administrations_per_day": 2,
                         "description": "Ondersteunt en beschermt het maagslijmvlies.",
                         "supplement_type": "kruid",
                         "add_by_default": true,
@@ -86,6 +87,7 @@
                     },
                     {
                         "name": "Psyliumzaad (bio)",
+                        "administrations_per_day": 2,
                         "description": "Ondersteunt en beschermt het maagslijmvlies en heeft een stabiliserend effect op de bloedsuikerspiegel.",
                         "supplement_type": "kruid",
                         "add_by_default": false,
@@ -370,6 +372,7 @@
                 "supplements": [
                     {
                         "name": "Schüsslerzout nr. 10 – Natrium sulfuricum",
+                        "administrations_per_day": 2,
                         "description": "Wordt binnen de Schüsslertherapie ingezet ter ondersteuning van de lever-, vocht- en stofwisselingsprocessen.",
                         "supplement_type": "supplement",
                         "add_by_default": true,
@@ -393,6 +396,7 @@
                     },
                     {
                         "name": "Schüsslerzout nr. 27 – Kalium bichromicum",
+                        "administrations_per_day": 2,
                         "description": "Wordt binnen de Schüsslertherapie ingezet ter ondersteuning van de glucose- en insulinstofwisseling.",
                         "supplement_type": "supplement",
                         "add_by_default": true,

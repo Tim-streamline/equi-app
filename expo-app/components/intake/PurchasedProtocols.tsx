@@ -12,21 +12,22 @@ import { PROTOCOLS_FOR_ALL_HORSES, PROTOCOLS_FOR_HORSE, type PurchasedProtocolRo
  * horse; with `allHorses` for every active horse of the user (Home), so intakes
  * of several horses each get their own card.
  */
-export function PurchasedProtocols({ allHorses = false }: { allHorses?: boolean }) {
+export function PurchasedProtocols({ allHorses = false, excludeProtocolIds = [] }: { allHorses?: boolean; excludeProtocolIds?: string[] }) {
   const horseId = useCurrentHorseId(), userId = useCurrentUserId();
   const { selectHorse } = useDb();
   const { data } = useQuery<PurchasedProtocolRow>(allHorses ? PROTOCOLS_FOR_ALL_HORSES : PROTOCOLS_FOR_HORSE, allHorses ? [userId] : [horseId, userId]);
-  if (!data.length) return null;
+  const visible = data.filter(protocol => !excludeProtocolIds.includes(protocol.id));
+  if (!visible.length) return null;
   return <View className="mb-4 gap-3">
-    {data.map(protocol => {
+    {visible.map(protocol => {
       const completedAt = protocol.completed_at ?? protocol.submitted_at;
       const horseName = protocol.horse_name || 'je paard';
       const generic = protocol.title === 'Persoonlijk protocol';
       return <View key={protocol.id} className="gap-3 rounded-card bg-white p-5">
       {/* With several horses a custom title alone does not say which horse it is for. */}
-      {allHorses && !generic && <Text className="-mb-2 font-semi text-[14px] text-ink-70">{horseName}</Text>}
-      <Text className="font-bold text-[18px] text-teal-700">{generic ? `Protocol van ${horseName}` : protocol.title}</Text>
-      <Text>{protocol.status === 'completed' ? 'Afgerond' : protocol.status === 'active' ? 'Actief protocol' : completedAt ? 'Je intake is verstuurd. Je behandelaar stelt je protocol op.' : 'Vul de intake voor dit protocol in.'}</Text>
+      {allHorses && !generic && protocol.status === 'completed' && <Text className="-mb-2 font-semi text-[14px] text-ink-70">{horseName}</Text>}
+      <Text className="font-bold text-[18px] text-teal-700">{protocol.status === 'completed' ? (generic ? `Herstelplan van ${horseName}` : protocol.title) : `Het EquiBoost traject van ${horseName}`}</Text>
+      <Text>{protocol.status === 'completed' ? 'Afgerond' : completedAt ? 'Je intake is verstuurd. Je behandelaar stelt je herstelplan op.' : allHorses ? 'Vul dit intake voor de EquiBoost traject in' : 'Vul de intake voor dit herstelplan in.'}</Text>
       {!!completedAt && <Text className="text-sm text-ink-70">Intake ingestuurd op {formatIntakeDate(completedAt)}</Text>}
       {(!!completedAt || protocol.status !== 'completed') && <Button title={completedAt ? 'Intake bekijken' : 'Intake openen'} onPress={() => {
         // The intake looks up its booking under the selected horse.

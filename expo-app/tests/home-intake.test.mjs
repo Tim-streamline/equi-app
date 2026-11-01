@@ -26,10 +26,10 @@ function screen(homeUpsell) {
   intakes.submitted.state.submittedAt = '2026-09-29T12:00:00Z';
   intakes.partial.state.answers = { paard: { naam: 'Luna' } };
   let selected = 'purchased', ready = true, delivered = false;
-  const activeProtocols = [];
+  const activeProtocols = [], preparingProtocols = [];
   let oldCachedResponse = false;
   const routes = [];
-  const purchases = { purchased: [{ id: 'p1', title: 'Protocol Nova', status: 'draft', booking_id: 'i1', submitted_at: null }], unpurchased: [], submitted: [{ id: 'p2', title: 'Protocol Luna', status: 'draft', booking_id: 'i2', submitted_at: '2026-10-01' }], partial: [{ id: 'p3', title: 'Vervolgprotocol', status: 'draft', booking_id: 'i3', submitted_at: null }] };
+  const purchases = { purchased: [{ id: 'p1', title: 'Het EquiBoost traject van purchased', status: 'draft', booking_id: 'i1', submitted_at: null }], unpurchased: [], submitted: [{ id: 'p2', title: 'Het EquiBoost traject van submitted', status: 'draft', booking_id: 'i2', submitted_at: '2026-10-01' }], partial: [{ id: 'p3', title: 'Het EquiBoost traject van partial', status: 'draft', booking_id: 'i3', submitted_at: null }] };
   const jsx = (type, props) => typeof type === 'function' ? type(props) : ({ type, props });
   const modules = {
     '@/constants/brand': { BRAND_NAME: 'EquiApp' },
@@ -56,10 +56,10 @@ function screen(homeUpsell) {
     '@/components/ui/Button': { Button: 'Button', PRIMARY_INK: '#083635' },
     '@/db/provider': { useDb: () => ({ selectHorse: id => { selected = id; } }) },
     '@/hooks/useHorseDashboard': { useHorseDashboard: () => ({
-      data: ready ? { horse: { id: selected }, greeting: selected ? 'Welkom, Tim' : 'Goedemorgen, Tim', hasPlus: !!selected && selected !== 'basic', showPlusUpsell: selected === 'unpurchased', homeUpsell, recommendations: selected ? [] : [1, 2, 3, 4].map(id => ({ id: `item-${id}`, title: `Item ${id}` })), protocol: activeProtocols.includes(selected) ? { statusLabel: `Actief voor ${selected}`, currentDay: 3, currentWeek: 1, progressPercent: 10 } : null,
+      data: ready ? { horse: { id: selected }, greeting: selected ? 'Welkom, Tim' : 'Goedemorgen, Tim', hasPlus: !!selected && selected !== 'basic', showPlusUpsell: selected === 'unpurchased', homeUpsell, recommendations: selected ? [] : [1, 2, 3, 4].map(id => ({ id: `item-${id}`, title: `Item ${id}` })), protocol: activeProtocols.includes(selected) ? { id: `p-${selected}`, statusLabel: `Actief voor ${selected}`, currentDay: preparingProtocols.includes(selected) ? 0 : 3, currentWeek: preparingProtocols.includes(selected) ? 0 : 1, progressPercent: 10 } : null,
         // The server's per-horse summaries, sorted by name (older cached responses lack them).
         ...(oldCachedResponse ? {} : { horseProtocols: horses.filter(horse => activeProtocols.includes(horse.id)).sort((a, b) => a.name.localeCompare(b.name))
-          .map(horse => ({ horseId: horse.id, horseName: horse.name, id: `p-${horse.id}`, statusLabel: `Actief voor ${horse.id}`, currentDay: 10, currentWeek: 2, progressPercent: 36 })) }) } : null,
+          .map(horse => ({ horseId: horse.id, horseName: horse.name, id: `p-${horse.id}`, statusLabel: `Actief voor ${horse.id}`, currentDay: preparingProtocols.includes(horse.id) ? 0 : 10, currentWeek: preparingProtocols.includes(horse.id) ? 0 : 2, progressPercent: 36 })) }) } : null,
       loading: !ready, refresh() {},
     }) },
     '@/hooks/useTabBarPadding': { useTabBarPadding: () => 76 },
@@ -82,7 +82,7 @@ function screen(homeUpsell) {
   const entry = () => render().find(node => node?.type === 'Button' && node.props.title === 'Intake openen');
   // The selected horse is chosen elsewhere (Protocol); Home has no selector.
   const select = id => { selected = id; };
-  return { render, entry, select, routes, intakes, purchases, activeProtocols, selected: () => selected,
+  return { render, entry, select, routes, intakes, purchases, activeProtocols, preparingProtocols, selected: () => selected,
     set ready(value) { ready = value; }, set oldCachedResponse(value) { oldCachedResponse = value; }, set delivered(value) { delivered = value; }, clearHorse() { selected = ''; }, withoutHorse() { selected = ''; horses.length = 0; }, addHorse(id) { horses.push({ id, name: id, status: 'active' }); selected = id; },
   };
 }
@@ -108,9 +108,9 @@ test('Home keeps readable promotion text with older cached dashboard data', () =
 
 test('Home lists the purchased protocol and opens its exact intake', () => {
   const app = screen(), tree = app.render();
-  assert.ok(tree.includes('Protocol Nova'));
-  assert.ok(tree.indexOf('Welkom, Tim') < tree.indexOf('Protocol Nova'));
-  assert.ok(tree.indexOf('Protocol Nova') < tree.indexOf('Ontdek in de bibliotheek'));
+  assert.ok(tree.includes('Het EquiBoost traject van purchased'));
+  assert.ok(tree.indexOf('Welkom, Tim') < tree.indexOf('Het EquiBoost traject van purchased'));
+  assert.ok(tree.indexOf('Het EquiBoost traject van purchased') < tree.indexOf('Ontdek in de bibliotheek'));
   app.entry().props.onPress();
   assert.deepEqual(app.routes, [{ pathname: '/intake', params: { bookingId: 'i1' } }]);
 });
@@ -122,8 +122,8 @@ test('Home shows every horse\'s intake as its own card, whichever horse is selec
     assert.equal(open().length, 2, 'Nova and the follow-up intake each have a card');
   }
   const tree = app.render();
-  for (const title of ['Protocol Nova', 'Protocol Luna', 'Vervolgprotocol']) assert.ok(tree.includes(title));
-  assert.ok(tree.includes('partial'), 'a custom title is labelled with its horse');
+  for (const title of ['Het EquiBoost traject van purchased', 'Het EquiBoost traject van submitted', 'Het EquiBoost traject van partial']) assert.ok(tree.includes(title));
+  assert.ok(tree.includes('Het EquiBoost traject van partial'), 'the trajectory identifies its horse');
   open()[1].props.onPress();
   assert.deepEqual(app.routes, [{ pathname: '/intake', params: { bookingId: 'i3' } }]);
   assert.ok(text(app.render()).includes('Je intake is verstuurd.'));
@@ -192,4 +192,38 @@ test('an older cached dashboard without per-horse summaries still shows the sele
   const cards = app.render().filter(n => n?.type === 'Pressable' && text(n).includes('Ga verder met het protocol'));
   assert.equal(cards.length, 1);
   assert.ok(text(cards[0]).includes('Actief voor partial'));
+});
+
+test('Home removes only the intake card whose published protocol already has a protocol card', () => {
+  const app = screen();
+  app.activeProtocols.push('submitted');
+  app.purchases.submitted[0].id = 'p-submitted';
+  const tree = app.render();
+  assert.ok(!tree.some(n => n?.type === 'Button' && n.props.title === 'Intake bekijken'));
+  assert.equal(tree.filter(n => n?.type === 'Button' && n.props.title === 'Intake openen').length, 2);
+  assert.ok(text(tree).includes("submitted's protocol"));
+  // A second purchase for the same horse is a different intake and remains available.
+  app.purchases.submitted.push({ id: 'new-purchase', title: 'Nieuw protocol', status: 'draft', booking_id: 'new-intake' });
+  assert.equal(app.render().filter(n => n?.type === 'Button' && n.props.title === 'Intake openen').length, 3);
+});
+
+test('an unstarted Home protocol opens that horse\'s order list and shows no day, week, phase or progress', () => {
+  const app = screen();
+  app.activeProtocols.push('submitted');
+  app.preparingProtocols.push('submitted');
+  app.purchases.submitted[0].id = 'p-submitted';
+  const cards = () => app.render().filter(n => n?.type === 'Pressable' && n.props.accessibilityLabel?.startsWith('Protocol van '));
+  const card = cards()[0];
+  assert.ok(text(card).includes('Je herstelplan voor submitted staat klaar'));
+  assert.ok(text(card).includes('Controleer wat je al in huis hebt en welke kruiden of andere producten je nog moet bestellen, zodat je zo snel mogelijk van start kan gaan.'));
+  assert.ok(!text(card).includes('Dag ') && !text(card).includes('Week ') && !text(card).includes('Actief voor'));
+  assert.ok(!flatten(card).some(n => n?.props?.style?.width));
+  card.props.onPress();
+  assert.equal(app.selected(), 'submitted');
+  assert.equal(app.routes.at(-1).params.horseId, 'submitted');
+  assert.equal(app.routes.at(-1).params.protocolId, 'p-submitted');
+  assert.equal(app.routes.at(-1).params.orderList, '1');
+  app.preparingProtocols.length = 0;
+  assert.ok(text(cards()[0]).includes('Actief voor submitted'));
+  assert.ok(text(cards()[0]).includes('Dag 10 · Week 2'));
 });

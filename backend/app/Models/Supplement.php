@@ -17,6 +17,8 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
     'name',
     'description',
     'instructions',
+    'product_url',
+    'administrations_per_day',
     'supplement_type',
     'dosis_type',
     'dosis',
@@ -33,6 +35,7 @@ class Supplement extends Model
     protected function casts(): array
     {
         return [
+            'administrations_per_day' => 'integer',
             'supplement_type' => SupplementType::class,
             'dosis_type' => SupplementDoseType::class,
             'dosis' => 'float',

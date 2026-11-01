@@ -292,7 +292,6 @@ class ProtocolController extends Controller
             'protocol_template_id',
             'therapist_id',
             'title',
-            'started_at',
             'status',
             'customer_settings',
         ]);
@@ -474,6 +473,7 @@ class ProtocolController extends Controller
             if ($catalogSupplement) {
                 $attributes += [
                     'supplement_id' => $catalogSupplement->id,
+                    'administrations_per_day' => $catalogSupplement->administrations_per_day,
                     'name' => $catalogSupplement->name,
                     'description' => $catalogSupplement->description,
                     'supplement_type' => $catalogSupplement->supplement_type->value,
@@ -680,7 +680,11 @@ class ProtocolController extends Controller
             return $totalWeeks;
         }
 
-        if ($protocol->status === 'paused' || ! $protocol->started_at) {
+        if (! $protocol->started_at) {
+            return 0;
+        }
+
+        if ($protocol->status === 'paused') {
             return max(1, min($totalWeeks, (int) ($protocol->current_week ?: 1)));
         }
 

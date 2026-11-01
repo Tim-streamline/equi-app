@@ -82,7 +82,11 @@ class IntakeBooking extends Model
             return 'Nog niet ingediend';
         }
 
-        return $this->status === 'pending' ? 'Te beoordelen' : ($this->status ?? '');
+        return match ($this->status) {
+            'pending' => 'Te beoordelen',
+            'done' => 'Beoordeeld',
+            default => $this->status ?? '',
+        };
     }
 
     public function intakeHorseName(): string

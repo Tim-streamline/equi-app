@@ -128,6 +128,8 @@ class AdminProtocolManagementTest extends TestCase
         $this->actingAs($this->admin, 'admin')->post('/admin/protocols', $payload)->assertSessionHasNoErrors();
         $protocol = Protocol::firstOrFail();
         $history = app(\App\Support\ProtocolDayHistory::class);
+        // Simulate the owner's earlier start; publishing itself no longer starts the plan.
+        $protocol->update(['started_at' => '2026-09-15']);
         $update = $this->storedPayload($protocol);
         $update['phases'][0]['supplements'] = [];
         $this->put('/admin/protocols/'.$protocol->id, $update)->assertSessionHasNoErrors();
@@ -527,7 +529,7 @@ class AdminProtocolManagementTest extends TestCase
         $this->assertDatabaseMissing('protocols', ['title' => 'Boaz recovery protocol']);
     }
 
-    public function test_publishing_requires_a_complete_timed_plan(): void
+    public function test_publishing_requires_a_complete_plan_but_leaves_starting_to_the_owner(): void
     {
         $payload = $this->payload();
         $payload['published'] = true;
@@ -535,15 +537,11 @@ class AdminProtocolManagementTest extends TestCase
 
         $this->actingAs($this->admin, 'admin')
             ->post('/admin/protocols', $payload)
-            ->assertSessionHasErrors('started_at');
-
-        $payload['started_at'] = '2026-08-17';
-        $this->actingAs($this->admin, 'admin')
-            ->post('/admin/protocols', $payload)
             ->assertSessionHasNoErrors();
 
         $protocol = Protocol::query()->where('title', 'Boaz recovery protocol')->firstOrFail();
         $this->assertNotNull($protocol->published_at);
+        $this->assertNull($protocol->started_at);
         $this->assertSame(8, $protocol->total_weeks);
     }
 

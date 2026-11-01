@@ -383,6 +383,8 @@ class ProtocolSettingsController extends Controller
             'name' => ['required', 'string', 'max:255'],
             'description' => ['nullable', 'string', 'max:10000'],
             'instructions' => ['nullable', 'string', 'max:10000'],
+            'product_url' => ['nullable', 'url:http,https', 'max:2048'],
+            'administrations_per_day' => ['sometimes', 'integer', 'between:1,24'],
             'supplement_type' => ['required', Rule::enum(SupplementType::class)],
             'dosis_type' => ['nullable', 'required_with:dosis,unit', Rule::enum(SupplementDoseType::class)],
             'dosis' => ['nullable', 'required_with:dosis_type,unit', 'numeric', 'gt:0'],

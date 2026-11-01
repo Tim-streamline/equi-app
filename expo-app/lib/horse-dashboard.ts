@@ -21,6 +21,25 @@ export type DashboardSupplement = {
   phaseTitle: string;
   done?: boolean;
 };
+export type DashboardOrderItem = {
+  id: string;
+  productKey: string;
+  name: string;
+  catalogIds: string[];
+  selectionIds: string[];
+  quantity: number | null;
+  unit: string | null;
+  quantityLabel: string | null;
+  calculationComplete: boolean;
+  calculationBasis: 'daily_7_per_week';
+  purchaseOptions: { id?: string; catalogId?: string | null; url: string; label: string }[];
+  components: {
+    selectionId: string; phaseId: string; dosePerAdministration: number | null;
+    administrationsPerDay: number; daysPerWeek: number;
+    unit: string | null; administrationsPerWeek: number | null; scheduledWeeks: number;
+    administrations: number | null; quantity: number | null;
+  }[];
+};
 export type DashboardPhase = {
   id: string;
   title: string;
@@ -60,6 +79,8 @@ export type DashboardAdvice = {
   ctaLabel?: string;
 };
 export type DashboardProtocol = {
+  preparing?: boolean;
+  startedAt?: string | null;
   id: string;
   title: string;
   currentDay: number;
@@ -70,7 +91,8 @@ export type DashboardProtocol = {
   todayLabel: string;
   phaseLabel: string;
   phases: DashboardPhase[];
-  orderItems: DashboardSupplement[];
+  orderItems: DashboardOrderItem[];
+  orderDiscount?: string;
   notifications: DashboardNotification[];
   today: {
     items: DashboardSupplement[];
@@ -121,6 +143,8 @@ export type DashboardProtocol = {
 };
 /** A protocol card on Home: the server's summary of one horse's protocol in progress. */
 export type HorseProtocolSummary = {
+  preparing?: boolean;
+  startedAt?: string | null;
   horseId: string;
   horseName: string;
   id: string;
@@ -186,6 +210,7 @@ export function libraryPath(
 /** Recalculate cached phase labels on midnight/resume without exposing unavailable content. */
 export function dashboardAtTime(data: HorseDashboard, now: Date): HorseDashboard {
   if (!data.protocol) return data;
+  if (data.protocol.preparing) return data;
   const phases = data.protocol.phases.map((phase): DashboardPhase => {
     const available = Date.parse(phase.availableAt ?? '');
     const start = Date.parse(phase.startsAt ?? '');
@@ -215,7 +240,9 @@ export function dashboardAtTime(data: HorseDashboard, now: Date): HorseDashboard
   });
   const allowed = new Set(phases.flatMap((phase) => phase.supplements.map((item) => item.id)));
   return { ...data, protocol: { ...data.protocol, phases,
-    orderItems: data.protocol.orderItems.filter((item) => allowed.has(item.id)),
+    // Aggregate order rows intentionally cover the full protocol, including future phases.
+    // Old cached supplement rows retain their prior visibility restriction.
+    orderItems: data.protocol.orderItems.filter((item) => item.productKey || allowed.has(item.id)),
     notifications: data.protocol.notifications.filter((notice) => notice.type !== 'next_phase'
       || phases.some((phase) => phase.id === notice.phaseId && phase.state === 'preview')),
   } };

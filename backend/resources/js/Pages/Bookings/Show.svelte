@@ -83,7 +83,7 @@
             <CardHeader><CardTitle>Update status</CardTitle></CardHeader>
             <CardContent class="flex flex-wrap gap-2">
                 <Button variant="outline" onclick={() => setStatus('confirmed')}>Confirm</Button>
-                <Button variant="outline" onclick={() => setStatus('done')}>Mark done</Button>
+                <Button variant="outline" onclick={() => setStatus('done')}>Markeer als beoordeeld</Button>
                 <Button variant="outline" onclick={() => setStatus('pending')}>Te beoordelen</Button>
                 <Button variant="destructive" onclick={() => setStatus('cancelled')}>Cancel</Button>
             </CardContent>

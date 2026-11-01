@@ -29,14 +29,14 @@ class ProtocolPhaseAvailability
             'durationWeeks' => $duration, 'currentPhaseWeek' => $currentWeek,
             'durationLabel' => $duration ? 'Duur: '.$duration.($duration === 1 ? ' week' : ' weken') : 'Nog niet ingepland',
             'weekStart' => $first, 'weekEnd' => $last,
-            'weekLabel' => $first ? 'Week '.$first.($last > $first ? ' t/m '.$last : '') : 'Nog niet ingepland',
+            'weekLabel' => ! $protocol->started_at ? 'Nog niet gestart' : ($first ? 'Week '.$first.($last > $first ? ' t/m '.$last : '') : 'Nog niet ingepland'),
             'state' => $state, 'accessible' => $state !== 'locked',
             'startsAt' => $start?->toIso8601String(), 'endsAt' => $end?->toIso8601String(), 'availableAt' => $available?->toIso8601String(),
             'statusLabel' => match ($state) {
                 'active' => 'Actief · week '.$currentWeek.' van '.$duration,
                 'preview' => 'Start volgende week',
                 'done' => 'Afgerond',
-                default => $first ? 'Start in protocolweek '.$first : 'Nog niet ingepland',
+                default => ! $protocol->started_at ? 'Nog niet gestart' : ($first ? 'Start in protocolweek '.$first : 'Nog niet ingepland'),
             },
         ];
     }

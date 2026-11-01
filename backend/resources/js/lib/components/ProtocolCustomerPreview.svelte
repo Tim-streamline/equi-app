@@ -11,6 +11,7 @@
     let week = $state(1);
     let tab = $state('vandaag');
     let phaseId = $state(null);
+    let ordersOpen = $state(false);
     let request = 0;
     const tabs = PROTOCOL_TABS.map((item) => ({ id: item.key, label: item.label }));
     let dialog;
@@ -52,6 +53,7 @@
         </div>
         <div class="flex items-center justify-between gap-3 bg-[#EAFBF9] px-4 py-2 text-xs text-[#0E6F69]">
             <span>Preview · niet opgeslagen</span>
+            <button type="button" class="font-semibold underline" onclick={() => ordersOpen = !ordersOpen}>{ordersOpen ? 'Terug naar protocol' : 'Bestellijst'}</button>
             <label>Bekijk week <select class="rounded border bg-white p-1" aria-label="Previewweek" bind:value={week} disabled={loading}>{#each Array.from({ length: Math.max(1, protocol?.totalWeeks ?? 1) }, (_, i) => i + 1) as n}<option value={n}>{n}</option>{/each}</select></label>
         </div>
         {#if error}<div role="alert" class="m-4 rounded-xl bg-red-50 p-4 text-sm text-red-800">{error}<button type="button" class="mt-3 block underline" onclick={() => load(week)}>Opnieuw proberen</button></div>{/if}
@@ -60,7 +62,19 @@
             <header class="px-5 py-4"><p class="text-xs text-[#1B2A2A]/55">{result.horse.name}</p><h2 class="mt-1 text-xl font-bold">{protocol.title}</h2><p class="mt-1 text-xs text-[#1B2A2A]/55">Week {protocol.currentWeek} van {protocol.totalWeeks}{protocol.phaseLabel ? ` · ${protocol.phaseLabel}` : ''}</p></header>
             <nav aria-label="Protocolonderdelen" class="flex border-b px-2">{#each tabs as item}<button type="button" class={`min-h-12 flex-1 border-b-2 text-[13px] font-semibold ${tab === item.id ? 'border-[#18BAB0] text-[#108A82]' : 'border-transparent text-[#1B2A2A]/65'}`} aria-pressed={tab === item.id} onclick={() => { tab = item.id; phaseId = null; }}>{item.label}</button>{/each}</nav>
             <div class="min-h-0 flex-1 space-y-4 overflow-y-auto px-5 pb-8 pt-4">
-                {#if phase}
+                {#if ordersOpen}
+                    <h3 class="text-xl font-bold">Bestellijst</h3>
+                    <p class="rounded-2xl bg-[#EAFBF9] p-4 text-sm font-semibold text-[#0E6F69]">{protocol.orderDiscount}</p>
+                    {#each protocol.orderItems as item}
+                        <section class="rounded-2xl border bg-white p-4">
+                            <h4 class="text-lg font-semibold">{item.name}</h4>
+                            <p class="mt-2 text-sm">Totaal nodig: <strong>{item.quantityLabel ?? 'hoeveelheid nog te bepalen'}</strong></p>
+                            {#each item.purchaseOptions as option}
+                                <a class="mt-3 inline-block text-sm font-semibold text-[#0E6F69]" href={option.url} target="_blank" rel="noopener noreferrer">{option.label}</a>
+                            {/each}
+                        </section>
+                    {:else}<p class="text-sm">Er staan geen producten op deze bestellijst.</p>{/each}
+                {:else if phase}
                     <button type="button" class="text-sm text-[#108A82]" onclick={() => (phaseId = null)}>← Terug naar {tab === 'vandaag' ? 'Vandaag' : 'Kalender'}</button>
                     <h3 class="text-lg font-bold">{phase.title}</h3><p class="text-xs text-[#1B2A2A]/55">{phase.weekLabel} · {phase.statusLabel}</p>
                     {#if phase.state === 'locked'}<p class="text-xs text-[#A06A1B]">Voor de klant beschikbaar vanaf één week voor de start. In deze preview kun je de inhoud alvast controleren.</p>{/if}
@@ -102,7 +116,24 @@
     {#each protocol.phases as item}<button type="button" onclick={() => (phaseId = item.id)} class={`flex w-full items-center gap-2 rounded-2xl border bg-white p-4 text-left ${item.state === 'active' ? 'border-[#18BAB0]' : 'border-[#1B2A2A]/10'}`}><div class="flex-1"><h4 class="text-sm font-semibold">{item.title}</h4><p class="mt-1 text-xs text-[#1B2A2A]/55">{item.weekLabel} · {item.durationLabel}</p></div><span class="max-w-[40%] rounded-full bg-[#EAFBF9] px-2 py-1 text-[10px] text-[#108A82]">{item.statusLabel}</span><ChevronRight class="size-4 shrink-0" /></button>{/each}
 {/snippet}
 {#snippet adviceCard(advice)}
-    <article class="rounded-2xl border border-[#1B2A2A]/10 bg-white p-4"><h4 class="text-sm font-semibold">{advice.title}</h4>{#if advice.action}<p class="mt-1 text-xs font-semibold text-[#108A82]">{advice.action === 'avoid' ? 'Vermijden' : 'Doen'}</p>{/if}{#if advice.description}<p class="mt-2 whitespace-pre-line text-sm leading-6 text-[#1B2A2A]/70">{advice.description}</p>{/if}{#if advice.frequency}<p class="mt-2 text-xs">{advice.frequency}</p>{/if}{#if advice.note}<p class="mt-2 whitespace-pre-line text-sm">{advice.note}</p>{/if}{#if advice.url}<a class="mt-3 block text-sm text-[#108A82] underline" href={advice.url} target="_blank" rel="noreferrer">{advice.ctaLabel || 'Meer informatie'}</a>{/if}</article>
+    <article class="rounded-2xl border border-[#1B2A2A]/10 bg-white p-5">
+        <h4 class="text-base font-semibold">{advice.title}</h4>
+        {#if advice.action}<p class="mt-1 text-xs font-semibold text-[#108A82]">{advice.action === 'avoid' ? 'Vermijden' : 'Doen'}</p>{/if}
+        {#if advice.description}
+            <section class="mt-4 space-y-2">
+                <h5 class="text-[13px] font-semibold text-[#0D5C5B]">Instructies</h5>
+                <p class="whitespace-pre-wrap text-[15px] leading-6 text-[#1B2A2A]/70">{advice.description}</p>
+            </section>
+        {/if}
+        {#if advice.frequency}<p class="mt-3 text-[13px]"><strong>Frequentie:</strong> {advice.frequency}</p>{/if}
+        {#if advice.note}
+            <section class="mt-5 space-y-2 rounded-xl border-l-[3px] border-[#18BAB0] bg-[#EAFBF9] p-4">
+                <h5 class="text-[13px] font-semibold text-[#0D5C5B]">Persoonlijke toelichting van je therapeut</h5>
+                <p class="whitespace-pre-wrap text-[15px] leading-6">{advice.note}</p>
+            </section>
+        {/if}
+        {#if advice.url}<a class="mt-3 block text-sm text-[#108A82] underline" href={advice.url} target="_blank" rel="noreferrer">{advice.ctaLabel || 'Meer informatie'}</a>{/if}
+    </article>
 {/snippet}
 
 {#snippet libraryLink(title, description, item)}
