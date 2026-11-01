@@ -9,7 +9,7 @@ use App\Models\ProtocolPhaseSupplementWeek;
 use App\Models\Supplement;
 use App\Support\ProtocolOrderList;
 use Illuminate\Database\Eloquent\Collection;
-use PHPUnit\Framework\TestCase;
+use Tests\TestCase;
 
 class ProtocolOrderListTest extends TestCase
 {
