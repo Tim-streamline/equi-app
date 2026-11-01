@@ -2,7 +2,7 @@
   "expo": {
     "name": "EquiApp",
     "slug": "equi-app",
-    "version": "0.0.9",
+    "version": "0.0.10",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "scheme": "expoapp",
@@ -20,7 +20,7 @@
       },
       "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": false,
-      "versionCode": 13,
+      "versionCode": 14,
       "package": "com.anonymous.expoapp",
       "googleServicesFile": "./google-services.json"
     },

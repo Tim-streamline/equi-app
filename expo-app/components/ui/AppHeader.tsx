@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { View, Text, Animated, Platform, type StyleProp, type ViewStyle } from 'react-native';
 import { router } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -57,15 +57,23 @@ function nextTransition(previous: Transition, to: number, interrupted: boolean):
 }
 
 /**
- * Native animation graph for the header slots, built once. A page change only
- * sets the `on` and `width` values (`apply`); styles never change, so the
- * native driver keeps full control even when a change interrupts a running one.
+ * Native animation graph for the header slots. A page change only sets the
+ * `on` and `width` values (`apply`); styles never change, so the native driver
+ * keeps full control even when a change interrupts a running one.
  */
-function createSlotAnimations(position: Position, count: number, index: number) {
+function createSlotValues(count: number, index: number) {
   const initial = settled(index, count);
   const on = initial.on.map(value => new Animated.Value(value));
   const width = initial.width.map(value => new Animated.Value(value));
-  const styles = on.map((visible, page) => {
+  const apply = (t: Transition) => {
+    t.on.forEach((value, page) => on[page].setValue(value));
+    t.width.forEach((value, page) => width[page].setValue(value));
+  };
+  return { on, width, apply, initial };
+}
+
+function slotStyles(position: Position, { on, width }: { on: Animated.Value[]; width: Animated.Value[] }) {
+  return on.map((visible, page) => {
     // Signed distance from this page in multiples of its window: 0 here, ±1 at the window edge.
     const offset = Animated.divide(Animated.add(position, -page), width[page]);
     const distance = offset.interpolate({ inputRange: [-1, 0, 1], outputRange: [1, 0, 1], extrapolate: 'clamp' });
@@ -74,14 +82,9 @@ function createSlotAnimations(position: Position, count: number, index: number) 
       transform: [{ translateX: offset.interpolate({ inputRange: [-1, 0, 1], outputRange: [SLIDE, 0, -SLIDE], extrapolate: 'clamp' }) }],
     };
   });
-  const apply = (t: Transition) => {
-    t.on.forEach((value, page) => on[page].setValue(value));
-    t.width.forEach((value, page) => width[page].setValue(value));
-  };
-  return { styles, apply, initial };
 }
 
-/** One page's title or action, stacked with the other pages' and faded by `createSlotAnimations`. */
+/** One page's title or action, stacked with the other pages' and faded by `slotStyles`. */
 function PageSlot({ hidden, style, children }: { hidden: boolean; style: StyleProp<ViewStyle>; children: ReactNode }) {
   return (
     <Animated.View
@@ -103,14 +106,18 @@ const TITLE = { includeFontPadding: false, fontFamily: 'SourceSans3_700Bold', fo
  * jump when switching tabs; the pages must not add the top safe-area inset again.
  *
  * Each page's title and action come from its screen options (`title`,
- * `headerAction`) and follow the pager scroll via `createSlotAnimations`. Actions are laid
+ * `headerAction`) and follow the pager scroll via `slotStyles`. Actions are laid
  * out against the account button, which never moves.
  */
 export function AppHeader({ state, descriptors, position }: MaterialTopTabBarProps) {
   const index = state.index;
   const count = state.routes.length;
-  // The pager's position node and page count are fixed for the header's lifetime.
-  const [{ styles, apply, initial }] = useState(() => createSlotAnimations(position, count, index));
+  // The page count is fixed for the header's lifetime. The position node is too on
+  // native, but the web pager replaces it once it has measured its width (and on
+  // resize), so the styles follow it while the slot values persist.
+  const [values] = useState(() => createSlotValues(count, index));
+  const { apply, initial } = values;
+  const styles = useMemo(() => slotStyles(position, values), [position, values]);
   const transition = useRef(initial);
   // Whether the pager is still moving towards the last page change. Native pagers
   // report coming to rest (swipeEnd, sent to every page's listeners); a report right
