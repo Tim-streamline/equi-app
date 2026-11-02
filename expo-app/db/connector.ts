@@ -1,3 +1,5 @@
+import { syncRequest, syncHttpError } from '@/lib/sync-request';
+import { reportSyncFailure } from '@/lib/sync-errors';
 // Bridges PowerSync with the Laravel backend. PowerSync calls
 // `fetchCredentials()` periodically (whenever a fresh token is needed) and
 // `uploadData()` whenever the local SQLite has pending CRUD operations.
@@ -114,58 +116,61 @@ export async function getOrMintToken(signal?: AbortSignal, forceRefresh = false)
 
 export class LaravelConnector implements PowerSyncBackendConnector {
   async fetchCredentials(signal?: AbortSignal): Promise<PowerSyncCredentials | null> {
-    console.log('[connector] fetchCredentials called');
-    const minted = await mintToken(signal);
-    if (!minted) {
-      console.warn('[connector] fetchCredentials: no minted token');
-      return null;
+    try {
+      return await syncRequest(20_000, async (requestSignal, check) => {
+        console.log('[connector] fetchCredentials called');
+        const minted = await mintToken(requestSignal);
+        check();
+        if (!minted) {
+          console.warn('[connector] fetchCredentials: no minted token');
+          return null;
+        }
+        return { endpoint: minted.endpoint, token: minted.token };
+      }, signal);
+    } catch (error) {
+      reportSyncFailure(error, 'sync.credentials');
+      throw error;
     }
-    return { endpoint: minted.endpoint, token: minted.token };
   }
 
   async uploadData(database: AbstractPowerSyncDatabase): Promise<void> {
-    const revision = accountSession.revision;
-    const checkSession = () => { if (revision !== accountSession.revision) throw new Error('Je sessie is gewijzigd.'); };
-    const batch = await database.getNextCrudTransaction();
-    if (!batch) return;
+    try {
+      await syncRequest(600_000, async (signal, check) => {
+        const revision = accountSession.revision;
+        const checkSession = () => { check(); if (revision !== accountSession.revision) throw new Error('Je sessie is gewijzigd.'); };
+        const batch = await database.getNextCrudTransaction();
+        checkSession();
+        if (!batch) return;
 
-    const token = await getOrMintToken();
-    if (!token) {
-      throw new Error('No PowerSync credentials available for upload');
+        const token = await syncRequest(20_000, signal => getOrMintToken(signal), signal);
+        if (!token) {
+          throw new Error('No PowerSync credentials available for upload');
+        }
+
+        const credentials = await loadCredentials();
+        checkSession();
+        if (!credentials) throw new Error('Meld je opnieuw aan.');
+        await uploadIntakeAttachments(batch.crud, credentials.userId, token, checkSession, signal);
+        const operations = await prepareSyncOperations(database, batch.crud);
+        checkSession();
+
+        await syncRequest(30_000, async (requestSignal, checkRequest) => {
+          checkSession();
+          const response = await fetch(`${getApiBaseUrl()}/api/sync/upload`, {
+            method: 'POST', signal: requestSignal,
+            headers: { 'Content-Type': 'application/json', Accept: 'application/json', Authorization: `Bearer ${token}` },
+            body: JSON.stringify({ timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || 'Europe/Amsterdam', operations }),
+          });
+          checkRequest();
+          if (response.status === 401) cachedToken = null;
+          if (!response.ok) throw syncHttpError(response.status);
+        }, signal);
+        checkSession();
+        await batch.complete();
+      });
+    } catch (error) {
+      reportSyncFailure(error, 'sync.upload');
+      throw error;
     }
-
-    const credentials = await loadCredentials();
-    checkSession();
-    if (!credentials) throw new Error('Meld je opnieuw aan.');
-    await uploadIntakeAttachments(batch.crud, credentials.userId, token, checkSession);
-    const operations = await prepareSyncOperations(database, batch.crud);
-    checkSession();
-
-    const res = await fetch(`${getApiBaseUrl()}/api/sync/upload`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Accept: 'application/json',
-        Authorization: `Bearer ${token}`,
-      },
-      body: JSON.stringify({
-        timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || 'Europe/Amsterdam',
-        operations,
-      }),
-    });
-
-    if (res.status === 401) {
-      // Token must have expired between fetchCredentials and uploadData.
-      cachedToken = null;
-      const body = await res.text().catch(() => '');
-      throw new Error(`Upload unauthorized (${res.status}): ${body}`);
-    }
-    if (!res.ok) {
-      const body = await res.text().catch(() => '');
-      throw new Error(`Upload failed (${res.status}): ${body}`);
-    }
-
-    // Only ack the batch once the server confirms persistence.
-    await batch.complete();
   }
 }

@@ -1,3 +1,5 @@
+import { retrySyncUploads } from '@/db/retry-sync';
+import { reportSyncFailure } from '@/lib/sync-errors';
 import { disableBrowserPush } from '../lib/browser-push';
 import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from 'react';
 import { ActivityIndicator, Pressable, Text, View } from 'react-native';
@@ -20,6 +22,8 @@ type DbContextValue = {
   powersync: PowerSyncDatabase; isLoggedIn: boolean; isConnected: boolean;
   syncStatus: SyncStatus; currentUserId: string | null; selectedHorseId: string | null;
   refreshSubscriptionAccess: (signal: AbortSignal) => Promise<void>;
+  retryUploads: () => Promise<void>;
+  retryingUploads: boolean;
   selectHorse: (id: string) => void; login: (email: string, password: string) => Promise<void>; register: (input: RegistrationInput) => Promise<RegistrationChallenge>; completeRegistration: (input: RegistrationCompletion) => Promise<void>; logout: () => Promise<void>;
 };
 const DbContext = createContext<DbContextValue | null>(null);
@@ -33,6 +37,7 @@ export function DbProvider({ children }: { children: ReactNode }) {
   const [userId, setUserId] = useState<string | null>(null);
   const [selectedHorseId, selectHorse] = useState<string | null>(null);
   const [syncStatus, setSyncStatus] = useState<SyncStatus>('idle');
+  const [retryingUploads, setRetryingUploads] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const active = useRef<{ db: PowerSyncDatabase; userId: string | null; unsubscribe: () => void } | null>(null);
   const channel = useRef<BroadcastChannel | null>(null);
@@ -70,7 +75,10 @@ export function DbProvider({ children }: { children: ReactNode }) {
       await db.init();
       if (!mounted.current) { await db.close(); return; }
       const unsubscribe = db.registerListener({ statusChanged: status => {
-        if (active.current?.db === db && id) setSyncStatus(mapStatus(status));
+        if (active.current?.db !== db || !id) return;
+        setSyncStatus(mapStatus(status));
+        if (status.dataFlowStatus?.uploadError) reportSyncFailure(status.dataFlowStatus.uploadError, 'sync.upload');
+        if (status.dataFlowStatus?.downloadError) reportSyncFailure(status.dataFlowStatus.downloadError, 'sync.download');
       } });
       active.current = { db, userId: id, unsubscribe };
       let restoredHorse: string | null = null;
@@ -134,6 +142,20 @@ export function DbProvider({ children }: { children: ReactNode }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [attempt]);
 
+  const retryUploads = useCallback(async () => {
+    const current = active.current;
+    if (!current?.userId) throw new Error('Meld je opnieuw aan.');
+    setRetryingUploads(true);
+    const connector = new LaravelConnector(current.userId);
+    try {
+      await retrySyncUploads(current.db, {
+        fetchCredentials: () => connector.fetchCredentials(undefined, true),
+        uploadData: db => connector.uploadData(db),
+      });
+    }
+    finally { if (mounted.current) setRetryingUploads(false); }
+  }, []);
+
   const refreshSubscriptionAccess = useCallback(async (signal: AbortSignal) => {
     const current = active.current;
     if (!current?.userId) throw new Error('Meld je opnieuw aan.');
@@ -166,7 +188,7 @@ export function DbProvider({ children }: { children: ReactNode }) {
     <Pressable accessibilityRole="button" onPress={() => { setError(null); setAttempt(value => value + 1); }}><Text>Opnieuw proberen</Text></Pressable>
   </View>;
   if (!database) return <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}><ActivityIndicator accessibilityLabel="App laden" color="#127A79" /></View>;
-  return <PowerSyncContext.Provider value={database}><DbContext.Provider value={{ powersync: database, isLoggedIn: !!userId, isConnected: syncStatus === 'connected', syncStatus, currentUserId: userId, selectedHorseId, selectHorse, login, register, completeRegistration, logout, refreshSubscriptionAccess }}>
+  return <PowerSyncContext.Provider value={database}><DbContext.Provider value={{ powersync: database, isLoggedIn: !!userId, isConnected: syncStatus === 'connected', syncStatus, retryUploads, retryingUploads, currentUserId: userId, selectedHorseId, selectHorse, login, register, completeRegistration, logout, refreshSubscriptionAccess }}>
     {children}
   </DbContext.Provider></PowerSyncContext.Provider>;
 }

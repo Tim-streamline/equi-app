@@ -1,3 +1,4 @@
+import * as syncRequests from '../lib/sync-request.ts';
 import * as photoDimensions from '../lib/intake/attachments/photo-dimensions.ts';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
@@ -44,7 +45,7 @@ function fixture({ assets = [asset('a.jpg'), asset('b.jpg')], max, slots, initia
   const code = ts.transpileModule(readFileSync(new URL('../components/intake/AttachmentField.tsx', import.meta.url), 'utf8'), {
     compilerOptions: { target: ts.ScriptTarget.ES2022, jsx: ts.JsxEmit.ReactJSX, module: ts.ModuleKind.CommonJS },
   }).outputText;
-  new Function('require', 'exports', code)(name => { assert.ok(name in modules, name); return modules[name]; }, exports);
+  new Function('require', 'exports', code)(name => { if (name === '@/lib/sync-request') return syncRequests; if (name === '@/lib/sync-errors') return { reportSyncFailure() {} }; assert.ok(name in modules, name); return modules[name]; }, exports);
   const props = { photo: true, max, slots, section: 'fysiek', field: 'photos', onSlotAdded: (ref, id) => assigned.push([ref, id]) };
   const draw = () => {
     hook = 0;

@@ -1,3 +1,4 @@
+import * as syncRequests from '../lib/sync-request.ts';
 import * as photoDimensions from '../lib/intake/attachments/photo-dimensions.ts';
 import * as intakeDates from '../lib/intake/dates.ts';
 import * as repeaterRows from '../lib/intake/repeater.ts';
@@ -10,7 +11,7 @@ const runtime = { jsx, jsxs: jsx };
 function load(path, modules) {
   const exports = {};
   const code = ts.transpileModule(readFileSync(new URL(path, import.meta.url), 'utf8'), { compilerOptions: { jsx: ts.JsxEmit.ReactJSX, module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 } }).outputText;
-  new Function('require', 'exports', code)(name => { if (name === '@/lib/intake/repeater') return repeaterRows; if (name === './dates' || name === '@/lib/intake/dates') return intakeDates; if (name === './MonthYearField' && !(name in modules)) return { MonthYearField: 'MonthYearField' }; assert.ok(name in modules, name); return modules[name]; }, exports);
+  new Function('require', 'exports', code)(name => { if (name === '@/lib/intake/repeater') return repeaterRows; if (name === './dates' || name === '@/lib/intake/dates') return intakeDates; if (name === './MonthYearField' && !(name in modules)) return { MonthYearField: 'MonthYearField' }; if (name === '@/lib/sync-request') return syncRequests; if (name === '@/lib/sync-errors') return { reportSyncFailure() {} }; assert.ok(name in modules, name); return modules[name]; }, exports);
   return exports;
 }
 const native = Object.fromEntries(['View', 'Text', 'Pressable', 'Image', 'ActivityIndicator', 'ScrollView', 'KeyboardAvoidingView'].map(name => [name, name]));

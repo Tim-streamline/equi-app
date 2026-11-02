@@ -63,5 +63,21 @@ Email addresses, bearer/JWT tokens and credential assignments in error text are
 redacted; backend query exceptions omit interpolated SQL. Stack traces, error type,
 release/environment and operation tags remain available.
 
+Background synchronization now explicitly reports credential, upload, download and
+retry failures. Intake attachments also report storage failures and files still
+pending after three minutes on screen. Events contain only a fixed operation name,
+failure category and HTTP status when available; raw exception messages, response
+bodies, filenames, photo bytes, answers and account identifiers are not sent.
+Repeated operation/category/status combinations are limited to one event per five
+minutes per running app. Deliberate cancellation during retry is not reported.
+
+Pending attachments offer **Upload opnieuw proberen**. This cancels outstanding
+sync requests and reconnects without clearing local answers, the CRUD queue or
+attachment storage. Credential requests time out after 20 seconds, answer uploads
+after 30 seconds and individual file uploads after two minutes. A retry starts
+background synchronization; **Geüpload** appears only after the file upload is
+confirmed and persisted locally. The existing same-tab **Bewaren en vernieuwen**
+flow preserves queued photos across a web update.
+
 The account's default data region is **United States** and retention is **90 days**.
 Changing region requires a plan upgrade in this account.

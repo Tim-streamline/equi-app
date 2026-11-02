@@ -13,6 +13,8 @@ import type { LocalAttachment } from '@/lib/intake/attachments/types';
 import { Photo } from './AttachmentPhoto';
 import { useIntake } from '@/lib/intake/store';
 import { registerRefreshProtection, refreshProtectionChanged } from '@/lib/refresh-safety';
+import { reportSyncFailure } from '@/lib/sync-errors';
+import { SyncRequestError } from '@/lib/sync-request';
 
 export { Photo } from './AttachmentPhoto';
 
@@ -30,7 +32,10 @@ function useLocalAttachment(reference: string) {
       const version = ++request;
       if (currentUserId) void attachmentStorage.get(currentUserId, reference.split(':')[1])
         .then(value => { if (active && version === request) setRecord(value ? { uploaded: value.uploaded, error: value.error } : null); })
-        .catch(() => { if (active && version === request) setRecord(null); });
+        .catch(error => {
+          reportSyncFailure(error, 'intake.attachment.storage');
+          if (active && version === request) setRecord(null);
+        });
       else setRecord(null);
     };
     refresh();
@@ -43,9 +48,33 @@ function useLocalAttachment(reference: string) {
 }
 function UploadStatus({ reference }: { reference: string }) {
   const record = useLocalAttachment(reference);
-  return record && !record.uploaded ? <Text accessibilityLiveRegion="polite" className="text-xs text-ink-70">
-    {record.error ? 'Opgeslagen op dit apparaat · upload wordt opnieuw geprobeerd' : 'Opgeslagen op dit apparaat · wacht op upload'}
-  </Text> : null;
+  const { retryUploads, retryingUploads, syncStatus } = useDb();
+  const [retryError, setRetryError] = useState('');
+  const pending = !!record && !record.uploaded;
+  useEffect(() => {
+    if (!pending) return;
+    const timer = setTimeout(() => reportSyncFailure(new SyncRequestError('Upload remains pending', 'stalled'), 'intake.attachment.pending'), 180_000);
+    return () => clearTimeout(timer);
+  }, [pending, reference]);
+  if (!record) return null;
+  if (record.uploaded) return <Text accessibilityLiveRegion="polite" className="text-xs text-teal-600">Geüpload</Text>;
+  const retry = async () => {
+    setRetryError('');
+    try { await retryUploads(); }
+    catch { setRetryError('De verbinding kon niet worden hersteld. Je bestand blijft op dit apparaat bewaard. Probeer opnieuw.'); }
+  };
+  return <View className="gap-1">
+    <Text accessibilityLiveRegion="polite" className="text-xs text-ink-70">
+      {retryingUploads ? 'Verbinding herstellen…'
+        : record.error ? `Nog niet geüpload · ${record.error}`
+        : syncStatus === 'error' ? 'Opgeslagen op dit apparaat · synchroniseren is onderbroken'
+        : 'Opgeslagen op dit apparaat · wacht op upload'}
+    </Text>
+    <Pressable accessibilityRole="button" disabled={retryingUploads} onPress={() => void retry()} className="min-h-[44px] justify-center self-start px-1">
+      <Text className="font-semi text-sm text-teal-600">{retryingUploads ? 'Opnieuw verbinden…' : 'Upload opnieuw proberen'}</Text>
+    </Pressable>
+    {!!retryError && <Text accessibilityRole="alert" className="text-xs text-red-700">{retryError}</Text>}
+  </View>;
 }
 type PickedAsset = ImagePicker.ImagePickerAsset | DocumentPicker.DocumentPickerAsset;
 type PhotoSlot = { id: string; label: string; field: string };
@@ -114,7 +143,10 @@ export function AttachmentField({ value, onChange, section, field, photo, max, r
         const attachmentId = typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID()
           : 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => { const r = Math.random() * 16 | 0; return (c === 'x' ? r : (r & 3) | 8).toString(16); });
         await saveAttachment({ id: attachmentId, userId: currentUserId, bookingId: id, horseId, section, field: target?.field ?? field, name, mime, uploaded: false },
-          { uri: asset.uri, file, name, mime });
+          { uri: asset.uri, file, name, mime }).catch(error => {
+            reportSyncFailure(error, 'intake.attachment.storage');
+            throw error;
+          });
         checkSession(revision);
         if (target && !latest.current.slots?.some(slot => slot.id === target.id)) throw new Error('Dit aanzicht is inmiddels ingevuld.');
         if (!target && remaining() === 0) throw new Error('Het maximum aantal bestanden is bereikt.');

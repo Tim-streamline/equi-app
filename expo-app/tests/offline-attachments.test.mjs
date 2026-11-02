@@ -1,3 +1,4 @@
+import * as syncRequests from '../lib/sync-request.ts';
 import * as syncOperations from '../lib/intake/sync-operations.ts';
 import test from 'node:test';
 import assert from 'node:assert/strict';
@@ -63,7 +64,7 @@ function load(file, modules) {
   const js = ts.transpileModule(readFileSync(new URL(file, import.meta.url), 'utf8'), {
     compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 },
   }).outputText;
-  new Function('require', 'exports', js)(name => { assert.ok(name in modules, name); return modules[name]; }, exports);
+  new Function('require', 'exports', js)(name => { if (name === '@/lib/sync-request') return syncRequests; if (name === '@/lib/sync-errors') return { reportSyncFailure() {} }; assert.ok(name in modules, name); return modules[name]; }, exports);
   return exports;
 }
 for (const platform of ['native', 'web']) test(`${platform} connector blocks answers and acknowledgement until attachments upload`, async t => {

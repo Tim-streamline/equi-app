@@ -1,3 +1,4 @@
+import * as syncRequests from '../lib/sync-request.ts';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import test from 'node:test';
@@ -48,7 +49,7 @@ function harness(fetch, { legacy = null, reinstalled = false, saveFails = false 
     const exports = {};
     vm.runInNewContext(code, {
       exports, require: (name) => {
-        assert.ok(name in modules, `Unexpected dependency: ${name}`);
+        if (name === '@/lib/sync-request') return syncRequests; if (name === '@/lib/sync-errors') return { reportSyncFailure() {} }; assert.ok(name in modules, `Unexpected dependency: ${name}`);
         return modules[name];
       },
       fetch, AbortController, process: { env: {} }, console: { log() {}, warn() {} },

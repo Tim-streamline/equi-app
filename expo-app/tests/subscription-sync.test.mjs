@@ -1,3 +1,4 @@
+import * as syncRequests from '../lib/sync-request.ts';
 import * as syncOperations from '../lib/intake/sync-operations.ts';
 import test from 'node:test';
 import assert from 'node:assert/strict';
@@ -14,7 +15,7 @@ function load(path, modules, globals = {}) {
   const exports = {};
   const code = ts.transpileModule(readFileSync(new URL(path, import.meta.url), 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS } }).outputText;
   new Function('require', 'exports', ...Object.keys(globals), code)(name => {
-    assert.ok(name in modules, name); return modules[name];
+    if (name === '@/lib/sync-request') return syncRequests; if (name === '@/lib/sync-errors') return { reportSyncFailure() {} }; assert.ok(name in modules, name); return modules[name];
   }, exports, ...Object.values(globals));
   return exports;
 }

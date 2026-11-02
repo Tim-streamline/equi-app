@@ -6,6 +6,39 @@ afterEach(() => { globalThis.fetch = originalFetch; forgetSession(); });
 const response = (body, status = 200) => new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json' } });
 const session = id => ({ user: { id, name: 'Test', email: 'test@example.test' }, token: `jwt-${id}`, endpoint: 'http://sync', expires_in: 3600 });
 
+test('a hung shared token request times out, clears pending state and cannot overwrite the retry', async t => {
+  t.mock.timers.enable({ apis: ['setTimeout'] });
+  let finish, signal;
+  globalThis.fetch = async (url, options) => {
+    signal = options.signal;
+    if (url.endsWith('/csrf')) return response({ token: 'csrf' });
+    return new Promise(resolve => { finish = resolve; });
+  };
+  const one = getSession(), two = getSession();
+  const rejected = Promise.all([assert.rejects(one, error => error.kind === 'timeout'), assert.rejects(two, error => error.kind === 'timeout')]);
+  for (let i = 0; i < 30; i++) await Promise.resolve();
+  assert.ok(finish);
+  t.mock.timers.tick(20_000); await rejected;
+  assert.equal(signal.aborted, true);
+  globalThis.fetch = async url => response(url.endsWith('/csrf') ? { token: 'csrf' } : session('new'));
+  assert.equal((await getSession()).user.id, 'new');
+  finish(response(session('old')));
+  for (let i = 0; i < 30; i++) await Promise.resolve();
+  assert.equal((await getSession()).user.id, 'new');
+});
+
+test('a late CSRF response after timeout cannot start another token request', async t => {
+  t.mock.timers.enable({ apis: ['setTimeout'] });
+  let finish, calls = 0;
+  globalThis.fetch = async () => { calls++; return new Promise(resolve => { finish = resolve; }); };
+  const result = getSession();
+  const rejected = assert.rejects(result, error => error.kind === 'timeout');
+  t.mock.timers.tick(20_000); await rejected;
+  finish(response({ token: 'csrf' }));
+  for (let i = 0; i < 30; i++) await Promise.resolve();
+  assert.equal(calls, 1);
+});
+
 test('login uses CSRF and HttpOnly session transport; renewal never resends the password', async () => {
   const requests = [];
   globalThis.fetch = async (url, options) => {

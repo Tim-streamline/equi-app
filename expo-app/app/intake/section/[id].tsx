@@ -141,7 +141,7 @@ export default function IntakeSectionScreen() {
           <View className="flex-row items-center justify-center gap-1.5">
             <View className="h-1.5 w-1.5 rounded-full bg-mint-500" />
             <Text className="text-[11px] text-ink-70">
-              {state.submittedAt ? `Ingestuurd op ${formatIntakeDate(state.submittedAt)} · ` : 'Automatisch opgeslagen · '}
+              {state.submittedAt ? `Ingestuurd op ${formatIntakeDate(state.submittedAt)} · ` : 'Automatisch opgeslagen op dit apparaat · '}
               <Text className={allAnswered ? 'text-success' : 'text-danger'}>
                 {filled} / {total}
               </Text>{' '}

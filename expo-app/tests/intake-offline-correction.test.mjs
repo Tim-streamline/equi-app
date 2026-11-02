@@ -1,3 +1,4 @@
+import * as syncRequests from '../lib/sync-request.ts';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
@@ -10,7 +11,11 @@ function load(path, modules) {
   const code = ts.transpileModule(readFileSync(new URL(path, import.meta.url), 'utf8'), {
     compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 },
   }).outputText;
-  new Function('require', 'exports', code)(key => { assert.ok(key in modules, key); return modules[key]; }, exports);
+  new Function('require', 'exports', code)(key => {
+    if (key === '@/lib/sync-request') return syncRequests;
+    if (key === '@/lib/sync-errors') return { reportSyncFailure() {} };
+    assert.ok(key in modules, key); return modules[key];
+  }, exports);
   return exports;
 }
 const identity = { response_id: 'booking', section_id: 'original', field_id: 'choice' };
@@ -65,7 +70,7 @@ for (const platform of ['native', 'web']) {
         return new Response('{}', { status });
       });
       const connector = new LaravelConnector('owner');
-      await assert.rejects(connector.uploadData(db), /409/);
+      await assert.rejects(connector.uploadData(db), error => error.status === 409);
       assert.equal(acknowledged, 0, 'a rejected recovery must remain queued');
       if (!tracked) assert.deepEqual(requests[0].data, patch.opData);
       available = true; status = 200;

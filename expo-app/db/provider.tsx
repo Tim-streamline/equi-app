@@ -1,3 +1,5 @@
+import { retrySyncUploads } from '@/db/retry-sync';
+import { reportSyncFailure } from '@/lib/sync-errors';
 // Provides the PowerSync database to the rest of the app via @powersync/react's
 // PowerSyncContext, plus an auth-aware wrapper (DbContext) that tracks the
 // logged-in user + sync status. Screens consume data through useQuery (see
@@ -69,6 +71,8 @@ type DbContextValue = {
   completeRegistration: (input: RegistrationCompletion) => Promise<void>;
   logout: () => Promise<void>;
   refreshSubscriptionAccess: (signal: AbortSignal) => Promise<void>;
+  retryUploads: () => Promise<void>;
+  retryingUploads: boolean;
 };
 
 const DbContext = createContext<DbContextValue | null>(null);
@@ -77,6 +81,7 @@ export function DbProvider({ children }: { children: ReactNode }) {
   const [powersync, setPowersync] = useState<AbstractPowerSyncDatabase | null>(null);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [syncStatus, setSyncStatus] = useState<SyncStatus>('idle');
+  const [retryingUploads, setRetryingUploads] = useState(false);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const connectedRef = useRef(false);
   const [selectedHorseId, selectHorse] = useState<string | null>(null);
@@ -97,6 +102,8 @@ export function DbProvider({ children }: { children: ReactNode }) {
           statusChanged: (status) => {
             if (!connectedRef.current) return;
             setSyncStatus(mapStatus(status));
+            if (status.dataFlowStatus?.uploadError) reportSyncFailure(status.dataFlowStatus.uploadError, 'sync.upload');
+            if (status.dataFlowStatus?.downloadError) reportSyncFailure(status.dataFlowStatus.downloadError, 'sync.download');
           },
         });
 
@@ -147,6 +154,14 @@ export function DbProvider({ children }: { children: ReactNode }) {
     }),
     [powersync, connectToBackend],
   );
+
+  const retryUploads = useCallback(async () => {
+    if (!powersync || !currentUserId) throw new Error('Meld je opnieuw aan.');
+    setRetryingUploads(true);
+    connectedRef.current = true;
+    try { await retrySyncUploads(powersync, new LaravelConnector()); }
+    finally { setRetryingUploads(false); }
+  }, [powersync, currentUserId]);
 
   const register = registerRequest;
   const refreshSubscriptionAccess = useCallback(async (signal: AbortSignal) => {
@@ -211,8 +226,9 @@ export function DbProvider({ children }: { children: ReactNode }) {
       completeRegistration,
       logout,
       refreshSubscriptionAccess,
+      retryUploads, retryingUploads,
     };
-  }, [powersync, isLoggedIn, syncStatus, currentUserId, selectedHorseId, login, register, completeRegistration, logout, refreshSubscriptionAccess]);
+  }, [powersync, isLoggedIn, syncStatus, currentUserId, selectedHorseId, login, register, completeRegistration, logout, refreshSubscriptionAccess, retryUploads, retryingUploads]);
 
   if (!powersync || !value) {
     return (

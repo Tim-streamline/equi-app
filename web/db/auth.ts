@@ -1,3 +1,5 @@
+import { syncRequest, SyncRequestError } from '../../expo-app/lib/sync-request.ts';
+
 export type LoginResponse = {
   endpoint: string;
   token: string;
@@ -24,6 +26,7 @@ async function request(path: string, body: object, signal?: AbortSignal) {
   const csrf = await fetch('/web-session/csrf', { credentials: 'same-origin', cache: 'no-store', signal });
   if (!csrf.ok) throw new Error('Verbinding niet beschikbaar. Probeer opnieuw.');
   const { token } = await csrf.json();
+  if (signal?.aborted) throw new SyncRequestError('De verbinding is onderbroken. Probeer opnieuw.', 'cancelled');
   return fetch(`/web-session/${path}`, {
     method: 'POST', credentials: 'same-origin', cache: 'no-store', signal,
     headers: { Accept: 'application/json', 'Content-Type': 'application/json', 'X-CSRF-TOKEN': token },
@@ -52,8 +55,9 @@ export async function getSession(signal?: AbortSignal, force = false): Promise<L
   }
   const current = revision;
   const expectedUser = session?.user.id;
-  const operation = (async () => {
-    const response = await request('token', {}, signal);
+  const operation = syncRequest(20_000, async (requestSignal, check) => {
+    const response = await request('token', {}, requestSignal);
+    check();
     if (current !== revision) throw new Error('Je sessie is gewijzigd.');
     if (response.status === 401) {
       forgetSession();
@@ -62,6 +66,7 @@ export async function getSession(signal?: AbortSignal, force = false): Promise<L
     }
     if (!response.ok) throw new Error('Verbinding niet beschikbaar. Probeer opnieuw.');
     const data: LoginResponse = await response.json();
+    check();
     if (current !== revision) throw new Error('Je sessie is gewijzigd.');
     if (expectedUser && String(expectedUser) !== String(data.user.id)) {
       forgetSession();
@@ -69,7 +74,7 @@ export async function getSession(signal?: AbortSignal, force = false): Promise<L
       throw new Error('Je account is gewijzigd in een ander tabblad.');
     }
     return accept(data);
-  })();
+  }, signal);
   pending = operation;
   try { return await operation; }
   finally { if (pending === operation) pending = null; }

@@ -1,3 +1,4 @@
+import * as syncRequests from '../lib/sync-request.ts';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import test from 'node:test';
@@ -9,7 +10,7 @@ const requestCode = await compile('../hooks/useLibraryResource.ts');
 const connectorCode = await compile('../db/connector.ts');
 const syncOperationsCode = await compile('../lib/intake/sync-operations.ts');
 function load(code, modules) {
-  const exports = {}; new Function('require', 'exports', code)(name => { assert.ok(name in modules, name); return modules[name]; }, exports); return exports;
+  const exports = {}; new Function('require', 'exports', code)(name => { if (name === '@/lib/sync-request') return syncRequests; if (name === '@/lib/sync-errors') return { reportSyncFailure() {} }; assert.ok(name in modules, name); return modules[name]; }, exports); return exports;
 }
 const flat = node => Array.isArray(node) ? node.flatMap(flat) : node && typeof node === 'object' ? [node, ...flat(node.props?.children)] : [node];
 const item = { id: 'lesson', title: 'Test lesson', description: 'The complete CMS preview.', format: 'article', authorName: 'Shelley', heroImageUrl: 'https://example.test/cover.jpg', creditCost: 2 };
