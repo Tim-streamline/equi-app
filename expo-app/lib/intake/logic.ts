@@ -295,7 +295,11 @@ function hideAnswersOnce(answers: IntakeAnswers, schema: Section[], noneOptions:
       if (!field.showIf || !Object.prototype.hasOwnProperty.call(result[source] ?? {}, field.id)) continue;
       values ??= answersForSection(section, result);
       if (showField({ ...field, photoConfig: undefined }, values, result, noneOptions)) continue;
-      const { [field.id]: _hidden, ...rest } = result[source]!;
+      // Keep removal explicit: Metro's production transform can drop the
+      // computed key in unused-value object-rest destructuring. That leaves
+      // the hidden answer in place and effectiveAnswers never converges.
+      const rest = { ...result[source] };
+      delete rest[field.id];
       result = { ...result, [source]: rest };
       values = { ...values };
       delete values[field.id];
