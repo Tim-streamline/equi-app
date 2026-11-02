@@ -97,7 +97,7 @@ class IntakeComplaintPhysicalRefinementsTest extends TestCase
         foreach (['ontstaan-verandering-details', 'klacht-frequentie-anders', 'klacht-patronen-details', 'klacht-onderzoek-details', 'klacht-gelijktijdig-details', 'da-diagnose', 'spierverlies-locatie', 'gedrag-signalen-anders'] as $key) {
             $this->assertFalse($rows->contains('key', $key), $key);
         }
-        $this->assertFalse($rows->firstWhere('key', 'gedrag-signalen')['flagged']);
+        $this->assertArrayNotHasKey('flagged', $rows->firstWhere('key', 'gedrag-signalen'));
         $this->assertFalse($rows->firstWhere('key', 'foto-huid')['required']);
         $this->assertTrue($rows->firstWhere('key', 'foto-hoeven')['required']);
         $html = app(IntakeAnswersPdf::class)->html($booking->fresh());

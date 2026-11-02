@@ -10,6 +10,8 @@ use App\Models\IntakeSection;
 /** One evaluator for the admin review, print output and future protocol generation. */
 class IntakeReview
 {
+    private array $answerReferences = [];
+
     public function forBooking(IntakeBooking $booking): array
     {
         $questionnaire = IntakeQuestionnaire::where('slug', 'protocol-intake')->where('active', true)
@@ -37,7 +39,7 @@ class IntakeReview
             $visibleAnswers = $this->sectionAnswers($section, $visibility);
             foreach ($section->fields as $field) {
                 $value = $sectionAnswers[$field->key] ?? null;
-                $historical = ! $section->active || ! $field->active || ! $this->visible($field->show_if, $visibleAnswers, $visibility, $none);
+                $historical = ! $section->active || ! $field->active || ! $this->visible($field->visibility_rule ?? $field->show_if, $visibleAnswers, $visibility, $none);
                 if ($historical && ($field->type === 'sectionhead' || $this->empty($value))) {
                     continue;
                 }
@@ -51,7 +53,6 @@ class IntakeReview
                     $value = null;
                 }
                 $critical = ! $historical && $this->matches($value, $field->critical_if);
-                $flag = ! $historical && ($critical || $this->flagged($value, $field->flag_if, $none));
                 $hits = [];
                 $signalInput = $historical ? null : app(IntakeSignalPreparation::class)->input($field, $value, $answerSection);
                 if ($signalInput) {
@@ -70,8 +71,8 @@ class IntakeReview
                     'sub' => $field->repeater_sub ?? [], 'value' => $value,
                     'empty' => $this->empty($value), 'required' => ! $historical && ! $field->optional,
                     'historical' => $historical,
-                    'flagged' => $flag, 'critical' => $critical, 'protocol' => $hits,
-                    'flagged_options' => array_values(array_filter(is_array($value) ? $value : [], fn ($v) => is_scalar($v) && ($this->matches($v, $field->critical_if) || $this->flagged($v, $field->flag_if, $none)))),
+                    'critical' => $critical, 'protocol' => $hits,
+                    'critical_options' => $historical ? [] : array_values(array_filter(is_array($value) ? $value : [], fn ($v) => is_scalar($v) && $this->matches($v, $field->critical_if))),
                     'attachments' => [],
                     'large_attachments' => ($field->photo_config['document_layout'] ?? null) === 'full_page',
                     'owner_reported' => (bool) $field->signal_config,
@@ -154,7 +155,6 @@ class IntakeReview
                     unset($photo);
                 }
                 if ($historical) {
-                    $row['flagged_options'] = [];
                     $historicalRows[] = $row;
 
                     continue;
@@ -170,12 +170,11 @@ class IntakeReview
             $questions = array_values(array_filter($rows, fn ($r) => $r['type'] !== 'sectionhead'));
             if ($historicalRows) {
                 $historicalSections[] = ['id' => $section->key, 'nr' => $section->order, 'title' => $section->title,
-                    'rows' => $historicalRows, 'intro' => 'Eerder ingevuld, nu verborgen of gearchiveerd. Niet als actuele bevinding gebruiken.', 'count' => count($historicalRows), 'flags' => 0];
+                    'rows' => $historicalRows, 'intro' => 'Eerder ingevuld, nu verborgen of gearchiveerd. Niet als actuele bevinding gebruiken.', 'count' => count($historicalRows)];
             }
             if ($section->active) {
                 $sections[] = ['id' => $section->key, 'nr' => $section->order, 'title' => $section->title,
-                    'intro' => $section->intro, 'rows' => $rows, 'count' => count($questions),
-                    'flags' => count(array_filter($questions, fn ($r) => $r['flagged']))];
+                    'intro' => $section->intro, 'rows' => $rows, 'count' => count($questions)];
             }
         }
         // Retain metadata entered through the retired custom photo screen in
@@ -187,18 +186,18 @@ class IntakeReview
             }
             $legacy[] = ['id' => '__photos.'.$key, 'key' => $key, 'section' => '__photos',
                 'label' => $key, 'type' => 'text', 'unit' => null, 'sub' => [], 'value' => $value,
-                'empty' => $this->empty($value), 'required' => false, 'flagged' => false,
-                'critical' => false, 'protocol' => [], 'flagged_options' => [], 'attachments' => []];
+                'empty' => $this->empty($value), 'required' => false,
+                'critical' => false, 'protocol' => [], 'critical_options' => [], 'attachments' => []];
         }
         if ($legacy) {
             $sections[] = ['id' => '__photos', 'nr' => count($sections), 'title' => 'Eerder opgeslagen fotogegevens',
-                'intro' => null, 'rows' => $legacy, 'count' => count($legacy), 'flags' => 0];
+                'intro' => null, 'rows' => $legacy, 'count' => count($legacy)];
         }
         $rows = array_merge([], ...array_column($sections, 'rows'));
         $questions = array_values(array_filter($rows, fn ($r) => $r['type'] !== 'sectionhead'));
 
         return ['sections' => $sections, 'historical_sections' => $historicalSections, 'safety' => $safety, 'triggers' => $triggers, 'answers' => $answers,
-            'counts' => ['all' => count($questions), 'flags' => count(array_filter($questions, fn ($r) => $r['flagged'])),
+            'counts' => ['all' => count($questions),
                 'protocol' => count($triggers), 'empty' => count(array_filter($questions, fn ($r) => $r['empty']))],
             'blocked' => (bool) $submissionBlocks || count(array_filter($safety, fn ($r) => $r['critical'])) > 0,
             'submission_blocks' => $submissionBlocks,
@@ -216,6 +215,8 @@ class IntakeReview
      */
     public function effectiveAnswers(iterable $sections, array $answers, array $none): array
     {
+        $conditions = app(IntakeAnswerConditions::class);
+        $this->answerReferences = $conditions->references($conditions->catalog($sections));
         // Every pass that changes anything removes an answer, so this ends.
         do {
             $changed = false;
@@ -226,11 +227,11 @@ class IntakeReview
                 $values = null;
                 foreach ($section->fields as $field) {
                     $source = $field->answer_section_key ?? $section->key;
-                    if (! $field->active || ! $field->show_if || ! array_key_exists($field->key, $answers[$source] ?? [])) {
+                    if (! $field->active || ! ($field->visibility_rule ?? $field->show_if) || ! array_key_exists($field->key, $answers[$source] ?? [])) {
                         continue;
                     }
                     $values ??= $this->sectionAnswers($section, $answers);
-                    if ($this->visible($field->show_if, $values, $answers, $none)) {
+                    if ($this->visible($field->visibility_rule ?? $field->show_if, $values, $answers, $none)) {
                         continue;
                     }
                     unset($answers[$source][$field->key], $values[$field->key]);
@@ -283,21 +284,14 @@ class IntakeReview
             && ! in_array(mb_strtolower(trim((string) $v)), array_map(fn ($s) => mb_strtolower(trim($s)), $none), true)));
     }
 
-    private function flagged(mixed $value, mixed $rule, array $none): bool
-    {
-        if ($rule === 'non-empty') {
-            return ! $this->empty($value) && (! is_string($value) || ! preg_match('/^(geen|nee|n\.v\.t\.)/iu', trim($value)));
-        }
-        if ($rule === 'any') {
-            return count($this->realOptions($value, $none)) > 0;
-        }
-
-        return $this->matches($value, $rule);
-    }
-
     public function visible(?array $conditions, array $section, array $answers, array $none): bool
     {
         foreach ($conditions ?? [] as $key => $condition) {
+            if ($key === '$answer') {
+                $reference = $this->answerReferences[$condition] ?? null;
+                if ($reference === null || ! $this->visible($reference, $section, $answers, $none)) return false;
+                continue;
+            }
             if ($key === '$all' || $key === '$any') {
                 $results = array_map(fn ($rule) => $this->visible($rule, $section, $answers, $none), $condition);
                 if ($key === '$all' ? in_array(false, $results, true) : ! in_array(true, $results, true)) {

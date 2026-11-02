@@ -49,7 +49,7 @@ class IntakeQuestionnaireSeeder extends Seeder
                 $fieldKeys = [];
                 foreach ($sectionData['fields'] as $order => $fieldData) {
                     $fieldKeys[] = $fieldData['id'];
-                    $section->fields()->updateOrCreate(
+                    \App\Models\IntakeField::withoutEvents(fn () => $section->fields()->updateOrCreate(
                         ['key' => $fieldData['id']],
                         [
                             'order' => $order,
@@ -69,23 +69,34 @@ class IntakeQuestionnaireSeeder extends Seeder
                             'placeholder' => $fieldData['placeholder'] ?? null,
                             'link' => $fieldData['link'] ?? null,
                             'options' => $fieldData['options'] ?? null,
+                            'option_effects' => $fieldData['optionEffects'] ?? null,
+                            'option_keys' => $fieldData['optionKeys'] ?? [],
                             'answer_aliases' => $fieldData['answerAliases'] ?? null,
                             'submission_blocks' => $fieldData['submissionBlocks'] ?? null,
                             'show_if' => $fieldData['showIf'] ?? null,
-                            'flag_if' => $fieldData['flagIf'] ?? null,
                             'critical_if' => $fieldData['criticalIf'] ?? null,
                             'protocol_if' => $fieldData['protocolIf'] ?? null,
                             'signal_config' => $fieldData['signalConfig'] ?? null,
                             'repeater_sub' => $fieldData['sub'] ?? null,
                             'active' => true,
                         ],
-                    );
+                    ));
                 }
 
                 $section->fields()->whereNotIn('key', $fieldKeys)->update(['active' => false]);
             }
 
             $questionnaire->sections()->whereNotIn('key', $sectionKeys)->update(['active' => false]);
+            // Resolve against the complete definition, including parents declared in later sections.
+            $conditions = app(\App\Support\IntakeAnswerConditions::class);
+            $sections = $questionnaire->sections()->with('fields')->get();
+            $catalog = $conditions->catalog($sections);
+            foreach ($sections as $section) {
+                foreach ($section->fields as $field) {
+                    $rule = $conditions->migrate($field->show_if, $section->key, $catalog, $questionnaire->none_options ?? []);
+                    DB::table('intake_fields')->where('id', $field->id)->update(['visibility_rule' => $rule === null ? null : json_encode($rule, JSON_THROW_ON_ERROR)]);
+                }
+            }
         });
     }
 }

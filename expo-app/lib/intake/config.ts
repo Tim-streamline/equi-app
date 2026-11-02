@@ -1,4 +1,4 @@
-import type { Field, Section } from './schema';
+import type { Field, Section, ShowIf } from './schema';
 
 type Row = Record<string, unknown>;
 
@@ -47,9 +47,11 @@ export function buildIntakeSchema(sectionRows: Row[], fieldRows: Row[]): Section
       placeholder: row.placeholder == null ? undefined : String(row.placeholder),
       link: json<Field['link']>(row.link),
       options: json<string[]>(row.options),
+      optionEffects: json<Field['optionEffects']>(row.option_effects),
+      optionKeys: json<Field['optionKeys']>(row.option_keys),
+      visibilityRule: json<ShowIf>(row.visibility_rule),
       signalConfig: json<Field['signalConfig']>(row.signal_config),
       showIf: json<Field['showIf']>(row.show_if),
-      flagIf: json<Field['flagIf']>(row.flag_if),
       criticalIf: json<Field['criticalIf']>(row.critical_if),
       protocolIf: json<Field['protocolIf']>(row.protocol_if),
       sub: json<Field['sub']>(row.repeater_sub),
@@ -60,7 +62,7 @@ export function buildIntakeSchema(sectionRows: Row[], fieldRows: Row[]): Section
     fieldsBySection.set(sectionId, fields);
   }
 
-  return sectionRows
+  const schema: Section[] = sectionRows
     .filter((row) => bool(row.active ?? 1))
     .sort((a, b) => Number(a.order ?? 0) - Number(b.order ?? 0))
     .map((row) => ({
@@ -77,4 +79,25 @@ export function buildIntakeSchema(sectionRows: Row[], fieldRows: Row[]): Section
         (a, b) => Number((a as Field & { __order?: number }).__order ?? 0) - Number((b as Field & { __order?: number }).__order ?? 0),
       ),
     }));
+  return resolveAnswerConditions(schema);
+}
+
+
+/** Resolve stable global keys using this questionnaire's current labels and answer locations. */
+export function resolveAnswerConditions(schema: Section[]): Section[] {
+  const references = new Map<string, ShowIf>();
+  for (const section of schema) for (const field of section.fields) {
+    for (const [answer, key] of Object.entries(field.optionKeys ?? {})) {
+      const labels = [answer, ...Object.entries(field.answerAliases ?? {}).filter(([, current]) => current === answer).map(([old]) => old)];
+      references.set(key, { [`${field.answerSection ?? section.id}.${field.id}`]: labels });
+    }
+  }
+  const compile = (rule: ShowIf): ShowIf => Object.fromEntries(Object.entries(rule).flatMap(([key, value]) => {
+    if (key === '$answer') return Object.entries(references.get(String(value)) ?? { __missing_answer__: '__never__' });
+    if (key === '$all' || key === '$any') return [[key, (value as ShowIf[]).map(compile)]];
+    if (key === '$not') return [[key, compile(value as ShowIf)]];
+    return [[key, value]];
+  }));
+  return schema.map(section => ({ ...section, fields: section.fields.map(field => field.visibilityRule
+    ? { ...field, showIf: compile(field.visibilityRule) } : field) }));
 }

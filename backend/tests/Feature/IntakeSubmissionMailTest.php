@@ -157,9 +157,9 @@ class IntakeSubmissionMailTest extends TestCase
         $this->get('/admin/bookings/'.$this->booking->id)->assertInertia(fn (Assert $page) => $page->where('booking.submission_email_status', 'pending'));
     }
 
-    public function test_pdf_marks_the_same_attention_points_and_critical_answers_as_the_admin(): void
+    public function test_pdf_preserves_critical_answers_without_review_flags(): void
     {
-        IntakeField::where('key', 'klachten')->firstOrFail()->update(['flag_if' => ['Jeuk'], 'options' => ['Jeuk', 'Hoesten', 'Niet geselecteerde optie']]);
+        IntakeField::where('key', 'klachten')->firstOrFail()->update(['critical_if' => ['Jeuk'], 'options' => ['Jeuk', 'Hoesten', 'Niet geselecteerde optie']]);
         IntakeField::where('key', 'gewicht')->firstOrFail()->update(['critical_if' => ['540']]);
 
         $html = app(IntakeAnswersPdf::class)->html($this->booking->fresh());
@@ -169,19 +169,17 @@ class IntakeSubmissionMailTest extends TestCase
         $attention = $xpath->query('//div[@class="review-answer attention"]');
         $critical = $xpath->query('//div[@class="review-answer critical"]');
 
-        $this->assertCount(1, $attention);
-        $this->assertStringContainsString('Klachten', $attention->item(0)->textContent);
-        $this->assertStringContainsString('Aandachtspunt', $attention->item(0)->textContent);
-        $this->assertCount(1, $critical);
-        $this->assertStringContainsString('540 kg', $critical->item(0)->textContent);
+        $this->assertCount(0, $attention);
+        $this->assertCount(2, $critical);
         $this->assertStringContainsString('Blokkeert protocol', $critical->item(0)->textContent);
-        $this->assertSame('Jeuk', $xpath->query('//li[@class="flagged-option"]')->item(0)->textContent);
+        $this->assertStringContainsString('540 kg', $html);
+        $this->assertSame('Jeuk', $xpath->query('//li[@class="critical-option"]')->item(0)->textContent);
         $this->assertSame('Hoesten', $xpath->query('//li[not(@class)]')->item(0)->textContent);
         $this->assertStringNotContainsString('Niet geselecteerde optie', $html);
 
-        // Changing the admin rule also changes the export; there is no separate PDF flag logic.
-        IntakeField::where('key', 'klachten')->firstOrFail()->update(['flag_if' => null]);
-        $this->assertStringNotContainsString('class="review-answer attention"', app(IntakeAnswersPdf::class)->html($this->booking->fresh()));
+        // Critical answer styling follows the configured safety rule.
+        IntakeField::where('key', 'klachten')->firstOrFail()->update(['critical_if' => null]);
+        $this->assertStringNotContainsString('class="critical-option"', app(IntakeAnswersPdf::class)->html($this->booking->fresh()));
     }
 
     public function test_pdf_includes_answers_from_all_thirteen_sections_and_formats_structured_values(): void

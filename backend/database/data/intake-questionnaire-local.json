@@ -55,9 +55,6 @@
                         "Ik twijfel nog, leg hieronder uit"
                     ],
                     "show_if": null,
-                    "flag_if": [
-                        "Ik twijfel nog, leg hieronder uit"
-                    ],
                     "critical_if": null,
                     "protocol_if": null,
                     "repeater_sub": null,
@@ -88,7 +85,6 @@
                             "Ik twijfel nog, leg hieronder uit"
                         ]
                     },
-                    "flag_if": null,
                     "critical_if": null,
                     "protocol_if": null,
                     "repeater_sub": null,
@@ -115,7 +111,6 @@
                     "link": null,
                     "options": null,
                     "show_if": null,
-                    "flag_if": null,
                     "critical_if": null,
                     "protocol_if": null,
                     "repeater_sub": null,
@@ -142,7 +137,6 @@
                     "link": null,
                     "options": null,
                     "show_if": null,
-                    "flag_if": null,
                     "critical_if": null,
                     "protocol_if": null,
                     "repeater_sub": null,
@@ -169,7 +163,6 @@
                     "link": null,
                     "options": null,
                     "show_if": null,
-                    "flag_if": null,
                     "critical_if": null,
                     "protocol_if": null,
                     "repeater_sub": null,
@@ -196,7 +189,6 @@
                     "link": null,
                     "options": null,
                     "show_if": null,
-                    "flag_if": null,
                     "critical_if": null,
                     "protocol_if": null,
                     "repeater_sub": null,
@@ -249,16 +241,6 @@
                         "Anders, namelijk"
                     ],
                     "show_if": null,
-                    "flag_if": [
-                        "Sneller dan verwacht",
-                        "Zichtbaar diepere ademhaling",
-                        "Oppervlakkige ademhaling",
-                        "Meer buikademhaling / buikspieren zichtbaar",
-                        "Flankbeweging duidelijk zichtbaar",
-                        "Zware / moeizame ademhaling",
-                        "Geluid bij ademhaling (snurken, piepen, rochelen, etc.)",
-                        "Neusvleugelen"
-                    ],
                     "critical_if": null,
                     "protocol_if": null,
                     "repeater_sub": null,
@@ -287,7 +269,6 @@
                     "show_if": {
                         "ademhaling": "Anders, namelijk"
                     },
-                    "flag_if": null,
                     "critical_if": null,
                     "protocol_if": null,
                     "repeater_sub": null,
@@ -321,10 +302,6 @@
                         "Weet ik niet"
                     ],
                     "show_if": null,
-                    "flag_if": [
-                        "Snel moe / lage energie",
-                        "Regelmatig lichamelijk ongemak zichtbaar"
-                    ],
                     "critical_if": null,
                     "protocol_if": null,
                     "repeater_sub": null,
@@ -357,11 +334,6 @@
                         "Anders, namelijk"
                     ],
                     "show_if": null,
-                    "flag_if": [
-                        "Regelmatig warme hoeven",
-                        "Sterke digitale pols",
-                        "Opgezette benen / vocht"
-                    ],
                     "critical_if": null,
                     "protocol_if": null,
                     "repeater_sub": null,
@@ -390,7 +362,6 @@
                     "show_if": {
                         "benen-hoeven-gevoel": "Anders, namelijk"
                     },
-                    "flag_if": null,
                     "critical_if": null,
                     "protocol_if": null,
                     "repeater_sub": null,
@@ -424,10 +395,6 @@
                         "Weet ik niet"
                     ],
                     "show_if": null,
-                    "flag_if": [
-                        "Weinig spiermassa",
-                        "Plaatselijk spierverlies zichtbaar"
-                    ],
                     "critical_if": null,
                     "protocol_if": null,
                     "repeater_sub": null,
@@ -454,7 +421,6 @@
                     "link": null,
                     "options": null,
                     "show_if": null,
-                    "flag_if": null,
                     "critical_if": null,
                     "protocol_if": null,
                     "repeater_sub": null,
@@ -503,7 +469,6 @@
                         "Anders, namelijk"
                     ],
                     "show_if": null,
-                    "flag_if": "any",
                     "critical_if": null,
                     "protocol_if": null,
                     "repeater_sub": null,
@@ -532,7 +497,6 @@
                     "show_if": {
                         "hoeven-kwaliteit": "Anders, namelijk"
                     },
-                    "flag_if": null,
                     "critical_if": null,
                     "protocol_if": null,
                     "repeater_sub": null,
@@ -570,14 +534,6 @@
                         "Anders, namelijk"
                     ],
                     "show_if": null,
-                    "flag_if": [
-                        "Gevoelig / snel geïrriteerd",
-                        "Schilfers / korstjes",
-                        "Jeuk / schuren",
-                        "Bultjes / galbulten / zwellingen",
-                        "Wondjes / beschadigingen",
-                        "Verdikte huid / plooivorming"
-                    ],
                     "critical_if": null,
                     "protocol_if": null,
                     "repeater_sub": null,
@@ -606,7 +562,6 @@
                     "show_if": {
                         "huid": "Anders, namelijk"
                     },
-                    "flag_if": null,
                     "critical_if": null,
                     "protocol_if": null,
                     "repeater_sub": null,
@@ -641,12 +596,6 @@
                         "Weet ik niet"
                     ],
                     "show_if": null,
-                    "flag_if": [
-                        "Erg mager",
-                        "Aan de magere kant",
-                        "Eerder rond / makkelijk dik",
-                        "Duidelijk overgewicht"
-                    ],
                     "critical_if": null,
                     "protocol_if": null,
                     "repeater_sub": null,
@@ -681,12 +630,6 @@
                         "Weet ik niet"
                     ],
                     "show_if": null,
-                    "flag_if": [
-                        "Bleek / licht van kleur",
-                        "Donkerrood / felrood",
-                        "Gelig",
-                        "Blauwachtig / paarsig"
-                    ],
                     "critical_if": null,
                     "protocol_if": null,
                     "repeater_sub": null,
@@ -719,10 +662,6 @@
                         "Weet ik niet"
                     ],
                     "show_if": null,
-                    "flag_if": [
-                        "Droog / plakkerig",
-                        "Erg nat / slijmerig"
-                    ],
                     "critical_if": null,
                     "protocol_if": null,
                     "repeater_sub": null,
@@ -751,7 +690,6 @@
                     "show_if": {
                         "slijmvliezen-gevoel": "Wisselend, licht kort toe"
                     },
-                    "flag_if": null,
                     "critical_if": null,
                     "protocol_if": null,
                     "repeater_sub": null,
@@ -780,7 +718,6 @@
                     "show_if": {
                         "slijmvliezen": "Wisselend, licht kort toe"
                     },
-                    "flag_if": null,
                     "critical_if": null,
                     "protocol_if": null,
                     "repeater_sub": null,
@@ -809,7 +746,6 @@
                     "show_if": {
                         "bespiering": "Plaatselijk spierverlies zichtbaar"
                     },
-                    "flag_if": null,
                     "critical_if": null,
                     "protocol_if": null,
                     "repeater_sub": null,
@@ -847,15 +783,6 @@
                         "Anders, namelijk"
                     ],
                     "show_if": null,
-                    "flag_if": [
-                        "Dof",
-                        "Droog / stug",
-                        "Vettig",
-                        "Schilfers / roos",
-                        "Moeite met verharen",
-                        "Veranderingen in kleur / pigment",
-                        "Kale plekken / dunne vacht"
-                    ],
                     "critical_if": null,
                     "protocol_if": null,
                     "repeater_sub": null,
@@ -884,7 +811,6 @@
                     "show_if": {
                         "vacht": "Anders, namelijk"
                     },
-                    "flag_if": null,
                     "critical_if": null,
                     "protocol_if": null,
                     "repeater_sub": null,
@@ -924,7 +850,6 @@
                     "link": null,
                     "options": null,
                     "show_if": null,
-                    "flag_if": null,
                     "critical_if": null,
                     "protocol_if": null,
                     "repeater_sub": null,
@@ -957,7 +882,6 @@
                             "5–7×"
                         ]
                     },
-                    "flag_if": null,
                     "critical_if": null,
                     "protocol_if": null,
                     "repeater_sub": null,
@@ -996,7 +920,6 @@
                         "Geen van bovenstaande"
                     ],
                     "show_if": null,
-                    "flag_if": "any",
                     "critical_if": null,
                     "protocol_if": null,
                     "repeater_sub": null,
@@ -1035,17 +958,6 @@
                         "Anders, namelijk"
                     ],
                     "show_if": null,
-                    "flag_if": [
-                        "Teruggetrokken / weinig initiatief",
-                        "Veel stilstaan / \"afwezig\" lijken",
-                        "Weinig interesse in omgeving of andere paarden",
-                        "Weinig spel-, onderzoeks- of sociaal gedrag",
-                        "Overmatig alert / gespannen / moeilijk ontspannen",
-                        "Veel conflictvermijding / zich klein maken",
-                        "Prikkelbaar / snel geïrriteerd / reactief",
-                        "Wisselende stemming of gedrag",
-                        "Anders, namelijk"
-                    ],
                     "critical_if": null,
                     "protocol_if": null,
                     "repeater_sub": null,
@@ -1074,7 +986,6 @@
                     "show_if": {
                         "gedrag-signalen": "Anders, namelijk"
                     },
-                    "flag_if": null,
                     "critical_if": null,
                     "protocol_if": null,
                     "repeater_sub": null,
@@ -1105,10 +1016,6 @@
                         "nee"
                     ],
                     "show_if": null,
-                    "flag_if": [
-                        "ja, regelmatig",
-                        "soms"
-                    ],
                     "critical_if": null,
                     "protocol_if": null,
                     "repeater_sub": null,
@@ -1135,7 +1042,6 @@
                     "link": null,
                     "options": null,
                     "show_if": null,
-                    "flag_if": null,
                     "critical_if": null,
                     "protocol_if": null,
                     "repeater_sub": null,
@@ -1162,7 +1068,6 @@
                     "link": null,
                     "options": null,
                     "show_if": null,
-                    "flag_if": null,
                     "critical_if": null,
                     "protocol_if": null,
                     "repeater_sub": null,
@@ -1189,7 +1094,6 @@
                     "link": null,
                     "options": null,
                     "show_if": null,
-                    "flag_if": null,
                     "critical_if": null,
                     "protocol_if": null,
                     "repeater_sub": null,
@@ -1222,7 +1126,6 @@
                             "5–7×"
                         ]
                     },
-                    "flag_if": null,
                     "critical_if": null,
                     "protocol_if": null,
                     "repeater_sub": null,
@@ -1249,7 +1152,6 @@
                     "link": null,
                     "options": null,
                     "show_if": null,
-                    "flag_if": null,
                     "critical_if": null,
                     "protocol_if": null,
                     "repeater_sub": null,
@@ -1283,13 +1185,6 @@
                         "Geen van bovenstaande"
                     ],
                     "show_if": null,
-                    "flag_if": [
-                        "weven",
-                        "ijsberen",
-                        "luchtzuigen",
-                        "kribbenbijten",
-                        "Overmatig schuren, likken, kauwen, flehmen of ander repetitief gedrag"
-                    ],
                     "critical_if": null,
                     "protocol_if": null,
                     "repeater_sub": null,
@@ -1316,7 +1211,6 @@
                     "link": null,
                     "options": null,
                     "show_if": null,
-                    "flag_if": null,
                     "critical_if": null,
                     "protocol_if": null,
                     "repeater_sub": null,
@@ -1349,7 +1243,6 @@
                             "5–7×"
                         ]
                     },
-                    "flag_if": null,
                     "critical_if": null,
                     "protocol_if": null,
                     "repeater_sub": null,
@@ -1382,7 +1275,6 @@
                             "5–7×"
                         ]
                     },
-                    "flag_if": null,
                     "critical_if": null,
                     "protocol_if": null,
                     "repeater_sub": null,
@@ -1414,7 +1306,6 @@
                         "5–7×"
                     ],
                     "show_if": null,
-                    "flag_if": null,
                     "critical_if": null,
                     "protocol_if": null,
                     "repeater_sub": null,
@@ -1447,7 +1338,6 @@
                             "5–7×"
                         ]
                     },
-                    "flag_if": null,
                     "critical_if": null,
                     "protocol_if": null,
                     "repeater_sub": null,
@@ -1486,7 +1376,6 @@
                             "5–7×"
                         ]
                     },
-                    "flag_if": null,
                     "critical_if": null,
                     "protocol_if": null,
                     "repeater_sub": null,
@@ -1519,7 +1408,6 @@
                             "5–7×"
                         ]
                     },
-                    "flag_if": "non-empty",
                     "critical_if": null,
                     "protocol_if": null,
                     "repeater_sub": null,
@@ -1552,7 +1440,6 @@
                             "5–7×"
                         ]
                     },
-                    "flag_if": null,
                     "critical_if": null,
                     "protocol_if": null,
                     "repeater_sub": null,
@@ -1585,7 +1472,6 @@
                             "5–7×"
                         ]
                     },
-                    "flag_if": null,
                     "critical_if": null,
                     "protocol_if": null,
                     "repeater_sub": null,
@@ -1615,7 +1501,6 @@
                         "Nee"
                     ],
                     "show_if": null,
-                    "flag_if": null,
                     "critical_if": null,
                     "protocol_if": null,
                     "repeater_sub": null,
@@ -1644,7 +1529,6 @@
                     "show_if": {
                         "training-veranderd": "Ja"
                     },
-                    "flag_if": null,
                     "critical_if": null,
                     "protocol_if": null,
                     "repeater_sub": null,
@@ -1673,7 +1557,6 @@
                     "show_if": {
                         "training-veranderd": "Ja"
                     },
-                    "flag_if": null,
                     "critical_if": null,
                     "protocol_if": null,
                     "repeater_sub": null,
@@ -1718,7 +1601,6 @@
                             "5–7×"
                         ]
                     },
-                    "flag_if": null,
                     "critical_if": null,
                     "protocol_if": null,
                     "repeater_sub": null,
@@ -1752,7 +1634,6 @@
                         ],
                         "training-vormen": "Anders, namelijk"
                     },
-                    "flag_if": null,
                     "critical_if": null,
                     "protocol_if": null,
                     "repeater_sub": null,
@@ -1804,7 +1685,6 @@
                         "Geen van bovenstaande"
                     ],
                     "show_if": null,
-                    "flag_if": "any",
                     "critical_if": null,
                     "protocol_if": null,
                     "repeater_sub": null,
@@ -1833,7 +1713,6 @@
                     "show_if": {
                         "typisch-gedrag": "any-checked"
                     },
-                    "flag_if": null,
                     "critical_if": null,
                     "protocol_if": null,
                     "repeater_sub": null,
@@ -1873,7 +1752,6 @@
                     "link": null,
                     "options": null,
                     "show_if": null,
-                    "flag_if": null,
                     "critical_if": null,
                     "protocol_if": null,
                     "repeater_sub": null,
@@ -1908,11 +1786,6 @@
                     "show_if": {
                         "paard.geslacht": "hengst"
                     },
-                    "flag_if": [
-                        "Ja, momenteel",
-                        "Ja, in het verleden",
-                        "Vermoeden / verhoogd risico"
-                    ],
                     "critical_if": null,
                     "protocol_if": null,
                     "repeater_sub": null,
@@ -1945,7 +1818,6 @@
                             "Ja, in het verleden"
                         ]
                     },
-                    "flag_if": null,
                     "critical_if": null,
                     "protocol_if": null,
                     "repeater_sub": null,
@@ -1982,7 +1854,6 @@
                             "Ja, in het verleden"
                         ]
                     },
-                    "flag_if": null,
                     "critical_if": null,
                     "protocol_if": null,
                     "repeater_sub": null,
@@ -2015,7 +1886,6 @@
                             "Ja, in het verleden"
                         ]
                     },
-                    "flag_if": null,
                     "critical_if": null,
                     "protocol_if": null,
                     "repeater_sub": null,
@@ -2048,7 +1918,6 @@
                             "Ja, in het verleden"
                         ]
                     },
-                    "flag_if": null,
                     "critical_if": null,
                     "protocol_if": null,
                     "repeater_sub": null,
@@ -2086,7 +1955,6 @@
                             "Ja, in het verleden"
                         ]
                     },
-                    "flag_if": null,
                     "critical_if": null,
                     "protocol_if": null,
                     "repeater_sub": null,
@@ -2134,7 +2002,6 @@
                             "Ja, in het verleden"
                         ]
                     },
-                    "flag_if": null,
                     "critical_if": null,
                     "protocol_if": null,
                     "repeater_sub": null,
@@ -2163,7 +2030,6 @@
                     "show_if": {
                         "hengst-vruchtbaarheid-waar": "Anders, namelijk"
                     },
-                    "flag_if": null,
                     "critical_if": null,
                     "protocol_if": null,
                     "repeater_sub": null,
@@ -2202,7 +2068,6 @@
                             "Ja, in het verleden"
                         ]
                     },
-                    "flag_if": null,
                     "critical_if": null,
                     "protocol_if": null,
                     "repeater_sub": null,
@@ -2231,7 +2096,6 @@
                         "Niet van toepassing"
                     ],
                     "show_if": null,
-                    "flag_if": "any",
                     "critical_if": null,
                     "protocol_if": null,
                     "repeater_sub": [
@@ -2329,11 +2193,6 @@
                     "show_if": {
                         "paard.geslacht": "merrie"
                     },
-                    "flag_if": [
-                        "Ja, momenteel",
-                        "Ja, in het verleden",
-                        "Vermoeden / verhoogd risico"
-                    ],
                     "critical_if": null,
                     "protocol_if": null,
                     "repeater_sub": null,
@@ -2366,7 +2225,6 @@
                             "Ja, in het verleden"
                         ]
                     },
-                    "flag_if": null,
                     "critical_if": null,
                     "protocol_if": null,
                     "repeater_sub": null,
@@ -2403,7 +2261,6 @@
                             "Ja, in het verleden"
                         ]
                     },
-                    "flag_if": null,
                     "critical_if": null,
                     "protocol_if": null,
                     "repeater_sub": null,
@@ -2436,7 +2293,6 @@
                             "Ja, in het verleden"
                         ]
                     },
-                    "flag_if": null,
                     "critical_if": null,
                     "protocol_if": null,
                     "repeater_sub": null,
@@ -2469,7 +2325,6 @@
                             "Ja, in het verleden"
                         ]
                     },
-                    "flag_if": null,
                     "critical_if": null,
                     "protocol_if": null,
                     "repeater_sub": null,
@@ -2507,7 +2362,6 @@
                             "Ja, in het verleden"
                         ]
                     },
-                    "flag_if": null,
                     "critical_if": null,
                     "protocol_if": null,
                     "repeater_sub": null,
@@ -2556,7 +2410,6 @@
                             "Ja, in het verleden"
                         ]
                     },
-                    "flag_if": null,
                     "critical_if": null,
                     "protocol_if": null,
                     "repeater_sub": null,
@@ -2585,7 +2438,6 @@
                     "show_if": {
                         "merrie-vruchtbaarheid-waar": "Anders, namelijk"
                     },
-                    "flag_if": null,
                     "critical_if": null,
                     "protocol_if": null,
                     "repeater_sub": null,
@@ -2624,7 +2476,6 @@
                             "Ja, in het verleden"
                         ]
                     },
-                    "flag_if": null,
                     "critical_if": null,
                     "protocol_if": null,
                     "repeater_sub": null,
@@ -2665,19 +2516,6 @@
                         "onbekend"
                     ],
                     "show_if": null,
-                    "flag_if": [
-                        "mestwater",
-                        "diarree",
-                        "koliekgevoeligheid",
-                        "zomereczeem",
-                        "mok",
-                        "chronisch hoesten",
-                        "overgewicht",
-                        "EMS",
-                        "PPID",
-                        "hoefbevangenheid",
-                        "Anders, namelijk"
-                    ],
                     "critical_if": null,
                     "protocol_if": null,
                     "repeater_sub": null,
@@ -2706,7 +2544,6 @@
                     "show_if": {
                         "moeder-metabolisch": "Anders, namelijk"
                     },
-                    "flag_if": null,
                     "critical_if": null,
                     "protocol_if": null,
                     "repeater_sub": null,
@@ -2733,7 +2570,6 @@
                     "link": null,
                     "options": null,
                     "show_if": null,
-                    "flag_if": null,
                     "critical_if": null,
                     "protocol_if": null,
                     "repeater_sub": null,
@@ -2775,7 +2611,6 @@
                         ],
                         "penis-koker-controle": "Ja"
                     },
-                    "flag_if": "any",
                     "critical_if": null,
                     "protocol_if": null,
                     "repeater_sub": null,
@@ -2804,7 +2639,6 @@
                     "show_if": {
                         "penis-koker-bevindingen": "Anders, namelijk"
                     },
-                    "flag_if": null,
                     "critical_if": null,
                     "protocol_if": null,
                     "repeater_sub": null,
@@ -2840,7 +2674,6 @@
                             "hengst"
                         ]
                     },
-                    "flag_if": null,
                     "critical_if": null,
                     "protocol_if": null,
                     "repeater_sub": null,
@@ -2873,7 +2706,6 @@
                         ],
                         "penis-koker-controle": "Ja"
                     },
-                    "flag_if": null,
                     "critical_if": null,
                     "protocol_if": null,
                     "repeater_sub": null,
@@ -2906,7 +2738,6 @@
                     "show_if": {
                         "paard.geslacht": "hengst"
                     },
-                    "flag_if": null,
                     "critical_if": null,
                     "protocol_if": null,
                     "repeater_sub": null,
@@ -2933,7 +2764,6 @@
                     "link": null,
                     "options": null,
                     "show_if": null,
-                    "flag_if": null,
                     "critical_if": null,
                     "protocol_if": null,
                     "repeater_sub": null,
@@ -2962,7 +2792,6 @@
                     "show_if": {
                         "paard.geslacht": "merrie"
                     },
-                    "flag_if": null,
                     "critical_if": null,
                     "protocol_if": null,
                     "repeater_sub": null,
@@ -2994,7 +2823,6 @@
                             "hengst"
                         ]
                     },
-                    "flag_if": null,
                     "critical_if": null,
                     "protocol_if": null,
                     "repeater_sub": null,
@@ -3021,7 +2849,6 @@
                     "link": null,
                     "options": null,
                     "show_if": null,
-                    "flag_if": null,
                     "critical_if": null,
                     "protocol_if": null,
                     "repeater_sub": null,
@@ -3048,7 +2875,6 @@
                     "link": null,
                     "options": null,
                     "show_if": null,
-                    "flag_if": "non-empty",
                     "critical_if": null,
                     "protocol_if": null,
                     "repeater_sub": null,
@@ -3075,7 +2901,6 @@
                     "link": null,
                     "options": null,
                     "show_if": null,
-                    "flag_if": null,
                     "critical_if": null,
                     "protocol_if": null,
                     "repeater_sub": null,
@@ -3122,7 +2947,6 @@
                         "Anders, namelijk"
                     ],
                     "show_if": null,
-                    "flag_if": null,
                     "critical_if": null,
                     "protocol_if": null,
                     "repeater_sub": null,
@@ -3151,7 +2975,6 @@
                     "show_if": {
                         "bodem-leefomgeving": "Anders, namelijk"
                     },
-                    "flag_if": null,
                     "critical_if": null,
                     "protocol_if": null,
                     "repeater_sub": null,
@@ -3188,9 +3011,6 @@
                         "anders"
                     ],
                     "show_if": null,
-                    "flag_if": [
-                        "zaagsel"
-                    ],
                     "critical_if": null,
                     "protocol_if": null,
                     "repeater_sub": null,
@@ -3226,13 +3046,6 @@
                         "Wisselend per seizoen"
                     ],
                     "show_if": null,
-                    "flag_if": [
-                        "Niet altijd bij langdurige regenval of natte omstandigheden",
-                        "Niet altijd tijdens warme of zonnige dagen",
-                        "Nee",
-                        "Alleen in bepaalde delen van het jaar",
-                        "Wisselend per seizoen"
-                    ],
                     "critical_if": null,
                     "protocol_if": null,
                     "repeater_sub": null,
@@ -3263,7 +3076,6 @@
                     "link": null,
                     "options": null,
                     "show_if": null,
-                    "flag_if": null,
                     "critical_if": null,
                     "protocol_if": null,
                     "repeater_sub": null,
@@ -3294,9 +3106,6 @@
                         "Weet ik niet"
                     ],
                     "show_if": null,
-                    "flag_if": [
-                        "Ja"
-                    ],
                     "critical_if": null,
                     "protocol_if": null,
                     "repeater_sub": null,
@@ -3330,10 +3139,6 @@
                     "show_if": {
                         "giftige-planten": "Ja"
                     },
-                    "flag_if": [
-                        "Ja, af en toe",
-                        "Ja, regelmatig"
-                    ],
                     "critical_if": null,
                     "protocol_if": null,
                     "repeater_sub": null,
@@ -3362,7 +3167,6 @@
                     "show_if": {
                         "giftige-planten": "Ja"
                     },
-                    "flag_if": null,
                     "critical_if": null,
                     "protocol_if": null,
                     "repeater_sub": null,
@@ -3391,7 +3195,6 @@
                     "show_if": {
                         "giftige-planten": "Ja"
                     },
-                    "flag_if": null,
                     "critical_if": null,
                     "protocol_if": null,
                     "repeater_sub": null,
@@ -3429,7 +3232,6 @@
                     "show_if": {
                         "giftige-planten": "Ja"
                     },
-                    "flag_if": null,
                     "critical_if": null,
                     "protocol_if": null,
                     "repeater_sub": null,
@@ -3456,7 +3258,6 @@
                     "link": null,
                     "options": null,
                     "show_if": null,
-                    "flag_if": null,
                     "critical_if": null,
                     "protocol_if": null,
                     "repeater_sub": null,
@@ -3490,7 +3291,6 @@
                         "Zeer groot terrein / track / meerdere hectares"
                     ],
                     "show_if": null,
-                    "flag_if": null,
                     "critical_if": null,
                     "protocol_if": null,
                     "repeater_sub": null,
@@ -3523,10 +3323,6 @@
                         ">16 uur"
                     ],
                     "show_if": null,
-                    "flag_if": [
-                        "8–16 uur",
-                        ">16 uur"
-                    ],
                     "critical_if": null,
                     "protocol_if": null,
                     "repeater_sub": null,
@@ -3560,7 +3356,6 @@
                         "Zeer groot terrein / track / meerdere hectares"
                     ],
                     "show_if": null,
-                    "flag_if": null,
                     "critical_if": null,
                     "protocol_if": null,
                     "repeater_sub": null,
@@ -3593,10 +3388,6 @@
                         ">16 uur"
                     ],
                     "show_if": null,
-                    "flag_if": [
-                        "8–16 uur",
-                        ">16 uur"
-                    ],
                     "critical_if": null,
                     "protocol_if": null,
                     "repeater_sub": null,
@@ -3628,9 +3419,6 @@
                         "Anders, namelijk"
                     ],
                     "show_if": null,
-                    "flag_if": [
-                        "Nee, nooit"
-                    ],
                     "critical_if": null,
                     "protocol_if": null,
                     "repeater_sub": null,
@@ -3659,7 +3447,6 @@
                     "show_if": {
                         "komt-op-weide": "Anders, namelijk"
                     },
-                    "flag_if": null,
                     "critical_if": null,
                     "protocol_if": null,
                     "repeater_sub": null,
@@ -3694,7 +3481,6 @@
                     "show_if": {
                         "landbouw-nabij": "Ja"
                     },
-                    "flag_if": null,
                     "critical_if": null,
                     "protocol_if": null,
                     "repeater_sub": null,
@@ -3727,7 +3513,6 @@
                     "show_if": {
                         "landbouw-nabij": "Ja"
                     },
-                    "flag_if": null,
                     "critical_if": null,
                     "protocol_if": null,
                     "repeater_sub": null,
@@ -3762,7 +3547,6 @@
                         "landbouw-nabij": "Ja",
                         "landbouw-bespoten": "Ja"
                     },
-                    "flag_if": null,
                     "critical_if": null,
                     "protocol_if": null,
                     "repeater_sub": null,
@@ -3791,7 +3575,6 @@
                     "show_if": {
                         "landbouw-nabij": "Ja"
                     },
-                    "flag_if": null,
                     "critical_if": null,
                     "protocol_if": null,
                     "repeater_sub": null,
@@ -3824,7 +3607,6 @@
                     "show_if": {
                         "landbouw-nabij": "Ja"
                     },
-                    "flag_if": null,
                     "critical_if": null,
                     "protocol_if": null,
                     "repeater_sub": null,
@@ -3854,7 +3636,6 @@
                         "landbouw-nabij": "Ja",
                         "landbouw-klachten": "Ja"
                     },
-                    "flag_if": null,
                     "critical_if": null,
                     "protocol_if": null,
                     "repeater_sub": null,
@@ -3890,7 +3671,6 @@
                         "landbouw-nabij": "Ja",
                         "landbouw-bespoten": "Ja"
                     },
-                    "flag_if": null,
                     "critical_if": null,
                     "protocol_if": null,
                     "repeater_sub": null,
@@ -3921,7 +3701,6 @@
                         "Weet ik niet"
                     ],
                     "show_if": null,
-                    "flag_if": null,
                     "critical_if": null,
                     "protocol_if": null,
                     "repeater_sub": null,
@@ -3956,7 +3735,6 @@
                     "show_if": {
                         "landbouw-nabij": "Ja"
                     },
-                    "flag_if": null,
                     "critical_if": null,
                     "protocol_if": null,
                     "repeater_sub": null,
@@ -3989,7 +3767,6 @@
                     "show_if": {
                         "landbouw-nabij": "Ja"
                     },
-                    "flag_if": null,
                     "critical_if": null,
                     "protocol_if": null,
                     "repeater_sub": null,
@@ -4021,10 +3798,6 @@
                         "Niet van toepassing"
                     ],
                     "show_if": null,
-                    "flag_if": [
-                        "Ja, aan het begin van het weideseizoen",
-                        "Ja, aan het einde van het weideseizoen"
-                    ],
                     "critical_if": null,
                     "protocol_if": null,
                     "repeater_sub": null,
@@ -4051,7 +3824,6 @@
                     "link": null,
                     "options": null,
                     "show_if": null,
-                    "flag_if": null,
                     "critical_if": null,
                     "protocol_if": null,
                     "repeater_sub": null,
@@ -4085,7 +3857,6 @@
                         "Weet ik niet"
                     ],
                     "show_if": null,
-                    "flag_if": null,
                     "critical_if": null,
                     "protocol_if": null,
                     "repeater_sub": null,
@@ -4118,10 +3889,6 @@
                         "Weet ik niet"
                     ],
                     "show_if": null,
-                    "flag_if": [
-                        "Beperkt / niet altijd voldoende",
-                        "Nee"
-                    ],
                     "critical_if": null,
                     "protocol_if": null,
                     "repeater_sub": null,
@@ -4148,7 +3915,6 @@
                     "link": null,
                     "options": null,
                     "show_if": null,
-                    "flag_if": null,
                     "critical_if": null,
                     "protocol_if": null,
                     "repeater_sub": null,
@@ -4182,7 +3948,6 @@
                         "Anders, namelijk"
                     ],
                     "show_if": null,
-                    "flag_if": null,
                     "critical_if": null,
                     "protocol_if": null,
                     "repeater_sub": null,
@@ -4211,7 +3976,6 @@
                     "show_if": {
                         "schuilmogelijkheden": "Anders, namelijk"
                     },
-                    "flag_if": null,
                     "critical_if": null,
                     "protocol_if": null,
                     "repeater_sub": null,
@@ -4238,7 +4002,6 @@
                     "link": null,
                     "options": null,
                     "show_if": null,
-                    "flag_if": null,
                     "critical_if": null,
                     "protocol_if": null,
                     "repeater_sub": null,
@@ -4265,7 +4028,6 @@
                     "link": null,
                     "options": null,
                     "show_if": null,
-                    "flag_if": null,
                     "critical_if": null,
                     "protocol_if": null,
                     "repeater_sub": null,
@@ -4292,7 +4054,6 @@
                     "link": null,
                     "options": null,
                     "show_if": null,
-                    "flag_if": null,
                     "critical_if": null,
                     "protocol_if": null,
                     "repeater_sub": null,
@@ -4319,7 +4080,6 @@
                     "link": null,
                     "options": null,
                     "show_if": null,
-                    "flag_if": null,
                     "critical_if": null,
                     "protocol_if": null,
                     "repeater_sub": null,
@@ -4363,7 +4123,6 @@
                             "Anders, namelijk"
                         ]
                     },
-                    "flag_if": null,
                     "critical_if": null,
                     "protocol_if": null,
                     "repeater_sub": null,
@@ -4409,7 +4168,6 @@
                             "Anders, namelijk"
                         ]
                     },
-                    "flag_if": null,
                     "critical_if": null,
                     "protocol_if": null,
                     "repeater_sub": null,
@@ -4439,7 +4197,6 @@
                         "komt-op-weide": ["Ja, seizoensgebonden","Ja, het hele jaar door","Anders, namelijk"],
                         "weide-bodem": "Anders, namelijk"
                     },
-                    "flag_if": null,
                     "critical_if": null,
                     "protocol_if": null,
                     "repeater_sub": null,
@@ -4479,7 +4236,6 @@
                             "Anders, namelijk"
                         ]
                     },
-                    "flag_if": null,
                     "critical_if": null,
                     "protocol_if": null,
                     "repeater_sub": null,
@@ -4521,10 +4277,6 @@
                             "Anders, namelijk"
                         ]
                     },
-                    "flag_if": [
-                        "Veel / rijk gras",
-                        "Zeer rijk / snelgroeiende productieve weide"
-                    ],
                     "critical_if": null,
                     "protocol_if": null,
                     "repeater_sub": null,
@@ -4554,7 +4306,6 @@
                         "komt-op-weide": ["Ja, seizoensgebonden","Ja, het hele jaar door","Anders, namelijk"],
                         "weide-omschrijving": "Anders, namelijk"
                     },
-                    "flag_if": null,
                     "critical_if": null,
                     "protocol_if": null,
                     "repeater_sub": null,
@@ -4593,7 +4344,6 @@
                             "Anders, namelijk"
                         ]
                     },
-                    "flag_if": null,
                     "critical_if": null,
                     "protocol_if": null,
                     "repeater_sub": null,
@@ -4626,7 +4376,6 @@
                             "Anders, namelijk"
                         ]
                     },
-                    "flag_if": null,
                     "critical_if": null,
                     "protocol_if": null,
                     "repeater_sub": null,
@@ -4672,10 +4421,6 @@
                             "Anders, namelijk"
                         ]
                     },
-                    "flag_if": [
-                        "Productieweide / ingezaaid grasland",
-                        "Engels raaigras aanwezig / vermoedelijk aanwezig"
-                    ],
                     "critical_if": null,
                     "protocol_if": null,
                     "repeater_sub": null,
@@ -4708,7 +4453,6 @@
                             "Anders, namelijk"
                         ]
                     },
-                    "flag_if": null,
                     "critical_if": null,
                     "protocol_if": null,
                     "repeater_sub": null,
@@ -4747,7 +4491,6 @@
                             "Anders, namelijk"
                         ]
                     },
-                    "flag_if": null,
                     "critical_if": null,
                     "protocol_if": null,
                     "repeater_sub": null,
@@ -4786,7 +4529,6 @@
                             "Wisselend per seizoen"
                         ]
                     },
-                    "flag_if": null,
                     "critical_if": null,
                     "protocol_if": null,
                     "repeater_sub": null,
@@ -4827,7 +4569,6 @@
                             "Anders, namelijk"
                         ]
                     },
-                    "flag_if": null,
                     "critical_if": null,
                     "protocol_if": null,
                     "repeater_sub": null,
@@ -4868,7 +4609,6 @@
                             "Anders, namelijk"
                         ]
                     },
-                    "flag_if": null,
                     "critical_if": null,
                     "protocol_if": null,
                     "repeater_sub": null,
@@ -4907,7 +4647,6 @@
                             "Anders, namelijk"
                         ]
                     },
-                    "flag_if": null,
                     "critical_if": null,
                     "protocol_if": null,
                     "repeater_sub": null,
@@ -4940,7 +4679,6 @@
                             "Anders, namelijk"
                         ]
                     },
-                    "flag_if": null,
                     "critical_if": null,
                     "protocol_if": null,
                     "repeater_sub": null,
@@ -4976,7 +4714,6 @@
                         "anders, namelijk"
                     ],
                     "show_if": null,
-                    "flag_if": null,
                     "critical_if": null,
                     "protocol_if": null,
                     "repeater_sub": null,
@@ -5005,7 +4742,6 @@
                     "show_if": {
                         "woonvorm": "anders, namelijk"
                     },
-                    "flag_if": null,
                     "critical_if": null,
                     "protocol_if": null,
                     "repeater_sub": null,
@@ -5034,7 +4770,6 @@
                     "answer_aliases": null,
                     "submission_blocks": null,
                     "show_if": null,
-                    "flag_if": null,
                     "critical_if": null,
                     "protocol_if": null,
                     "repeater_sub": null,
@@ -5063,7 +4798,6 @@
                     "answer_aliases": null,
                     "submission_blocks": null,
                     "show_if": null,
-                    "flag_if": null,
                     "critical_if": null,
                     "protocol_if": null,
                     "repeater_sub": null,
@@ -5119,7 +4853,6 @@
                             }
                         ]
                     },
-                    "flag_if": null,
                     "critical_if": null,
                     "protocol_if": null,
                     "repeater_sub": null,
@@ -5181,10 +4914,6 @@
                             }
                         ]
                     },
-                    "flag_if": [
-                        "In of nabij smalle doorgangen",
-                        "In hoeken of doodlopende gedeelten"
-                    ],
                     "critical_if": null,
                     "protocol_if": null,
                     "repeater_sub": null,
@@ -5247,7 +4976,6 @@
                             }
                         ]
                     },
-                    "flag_if": null,
                     "critical_if": null,
                     "protocol_if": null,
                     "repeater_sub": null,
@@ -5309,10 +5037,6 @@
                             }
                         ]
                     },
-                    "flag_if": [
-                        "Regelmatig niet",
-                        "Zelden"
-                    ],
                     "critical_if": null,
                     "protocol_if": null,
                     "repeater_sub": null,
@@ -5347,9 +5071,6 @@
                     "answer_aliases": null,
                     "submission_blocks": null,
                     "show_if": null,
-                    "flag_if": [
-                        "Zelden of nooit"
-                    ],
                     "critical_if": null,
                     "protocol_if": null,
                     "repeater_sub": null,
@@ -5410,10 +5131,6 @@
                             }
                         ]
                     },
-                    "flag_if": [
-                        "Af en toe",
-                        "Regelmatig"
-                    ],
                     "critical_if": null,
                     "protocol_if": null,
                     "repeater_sub": null,
@@ -5475,11 +5192,6 @@
                             }
                         ]
                     },
-                    "flag_if": [
-                        "Eén in- en uitgang",
-                        "Vanuit de schuilplaats is het overzicht beperkt",
-                        "Andere paarden kunnen de doorgang blokkeren"
-                    ],
                     "critical_if": null,
                     "protocol_if": null,
                     "repeater_sub": null,
@@ -5508,7 +5220,6 @@
                     "answer_aliases": null,
                     "submission_blocks": null,
                     "show_if": null,
-                    "flag_if": null,
                     "critical_if": null,
                     "protocol_if": null,
                     "repeater_sub": null,
@@ -5555,7 +5266,6 @@
                     "link": null,
                     "options": null,
                     "show_if": null,
-                    "flag_if": null,
                     "critical_if": null,
                     "protocol_if": null,
                     "repeater_sub": null,
@@ -5587,7 +5297,6 @@
                     "link": null,
                     "options": null,
                     "show_if": null,
-                    "flag_if": null,
                     "critical_if": null,
                     "protocol_if": null,
                     "repeater_sub": null,
@@ -5618,7 +5327,6 @@
                     "link": null,
                     "options": null,
                     "show_if": null,
-                    "flag_if": null,
                     "critical_if": null,
                     "protocol_if": null,
                     "repeater_sub": null,
@@ -5662,7 +5370,6 @@
                     "link": null,
                     "options": null,
                     "show_if": null,
-                    "flag_if": null,
                     "critical_if": null,
                     "protocol_if": null,
                     "repeater_sub": null,
@@ -5706,7 +5413,6 @@
                     "link": null,
                     "options": null,
                     "show_if": null,
-                    "flag_if": null,
                     "critical_if": null,
                     "protocol_if": null,
                     "repeater_sub": null,
@@ -5750,7 +5456,6 @@
                     "link": null,
                     "options": null,
                     "show_if": null,
-                    "flag_if": null,
                     "critical_if": null,
                     "protocol_if": null,
                     "repeater_sub": null,
@@ -5794,7 +5499,6 @@
                     "link": null,
                     "options": null,
                     "show_if": null,
-                    "flag_if": null,
                     "critical_if": null,
                     "protocol_if": null,
                     "repeater_sub": null,
@@ -5842,7 +5546,6 @@
                     "link": null,
                     "options": null,
                     "show_if": null,
-                    "flag_if": null,
                     "critical_if": null,
                     "protocol_if": null,
                     "repeater_sub": null,
@@ -5876,7 +5579,6 @@
                     "link": null,
                     "options": null,
                     "show_if": null,
-                    "flag_if": null,
                     "critical_if": null,
                     "protocol_if": null,
                     "repeater_sub": null,
@@ -5912,7 +5614,6 @@
                     "link": null,
                     "options": null,
                     "show_if": null,
-                    "flag_if": null,
                     "critical_if": null,
                     "protocol_if": null,
                     "repeater_sub": null,
@@ -5942,7 +5643,6 @@
                     "link": null,
                     "options": null,
                     "show_if": null,
-                    "flag_if": null,
                     "critical_if": null,
                     "protocol_if": null,
                     "repeater_sub": null,
@@ -5972,7 +5672,6 @@
                     "link": null,
                     "options": null,
                     "show_if": null,
-                    "flag_if": null,
                     "critical_if": null,
                     "protocol_if": null,
                     "repeater_sub": null,
@@ -6006,7 +5705,6 @@
                     "link": null,
                     "options": null,
                     "show_if": null,
-                    "flag_if": null,
                     "critical_if": null,
                     "protocol_if": null,
                     "repeater_sub": null,
@@ -6042,7 +5740,6 @@
                     "link": null,
                     "options": null,
                     "show_if": null,
-                    "flag_if": null,
                     "critical_if": null,
                     "protocol_if": null,
                     "repeater_sub": null,
@@ -6094,7 +5791,6 @@
                     "link": null,
                     "options": null,
                     "show_if": null,
-                    "flag_if": null,
                     "critical_if": null,
                     "protocol_if": null,
                     "repeater_sub": null,
@@ -6131,7 +5827,6 @@
                     "link": null,
                     "options": null,
                     "show_if": null,
-                    "flag_if": null,
                     "critical_if": null,
                     "protocol_if": null,
                     "repeater_sub": null,
@@ -6163,7 +5858,6 @@
                     "link": null,
                     "options": null,
                     "show_if": null,
-                    "flag_if": null,
                     "critical_if": null,
                     "protocol_if": null,
                     "repeater_sub": null,
@@ -6380,7 +6074,6 @@
                         "Geen van bovenstaande"
                     ],
                     "show_if": null,
-                    "flag_if": "any",
                     "critical_if": [
                         "Koorts / verhoging",
                         "Koliek(achtige) klachten",
@@ -6416,7 +6109,6 @@
                     "show_if": {
                         "acuut": "any-checked"
                     },
-                    "flag_if": null,
                     "critical_if": null,
                     "protocol_if": null,
                     "repeater_sub": null,
@@ -6443,7 +6135,6 @@
                     "link": null,
                     "options": null,
                     "show_if": null,
-                    "flag_if": null,
                     "critical_if": null,
                     "protocol_if": null,
                     "repeater_sub": null,
@@ -6470,7 +6161,6 @@
                     "link": null,
                     "options": null,
                     "show_if": null,
-                    "flag_if": null,
                     "critical_if": null,
                     "protocol_if": null,
                     "repeater_sub": null,
@@ -6503,7 +6193,6 @@
                     "show_if": {
                         "bloedonderzoek-gedaan": "Ja"
                     },
-                    "flag_if": null,
                     "critical_if": null,
                     "protocol_if": null,
                     "repeater_sub": null,
@@ -6533,7 +6222,6 @@
                         "Nee"
                     ],
                     "show_if": null,
-                    "flag_if": null,
                     "critical_if": null,
                     "protocol_if": null,
                     "repeater_sub": null,
@@ -6560,7 +6248,6 @@
                     "link": null,
                     "options": null,
                     "show_if": null,
-                    "flag_if": "non-empty",
                     "critical_if": null,
                     "protocol_if": null,
                     "repeater_sub": null,
@@ -6587,7 +6274,6 @@
                     "link": null,
                     "options": null,
                     "show_if": null,
-                    "flag_if": null,
                     "critical_if": null,
                     "protocol_if": null,
                     "repeater_sub": null,
@@ -6614,7 +6300,6 @@
                     "link": null,
                     "options": null,
                     "show_if": null,
-                    "flag_if": null,
                     "critical_if": null,
                     "protocol_if": null,
                     "repeater_sub": null,
@@ -6641,7 +6326,6 @@
                     "link": null,
                     "options": null,
                     "show_if": null,
-                    "flag_if": null,
                     "critical_if": null,
                     "protocol_if": null,
                     "repeater_sub": null,
@@ -6676,7 +6360,6 @@
                         "Anders, namelijk"
                     ],
                     "show_if": null,
-                    "flag_if": null,
                     "critical_if": null,
                     "protocol_if": null,
                     "repeater_sub": null,
@@ -6705,7 +6388,6 @@
                     "show_if": {
                         "klacht-frequentie": "Anders, namelijk"
                     },
-                    "flag_if": null,
                     "critical_if": null,
                     "protocol_if": null,
                     "repeater_sub": null,
@@ -6736,7 +6418,6 @@
                         "Weet ik niet"
                     ],
                     "show_if": null,
-                    "flag_if": null,
                     "critical_if": null,
                     "protocol_if": null,
                     "repeater_sub": null,
@@ -6765,7 +6446,6 @@
                     "show_if": {
                         "klacht-gelijktijdig": "Ja"
                     },
-                    "flag_if": null,
                     "critical_if": null,
                     "protocol_if": null,
                     "repeater_sub": null,
@@ -6792,7 +6472,6 @@
                     "link": null,
                     "options": null,
                     "show_if": null,
-                    "flag_if": null,
                     "critical_if": null,
                     "protocol_if": null,
                     "repeater_sub": null,
@@ -6822,7 +6501,6 @@
                         "Nee"
                     ],
                     "show_if": null,
-                    "flag_if": null,
                     "critical_if": null,
                     "protocol_if": null,
                     "repeater_sub": null,
@@ -6851,7 +6529,6 @@
                     "show_if": {
                         "klacht-onderzocht": "Ja"
                     },
-                    "flag_if": null,
                     "critical_if": null,
                     "protocol_if": null,
                     "repeater_sub": null,
@@ -6884,7 +6561,6 @@
                         "Weet ik niet"
                     ],
                     "show_if": null,
-                    "flag_if": null,
                     "critical_if": null,
                     "protocol_if": null,
                     "repeater_sub": null,
@@ -6911,7 +6587,6 @@
                     "link": null,
                     "options": null,
                     "show_if": null,
-                    "flag_if": null,
                     "critical_if": null,
                     "protocol_if": null,
                     "repeater_sub": null,
@@ -6942,7 +6617,6 @@
                         "Weet ik niet"
                     ],
                     "show_if": null,
-                    "flag_if": null,
                     "critical_if": null,
                     "protocol_if": null,
                     "repeater_sub": null,
@@ -6971,7 +6645,6 @@
                     "show_if": {
                         "klacht-patronen": "Ja"
                     },
-                    "flag_if": null,
                     "critical_if": null,
                     "protocol_if": null,
                     "repeater_sub": null,
@@ -7002,7 +6675,6 @@
                         "Weet ik niet"
                     ],
                     "show_if": null,
-                    "flag_if": null,
                     "critical_if": null,
                     "protocol_if": null,
                     "repeater_sub": null,
@@ -7031,7 +6703,6 @@
                     "show_if": {
                         "ontstaan-verandering": "Ja"
                     },
-                    "flag_if": null,
                     "critical_if": null,
                     "protocol_if": null,
                     "repeater_sub": null,
@@ -7058,7 +6729,6 @@
                     "link": null,
                     "options": null,
                     "show_if": null,
-                    "flag_if": "non-empty",
                     "critical_if": null,
                     "protocol_if": null,
                     "repeater_sub": null,
@@ -7085,7 +6755,6 @@
                     "link": null,
                     "options": null,
                     "show_if": null,
-                    "flag_if": null,
                     "critical_if": null,
                     "protocol_if": null,
                     "repeater_sub": null,
@@ -7122,7 +6791,6 @@
                         "Pees- of gewrichtsklachten"
                     ],
                     "show_if": null,
-                    "flag_if": null,
                     "critical_if": null,
                     "protocol_if": null,
                     "repeater_sub": null,
@@ -7149,7 +6817,6 @@
                     "link": null,
                     "options": null,
                     "show_if": null,
-                    "flag_if": null,
                     "critical_if": null,
                     "protocol_if": null,
                     "repeater_sub": null,
@@ -7202,7 +6869,6 @@
                             "Ja, vastgesteld door dierenarts/onderzoek"
                         ]
                     },
-                    "flag_if": null,
                     "critical_if": null,
                     "protocol_if": null,
                     "repeater_sub": null,
@@ -7236,7 +6902,6 @@
                         ],
                         "ems-diagnose-basis": "Anders, namelijk"
                     },
-                    "flag_if": null,
                     "critical_if": null,
                     "protocol_if": null,
                     "repeater_sub": null,
@@ -7268,12 +6933,6 @@
                         "Weet ik niet"
                     ],
                     "show_if": null,
-                    "flag_if": [
-                        "aangetoond door dierenarts",
-                        "vermoeden van mij",
-                        "Vastgesteld door dierenarts/onderzoek",
-                        "Ik vermoed dit"
-                    ],
                     "critical_if": null,
                     "protocol_if": null,
                     "repeater_sub": null,
@@ -7306,7 +6965,6 @@
                         ],
                         "ems-vermoeden-redenen": "Anders, namelijk"
                     },
-                    "flag_if": null,
                     "critical_if": null,
                     "protocol_if": null,
                     "repeater_sub": null,
@@ -7345,7 +7003,6 @@
                             "Niet vastgesteld, maar ik vermoed dit zelf"
                         ]
                     },
-                    "flag_if": null,
                     "critical_if": null,
                     "protocol_if": null,
                     "repeater_sub": null,
@@ -7377,7 +7034,6 @@
                             "Niet vastgesteld, maar ik vermoed dit zelf"
                         ]
                     },
-                    "flag_if": null,
                     "critical_if": null,
                     "protocol_if": null,
                     "repeater_sub": null,
@@ -7418,10 +7074,6 @@
                         "nee"
                     ],
                     "show_if": null,
-                    "flag_if": [
-                        "ja, regelmatig",
-                        "soms"
-                    ],
                     "critical_if": null,
                     "protocol_if": null,
                     "repeater_sub": null,
@@ -7453,11 +7105,6 @@
                         "Nee, voor zover bekend niet"
                     ],
                     "show_if": null,
-                    "flag_if": [
-                        "Ja, mijn paard is momenteel hoefbevangen",
-                        "Ja, mijn paard is in het verleden hoefbevangen geweest",
-                        "Mijn paard heeft een verhoogd risico op hoefbevangenheid"
-                    ],
                     "critical_if": [
                         "Ja, mijn paard is momenteel hoefbevangen"
                     ],
@@ -7502,7 +7149,6 @@
                             "Weet ik niet"
                         ]
                     },
-                    "flag_if": null,
                     "critical_if": null,
                     "protocol_if": null,
                     "repeater_sub": null,
@@ -7536,7 +7182,6 @@
                     "show_if": {
                         "hoefbevangenheid": "Ja, mijn paard is in het verleden hoefbevangen geweest"
                     },
-                    "flag_if": null,
                     "critical_if": null,
                     "protocol_if": null,
                     "repeater_sub": null,
@@ -7568,7 +7213,6 @@
                     "show_if": {
                         "_laminitis_recovery_required": "Ja"
                     },
-                    "flag_if": null,
                     "critical_if": null,
                     "protocol_if": null,
                     "repeater_sub": null,
@@ -7597,7 +7241,6 @@
                     "show_if": {
                         "hoefbevangenheid": "Ja, mijn paard is momenteel hoefbevangen"
                     },
-                    "flag_if": null,
                     "critical_if": null,
                     "protocol_if": null,
                     "repeater_sub": null,
@@ -7641,13 +7284,6 @@
                             "risico / vermoeden"
                         ]
                     },
-                    "flag_if": [
-                        "Kanteling / rotatie van het hoefbeen",
-                        "Zinking van het hoefbeen",
-                        "Verbreding van de witte lijn",
-                        "Verlies van zooldikte",
-                        "Misvormde hoefcapsule"
-                    ],
                     "critical_if": null,
                     "protocol_if": null,
                     "repeater_sub": null,
@@ -7679,7 +7315,6 @@
                     "show_if": {
                         "hoefbevangenheid": "Ja, mijn paard is momenteel hoefbevangen"
                     },
-                    "flag_if": null,
                     "critical_if": null,
                     "protocol_if": null,
                     "repeater_sub": null,
@@ -7712,7 +7347,6 @@
                             "risico / vermoeden"
                         ]
                     },
-                    "flag_if": null,
                     "critical_if": null,
                     "protocol_if": null,
                     "repeater_sub": null,
@@ -7757,7 +7391,6 @@
                             "risico / vermoeden"
                         ]
                     },
-                    "flag_if": "any",
                     "critical_if": null,
                     "protocol_if": null,
                     "repeater_sub": null,
@@ -7786,7 +7419,6 @@
                     "show_if": {
                         "hoefbevangenheid-gevolgen": "Anders, namelijk"
                     },
-                    "flag_if": null,
                     "critical_if": null,
                     "protocol_if": null,
                     "repeater_sub": null,
@@ -7815,7 +7447,6 @@
                     "show_if": {
                         "_laminitis_recovery_required": "Ja"
                     },
-                    "flag_if": null,
                     "critical_if": null,
                     "protocol_if": null,
                     "repeater_sub": null,
@@ -7848,7 +7479,6 @@
                     "show_if": {
                         "hoefbevangenheid": "Ja, mijn paard is in het verleden hoefbevangen geweest"
                     },
-                    "flag_if": null,
                     "critical_if": null,
                     "protocol_if": null,
                     "repeater_sub": null,
@@ -7899,7 +7529,6 @@
                     "show_if": {
                         "hoefbevangenheid": "Ja, mijn paard is in het verleden hoefbevangen geweest"
                     },
-                    "flag_if": null,
                     "critical_if": null,
                     "protocol_if": null,
                     "repeater_sub": null,
@@ -7928,7 +7557,6 @@
                     "show_if": {
                         "hoefbevangenheid": "Ja, mijn paard is in het verleden hoefbevangen geweest"
                     },
-                    "flag_if": null,
                     "critical_if": null,
                     "protocol_if": null,
                     "repeater_sub": null,
@@ -7962,7 +7590,6 @@
                         "hoefbevangenheid": "Ja, mijn paard is in het verleden hoefbevangen geweest",
                         "hoefbevangenheid-hersteld": "Nee"
                     },
-                    "flag_if": null,
                     "critical_if": null,
                     "protocol_if": null,
                     "repeater_sub": null,
@@ -7991,7 +7618,6 @@
                     "show_if": {
                         "hoefbevangenheid": "Mijn paard heeft een verhoogd risico op hoefbevangenheid"
                     },
-                    "flag_if": null,
                     "critical_if": null,
                     "protocol_if": null,
                     "repeater_sub": null,
@@ -8028,7 +7654,6 @@
                             "risico / vermoeden"
                         ]
                     },
-                    "flag_if": null,
                     "critical_if": null,
                     "protocol_if": null,
                     "repeater_sub": null,
@@ -8060,7 +7685,6 @@
                     "show_if": {
                         "_laminitis_recovery_required": "Ja"
                     },
-                    "flag_if": null,
                     "critical_if": null,
                     "protocol_if": null,
                     "repeater_sub": null,
@@ -8089,7 +7713,6 @@
                     "show_if": {
                         "hoefbevangenheid": "Ja, mijn paard is momenteel hoefbevangen"
                     },
-                    "flag_if": null,
                     "critical_if": null,
                     "protocol_if": null,
                     "repeater_sub": null,
@@ -8121,7 +7744,6 @@
                         "Anders, namelijk"
                     ],
                     "show_if": null,
-                    "flag_if": null,
                     "critical_if": null,
                     "protocol_if": null,
                     "repeater_sub": null,
@@ -8150,7 +7772,6 @@
                     "show_if": {
                         "hoefverzorger-type": "Anders, namelijk"
                     },
-                    "flag_if": null,
                     "critical_if": null,
                     "protocol_if": null,
                     "repeater_sub": null,
@@ -8179,7 +7800,6 @@
                     "show_if": {
                         "hoeven-bijz": "anders"
                     },
-                    "flag_if": null,
                     "critical_if": null,
                     "protocol_if": null,
                     "repeater_sub": null,
@@ -8216,15 +7836,6 @@
                         "anders"
                     ],
                     "show_if": null,
-                    "flag_if": [
-                        "afwijkende hoefstand",
-                        "white line disease",
-                        "rotstraal",
-                        "hoefkanker",
-                        "regelmatig hoefzweren",
-                        "hoefbevangenheid",
-                        "NPA"
-                    ],
                     "critical_if": null,
                     "protocol_if": null,
                     "repeater_sub": null,
@@ -8256,7 +7867,6 @@
                         "nee"
                     ],
                     "show_if": null,
-                    "flag_if": null,
                     "critical_if": null,
                     "protocol_if": null,
                     "repeater_sub": null,
@@ -8286,7 +7896,6 @@
                         "ijzers": "nee",
                         "ijzers-afgelopen-twee-jaar": "Ja"
                     },
-                    "flag_if": null,
                     "critical_if": null,
                     "protocol_if": null,
                     "repeater_sub": null,
@@ -8323,7 +7932,6 @@
                     "show_if": {
                         "ijzers": "nee"
                     },
-                    "flag_if": null,
                     "critical_if": null,
                     "protocol_if": null,
                     "repeater_sub": null,
@@ -8357,7 +7965,6 @@
                         ],
                         "ir-uitslag-beschikbaar": "Ja"
                     },
-                    "flag_if": null,
                     "critical_if": null,
                     "protocol_if": null,
                     "repeater_sub": null,
@@ -8394,7 +8001,6 @@
                         "ir-onderzoeken": "any-checked",
                         "ir-voeding-vooraf": "Beperkte hoeveelheid hooi gegeten"
                     },
-                    "flag_if": null,
                     "critical_if": null,
                     "protocol_if": null,
                     "repeater_sub": null,
@@ -8439,7 +8045,6 @@
                             "Helemaal niets gegeten (volledig gevast)"
                         ]
                     },
-                    "flag_if": null,
                     "critical_if": null,
                     "protocol_if": null,
                     "repeater_sub": null,
@@ -8472,7 +8077,6 @@
                             "aangetoond door dierenarts"
                         ]
                     },
-                    "flag_if": null,
                     "critical_if": null,
                     "protocol_if": null,
                     "repeater_sub": null,
@@ -8505,7 +8109,6 @@
                             "aangetoond door dierenarts"
                         ]
                     },
-                    "flag_if": null,
                     "critical_if": null,
                     "protocol_if": null,
                     "repeater_sub": null,
@@ -8552,7 +8155,6 @@
                             "aangetoond door dierenarts"
                         ]
                     },
-                    "flag_if": null,
                     "critical_if": null,
                     "protocol_if": null,
                     "repeater_sub": null,
@@ -8586,7 +8188,6 @@
                         ],
                         "ir-onderzoeken": "Ander onderzoek, namelijk..."
                     },
-                    "flag_if": null,
                     "critical_if": null,
                     "protocol_if": null,
                     "repeater_sub": null,
@@ -8618,12 +8219,6 @@
                         "Weet ik niet"
                     ],
                     "show_if": null,
-                    "flag_if": [
-                        "aangetoond door dierenarts",
-                        "vermoeden van mij",
-                        "Vastgesteld door dierenarts/onderzoek",
-                        "Ik vermoed dit"
-                    ],
                     "critical_if": null,
                     "protocol_if": null,
                     "repeater_sub": null,
@@ -8659,7 +8254,6 @@
                             "aangetoond door dierenarts"
                         ]
                     },
-                    "flag_if": null,
                     "critical_if": null,
                     "protocol_if": null,
                     "repeater_sub": null,
@@ -8700,7 +8294,6 @@
                         "ir-onderzoeken": "any-checked",
                         "ir-voeding-vooraf": "Helemaal niets gegeten (volledig gevast)"
                     },
-                    "flag_if": null,
                     "critical_if": null,
                     "protocol_if": null,
                     "repeater_sub": null,
@@ -8732,7 +8325,6 @@
                             "Niet vastgesteld, maar ik vermoed dit zelf"
                         ]
                     },
-                    "flag_if": null,
                     "critical_if": null,
                     "protocol_if": null,
                     "repeater_sub": null,
@@ -8776,7 +8368,6 @@
                         ],
                         "ir-onderzoeken": "any-checked"
                     },
-                    "flag_if": null,
                     "critical_if": null,
                     "protocol_if": null,
                     "repeater_sub": null,
@@ -8817,7 +8408,6 @@
                         ],
                         "ir-onderzoeken": "any-checked"
                     },
-                    "flag_if": null,
                     "critical_if": null,
                     "protocol_if": null,
                     "repeater_sub": null,
@@ -8852,7 +8442,6 @@
                         "ir-onderzoeken": "any-checked",
                         "ir-voeding-vooraf": "Anders, namelijk..."
                     },
-                    "flag_if": null,
                     "critical_if": null,
                     "protocol_if": null,
                     "repeater_sub": null,
@@ -8886,7 +8475,6 @@
                         ],
                         "kpu-uitslag-beschikbaar": "Ja"
                     },
-                    "flag_if": null,
                     "critical_if": null,
                     "protocol_if": null,
                     "repeater_sub": null,
@@ -8919,7 +8507,6 @@
                             "Ja, positieve uitslag bij urineonderzoek"
                         ]
                     },
-                    "flag_if": null,
                     "critical_if": null,
                     "protocol_if": null,
                     "repeater_sub": null,
@@ -8956,7 +8543,6 @@
                             "Ja, positieve uitslag bij urineonderzoek"
                         ]
                     },
-                    "flag_if": null,
                     "critical_if": null,
                     "protocol_if": null,
                     "repeater_sub": null,
@@ -8988,12 +8574,6 @@
                         "Weet ik niet"
                     ],
                     "show_if": null,
-                    "flag_if": [
-                        "aangetoond uit urine onderzoek",
-                        "vermoeden van mij",
-                        "Aangetoond met urineonderzoek",
-                        "Ik vermoed dit"
-                    ],
                     "critical_if": null,
                     "protocol_if": null,
                     "repeater_sub": null,
@@ -9029,7 +8609,6 @@
                             "Ja, positieve uitslag bij urineonderzoek"
                         ]
                     },
-                    "flag_if": null,
                     "critical_if": null,
                     "protocol_if": null,
                     "repeater_sub": null,
@@ -9061,7 +8640,6 @@
                             "Niet vastgesteld, maar ik vermoed dit zelf"
                         ]
                     },
-                    "flag_if": null,
                     "critical_if": null,
                     "protocol_if": null,
                     "repeater_sub": null,
@@ -9100,7 +8678,6 @@
                     "show_if": {
                         "maag-medicatie": "ja"
                     },
-                    "flag_if": null,
                     "critical_if": null,
                     "protocol_if": null,
                     "repeater_sub": null,
@@ -9129,7 +8706,6 @@
                     "show_if": {
                         "maag-medicatie": "ja"
                     },
-                    "flag_if": null,
                     "critical_if": null,
                     "protocol_if": null,
                     "repeater_sub": null,
@@ -9158,7 +8734,6 @@
                     "show_if": {
                         "maag-medicatie": "ja"
                     },
-                    "flag_if": null,
                     "critical_if": null,
                     "protocol_if": null,
                     "repeater_sub": null,
@@ -9187,7 +8762,6 @@
                     "show_if": {
                         "maag-medicatie": "ja"
                     },
-                    "flag_if": null,
                     "critical_if": null,
                     "protocol_if": null,
                     "repeater_sub": null,
@@ -9220,7 +8794,6 @@
                     "show_if": {
                         "maag-medicatie": "ja"
                     },
-                    "flag_if": null,
                     "critical_if": null,
                     "protocol_if": null,
                     "repeater_sub": null,
@@ -9250,9 +8823,6 @@
                         "nee"
                     ],
                     "show_if": null,
-                    "flag_if": [
-                        "ja"
-                    ],
                     "critical_if": null,
                     "protocol_if": null,
                     "repeater_sub": null,
@@ -9295,7 +8865,6 @@
                         "Geen duidelijke klachten, maar ik vermoed toch maagongemak"
                     ],
                     "show_if": null,
-                    "flag_if": "any",
                     "critical_if": null,
                     "protocol_if": null,
                     "repeater_sub": null,
@@ -9325,9 +8894,6 @@
                         "Ja"
                     ],
                     "show_if": null,
-                    "flag_if": [
-                        "Ja"
-                    ],
                     "critical_if": null,
                     "protocol_if": null,
                     "repeater_sub": null,
@@ -9356,7 +8922,6 @@
                     "show_if": {
                         "medicatie-nu": "Ja"
                     },
-                    "flag_if": null,
                     "critical_if": null,
                     "protocol_if": null,
                     "repeater_sub": [
@@ -9416,7 +8981,6 @@
                         ],
                         "medicatie-ooit-welke": "Anders, namelijk"
                     },
-                    "flag_if": null,
                     "critical_if": null,
                     "protocol_if": null,
                     "repeater_sub": null,
@@ -9449,7 +9013,6 @@
                         ],
                         "medicatie-ooit-welke": "any-checked"
                     },
-                    "flag_if": null,
                     "critical_if": null,
                     "protocol_if": null,
                     "repeater_sub": [
@@ -9530,7 +9093,6 @@
                             "Ja, meerdere keren of langdurig"
                         ]
                     },
-                    "flag_if": null,
                     "critical_if": null,
                     "protocol_if": null,
                     "repeater_sub": null,
@@ -9562,10 +9124,6 @@
                         "Weet ik niet"
                     ],
                     "show_if": null,
-                    "flag_if": [
-                        "Ja, incidenteel",
-                        "Ja, meerdere keren of langdurig"
-                    ],
                     "critical_if": null,
                     "protocol_if": null,
                     "repeater_sub": null,
@@ -9598,7 +9156,6 @@
                         "Weet ik niet"
                     ],
                     "show_if": null,
-                    "flag_if": null,
                     "critical_if": null,
                     "protocol_if": null,
                     "repeater_sub": null,
@@ -9631,7 +9188,6 @@
                             "Ja, 1 keer"
                         ]
                     },
-                    "flag_if": null,
                     "critical_if": null,
                     "protocol_if": null,
                     "repeater_sub": null,
@@ -9668,7 +9224,6 @@
                             "Ja, 1 keer"
                         ]
                     },
-                    "flag_if": null,
                     "critical_if": null,
                     "protocol_if": null,
                     "repeater_sub": null,
@@ -9701,7 +9256,6 @@
                             "Een combinatie van beide"
                         ]
                     },
-                    "flag_if": null,
                     "critical_if": null,
                     "protocol_if": null,
                     "repeater_sub": null,
@@ -9738,7 +9292,6 @@
                         "Weet ik niet"
                     ],
                     "show_if": null,
-                    "flag_if": null,
                     "critical_if": null,
                     "protocol_if": null,
                     "repeater_sub": null,
@@ -9775,7 +9328,6 @@
                             "Een combinatie van beide"
                         ]
                     },
-                    "flag_if": null,
                     "critical_if": null,
                     "protocol_if": null,
                     "repeater_sub": null,
@@ -9816,13 +9368,6 @@
                             "Een combinatie van beide"
                         ]
                     },
-                    "flag_if": [
-                        "Ja, enkele dagen wat sloom of minder fit",
-                        "Ja, verandering in mest of spijsvertering",
-                        "Ja, buikgevoeligheid / darmklachten",
-                        "Ja, verandering in gedrag of gevoeligheid",
-                        "Ja, anders, namelijk"
-                    ],
                     "critical_if": null,
                     "protocol_if": null,
                     "repeater_sub": null,
@@ -9856,7 +9401,6 @@
                         ],
                         "ontworming-reactie": "Ja, anders, namelijk"
                     },
-                    "flag_if": null,
                     "critical_if": null,
                     "protocol_if": null,
                     "repeater_sub": null,
@@ -9892,7 +9436,6 @@
                             "Een combinatie van beide"
                         ]
                     },
-                    "flag_if": null,
                     "critical_if": null,
                     "protocol_if": null,
                     "repeater_sub": null,
@@ -9926,7 +9469,6 @@
                         ],
                         "ontworming-volgende": "ja"
                     },
-                    "flag_if": null,
                     "critical_if": null,
                     "protocol_if": null,
                     "repeater_sub": null,
@@ -9960,7 +9502,6 @@
                         ],
                         "ontworming-volgende": "ja"
                     },
-                    "flag_if": null,
                     "critical_if": null,
                     "protocol_if": null,
                     "repeater_sub": null,
@@ -9995,9 +9536,6 @@
                         "Weet ik niet"
                     ],
                     "show_if": null,
-                    "flag_if": [
-                        "Ja"
-                    ],
                     "critical_if": null,
                     "protocol_if": null,
                     "repeater_sub": null,
@@ -10034,7 +9572,6 @@
                     "show_if": {
                         "probiotica-geschiedenis": "Ja"
                     },
-                    "flag_if": null,
                     "critical_if": null,
                     "protocol_if": null,
                     "repeater_sub": null,
@@ -10063,7 +9600,6 @@
                     "show_if": {
                         "probiotica-geschiedenis": "Ja"
                     },
-                    "flag_if": null,
                     "critical_if": null,
                     "protocol_if": null,
                     "repeater_sub": null,
@@ -10098,7 +9634,6 @@
                     "show_if": {
                         "probiotica-geschiedenis": "Ja"
                     },
-                    "flag_if": null,
                     "critical_if": null,
                     "protocol_if": null,
                     "repeater_sub": null,
@@ -10127,7 +9662,6 @@
                     "show_if": {
                         "probiotica-geschiedenis": "Ja"
                     },
-                    "flag_if": null,
                     "critical_if": null,
                     "protocol_if": null,
                     "repeater_sub": null,
@@ -10154,7 +9688,6 @@
                     "link": null,
                     "options": null,
                     "show_if": null,
-                    "flag_if": null,
                     "critical_if": null,
                     "protocol_if": null,
                     "repeater_sub": null,
@@ -10181,7 +9714,6 @@
                     "link": null,
                     "options": null,
                     "show_if": null,
-                    "flag_if": null,
                     "critical_if": null,
                     "protocol_if": null,
                     "repeater_sub": null,
@@ -10208,7 +9740,6 @@
                     "link": null,
                     "options": null,
                     "show_if": null,
-                    "flag_if": null,
                     "critical_if": null,
                     "protocol_if": null,
                     "repeater_sub": null,
@@ -10235,7 +9766,6 @@
                     "link": null,
                     "options": null,
                     "show_if": null,
-                    "flag_if": null,
                     "critical_if": null,
                     "protocol_if": null,
                     "repeater_sub": null,
@@ -10262,7 +9792,6 @@
                     "link": null,
                     "options": null,
                     "show_if": null,
-                    "flag_if": null,
                     "critical_if": null,
                     "protocol_if": null,
                     "repeater_sub": null,
@@ -10289,7 +9818,6 @@
                     "link": null,
                     "options": null,
                     "show_if": null,
-                    "flag_if": null,
                     "critical_if": null,
                     "protocol_if": null,
                     "repeater_sub": null,
@@ -10316,7 +9844,6 @@
                     "link": null,
                     "options": null,
                     "show_if": null,
-                    "flag_if": null,
                     "critical_if": null,
                     "protocol_if": null,
                     "repeater_sub": null,
@@ -10343,7 +9870,6 @@
                     "link": null,
                     "options": null,
                     "show_if": null,
-                    "flag_if": null,
                     "critical_if": null,
                     "protocol_if": null,
                     "repeater_sub": null,
@@ -10372,7 +9898,6 @@
                     "show_if": {
                         "tandarts-methode": "Anders, namelijk"
                     },
-                    "flag_if": null,
                     "critical_if": null,
                     "protocol_if": null,
                     "repeater_sub": null,
@@ -10399,7 +9924,6 @@
                     "link": null,
                     "options": null,
                     "show_if": null,
-                    "flag_if": "non-empty",
                     "critical_if": null,
                     "protocol_if": null,
                     "repeater_sub": null,
@@ -10432,10 +9956,6 @@
                         "Nog nooit / onbekend"
                     ],
                     "show_if": null,
-                    "flag_if": [
-                        "Minder vaak dan 1x per 2 jaar",
-                        "Nog nooit / onbekend"
-                    ],
                     "critical_if": null,
                     "protocol_if": null,
                     "repeater_sub": null,
@@ -10462,7 +9982,6 @@
                     "link": null,
                     "options": null,
                     "show_if": null,
-                    "flag_if": null,
                     "critical_if": null,
                     "protocol_if": null,
                     "repeater_sub": null,
@@ -10497,7 +10016,6 @@
                         "Anders, namelijk"
                     ],
                     "show_if": null,
-                    "flag_if": null,
                     "critical_if": null,
                     "protocol_if": null,
                     "repeater_sub": null,
@@ -10524,7 +10042,6 @@
                     "link": null,
                     "options": null,
                     "show_if": null,
-                    "flag_if": null,
                     "critical_if": null,
                     "protocol_if": null,
                     "repeater_sub": null,
@@ -10559,7 +10076,6 @@
                         "Weet ik niet"
                     ],
                     "show_if": null,
-                    "flag_if": null,
                     "critical_if": null,
                     "protocol_if": null,
                     "repeater_sub": null,
@@ -10586,7 +10102,6 @@
                     "link": null,
                     "options": null,
                     "show_if": null,
-                    "flag_if": null,
                     "critical_if": null,
                     "protocol_if": null,
                     "repeater_sub": null,
@@ -10625,13 +10140,6 @@
                         "Weet ik niet"
                     ],
                     "show_if": null,
-                    "flag_if": [
-                        "Ja, een bult/zwelling op de injectieplek",
-                        "Ja, enkele dagen wat sloom of minder fit",
-                        "Ja, pijnlijke/gevoelige injectieplek",
-                        "Ja, koorts/verhoging",
-                        "Ja, anders, namelijk"
-                    ],
                     "critical_if": null,
                     "protocol_if": null,
                     "repeater_sub": null,
@@ -10660,7 +10168,6 @@
                     "show_if": {
                         "vacc-reactie": "Ja, anders, namelijk"
                     },
-                    "flag_if": null,
                     "critical_if": null,
                     "protocol_if": null,
                     "repeater_sub": null,
@@ -10689,7 +10196,6 @@
                     "show_if": {
                         "vacc-gepland": "Ja"
                     },
-                    "flag_if": null,
                     "critical_if": null,
                     "protocol_if": null,
                     "repeater_sub": null,
@@ -10727,7 +10233,6 @@
                         "Anders, geef toelichting"
                     ],
                     "show_if": null,
-                    "flag_if": null,
                     "critical_if": null,
                     "protocol_if": null,
                     "repeater_sub": null,
@@ -10756,7 +10261,6 @@
                     "show_if": {
                         "vaccinaties": "Anders, geef toelichting"
                     },
-                    "flag_if": null,
                     "critical_if": null,
                     "protocol_if": null,
                     "repeater_sub": null,
@@ -10783,7 +10287,6 @@
                     "link": null,
                     "options": null,
                     "show_if": null,
-                    "flag_if": "non-empty",
                     "critical_if": null,
                     "protocol_if": null,
                     "repeater_sub": null,
@@ -10810,7 +10313,6 @@
                     "link": null,
                     "options": null,
                     "show_if": null,
-                    "flag_if": null,
                     "critical_if": null,
                     "protocol_if": null,
                     "repeater_sub": null,
@@ -10837,7 +10339,6 @@
                     "link": null,
                     "options": null,
                     "show_if": null,
-                    "flag_if": null,
                     "critical_if": null,
                     "protocol_if": null,
                     "repeater_sub": null,
@@ -10887,7 +10388,6 @@
                         "Meer dan 5 keer"
                     ],
                     "show_if": null,
-                    "flag_if": null,
                     "critical_if": null,
                     "protocol_if": null,
                     "repeater_sub": null,
@@ -10916,7 +10416,6 @@
                     "show_if": {
                         "eerdere-eigenaar": "Ja"
                     },
-                    "flag_if": null,
                     "critical_if": null,
                     "protocol_if": null,
                     "repeater_sub": null,
@@ -10952,13 +10451,6 @@
                         "obees"
                     ],
                     "show_if": null,
-                    "flag_if": [
-                        "ondergewicht",
-                        "dun",
-                        "iets te zwaar",
-                        "overgewicht",
-                        "obees"
-                    ],
                     "critical_if": null,
                     "protocol_if": null,
                     "repeater_sub": null,
@@ -10985,7 +10477,6 @@
                     "link": null,
                     "options": null,
                     "show_if": null,
-                    "flag_if": null,
                     "critical_if": null,
                     "protocol_if": null,
                     "repeater_sub": null,
@@ -11018,10 +10509,6 @@
                     "show_if": {
                         "geslacht": "merrie"
                     },
-                    "flag_if": [
-                        "drachtig",
-                        "lacterend"
-                    ],
                     "critical_if": [
                         "drachtig",
                         "lacterend"
@@ -11056,7 +10543,6 @@
                         "Onbekend"
                     ],
                     "show_if": null,
-                    "flag_if": null,
                     "critical_if": null,
                     "protocol_if": null,
                     "repeater_sub": null,
@@ -11085,7 +10571,6 @@
                     "show_if": {
                         "geslacht": "ruin"
                     },
-                    "flag_if": null,
                     "critical_if": null,
                     "protocol_if": null,
                     "repeater_sub": null,
@@ -11116,7 +10601,6 @@
                         "hengst"
                     ],
                     "show_if": null,
-                    "flag_if": null,
                     "critical_if": null,
                     "protocol_if": null,
                     "repeater_sub": null,
@@ -11143,7 +10627,6 @@
                     "link": null,
                     "options": null,
                     "show_if": null,
-                    "flag_if": null,
                     "critical_if": null,
                     "protocol_if": null,
                     "repeater_sub": null,
@@ -11175,7 +10658,6 @@
                         "rapport dierenarts"
                     ],
                     "show_if": null,
-                    "flag_if": null,
                     "critical_if": null,
                     "protocol_if": null,
                     "repeater_sub": null,
@@ -11208,7 +10690,6 @@
                             "rapport dierenarts"
                         ]
                     },
-                    "flag_if": null,
                     "critical_if": null,
                     "protocol_if": null,
                     "repeater_sub": null,
@@ -11239,7 +10720,6 @@
                     "link": null,
                     "options": null,
                     "show_if": null,
-                    "flag_if": null,
                     "critical_if": null,
                     "protocol_if": null,
                     "repeater_sub": null,
@@ -11266,7 +10746,6 @@
                     "link": null,
                     "options": null,
                     "show_if": null,
-                    "flag_if": null,
                     "critical_if": null,
                     "protocol_if": null,
                     "repeater_sub": null,
@@ -11299,7 +10778,6 @@
                     "link": null,
                     "options": null,
                     "show_if": null,
-                    "flag_if": null,
                     "critical_if": null,
                     "protocol_if": null,
                     "repeater_sub": null,
@@ -11326,7 +10804,6 @@
                     "link": null,
                     "options": null,
                     "show_if": null,
-                    "flag_if": null,
                     "critical_if": null,
                     "protocol_if": null,
                     "repeater_sub": null,
@@ -11353,7 +10830,6 @@
                     "link": null,
                     "options": null,
                     "show_if": null,
-                    "flag_if": null,
                     "critical_if": null,
                     "protocol_if": null,
                     "repeater_sub": null,
@@ -11380,7 +10856,6 @@
                     "link": null,
                     "options": null,
                     "show_if": null,
-                    "flag_if": null,
                     "critical_if": null,
                     "protocol_if": null,
                     "repeater_sub": null,
@@ -11411,7 +10886,6 @@
                     "link": null,
                     "options": null,
                     "show_if": null,
-                    "flag_if": null,
                     "critical_if": null,
                     "protocol_if": null,
                     "repeater_sub": null,
@@ -11441,7 +10915,6 @@
                         "gemeten"
                     ],
                     "show_if": null,
-                    "flag_if": null,
                     "critical_if": null,
                     "protocol_if": null,
                     "repeater_sub": null,
@@ -11485,7 +10958,6 @@
                             "Meer dan 5 keer"
                         ]
                     },
-                    "flag_if": null,
                     "critical_if": null,
                     "protocol_if": null,
                     "repeater_sub": null,
@@ -11514,7 +10986,6 @@
                     "show_if": {
                         "verhuizingen-redenen": "Anders, namelijk"
                     },
-                    "flag_if": null,
                     "critical_if": null,
                     "protocol_if": null,
                     "repeater_sub": null,
@@ -11559,7 +11030,6 @@
                         "ja"
                     ],
                     "show_if": null,
-                    "flag_if": null,
                     "critical_if": null,
                     "protocol_if": null,
                     "repeater_sub": null,
@@ -11589,7 +11059,6 @@
                         "nee"
                     ],
                     "show_if": null,
-                    "flag_if": null,
                     "critical_if": null,
                     "protocol_if": null,
                     "repeater_sub": null,
@@ -11616,7 +11085,6 @@
                     "link": null,
                     "options": null,
                     "show_if": null,
-                    "flag_if": null,
                     "critical_if": null,
                     "protocol_if": null,
                     "repeater_sub": null,
@@ -11664,7 +11132,6 @@
                         "Anders, namelijk"
                     ],
                     "show_if": null,
-                    "flag_if": null,
                     "critical_if": null,
                     "protocol_if": null,
                     "repeater_sub": null,
@@ -11693,7 +11160,6 @@
                     "show_if": {
                         "andere-diersoorten": "Anders, namelijk"
                     },
-                    "flag_if": null,
                     "critical_if": null,
                     "protocol_if": null,
                     "repeater_sub": null,
@@ -11725,7 +11191,6 @@
                         "Weet ik niet"
                     ],
                     "show_if": {"andere-diersoorten": "any-checked"},
-                    "flag_if": null,
                     "critical_if": null,
                     "protocol_if": null,
                     "repeater_sub": null,
@@ -11752,7 +11217,6 @@
                     "link": null,
                     "options": null,
                     "show_if": null,
-                    "flag_if": null,
                     "critical_if": null,
                     "protocol_if": null,
                     "repeater_sub": null,
@@ -11812,9 +11276,6 @@
                             }
                         ]
                     },
-                    "flag_if": [
-                        "Nee, weinig mogelijkheid om uit sociale druk te gaan"
-                    ],
                     "critical_if": null,
                     "protocol_if": null,
                     "repeater_sub": null,
@@ -11874,9 +11335,6 @@
                             }
                         ]
                     },
-                    "flag_if": [
-                        "Regelmatig sociale spanning / stress"
-                    ],
                     "critical_if": null,
                     "protocol_if": null,
                     "repeater_sub": null,
@@ -11916,9 +11374,6 @@
                         "Wisselende groepssamenstelling"
                     ],
                     "show_if": null,
-                    "flag_if": [
-                        "Individueel zonder zicht/neuscontact met andere paarden"
-                    ],
                     "critical_if": null,
                     "protocol_if": null,
                     "repeater_sub": null,
@@ -11951,7 +11406,6 @@
                         "Anders, namelijk"
                     ],
                     "show_if": null,
-                    "flag_if": null,
                     "critical_if": null,
                     "protocol_if": null,
                     "repeater_sub": null,
@@ -11980,7 +11434,6 @@
                     "show_if": {
                         "sociaal-maatjes": "Anders, namelijk"
                     },
-                    "flag_if": null,
                     "critical_if": null,
                     "protocol_if": null,
                     "repeater_sub": null,
@@ -12040,9 +11493,6 @@
                             }
                         ]
                     },
-                    "flag_if": [
-                        "…zelf wordt weggejaagd"
-                    ],
                     "critical_if": null,
                     "protocol_if": null,
                     "repeater_sub": null,
@@ -12079,7 +11529,6 @@
                         "Weet ik niet"
                     ],
                     "show_if": null,
-                    "flag_if": null,
                     "critical_if": null,
                     "protocol_if": null,
                     "repeater_sub": null,
@@ -12114,7 +11563,6 @@
                         "Anders, namelijk"
                     ],
                     "show_if": null,
-                    "flag_if": "any",
                     "critical_if": null,
                     "protocol_if": null,
                     "repeater_sub": null,
@@ -12143,7 +11591,6 @@
                     "show_if": {
                         "sociaal-recent": "Anders, namelijk"
                     },
-                    "flag_if": null,
                     "critical_if": null,
                     "protocol_if": null,
                     "repeater_sub": null,
@@ -12209,12 +11656,6 @@
                             }
                         ]
                     },
-                    "flag_if": [
-                        "Mijn paard wordt regelmatig weggejaagd / gepest",
-                        "Competitie rond voer",
-                        "Competitie rond water",
-                        "Competitie rond schuilplek / favoriete plekken"
-                    ],
                     "critical_if": null,
                     "protocol_if": null,
                     "repeater_sub": null,
@@ -12247,9 +11688,6 @@
                         "Anders, namelijk"
                     ],
                     "show_if": null,
-                    "flag_if": [
-                        "Veel wisselingen / onrustige samenstelling"
-                    ],
                     "critical_if": null,
                     "protocol_if": null,
                     "repeater_sub": null,
@@ -12278,7 +11716,6 @@
                     "show_if": {
                         "sociaal-stabiel": "Anders, namelijk"
                     },
-                    "flag_if": null,
                     "critical_if": null,
                     "protocol_if": null,
                     "repeater_sub": null,
@@ -12305,7 +11742,6 @@
                     "link": null,
                     "options": null,
                     "show_if": null,
-                    "flag_if": null,
                     "critical_if": null,
                     "protocol_if": null,
                     "repeater_sub": null,
@@ -12414,10 +11850,6 @@
                             }
                         ]
                     },
-                    "flag_if": [
-                        "Dagelijks",
-                        "Meerdere keren per dag"
-                    ],
                     "critical_if": null,
                     "protocol_if": null,
                     "repeater_sub": null,
@@ -12558,12 +11990,6 @@
                             }
                         ]
                     },
-                    "flag_if": [
-                        "Mijn paard wordt fysiek weggeduwd",
-                        "Mijn paard wordt achtervolgd",
-                        "Er wordt gebeten of geschopt",
-                        "Andere paarden blokkeren de doorgang"
-                    ],
                     "critical_if": null,
                     "protocol_if": null,
                     "repeater_sub": null,
@@ -12704,7 +12130,6 @@
                             }
                         ]
                     },
-                    "flag_if": null,
                     "critical_if": null,
                     "protocol_if": null,
                     "repeater_sub": null,
@@ -12847,12 +12272,6 @@
                             }
                         ]
                     },
-                    "flag_if": [
-                        "Stopt tijdelijk met eten of rusten",
-                        "Blijft op afstand wachten",
-                        "Wordt op een andere plek opnieuw weggejaagd",
-                        "Blijft zichtbaar alert op de andere paarden"
-                    ],
                     "critical_if": null,
                     "protocol_if": null,
                     "repeater_sub": null,
@@ -12993,7 +12412,6 @@
                             }
                         ]
                     },
-                    "flag_if": null,
                     "critical_if": null,
                     "protocol_if": null,
                     "repeater_sub": null,
@@ -13136,13 +12554,6 @@
                             }
                         ]
                     },
-                    "flag_if": [
-                        "Bij het eten",
-                        "Bij het drinken",
-                        "Bij schuilplaatsen",
-                        "Bij rust- of ligplaatsen",
-                        "In doorgangen of smalle gedeelten"
-                    ],
                     "critical_if": null,
                     "protocol_if": null,
                     "repeater_sub": null,
@@ -13283,7 +12694,6 @@
                             }
                         ]
                     },
-                    "flag_if": null,
                     "critical_if": null,
                     "protocol_if": null,
                     "repeater_sub": null,
@@ -13325,7 +12735,6 @@
                     "show_if": {
                         "ruwvoer-geanalyseerd": "Ja"
                     },
-                    "flag_if": null,
                     "critical_if": null,
                     "protocol_if": null,
                     "repeater_sub": null,
@@ -13354,7 +12763,6 @@
                     "show_if": {
                         "ruwvoer-geanalyseerd": "Ja"
                     },
-                    "flag_if": null,
                     "critical_if": null,
                     "protocol_if": null,
                     "repeater_sub": null,
@@ -13383,7 +12791,6 @@
                     "show_if": {
                         "ruwvoer-geanalyseerd": "Ja"
                     },
-                    "flag_if": null,
                     "critical_if": null,
                     "protocol_if": null,
                     "repeater_sub": null,
@@ -13412,7 +12819,6 @@
                     "show_if": {
                         "ruwvoer-geanalyseerd": "Ja"
                     },
-                    "flag_if": null,
                     "critical_if": null,
                     "protocol_if": null,
                     "repeater_sub": null,
@@ -13443,7 +12849,6 @@
                         "Weet ik niet"
                     ],
                     "show_if": null,
-                    "flag_if": null,
                     "critical_if": null,
                     "protocol_if": null,
                     "repeater_sub": null,
@@ -13472,7 +12877,6 @@
                     "show_if": {
                         "bijvoeding-eerder": "Ja"
                     },
-                    "flag_if": null,
                     "critical_if": null,
                     "protocol_if": null,
                     "repeater_sub": [
@@ -13551,7 +12955,6 @@
                         "Weet ik niet"
                     ],
                     "show_if": null,
-                    "flag_if": null,
                     "critical_if": null,
                     "protocol_if": null,
                     "repeater_sub": null,
@@ -13582,7 +12985,6 @@
                         "Weet ik niet"
                     ],
                     "show_if": null,
-                    "flag_if": null,
                     "critical_if": null,
                     "protocol_if": null,
                     "repeater_sub": null,
@@ -13618,7 +13020,6 @@
                     "show_if": {
                         "graszaadhooi": "Ja"
                     },
-                    "flag_if": null,
                     "critical_if": null,
                     "protocol_if": null,
                     "repeater_sub": null,
@@ -13651,7 +13052,6 @@
                     "show_if": {
                         "graszaadhooi": "Ja"
                     },
-                    "flag_if": null,
                     "critical_if": null,
                     "protocol_if": null,
                     "repeater_sub": null,
@@ -13680,7 +13080,6 @@
                     "show_if": {
                         "supplementen-eerder": "Ja"
                     },
-                    "flag_if": null,
                     "critical_if": null,
                     "protocol_if": null,
                     "repeater_sub": [
@@ -13751,7 +13150,6 @@
                         "Anders / combinatie, namelijk"
                     ],
                     "show_if": null,
-                    "flag_if": null,
                     "critical_if": null,
                     "protocol_if": null,
                     "repeater_sub": null,
@@ -13780,7 +13178,6 @@
                     "show_if": {
                         "hooi-aanbod": "Anders / combinatie, namelijk"
                     },
-                    "flag_if": null,
                     "critical_if": null,
                     "protocol_if": null,
                     "repeater_sub": null,
@@ -13809,7 +13206,6 @@
                     "show_if": {
                         "ruwvoer-geanalyseerd": "Ja"
                     },
-                    "flag_if": null,
                     "critical_if": null,
                     "protocol_if": null,
                     "repeater_sub": null,
@@ -13841,10 +13237,6 @@
                         "weet ik niet"
                     ],
                     "show_if": null,
-                    "flag_if": [
-                        "wisselt per baal",
-                        "wisselt per levering"
-                    ],
                     "critical_if": null,
                     "protocol_if": null,
                     "repeater_sub": null,
@@ -13877,9 +13269,6 @@
                         "weet ik niet"
                     ],
                     "show_if": null,
-                    "flag_if": [
-                        "eerst krachtvoer"
-                    ],
                     "critical_if": null,
                     "protocol_if": null,
                     "repeater_sub": null,
@@ -13913,7 +13302,6 @@
                         "Weet ik niet"
                     ],
                     "show_if": null,
-                    "flag_if": null,
                     "critical_if": null,
                     "protocol_if": null,
                     "repeater_sub": null,
@@ -13944,10 +13332,6 @@
                         "Geschat"
                     ],
                     "show_if": null,
-                    "flag_if": [
-                        "Ooit gewogen, momenteel geschat",
-                        "Geschat"
-                    ],
                     "critical_if": null,
                     "protocol_if": null,
                     "repeater_sub": null,
@@ -13974,7 +13358,6 @@
                     "link": null,
                     "options": null,
                     "show_if": null,
-                    "flag_if": null,
                     "critical_if": null,
                     "protocol_if": null,
                     "repeater_sub": null,
@@ -14007,11 +13390,6 @@
                         "zuur"
                     ],
                     "show_if": null,
-                    "flag_if": [
-                        "stoffig",
-                        "schimmelig",
-                        "zuur"
-                    ],
                     "critical_if": null,
                     "protocol_if": null,
                     "repeater_sub": null,
@@ -14051,11 +13429,6 @@
                         "arm hooi"
                     ],
                     "show_if": null,
-                    "flag_if": [
-                        "rijk hooi",
-                        "gelig",
-                        "1 of 2 soorten grassen"
-                    ],
                     "critical_if": null,
                     "protocol_if": null,
                     "repeater_sub": null,
@@ -14087,10 +13460,6 @@
                         "Weet ik niet"
                     ],
                     "show_if": null,
-                    "flag_if": [
-                        "Ja, soms",
-                        "Ja, regelmatig"
-                    ],
                     "critical_if": null,
                     "protocol_if": null,
                     "repeater_sub": null,
@@ -14117,7 +13486,6 @@
                     "link": null,
                     "options": null,
                     "show_if": null,
-                    "flag_if": null,
                     "critical_if": null,
                     "protocol_if": null,
                     "repeater_sub": null,
@@ -14157,7 +13525,6 @@
                             "Ja, regelmatig"
                         ]
                     },
-                    "flag_if": null,
                     "critical_if": null,
                     "protocol_if": null,
                     "repeater_sub": null,
@@ -14191,7 +13558,6 @@
                         "Wisselend"
                     ],
                     "show_if": null,
-                    "flag_if": null,
                     "critical_if": null,
                     "protocol_if": null,
                     "repeater_sub": null,
@@ -14228,7 +13594,6 @@
                         "Weet ik niet"
                     ],
                     "show_if": null,
-                    "flag_if": null,
                     "critical_if": null,
                     "protocol_if": null,
                     "repeater_sub": null,
@@ -14255,7 +13620,6 @@
                     "link": null,
                     "options": null,
                     "show_if": null,
-                    "flag_if": null,
                     "critical_if": null,
                     "protocol_if": null,
                     "repeater_sub": null,
@@ -14287,9 +13651,6 @@
                         "Weet ik niet"
                     ],
                     "show_if": null,
-                    "flag_if": [
-                        "Uit plastic"
-                    ],
                     "critical_if": null,
                     "protocol_if": null,
                     "repeater_sub": null,
@@ -14318,7 +13679,6 @@
                     "show_if": {
                         "hooi-verpakking": "Een mix"
                     },
-                    "flag_if": null,
                     "critical_if": null,
                     "protocol_if": null,
                     "repeater_sub": null,
@@ -14349,7 +13709,6 @@
                         "Weet ik niet"
                     ],
                     "show_if": null,
-                    "flag_if": null,
                     "critical_if": null,
                     "protocol_if": null,
                     "repeater_sub": null,
@@ -14390,7 +13749,6 @@
                             "Meer dan 6 uur"
                         ]
                     },
-                    "flag_if": null,
                     "critical_if": null,
                     "protocol_if": null,
                     "repeater_sub": null,
@@ -14425,13 +13783,6 @@
                         "Weet ik niet"
                     ],
                     "show_if": null,
-                    "flag_if": [
-                        "Minder dan 2 uur",
-                        "2 tot 4 uur",
-                        "4 tot 6 uur",
-                        "Meer dan 6 uur",
-                        "Wisselend"
-                    ],
                     "critical_if": null,
                     "protocol_if": null,
                     "repeater_sub": null,
@@ -14460,7 +13811,6 @@
                     "show_if": {
                         "hooi-zonder-ruwvoer-langste": "Wisselend"
                     },
-                    "flag_if": null,
                     "critical_if": null,
                     "protocol_if": null,
                     "repeater_sub": null,
@@ -14489,7 +13839,6 @@
                     "show_if": {
                         "supplementen-nu": "Ja"
                     },
-                    "flag_if": "any",
                     "critical_if": null,
                     "protocol_if": null,
                     "repeater_sub": [
@@ -14562,7 +13911,6 @@
                     "show_if": {
                         "bijvoeding-nu": "Ja"
                     },
-                    "flag_if": null,
                     "critical_if": null,
                     "protocol_if": null,
                     "repeater_sub": [
@@ -14642,7 +13990,6 @@
                         "anders"
                     ],
                     "show_if": null,
-                    "flag_if": null,
                     "critical_if": null,
                     "protocol_if": null,
                     "repeater_sub": null,
@@ -14676,7 +14023,6 @@
                             "Anders, namelijk"
                         ]
                     },
-                    "flag_if": null,
                     "critical_if": null,
                     "protocol_if": null,
                     "repeater_sub": null,
@@ -14707,7 +14053,6 @@
                         "Weet ik niet"
                     ],
                     "show_if": null,
-                    "flag_if": null,
                     "critical_if": null,
                     "protocol_if": null,
                     "repeater_sub": null,
@@ -14734,7 +14079,6 @@
                     "link": null,
                     "options": null,
                     "show_if": null,
-                    "flag_if": null,
                     "critical_if": null,
                     "protocol_if": null,
                     "repeater_sub": null,
@@ -14761,7 +14105,6 @@
                     "link": null,
                     "options": null,
                     "show_if": null,
-                    "flag_if": null,
                     "critical_if": null,
                     "protocol_if": null,
                     "repeater_sub": null,
@@ -14788,7 +14131,6 @@
                     "link": null,
                     "options": null,
                     "show_if": null,
-                    "flag_if": null,
                     "critical_if": null,
                     "protocol_if": null,
                     "repeater_sub": null,
@@ -14815,7 +14157,6 @@
                     "link": null,
                     "options": null,
                     "show_if": null,
-                    "flag_if": null,
                     "critical_if": null,
                     "protocol_if": null,
                     "repeater_sub": null,
@@ -14842,7 +14183,6 @@
                     "link": null,
                     "options": null,
                     "show_if": null,
-                    "flag_if": null,
                     "critical_if": null,
                     "protocol_if": null,
                     "repeater_sub": null,
@@ -14869,7 +14209,6 @@
                     "link": null,
                     "options": null,
                     "show_if": null,
-                    "flag_if": null,
                     "critical_if": null,
                     "protocol_if": null,
                     "repeater_sub": null,
@@ -14900,7 +14239,6 @@
                         "Weet ik niet"
                     ],
                     "show_if": null,
-                    "flag_if": null,
                     "critical_if": null,
                     "protocol_if": null,
                     "repeater_sub": null,
@@ -14929,7 +14267,6 @@
                     "show_if": {
                         "snacks-aanwezig": "Ja"
                     },
-                    "flag_if": "any",
                     "critical_if": null,
                     "protocol_if": null,
                     "repeater_sub": [
@@ -15020,7 +14357,6 @@
                         "Weet ik niet"
                     ],
                     "show_if": null,
-                    "flag_if": null,
                     "critical_if": null,
                     "protocol_if": null,
                     "repeater_sub": null,
@@ -15057,7 +14393,6 @@
                             "Ja, zowel stro-bodembedekking als bewust bijgevoerd stro"
                         ]
                     },
-                    "flag_if": null,
                     "critical_if": null,
                     "protocol_if": null,
                     "repeater_sub": null,
@@ -15091,7 +14426,6 @@
                             "Ja, zowel stro-bodembedekking als bewust bijgevoerd stro"
                         ]
                     },
-                    "flag_if": null,
                     "critical_if": null,
                     "protocol_if": null,
                     "repeater_sub": null,
@@ -15131,7 +14465,6 @@
                             "Ja, zowel stro-bodembedekking als bewust bijgevoerd stro"
                         ]
                     },
-                    "flag_if": null,
                     "critical_if": null,
                     "protocol_if": null,
                     "repeater_sub": null,
@@ -15160,7 +14493,6 @@
                     "show_if": {
                         "stro-type": "Anders, namelijk"
                     },
-                    "flag_if": null,
                     "critical_if": null,
                     "protocol_if": null,
                     "repeater_sub": null,
@@ -15191,7 +14523,6 @@
                         "Weet ik niet"
                     ],
                     "show_if": null,
-                    "flag_if": null,
                     "critical_if": null,
                     "protocol_if": null,
                     "repeater_sub": null,
@@ -15221,7 +14552,6 @@
                         "Nee"
                     ],
                     "show_if": null,
-                    "flag_if": null,
                     "critical_if": null,
                     "protocol_if": null,
                     "repeater_sub": null,
@@ -15256,11 +14586,6 @@
                         "Weet ik niet"
                     ],
                     "show_if": null,
-                    "flag_if": [
-                        "Ja, in de afgelopen 2 weken",
-                        "Ja, in de afgelopen maand",
-                        "Ja, in de afgelopen 3 maanden"
-                    ],
                     "critical_if": null,
                     "protocol_if": null,
                     "repeater_sub": null,
@@ -15295,7 +14620,6 @@
                             "Ja, langer geleden"
                         ]
                     },
-                    "flag_if": null,
                     "critical_if": null,
                     "protocol_if": null,
                     "repeater_sub": null,
@@ -15330,7 +14654,6 @@
                             "Ja, langer geleden"
                         ]
                     },
-                    "flag_if": null,
                     "critical_if": null,
                     "protocol_if": null,
                     "repeater_sub": null,
@@ -15368,7 +14691,6 @@
                             "Ja, momenteel"
                         ]
                     },
-                    "flag_if": null,
                     "critical_if": null,
                     "protocol_if": null,
                     "repeater_sub": null,
@@ -15402,7 +14724,6 @@
                             "Ja, momenteel"
                         ]
                     },
-                    "flag_if": null,
                     "critical_if": null,
                     "protocol_if": null,
                     "repeater_sub": null,
@@ -15446,7 +14767,6 @@
                             "Ja, momenteel"
                         ]
                     },
-                    "flag_if": null,
                     "critical_if": null,
                     "protocol_if": null,
                     "repeater_sub": null,
@@ -15481,7 +14801,6 @@
                             "Ja, momenteel"
                         ]
                     },
-                    "flag_if": null,
                     "critical_if": null,
                     "protocol_if": null,
                     "repeater_sub": null,
@@ -15515,11 +14834,6 @@
                         "Weet ik niet"
                     ],
                     "show_if": null,
-                    "flag_if": [
-                        "Ja, enkele maanden",
-                        "Ja, meerdere jaren",
-                        "Ja, momenteel"
-                    ],
                     "critical_if": null,
                     "protocol_if": null,
                     "repeater_sub": null,
@@ -15565,7 +14879,6 @@
                         "weet ik niet"
                     ],
                     "show_if": null,
-                    "flag_if": null,
                     "critical_if": null,
                     "protocol_if": null,
                     "repeater_sub": null,
@@ -15600,12 +14913,6 @@
                         "Weet ik niet"
                     ],
                     "show_if": null,
-                    "flag_if": [
-                        "Ja, zuur / fermentatieachtig",
-                        "Ja, sterk / scherper ruikend dan van andere paarden",
-                        "Ja, rottingsachtig / onaangenaam",
-                        "Ja, wisselend"
-                    ],
                     "critical_if": null,
                     "protocol_if": null,
                     "repeater_sub": null,
@@ -15634,7 +14941,6 @@
                     "show_if": {
                         "mest-geur": "Anders, namelijk"
                     },
-                    "flag_if": null,
                     "critical_if": null,
                     "protocol_if": null,
                     "repeater_sub": null,
@@ -15668,9 +14974,6 @@
                         "weet ik niet"
                     ],
                     "show_if": null,
-                    "flag_if": [
-                        "zwart"
-                    ],
                     "critical_if": null,
                     "protocol_if": null,
                     "repeater_sub": null,
@@ -15704,12 +15007,6 @@
                         "weet ik niet"
                     ],
                     "show_if": null,
-                    "flag_if": [
-                        "waterig / diarree",
-                        "zacht of smeuïg (geen vaste appels)",
-                        "droog en hard",
-                        "wisselt per dag"
-                    ],
                     "critical_if": null,
                     "protocol_if": null,
                     "repeater_sub": null,
@@ -15736,7 +15033,6 @@
                     "link": null,
                     "options": null,
                     "show_if": null,
-                    "flag_if": null,
                     "critical_if": null,
                     "protocol_if": null,
                     "repeater_sub": null,
@@ -15771,12 +15067,6 @@
                         "Meer dan gemiddeld"
                     ],
                     "show_if": null,
-                    "flag_if": [
-                        "oranje",
-                        "troebel",
-                        "Minder dan gemiddeld",
-                        "Meer dan gemiddeld"
-                    ],
                     "critical_if": null,
                     "protocol_if": null,
                     "repeater_sub": null,
@@ -15809,11 +15099,6 @@
                         "Weet ik niet"
                     ],
                     "show_if": null,
-                    "flag_if": [
-                        "Twijfelachtig / wisselend",
-                        "Nee / drinkt opvallend weinig",
-                        "Drinkt opvallend veel"
-                    ],
                     "critical_if": null,
                     "protocol_if": null,
                     "repeater_sub": null,
@@ -15849,7 +15134,6 @@
                         "Anders, namelijk"
                     ],
                     "show_if": null,
-                    "flag_if": null,
                     "critical_if": null,
                     "protocol_if": null,
                     "repeater_sub": null,
@@ -15878,7 +15162,6 @@
                     "show_if": {
                         "water-aanbod": "Anders, namelijk"
                     },
-                    "flag_if": null,
                     "critical_if": null,
                     "protocol_if": null,
                     "repeater_sub": null,
@@ -15907,7 +15190,6 @@
                     "show_if": {
                         "water-aanbod": "multi-checked"
                     },
-                    "flag_if": null,
                     "critical_if": null,
                     "protocol_if": null,
                     "repeater_sub": null,
@@ -15936,7 +15218,6 @@
                     "show_if": {
                         "water-aanbod": "multi-checked"
                     },
-                    "flag_if": null,
                     "critical_if": null,
                     "protocol_if": null,
                     "repeater_sub": null,
@@ -15967,7 +15248,6 @@
                         "Weet ik niet"
                     ],
                     "show_if": null,
-                    "flag_if": null,
                     "critical_if": null,
                     "protocol_if": null,
                     "repeater_sub": null,
@@ -15996,7 +15276,6 @@
                     "show_if": {
                         "water-analyse": "Ja"
                     },
-                    "flag_if": null,
                     "critical_if": null,
                     "protocol_if": null,
                     "repeater_sub": null,
@@ -16033,16 +15312,6 @@
                         "groenig"
                     ],
                     "show_if": null,
-                    "flag_if": [
-                        "zwavelachtig",
-                        "algen aanwezig",
-                        "aanslag",
-                        "modderig",
-                        "ijzer / zware metalen",
-                        "gelig",
-                        "bruinig",
-                        "groenig"
-                    ],
                     "critical_if": null,
                     "protocol_if": null,
                     "repeater_sub": null,
@@ -16074,9 +15343,6 @@
                         "Weet ik niet"
                     ],
                     "show_if": null,
-                    "flag_if": [
-                        "Nee, niet altijd"
-                    ],
                     "critical_if": null,
                     "protocol_if": null,
                     "repeater_sub": null,
@@ -16111,10 +15377,6 @@
                         "Anders, namelijk"
                     ],
                     "show_if": null,
-                    "flag_if": [
-                        "Sloot-, beek- of vijverwater",
-                        "Weet ik niet"
-                    ],
                     "critical_if": null,
                     "protocol_if": null,
                     "repeater_sub": null,
@@ -16143,7 +15405,6 @@
                     "show_if": {
                         "water-type": "Anders, namelijk"
                     },
-                    "flag_if": null,
                     "critical_if": null,
                     "protocol_if": null,
                     "repeater_sub": null,
@@ -16172,7 +15433,6 @@
                     "show_if": {
                         "water-type": "multi-checked"
                     },
-                    "flag_if": null,
                     "critical_if": null,
                     "protocol_if": null,
                     "repeater_sub": null,
@@ -16204,9 +15464,6 @@
                         "Weet ik niet"
                     ],
                     "show_if": null,
-                    "flag_if": [
-                        "Minder vaak"
-                    ],
                     "critical_if": null,
                     "protocol_if": null,
                     "repeater_sub": null,

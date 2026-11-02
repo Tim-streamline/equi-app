@@ -22,7 +22,7 @@ return new class extends Migration
                     $section->fields()->create(['key' => $field['id'], 'order' => $old->order + $i,
                         'label' => $field['label'], 'type' => $field['type'], 'lines' => $field['lines'] ?? null,
                         'options' => $field['options'] ?? null, 'show_if' => $field['showIf'] ?? null,
-                        'flag_if' => $field['flagIf'] ?? null, 'required' => true, 'optional' => false, 'active' => true]);
+                        'required' => true, 'optional' => false, 'active' => true]);
                 }
             }
             $section->fields()->whereIn('key', $oldKeys)->update(['active' => false]);

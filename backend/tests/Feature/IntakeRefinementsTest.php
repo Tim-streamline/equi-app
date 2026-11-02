@@ -98,7 +98,7 @@ class IntakeRefinementsTest extends TestCase
         $event = collect($history['rows'])->firstWhere('key', 'medische-gebeurtenissen');
         $this->assertTrue($event['not_applicable']);
         $this->assertFalse($event['empty']);
-        $this->assertFalse($event['flagged']);
+        $this->assertArrayNotHasKey('flagged', $event);
         $this->assertSame([], $event['protocol']);
     }
 

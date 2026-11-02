@@ -10,11 +10,6 @@
       "Mijn paard heeft een verhoogd risico op hoefbevangenheid",
       "Nee, voor zover bekend niet"
     ],
-    "flagIf": [
-      "Ja, mijn paard is momenteel hoefbevangen",
-      "Ja, mijn paard is in het verleden hoefbevangen geweest",
-      "Mijn paard heeft een verhoogd risico op hoefbevangenheid"
-    ],
     "criticalIf": [
       "Ja, mijn paard is momenteel hoefbevangen"
     ]

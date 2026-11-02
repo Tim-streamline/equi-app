@@ -15,7 +15,7 @@ return new class extends Migration
                 return; // Fresh installs receive these definitions from the seeder.
             }
             $questionnaire->update(['none_options' => array_values(array_unique(array_merge($questionnaire->none_options ?? [], $patch['none_options_add'])))]);
-            $columns = ['showIf' => 'show_if', 'flagIf' => 'flag_if', 'sub' => 'repeater_sub'];
+            $columns = ['showIf' => 'show_if', 'sub' => 'repeater_sub'];
             $attributes = static function (array $values) use ($columns): array {
                 $result = [];
                 foreach ($values as $key => $value) {

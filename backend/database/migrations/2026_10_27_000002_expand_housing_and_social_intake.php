@@ -22,7 +22,7 @@ return new class extends Migration
                         if (! $field) continue;
                         // Only revise the explicitly requested settings. Never rewrite responses.
                         $updates = ['label' => $data['label']];
-                        foreach (['showIf' => 'show_if', 'options' => 'options', 'flagIf' => 'flag_if', 'answerAliases' => 'answer_aliases'] as $key => $column) {
+                        foreach (['showIf' => 'show_if', 'options' => 'options', 'answerAliases' => 'answer_aliases'] as $key => $column) {
                             if (array_key_exists($key, $data)) $updates[$column] = $data[$key];
                         }
                         $field->update($updates);
@@ -39,7 +39,7 @@ return new class extends Migration
                         'hint' => $data['hint'] ?? null, 'placeholder' => $data['placeholder'] ?? null,
                         'unit' => $data['unit'] ?? null, 'step' => $data['step'] ?? null, 'lines' => $data['lines'] ?? null,
                         'options' => $data['options'] ?? null, 'show_if' => $data['showIf'] ?? null,
-                        'flag_if' => $data['flagIf'] ?? null, 'photo_config' => $data['photoConfig'] ?? null,
+                        'photo_config' => $data['photoConfig'] ?? null,
                         'active' => true,
                     ]);
                 }

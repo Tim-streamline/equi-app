@@ -1,6 +1,6 @@
 // Pure evaluators over the intake schema + an answer set. Used to drive
-// conditional rendering (showIf), aggregate the therapist's review chips
-// (flagIf / criticalIf), and decide when a section is "done".
+// conditional rendering (showIf), critical safety checks (criticalIf),
+// and deciding when a section is "done".
 
 import {
   Field,
@@ -25,7 +25,7 @@ export function answersForSection(section: Section, answers: IntakeAnswers): Sec
   return result;
 }
 
-/** Field-level "the answer is non-empty" check used for `flagIf: 'non-empty'`. */
+/** Whether a stored answer is empty. */
 export function isEmpty(v: unknown): boolean {
   if (v == null) return true;
   if (typeof v === 'string') return v.trim() === '';
@@ -40,12 +40,8 @@ function matches(value: unknown, trigger: Trigger): boolean {
   return set.includes(String(value));
 }
 
-/**
- * Whether a multi-option label is a "none / not-applicable" sentinel — these
- * are mutually exclusive with every other option and never count as a real
- * flag/"any-checked" answer. Generalized from the original literal `'geen'`
- * to also cover "Geen van onderstaande", "Geen andere diersoorten",
- * "Nee, nooit", etc. that the deel-2 spec introduced.
+/** Legacy generic visibility rules exclude configured none/not-applicable answers.
+ * New visibility rules target stable answer keys; exclusivity is configured per option.
  */
 export function isNoneOption(
   option: string,
@@ -295,7 +291,10 @@ function hideAnswersOnce(answers: IntakeAnswers, schema: Section[], noneOptions:
       if (!field.showIf || !Object.prototype.hasOwnProperty.call(result[source] ?? {}, field.id)) continue;
       values ??= answersForSection(section, result);
       if (showField({ ...field, photoConfig: undefined }, values, result, noneOptions)) continue;
-      const { [field.id]: _hidden, ...rest } = result[source]!;
+      // Expo's production transform loses the computed key when an unused
+      // destructured binding is removed. Explicit deletion guarantees progress.
+      const rest = { ...result[source]! };
+      delete rest[field.id];
       result = { ...result, [source]: rest };
       values = { ...values };
       delete values[field.id];
@@ -423,21 +422,6 @@ export function nextSectionId(
   return schema[schema.length - 1]?.id ?? '';
 }
 
-/** Whether the answer triggers a `flagIf` on the field. */
-export function fieldFlagged(
-  field: Field,
-  value: unknown,
-  noneOptions: readonly string[] = INTAKE_NONE_OPTIONS,
-): boolean {
-  if (!field.flagIf) return false;
-  if (field.flagIf === 'non-empty') return !isEmpty(value);
-  if (field.flagIf === 'any') {
-    if (Array.isArray(value)) return value.filter((v) => !isNoneOption(String(v), noneOptions)).length > 0;
-    return !isEmpty(value) && !isNoneOption(String(value), noneOptions);
-  }
-  return matches(value, field.flagIf);
-}
-
 /** Whether the answer triggers a `criticalIf` block. */
 export function fieldCritical(field: Field, value: unknown): boolean {
   if (!field.criticalIf) return false;
@@ -450,7 +434,7 @@ export function hasCriticalAnswers(
   schema: Section[] = INTAKE_SCHEMA,
   noneOptions: readonly string[] = INTAKE_NONE_OPTIONS,
 ): boolean {
-  // Like the flag tally, answers to questions the user can no longer see do not count.
+  // Answers to questions the user can no longer see do not trigger safety checks.
   answers = effectiveAnswers(answers, schema, noneOptions);
   for (const sec of schema) {
     const a = answersForSection(sec, answers);
@@ -459,23 +443,6 @@ export function hasCriticalAnswers(
     }
   }
   return false;
-}
-
-/** Sum of all flagged answers — used for the submit-screen tally. */
-export function countFlags(
-  answers: IntakeAnswers,
-  schema: Section[] = INTAKE_SCHEMA,
-  noneOptions: readonly string[] = INTAKE_NONE_OPTIONS,
-): number {
-  let n = 0;
-  answers = effectiveAnswers(answers, schema, noneOptions);
-  for (const sec of schema) {
-    const a = answersForSection(sec, answers);
-    for (const f of visibleFields(sec, a, answers, noneOptions)) {
-      if (!repeaterNotApplicable(f, answers, sec.id) && fieldFlagged(f, a[f.id], noneOptions)) n++;
-    }
-  }
-  return n;
 }
 
 /** Reminder thresholds count applicable mandatory questions, never rounded section percentages. */

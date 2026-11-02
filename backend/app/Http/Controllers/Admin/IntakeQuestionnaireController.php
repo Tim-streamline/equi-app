@@ -53,18 +53,8 @@ class IntakeQuestionnaireController extends Controller
             'name' => ['required', 'string', 'max:255'],
             'disclaimer_short' => ['nullable', 'string', 'max:10000'],
             'disclaimer_long' => ['nullable', 'string', 'max:30000'],
-            'none_options_json' => ['required', 'string', 'max:20000'],
             'safety_config_json' => ['sometimes', 'nullable', 'string', 'max:50000'],
         ]);
-        $data['none_options'] = $this->decodeJson($data['none_options_json'], 'none_options_json');
-        unset($data['none_options_json']);
-        if (! is_array($data['none_options'])
-            || ! array_is_list($data['none_options'])
-            || array_filter($data['none_options'], fn ($value) => ! is_string($value))) {
-            throw ValidationException::withMessages([
-                'none_options_json' => 'Vul een JSON-array met antwoordteksten in.',
-            ]);
-        }
         if ($request->exists('safety_config_json')) {
             $data['safety_config'] = $this->decodeJson($request->input('safety_config_json'), 'safety_config_json');
             try { app(\App\Support\IntakeSafetySettings::class)->validate($data['safety_config']); }
@@ -112,20 +102,24 @@ class IntakeQuestionnaireController extends Controller
 
     public function storeField(Request $request): RedirectResponse
     {
-        $data = $this->fieldData($request);
-        $field = IntakeField::query()->create($data);
-        AuditLogger::created($field);
+        DB::transaction(function () use ($request) {
+            $data = $this->fieldData($request);
+            $field = IntakeField::query()->create($data);
+            AuditLogger::created($field);
+        });
 
         return back()->with('success', 'Intakeveld toegevoegd.');
     }
 
     public function updateField(Request $request, IntakeField $intakeField): RedirectResponse
     {
-        $data = $this->fieldData($request, $intakeField);
-        $this->ensureFieldKeyCanChange($intakeField, $data['key']);
-        $before = $intakeField->only(array_keys($data));
-        $intakeField->update($data);
-        AuditLogger::updated($intakeField, $before);
+        DB::transaction(function () use ($request, $intakeField) {
+            $data = $this->fieldData($request, $intakeField);
+            $this->ensureFieldKeyCanChange($intakeField, $data['key']);
+            $before = $intakeField->only(array_keys($data));
+            $intakeField->update($data);
+            AuditLogger::updated($intakeField, $before);
+        });
 
         return back()->with('success', 'Intakeveld opgeslagen.');
     }
@@ -197,10 +191,12 @@ class IntakeQuestionnaireController extends Controller
             'age_config_json' => ['nullable', 'string', 'max:20000'],
             'link_json' => ['nullable', 'string', 'max:20000'],
             'options_json' => ['nullable', 'string', 'max:50000'],
+            'option_effects' => ['sometimes', 'nullable', 'array'],
+            'option_keys' => ['sometimes', 'nullable', 'array'],
+            'visibility_rule_json' => ['sometimes', 'nullable', 'string', 'max:100000'],
             'answer_aliases_json' => ['sometimes', 'nullable', 'string', 'max:50000'],
             'submission_blocks' => ['sometimes', 'nullable', 'array'],
             'show_if_json' => ['nullable', 'string', 'max:50000'],
-            'flag_if_json' => ['nullable', 'string', 'max:50000'],
             'critical_if_json' => ['nullable', 'string', 'max:50000'],
             'protocol_if_json' => ['nullable', 'string', 'max:50000'],
             'signal_config_json' => ['nullable', 'string', 'max:50000'],
@@ -215,7 +211,6 @@ class IntakeQuestionnaireController extends Controller
             'options_json' => 'options',
             'answer_aliases_json' => 'answer_aliases',
             'show_if_json' => 'show_if',
-            'flag_if_json' => 'flag_if',
             'critical_if_json' => 'critical_if',
             'protocol_if_json' => 'protocol_if',
             'signal_config_json' => 'signal_config',
@@ -225,6 +220,35 @@ class IntakeQuestionnaireController extends Controller
             unset($data[$input]);
         }
 
+        IntakeSection::findOrFail($data['section_id'])->questionnaire()->lockForUpdate()->firstOrFail();
+        $answerConditions = app(\App\Support\IntakeAnswerConditions::class);
+        if ($request->exists('option_keys')) {
+            $answerConditions->validateKeys($request->input('option_keys') ?? [], is_array($data['options']) ? $data['options'] : []);
+            $data['option_keys'] = $request->input('option_keys') ?? [];
+            foreach ($field?->option_keys ?? [] as $answer => $key) {
+                if (isset($data['option_keys'][$answer]) && $data['option_keys'][$answer] !== $key) {
+                    throw ValidationException::withMessages(['option_keys' => 'De sleutel van een bestaand antwoord kan niet worden gewijzigd.']);
+                }
+            }
+            $used = IntakeField::when($field, fn ($query) => $query->whereKeyNot($field->id))->whereNotNull('option_keys')->pluck('option_keys');
+            foreach ($used as $keys) {
+                $keys = is_string($keys) ? json_decode($keys, true) : $keys;
+                if (array_intersect(array_values($data['option_keys']), array_values($keys ?? []))) {
+                    throw ValidationException::withMessages(['option_keys' => 'Deze antwoordsleutel hoort al bij een ander antwoord.']);
+                }
+            }
+        }
+        if ($request->exists('visibility_rule_json')) {
+            $data['visibility_rule'] = $this->decodeJson($request->input('visibility_rule_json'), 'visibility_rule_json');
+            if (! app(\App\Support\IntakeConditions::class)->valid($data['visibility_rule'])) {
+                throw ValidationException::withMessages(['show_if_json' => 'Gebruik geldige antwoordvoorwaarden met EN, OF of NIET.']);
+            }
+            $section = IntakeSection::findOrFail($data['section_id']);
+            $answerConditions->validateDependencies($data['visibility_rule'], $section->questionnaire->sections()->with('fields')->get(), $field);
+            unset($data['visibility_rule_json']);
+        }
+        $data['option_effects'] = $request->exists('option_effects') ? $request->input('option_effects') : $field?->option_effects;
+        app(\App\Support\IntakeOptionEffects::class)->validate($data['option_effects'], $data['options']);
         if (! $request->exists('answer_aliases_json')) $data['answer_aliases'] = $field?->answer_aliases;
         $data['submission_blocks'] = $request->exists('submission_blocks') ? $request->input('submission_blocks') : $field?->submission_blocks;
         try { app(\App\Support\IntakeSubmissionBlocks::class)->validate($data['submission_blocks']); }
@@ -361,7 +385,7 @@ class IntakeQuestionnaireController extends Controller
         if (! app(\App\Support\IntakeConditions::class)->valid($data['show_if'])) {
             $errors['show_if_json'] = 'Gebruik veldsleutels met antwoorden, of groepen $all (alles), $any (minstens één) en $not (niet).';
         }
-        foreach (['flag_if' => 'flag_if_json', 'critical_if' => 'critical_if_json'] as $column => $input) {
+        foreach (['critical_if' => 'critical_if_json'] as $column => $input) {
             if (! $this->isTriggerOrNull($data[$column])) {
                 $errors[$input] = 'Vul één antwoordtekst of een JSON-array met antwoordteksten in.';
             }

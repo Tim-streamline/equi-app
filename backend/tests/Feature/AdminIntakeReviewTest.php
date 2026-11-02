@@ -68,16 +68,16 @@ class AdminIntakeReviewTest extends TestCase
         $this->get('/admin/bookings/'.$this->booking->id.'?print=1')->assertInertia(fn (Assert $p) => $p->where('printMode', true)->has('review.sections.0.rows', 2));
     }
 
-    public function test_visibility_flags_and_protocol_hits_use_question_metadata(): void
+    public function test_visibility_safety_and_protocol_hits_use_question_metadata(): void
     {
         $this->field('heading', 'sectionhead');
-        $this->field('choice', 'multi', ['flag_if' => ['risk'], 'critical_if' => ['danger'], 'protocol_if' => ['risk' => 'Review choice', 'veiligheid' => 'Pause protocol']], ['neutral', 'risk', 'danger']);
+        $this->field('choice', 'multi', ['critical_if' => ['danger'], 'protocol_if' => ['risk' => 'Review choice', 'veiligheid' => 'Pause protocol']], ['neutral', 'risk', 'danger']);
         $this->field('hidden', extra: ['show_if' => ['choice' => 'missing']], value: 'stale');
         $this->field('visible', extra: ['show_if' => ['choice' => 'multi-checked']], value: 'yes');
-        $this->field('none', 'multi', ['flag_if' => 'any'], ['Geen van onderstaande']);
+        $this->field('none', 'multi', [], ['Geen van onderstaande']);
         $this->field('none-child', extra: ['show_if' => ['none' => 'any-checked']]);
-        $this->field('negative', extra: ['flag_if' => 'non-empty'], value: 'Nee, niets');
-        $this->field('positive', extra: ['flag_if' => 'non-empty', 'protocol_if' => ['non-empty' => 'Review text']], value: 'Something');
+        $this->field('negative', extra: [], value: 'Nee, niets');
+        $this->field('positive', extra: ['protocol_if' => ['non-empty' => 'Review text']], value: 'Something');
         $this->field('missing');
         $this->field('zero', 'number', value: 0);
         $this->field('repeater', 'repeater', ['repeater_sub' => [['id' => 'name', 'label' => 'Name']]], [['name' => '']]);
@@ -86,12 +86,12 @@ class AdminIntakeReviewTest extends TestCase
         $this->assertFalse($rows->has('hidden'));
         $this->assertFalse($rows->has('none-child'));
         $this->assertTrue($rows['choice']['critical']);
-        $this->assertSame(['risk', 'danger'], $rows['choice']['flagged_options']);
-        $this->assertFalse($rows['none']['flagged']);
-        $this->assertFalse($rows['negative']['flagged']);
+        $this->assertSame(['danger'], $rows['choice']['critical_options']);
+        $this->assertArrayNotHasKey('flagged', $rows['none']);
+        $this->assertArrayNotHasKey('flagged_options', $rows['negative']);
         $this->assertFalse($rows['zero']['empty']);
         $this->assertTrue($rows['repeater']['empty']);
-        $this->assertSame(['all' => 8, 'flags' => 2, 'protocol' => 2, 'empty' => 2], $review['counts']);
+        $this->assertSame(['all' => 8, 'protocol' => 2, 'empty' => 2], $review['counts']);
         $this->assertTrue($review['blocked']);
         $this->assertSame(['Review choice', 'Pause protocol'], $rows['choice']['protocol']);
     }

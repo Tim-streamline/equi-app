@@ -111,10 +111,6 @@
                 }
               ]
             },
-            "flagIf": [
-              "In of nabij smalle doorgangen",
-              "In hoeken of doodlopende gedeelten"
-            ],
             "hint": "Meerdere antwoorden mogelijk."
           },
           "existing": false
@@ -206,11 +202,7 @@
                   ]
                 }
               ]
-            },
-            "flagIf": [
-              "Regelmatig niet",
-              "Zelden"
-            ]
+            }
           },
           "existing": false
         },
@@ -228,13 +220,6 @@
               "Niet altijd tijdens warme of zonnige dagen",
               "Nee",
               "Weet ik niet",
-              "Alleen in bepaalde delen van het jaar",
-              "Wisselend per seizoen"
-            ],
-            "flagIf": [
-              "Niet altijd bij langdurige regenval of natte omstandigheden",
-              "Niet altijd tijdens warme of zonnige dagen",
-              "Nee",
               "Alleen in bepaalde delen van het jaar",
               "Wisselend per seizoen"
             ],
@@ -258,9 +243,6 @@
               "Af en toe",
               "Zelden of nooit",
               "Weet ik niet"
-            ],
-            "flagIf": [
-              "Zelden of nooit"
             ]
           },
           "existing": false
@@ -305,11 +287,7 @@
                   ]
                 }
               ]
-            },
-            "flagIf": [
-              "Af en toe",
-              "Regelmatig"
-            ]
+            }
           },
           "existing": false
         },
@@ -356,11 +334,6 @@
                 }
               ]
             },
-            "flagIf": [
-              "Eén in- en uitgang",
-              "Vanuit de schuilplaats is het overzicht beperkt",
-              "Andere paarden kunnen de doorgang blokkeren"
-            ],
             "hint": "Meerdere antwoorden mogelijk."
           },
           "existing": false
@@ -407,12 +380,6 @@
               "Nauwelijks spanning of conflicten zichtbaar",
               "Weet ik niet"
             ],
-            "flagIf": [
-              "Mijn paard wordt regelmatig weggejaagd / gepest",
-              "Competitie rond voer",
-              "Competitie rond water",
-              "Competitie rond schuilplek / favoriete plekken"
-            ],
             "showIf": {
               "$all": [
                 {
@@ -458,9 +425,6 @@
               "Regelmatig sociale spanning / stress",
               "Weet ik niet"
             ],
-            "flagIf": [
-              "Regelmatig sociale spanning / stress"
-            ],
             "showIf": {
               "$all": [
                 {
@@ -505,9 +469,6 @@
               "…soms wegjaagt en soms wordt weggejaagd",
               "…meestal rustig kan blijven staan zonder veel conflict",
               "Weet ik niet"
-            ],
-            "flagIf": [
-              "…zelf wordt weggejaagd"
             ],
             "showIf": {
               "$all": [
@@ -627,11 +588,7 @@
                   ]
                 }
               ]
-            },
-            "flagIf": [
-              "Dagelijks",
-              "Meerdere keren per dag"
-            ]
+            }
           },
           "existing": false
         },
@@ -724,12 +681,6 @@
                 }
               ]
             },
-            "flagIf": [
-              "Mijn paard wordt fysiek weggeduwd",
-              "Mijn paard wordt achtervolgd",
-              "Er wordt gebeten of geschopt",
-              "Andere paarden blokkeren de doorgang"
-            ],
             "hint": "Meerdere antwoorden mogelijk."
           },
           "existing": false
@@ -917,12 +868,6 @@
                 }
               ]
             },
-            "flagIf": [
-              "Stopt tijdelijk met eten of rusten",
-              "Blijft op afstand wachten",
-              "Wordt op een andere plek opnieuw weggejaagd",
-              "Blijft zichtbaar alert op de andere paarden"
-            ],
             "hint": "Meerdere antwoorden mogelijk."
           },
           "existing": false
@@ -1110,13 +1055,6 @@
                 }
               ]
             },
-            "flagIf": [
-              "Bij het eten",
-              "Bij het drinken",
-              "Bij schuilplaatsen",
-              "Bij rust- of ligplaatsen",
-              "In doorgangen of smalle gedeelten"
-            ],
             "hint": "Meerdere antwoorden mogelijk."
           },
           "existing": false
@@ -1226,9 +1164,6 @@
               "Beperkt / niet altijd mogelijk",
               "Nee, weinig mogelijkheid om uit sociale druk te gaan",
               "Weet ik niet"
-            ],
-            "flagIf": [
-              "Nee, weinig mogelijkheid om uit sociale druk te gaan"
             ],
             "showIf": {
               "$all": [

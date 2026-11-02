@@ -41,7 +41,7 @@ class IntakeSubmissionBlocks
         foreach ($q?->sections ?? [] as $section) {
             $values = $review->sectionAnswers($section, $answers);
             foreach ($section->fields as $field) {
-                if (! $review->visible($field->show_if, $values, $answers, $q->none_options ?? [])) {
+                if (! $review->visible($field->visibility_rule ?? $field->show_if, $values, $answers, $q->none_options ?? [])) {
                     continue;
                 }
                 $selected = $values[$field->key] ?? null;

@@ -12,9 +12,9 @@ for (const name of ['dates', 'schema', 'config', 'logic']) {
 }
 const { INTAKE_SCHEMA, INTAKE_NONE_OPTIONS } = modules['./schema'];
 const { buildIntakeSchema } = modules['./config'];
-const { visibleFields, missingRequired, isFieldAnswered, fieldFlagged, answeredCount, countFlags } = modules['./logic'];
+const { visibleFields, missingRequired, isFieldAnswered, answeredCount } = modules['./logic'];
 const payload = JSON.parse(readFileSync(new URL('../../backend/database/data/intake-questionnaire.json', import.meta.url)));
-const synced = buildIntakeSchema(payload.sections.map(s => ({ ...s, key: s.id, order: s.nr })), payload.sections.flatMap(s => s.fields.map((f, order) => ({ ...f, key: f.id, section_id: s.id, answer_section_key: f.answerSection, photo_config: JSON.stringify(f.photoConfig), age_config: JSON.stringify(f.ageConfig), date_config: JSON.stringify(f.dateConfig), signal_config: JSON.stringify(f.signalConfig), order, show_if: JSON.stringify(f.showIf), flag_if: JSON.stringify(f.flagIf), critical_if: JSON.stringify(f.criticalIf), repeater_sub: JSON.stringify(f.sub) }))));
+const synced = buildIntakeSchema(payload.sections.map(s => ({ ...s, key: s.id, order: s.nr })), payload.sections.flatMap(s => s.fields.map((f, order) => ({ ...f, key: f.id, section_id: s.id, answer_section_key: f.answerSection, photo_config: JSON.stringify(f.photoConfig), age_config: JSON.stringify(f.ageConfig), date_config: JSON.stringify(f.dateConfig), signal_config: JSON.stringify(f.signalConfig), order, show_if: JSON.stringify(f.showIf), critical_if: JSON.stringify(f.criticalIf), repeater_sub: JSON.stringify(f.sub) }))));
 
 test('the exported questionnaire matches the offline source including all 13 sections', () => {
   assert.deepEqual(INTAKE_SCHEMA, payload.sections);
@@ -53,7 +53,6 @@ for (const [name, schema] of [['offline', INTAKE_SCHEMA], ['synced', synced]]) {
         assert.ok(!missingRequired(section('voer'), a).some(f => f.id === detail));
         const oneSection = { ...section('voer'), fields: [gateField, detailField] };
         assert.deepEqual(answeredCount(oneSection, a), { answered: 1, total: 1 });
-        assert.equal(countFlags({ voer: a }, [oneSection]), 0);
       }
       for (const rows of [[], [{}]]) {
         assert.ok(missingRequired(section('voer'), { [gate]: 'Ja', [detail]: rows }).some(f => f.id === detail));
@@ -88,14 +87,11 @@ for (const [name, schema] of [['offline', INTAKE_SCHEMA], ['synced', synced]]) {
     assert.ok(!visible('gedrag', { 'training-veranderd': 'Nee', 'training-veranderd-details': 'Stale' }).includes('training-veranderd-details'));
     const a = { 'training-freq': '0×', 'training-vormen': ['Anders, namelijk'], 'training-knelpunten': 'Stale problem' };
     assert.ok(!visible('gedrag', a).includes('training-vormen-anders'));
-    assert.equal(countFlags({ gedrag: a }, [section('gedrag')]), 0);
   });
-  test(`${name}: behavior none choices are last, exclusive sentinels and never flag a problem (OPT-92)`, () => {
+  test(`${name}: behavior none choices remain last and hide their followups (OPT-92)`, () => {
     for (const id of ['typisch-gedrag', 'fysieke-signalen', 'stress-symptomen']) {
       const f = field('gedrag', id);
       assert.equal(f.options.at(-1), 'Geen van bovenstaande');
-      assert.equal(fieldFlagged(f, ['Geen van bovenstaande']), false);
-      assert.equal(fieldFlagged(f, [f.options[0]]), true);
     }
     assert.ok(!visible('gedrag', { 'typisch-gedrag': ['Geen van bovenstaande'] }).includes('typisch-gedrag-detail'));
   });
@@ -152,16 +148,14 @@ for (const [name, schema] of [['offline', INTAKE_SCHEMA], ['synced', synced]]) {
       }
     }
   });
-  test(`${name}: behavior special options are ordered and only real signals flag concerns (OPT-97)`, () => {
+  test(`${name}: behavior special options are ordered and gate their followups (OPT-97)`, () => {
     const f = field('gedrag', 'gedrag-signalen');
     assert.deepEqual(f.options.slice(-3), ['Geen van bovenstaande', 'Weet ik niet', 'Anders, namelijk']);
     for (const option of ['Geen van bovenstaande', 'Weet ik niet']) {
       const a = { [f.id]: [option], 'gedrag-signalen-anders': 'Stale' };
-      assert.equal(fieldFlagged(f, a[f.id]), false);
       assert.ok(!visible('gedrag', a).includes('gedrag-signalen-anders'));
       assert.ok(!missingRequired(section('gedrag'), a).some(f => f.id === 'gedrag-signalen-anders'));
     }
-    assert.equal(fieldFlagged(f, [f.options[0]]), true);
     assert.ok(missingRequired(section('gedrag'), { [f.id]: ['Anders, namelijk'] }).some(f => f.id === 'gedrag-signalen-anders'));
   });
   test(`${name}: horse questions retain required answers without reversing old owner answers (OPT-75/76/77)`, () => {
@@ -181,8 +175,6 @@ for (const [name, schema] of [['offline', INTAKE_SCHEMA], ['synced', synced]]) {
     const acute = field('klacht', 'acuut');
     assert.equal(acute.options.at(-1), 'Geen van bovenstaande');
     assert.ok(!visible('klacht', { acuut: ['Geen van bovenstaande'] }).includes('acuut-toelichting'));
-    assert.equal(fieldFlagged(acute, ['Geen van bovenstaande']), false);
-    assert.equal(fieldFlagged(acute, ['Koorts / verhoging']), true);
     assert.ok(visible('klacht', { acuut: ['Koorts / verhoging'] }).includes('acuut-toelichting'));
     const blood = field('klacht', 'bloedonderzoek');
     assert.equal(blood.type, 'file'); assert.equal(blood.optional, true);
@@ -216,9 +208,6 @@ for (const [name, schema] of [['offline', INTAKE_SCHEMA], ['synced', synced]]) {
     for (const id of ['ir-status', 'ems-status', 'kpu-status']) {
       const f = field('medisch', id);
       assert.deepEqual(f.options.slice(1), ['Ik vermoed dit', 'Voor zover ik weet niet', 'Weet ik niet']);
-      assert.equal(fieldFlagged(f, f.options[0]), true);
-      assert.equal(fieldFlagged(f, 'Ik vermoed dit'), true);
-      assert.equal(fieldFlagged(f, 'Voor zover ik weet niet'), false);
     }
     for (const answer of ['aangetoond door dierenarts', 'Vastgesteld door dierenarts/onderzoek']) {
       assert.ok(visible('medisch', { 'ir-status': answer }).includes('ir-onderzoek-wanneer-welk'));

@@ -12,7 +12,7 @@ import { formatDate } from '@/lib/intake/dates';
 import type { DateAnswer } from '@/lib/intake/dates';
 import { createRepeaterRow, withRepeaterRowIds, isRepeaterNumberInput, repeaterNumberText, repeaterUnitColumns, repeaterUnitMissing, repeaterValueText } from '@/lib/intake/repeater';
 import { MonthYearField } from './MonthYearField';
-import { normalizeAnswer, isFieldRequired, isNoneOption, repeaterNotApplicable, repeaterNaKey, photoNotApplicable, photoReferences, photoSlotReferences } from '@/lib/intake/logic';
+import { normalizeAnswer, isFieldRequired, repeaterNotApplicable, repeaterNaKey, photoNotApplicable, photoReferences, photoSlotReferences } from '@/lib/intake/logic';
 import { useIntake } from '@/lib/intake/store';
 import { AttachmentField } from './AttachmentField';
 import { ConfiguredPhotoField, PhotoExample } from './ConfiguredPhotoField';
@@ -46,7 +46,7 @@ type Props = {
   noneOptions: readonly string[];
 };
 
-export function IntakeField({ field, sectionId, n, noneOptions }: Props) {
+export function IntakeField({ field, sectionId, n }: Props) {
   const { state, setField } = useIntake();
   const answerSection = field.answerSection ?? sectionId;
   const value = normalizeAnswer(field, state.answers[answerSection]?.[field.id]);
@@ -108,7 +108,7 @@ export function IntakeField({ field, sectionId, n, noneOptions }: Props) {
       {state.submittedAt && !['photo', 'file'].includes(field.type)
         ? repeaterNa ? <Text className="rounded-xl bg-white p-3 text-[16px] text-ink">{field.options?.[0]}</Text>
           : <ReadOnlyAnswer field={field} value={value} answers={state.answers[answerSection] ?? {}} />
-        : repeaterNa ? null : renderInput(field, value, set, noneOptions, answerSection, photoDesign)}
+        : repeaterNa ? null : renderInput(field, value, set, answerSection, photoDesign)}
     </View>
   );
 }
@@ -133,7 +133,6 @@ function renderInput(
   field: Field,
   value: FieldValue,
   set: (v: FieldValue) => void,
-  noneOptions: readonly string[],
   sectionId: string,
   photoDesign = false,
 ) {
@@ -211,7 +210,7 @@ function renderInput(
           options={field.options ?? []}
           value={asArray(value)}
           onChange={set}
-          noneOptions={noneOptions}
+          optionEffects={field.optionEffects}
         />
       );
     case 'photo':
@@ -407,23 +406,20 @@ function MultiField({
   options,
   value,
   onChange,
-  noneOptions,
+  optionEffects,
 }: {
   options: string[];
   value: string[];
   onChange: (v: string[]) => void;
-  noneOptions: readonly string[];
+  optionEffects: Field['optionEffects'];
 }) {
+  const exclusive = (option: string) => optionEffects?.[option]?.exclusive_selection === true;
   const toggle = (o: string) => {
-    // Mutually exclusive "none" sentinel ("geen", "Geen van onderstaande",
-    // "Nee, nooit", …) — picking it clears everything else; picking any other
-    // option clears a previously selected sentinel. Mirrors how the therapist
-    // reads the answers.
-    if (isNoneOption(o, noneOptions)) {
+    if (exclusive(o)) {
       onChange(value.includes(o) ? [] : [o]);
       return;
     }
-    const filtered = value.filter((v) => !isNoneOption(v, noneOptions));
+    const filtered = value.filter((v) => !exclusive(v));
     onChange(
       filtered.includes(o) ? filtered.filter((v) => v !== o) : [...filtered, o],
     );

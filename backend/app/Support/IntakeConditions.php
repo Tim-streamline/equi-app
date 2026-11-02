@@ -13,6 +13,7 @@ class IntakeConditions
         foreach ($rule as $key => $value) {
             if ($key === '$all' || $key === '$any') $result[$key] = array_map(fn ($child) => $this->qualify($child, $source, $aliases), $value);
             elseif ($key === '$not') $result[$key] = $this->qualify($value, $source, $aliases);
+            elseif ($key === '$answer') $result[$key] = $value;
             elseif (str_contains($key, '.')) $result[$key] = $value;
             else {
                 // Qualified references read raw answers instead of the section's alias-normalized values.
@@ -36,7 +37,7 @@ class IntakeConditions
     {
         if (! is_array($rule)) return false;
         foreach ($rule as $key => $value) {
-            if (in_array($key, ['$all', '$any', '$not'], true)) return true;
+            if (in_array($key, ['$all', '$any', '$not', '$answer'], true)) return true;
             if (is_array($value) && ! array_is_list($value) && array_key_exists('gte', $value)) return true;
         }
         return false;
@@ -52,6 +53,8 @@ class IntakeConditions
                 foreach ($value as $child) if ($child === null || ! $this->valid($child, $depth + 1)) return false;
             } elseif ($key === '$not') {
                 if ($value === null || ! $this->valid($value, $depth + 1)) return false;
+            } elseif ($key === '$answer') {
+                if (count($rule) !== 1 || ! is_string($value) || ! \Illuminate\Support\Str::isUuid($value)) return false;
             } elseif (! preg_match('/^[a-z0-9_-]+(?:\.[a-z0-9_-]+)?$/', $key)) {
                 return false;
             } elseif (is_array($value) && ! array_is_list($value)) {

@@ -295,7 +295,7 @@ class IntakeHousingSocialTest extends TestCase
         $result = $review->forBooking($booking);
         $historical = collect($result['historical_sections'])->flatMap(fn ($s) => $s['rows']);
         $this->assertSame('Wacht achter het hek.', $historical->firstWhere('key', 'wegjagen-reactie-anders')['value']);
-        $this->assertFalse($historical->firstWhere('key', 'wegjagen-frequentie')['flagged']);
+        $this->assertArrayNotHasKey('flagged', $historical->firstWhere('key', 'wegjagen-frequentie'));
         $this->assertSame('"Wacht achter het hek."', $booking->answers()->where('field_id', 'wegjagen-reactie-anders')->value('value'));
         $this->assertStringContainsString('Geen actuele bevinding', app(IntakeAnswersPdf::class)->html($booking));
         $this->answer($booking, 'sociaal', 'sociaal-spanning', ['Wegjagen bij voer']);
@@ -349,7 +349,8 @@ class IntakeHousingSocialTest extends TestCase
         // Simulate a database where the shelter condition was created before the legacy answer was listed.
         $old = $field->show_if;
         $old['$any'][1]['huisvesting.buiten-droog-liggen'] = array_values(array_diff($old['$any'][1]['huisvesting.buiten-droog-liggen'], ['Nee / vaak nat, modderig of oncomfortabel']));
-        $field->update(['show_if' => $old]);
+        // Recreate the pre-keyed definition; normal edits now resolve legacy aliases automatically.
+        IntakeField::whereKey($field->id)->update(['show_if' => json_encode($old), 'visibility_rule' => null]);
         $this->answer($booking, 'huisvesting', 'schuilmogelijkheden', ['Geen']);
         $this->answer($booking, 'huisvesting', 'buiten-droog-liggen', 'Nee / vaak nat, modderig of oncomfortabel');
         $ids = fn () => collect(app(IntakeReview::class)->forBooking($booking)['sections'])->flatMap(fn ($s) => $s['rows'])->pluck('key')->all();

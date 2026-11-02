@@ -17,6 +17,32 @@ class AdminIntakeQuestionnaireTest extends TestCase
 
     private AdminUser $admin;
 
+    public function test_exclusive_selection_is_editable_per_answer_and_validated(): void
+    {
+        $this->seed(IntakeQuestionnaireSeeder::class);
+        $field = IntakeField::where('type', 'multi')->whereNotNull('option_effects')->firstOrFail();
+        $exclusive = array_key_first($field->option_effects);
+        $regular = collect($field->options)->first(fn ($answer) => ! isset($field->option_effects[$answer]));
+        $data = ['section_id' => $field->section_id, 'key' => $field->key, 'label' => $field->label,
+            'type' => $field->type, 'required' => true, 'optional' => false, 'tall' => false, 'active' => true,
+            'order' => $field->order, 'options_json' => json_encode($field->options),
+            'option_effects' => [$exclusive => ['exclusive_selection' => false], $regular => ['exclusive_selection' => true]]];
+        $url = '/admin/intake-questionnaire/fields/'.$field->id;
+        $this->actingAs($this->admin, 'admin')->put($url, $data)->assertSessionHasNoErrors();
+        $this->assertEquals($data['option_effects'], $field->fresh()->option_effects);
+
+        $oldForm = $data;
+        unset($oldForm['option_effects']);
+        $this->put($url, $oldForm)->assertSessionHasNoErrors();
+        $this->assertEquals($data['option_effects'], $field->fresh()->option_effects);
+        foreach ([[$regular => ['exclusive_selection' => 'true']], ['Missing answer' => ['exclusive_selection' => true]], [$regular => ['unknown_effect' => true]]] as $invalid) {
+            $this->put($url, [...$data, 'option_effects' => $invalid])->assertSessionHasErrors('option_effects');
+            $this->assertEquals($data['option_effects'], $field->fresh()->option_effects);
+        }
+        $this->put($url, [...$data, 'option_effects' => []])->assertSessionHasNoErrors();
+        $this->assertSame([], $field->fresh()->option_effects);
+    }
+
     protected function setUp(): void
     {
         parent::setUp();
@@ -105,14 +131,10 @@ class AdminIntakeQuestionnaireTest extends TestCase
                 'name' => 'Protocol-intake',
                 'disclaimer_short' => 'Korte tekst',
                 'disclaimer_long' => 'Lange tekst',
-                'none_options_json' => '["geen","niet van toepassing"]',
             ])
             ->assertSessionHasNoErrors();
 
-        $this->assertSame(
-            ['geen', 'niet van toepassing'],
-            json_decode(DB::table('intake_questionnaires')->value('none_options'), true),
-        );
+        $this->assertDatabaseHas('intake_questionnaires', ['id' => $questionnaireId, 'disclaimer_short' => 'Korte tekst', 'disclaimer_long' => 'Lange tekst']);
 
         $this->actingAs($this->admin, 'admin')
             ->post('/admin/intake-questionnaire/sections', [
@@ -148,7 +170,6 @@ class AdminIntakeQuestionnaireTest extends TestCase
                 'active' => true,
                 'options_json' => '["Ja","Nee"]',
                 'show_if_json' => '{"paard.geslacht":"merrie"}',
-                'flag_if_json' => '["Ja"]',
                 'critical_if_json' => '["Ja"]',
                 'protocol_if_json' => '{"route":"manual-review"}',
                 'link_json' => '{"text":"Meer informatie","url":"https://example.test"}',

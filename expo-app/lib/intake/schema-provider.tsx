@@ -8,7 +8,7 @@ import {
   INTAKE_SCHEMA,
   type Section,
 } from './schema';
-import { buildIntakeSchema } from './config';
+import { buildIntakeSchema, resolveAnswerConditions } from './config';
 
 type IntakeSchemaContextValue = {
   schema: Section[];
@@ -19,7 +19,7 @@ type IntakeSchemaContextValue = {
 };
 
 const IntakeSchemaContext = createContext<IntakeSchemaContextValue>({
-  schema: INTAKE_SCHEMA,
+  schema: resolveAnswerConditions(INTAKE_SCHEMA),
   disclaimerShort: INTAKE_DISCLAIMER_SHORT,
   disclaimerLong: INTAKE_DISCLAIMER_LONG,
   noneOptions: INTAKE_NONE_OPTIONS,
@@ -53,7 +53,7 @@ export function IntakeSchemaProvider({ children }: { children: ReactNode }) {
       : [];
     if (!questionnaire || configured.length === 0) {
       return {
-        schema: INTAKE_SCHEMA,
+        schema: resolveAnswerConditions(INTAKE_SCHEMA),
         disclaimerShort: INTAKE_DISCLAIMER_SHORT,
         disclaimerLong: INTAKE_DISCLAIMER_LONG,
         noneOptions: INTAKE_NONE_OPTIONS,

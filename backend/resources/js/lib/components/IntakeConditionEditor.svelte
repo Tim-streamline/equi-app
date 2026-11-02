@@ -6,18 +6,21 @@
     const children = $derived(group === '$not' ? [value.$not] : group && entries.length === 1 ? value[group] : group ? entries.map(([key, answer]) => ({ [key]: answer })) : []);
     const key = $derived(!group && entries.length ? entries[0][0] : '');
     const answer = $derived(!group && entries.length ? entries[0][1] : '');
-    const question = $derived(questions.find(q => q.key === key));
+    const answerKey = $derived(key === '$answer' ? answer : null);
+    const question = $derived(answerKey ? questions.find(q => Object.values(q.optionKeys ?? {}).includes(answerKey)) : questions.find(q => q.key === key));
     // A {gte} object is a minimum; anything else is a list of answers. The form always shows what is saved.
     const minimumMode = $derived(isMinimum(answer));
     function isMinimum(answer) { return !!answer && typeof answer === 'object' && !Array.isArray(answer); }
     /** A new condition starts complete: a number question at minimum 1, otherwise its first answer. */
     function initialRule(questionKey) {
         const q = questions.find(q => q.key === questionKey);
-        return { [questionKey]: q?.type === 'number' ? { gte: 1 } : q?.options?.[0] ?? '' };
+        if (q?.type === 'number') return { [questionKey]: { gte: 1 } };
+        const answerKey = q?.optionKeys?.[q?.options?.[0]];
+        return answerKey ? { $answer: answerKey } : { [questionKey]: q?.options?.[0] ?? '' };
     }
     /** An empty minimum stays empty, so saving is refused instead of silently becoming 0. */
     function minimumRule(text) { return { [key]: { gte: text === '' ? '' : Number(text) } }; }
-    function modeRule(mode) { return mode === 'gte' ? { [key]: { gte: 1 } } : { [key]: question?.options?.[0] ?? '' }; }
+    function modeRule(mode) { return mode === 'gte' ? { [question.key]: { gte: 1 } } : question?.optionKeys?.[question?.options?.[0]] ? { $answer: question.optionKeys[question.options[0]] } : { [question.key]: question?.options?.[0] ?? '' }; }
     function replaceChild(index, rule) {
         const next = children.map((child, i) => i === index ? rule : child).filter(Boolean);
         onchange(next.length ? group === '$not' ? { $not: next[0] } : { [group]: next } : null);
@@ -31,11 +34,11 @@
         <button type="button" class="text-sm font-semibold text-[#0E6F69]" onclick={() => chooseField(questions[0]?.key ?? '')}>Voorwaarde toevoegen</button>
     {:else if group}
         <details open={depth === 0}>
-        <summary class="cursor-pointer text-sm font-semibold text-[#0E6F69]">{group === '$all' ? 'Alle voorwaarden gelden' : group === '$any' ? 'Minstens één voorwaarde geldt' : 'Deze voorwaarde geldt niet'} · {children.length}</summary>
+        <summary class="cursor-pointer text-sm font-semibold text-[#0E6F69]">{group === '$all' ? 'EN · alle antwoorden gelden' : group === '$any' ? 'OF · minstens één antwoord geldt' : 'Deze voorwaarde geldt niet'} · {children.length}</summary>
         <div class="mt-3 space-y-3">
         <div class="flex flex-wrap items-center gap-3">
             <select aria-label="Voorwaardegroep" class="rounded-lg border p-2 text-sm" value={group} onchange={e => onchange(e.currentTarget.value === '$not' ? { $not: children[0] } : { [e.currentTarget.value]: children })}>
-                <option value="$all">Alle voorwaarden gelden</option><option value="$any">Minstens één voorwaarde geldt</option><option value="$not">Deze voorwaarde geldt niet</option>
+                <option value="$all">EN · alle voorwaarden gelden</option><option value="$any">OF · minstens één voorwaarde geldt</option><option value="$not">Deze voorwaarde geldt niet</option>
             </select>
             <button type="button" class="text-sm text-red-700" onclick={() => onchange(null)}>Groep verwijderen</button>
         </div>
@@ -43,10 +46,11 @@
         {#if group !== '$not'}<button type="button" class="text-sm font-semibold text-[#0E6F69]" onclick={() => onchange({ [group]: [...children, initialRule(questions[0]?.key ?? '')] })}>Voorwaarde toevoegen</button>{/if}
         </div></details>
     {:else}
-        <select aria-label="Vraag voor voorwaarde" class="w-full rounded-lg border p-2 text-sm" value={key} onchange={e => chooseField(e.currentTarget.value)}>
+        <select aria-label="Vraag voor voorwaarde" class="w-full rounded-lg border p-2 text-sm" value={question?.key ?? key} onchange={e => chooseField(e.currentTarget.value)}>
             {#if !question}<option value={key}>{key}</option>{/if}
             {#each questions as q}<option value={q.key}>{q.label}</option>{/each}
         </select>
+        {#if answerKey && !question}<p class="text-sm text-red-700">Dit antwoord is niet meer beschikbaar: {answerKey}</p>{/if}
         {#if question?.type === 'number' && question?.options?.length}
             <select aria-label="Soort voorwaarde" class="rounded-lg border p-2 text-sm" value={minimumMode ? 'gte' : 'options'} onchange={e => onchange(modeRule(e.currentTarget.value))}>
                 <option value="gte">Minimaal een getal</option><option value="options">Eén van deze antwoorden</option>
@@ -55,6 +59,14 @@
         {#if minimumMode}
             <label class="block text-sm">Minimaal <input aria-label="Minimale waarde" type="number" class="ml-2 w-24 rounded-lg border p-2" value={answer.gte ?? ''} oninput={e => onchange(minimumRule(e.currentTarget.value))} /></label>
             {#if answer.gte === '' || answer.gte === null || answer.gte === undefined}<p class="text-sm text-red-700">Vul een minimum in.</p>{/if}
+        {:else if answerKey && question?.options?.length}
+            <label class="block space-y-1 text-sm">
+                <span>Dit antwoord is geselecteerd</span>
+                <select aria-label="Antwoord voor voorwaarde" class="w-full rounded-lg border p-2 text-sm" value={answerKey} onchange={e => onchange({ $answer: e.currentTarget.value })}>
+                    {#each question.options as option}<option value={question.optionKeys[option]}>{option}</option>{/each}
+                </select>
+            </label>
+            <p class="break-all text-xs text-[#1B2A2A]/60">Antwoordsleutel: {answerKey}</p>
         {:else if question?.options?.length}
             <fieldset class="max-h-48 space-y-2 overflow-y-auto"><legend class="text-sm mb-2">Eén van deze antwoorden</legend>
                 {#each question.options as option}
@@ -70,8 +82,8 @@
         {/if}
         <div class="flex flex-wrap gap-4 text-sm">
             <button type="button" class="text-red-700" onclick={() => onchange(null)}>Verwijderen</button>
-            <button type="button" class="text-[#0E6F69]" onclick={() => onchange({ $all: [value, initialRule(questions[0]?.key ?? '')] })}>En nog een voorwaarde</button>
-            <button type="button" class="text-[#0E6F69]" onclick={() => onchange({ $any: [value, initialRule(questions[0]?.key ?? '')] })}>Of een andere voorwaarde</button>
+            <button type="button" class="text-[#0E6F69]" onclick={() => onchange({ $all: [value, initialRule(questions[0]?.key ?? '')] })}>EN nog een antwoord</button>
+            <button type="button" class="text-[#0E6F69]" onclick={() => onchange({ $any: [value, initialRule(questions[0]?.key ?? '')] })}>OF een ander antwoord</button>
             <button type="button" class="text-[#0E6F69]" onclick={() => onchange({ $not: value })}>Omgekeerde voorwaarde</button>
         </div>
     {/if}

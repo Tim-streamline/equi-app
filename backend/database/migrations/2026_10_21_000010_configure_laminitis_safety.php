@@ -26,7 +26,7 @@ return new class extends Migration
                     'order' => $order + $i, 'label' => $field['label'], 'type' => $field['type'],
                     'hint' => $field['hint'] ?? null, 'placeholder' => $field['placeholder'] ?? null,
                     'options' => $field['options'] ?? null, 'show_if' => $field['showIf'] ?? null,
-                    'flag_if' => $field['flagIf'] ?? null, 'critical_if' => $field['criticalIf'] ?? null,
+                    'critical_if' => $field['criticalIf'] ?? null,
                     'lines' => $field['lines'] ?? null, 'optional' => false, 'required' => true, 'active' => true,
                 ]);
             }

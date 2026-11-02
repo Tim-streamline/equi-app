@@ -32,7 +32,7 @@ class IntakeProgress
                 if ($field->type === 'sectionhead') {
                     continue;
                 }
-                if (! $review->visible($field->show_if, $visibleAnswers, $visibility, $questionnaire->none_options ?? [])) {
+                if (! $review->visible($field->visibility_rule ?? $field->show_if, $visibleAnswers, $visibility, $questionnaire->none_options ?? [])) {
                     continue;
                 }
                 // Older app versions hide these questions, so they must not block those owners.

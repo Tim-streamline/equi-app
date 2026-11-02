@@ -19,9 +19,9 @@
     const allRows = $derived(review.sections.flatMap(s => s.rows));
     const summary = $derived(['ras', 'leeftijd', 'geboortedatum', 'geslacht', 'gewicht', 'gewicht-methode', 'gewicht-methode-wanneer', 'stokmaat', 'stokmaat-methode', 'conditie'].map(key => allRows.find(r => r.section === 'paard' && r.key === key)).filter(Boolean));
     const portrait = $derived(allRows.find(r => r.section === 'fysiek' && r.key === 'foto-zijaanzicht-links')?.attachments?.[0]);
-    const matching = (row) => filter === 'all' || (row.type !== 'sectionhead' && (filter === 'flags' ? row.flagged : filter === 'protocol' ? row.protocol.length > 0 : row.empty));
+    const matching = (row) => filter === 'all' || (row.type !== 'sectionhead' && (filter === 'protocol' ? row.protocol.length > 0 : row.empty));
     const sections = $derived(review.sections.map(s => ({ ...s, rows: s.rows.filter(matching) })).filter(s => s.rows.length));
-    const filters = [['all', 'Alle antwoorden'], ['flags', 'Aandachtspunten'], ['protocol', 'Protocol-triggers'], ['empty', 'Niet ingevuld']];
+    const filters = [['all', 'Alle antwoorden'], ['protocol', 'Protocol-triggers'], ['empty', 'Niet ingevuld']];
 
     function jump(id, reveal = false) {
         if (reveal) filter = 'all';
@@ -109,18 +109,18 @@
     {/if}
     <div class="review-columns">
         {#if !printMode}<nav class="section-nav" aria-label="Onderdelen"><h3>Onderdelen</h3>
-            {#each sections as section}<button class:current={active === section.id} onclick={() => jump(`section-${section.id}`)}><span>{String(section.nr).padStart(2, '0')}</span><span>{section.title}</span>{#if section.flags}<b>{section.flags}</b>{/if}</button>{/each}
+            {#each sections as section}<button class:current={active === section.id} onclick={() => jump(`section-${section.id}`)}><span>{String(section.nr).padStart(2, '0')}</span><span>{section.title}</span></button>{/each}
         </nav>{/if}
         <div class="answers">
             {#each sections as section}
                 <section class="surface section" id={`section-${section.id}`} data-section={section.id}>
-                    <header><span class="number">{String(section.nr).padStart(2, '0')}</span><div><h2>{section.title}</h2><p>{section.count} vragen{section.flags ? ` · ${section.flags} aandachtspunten` : ''}</p></div></header>
+                    <header><span class="number">{String(section.nr).padStart(2, '0')}</span><div><h2>{section.title}</h2><p>{section.count} vragen</p></div></header>
                     {#each section.rows as row}
                         {#if row.type === 'sectionhead'}<h3 class="subheading">{row.label}</h3>
                         {:else}<div class="answer-row" id={`answer-${row.id}`}>
                             <div class="question"><span>{row.label}</span>
-                                {#if row.owner_reported}<small class="attention">Vermoeden eigenaar · niet bevestigd</small>{/if}
-                                {#if row.critical}<small class="critical">Blokkeert protocol</small>{:else if row.flagged}<small class="attention">Aandachtspunt</small>{/if}
+                                {#if row.owner_reported}<small class="owner-report">Vermoeden eigenaar · niet bevestigd</small>{/if}
+                                {#if row.critical}<small class="critical">Blokkeert protocol</small>{/if}
                                 {#if row.required && row.empty}<small class="missing">Verplicht, niet ingevuld</small>{/if}
                             </div>
                             <div class="answer"><Answer {row} {printMode} openPhoto={file => photo = file} />
@@ -187,16 +187,16 @@
     .filters button.chosen { background: #0c3735; color: white; border-color: #0c3735; } .filters span { background: #8882; padding: 1px 6px; border-radius: 8px; margin-left: 5px; }
     .review-columns { display: grid; grid-template-columns: 160px minmax(0, 1fr) 280px; align-items: start; gap: 20px; }
     .section-nav, .review-sidebar { position: sticky; top: 16px; } .section-nav h3 { color: #6d7e75; margin-bottom: 10px; }
-    .section-nav button { display: grid; grid-template-columns: 24px 1fr auto; align-items: center; gap: 8px; text-align: left; width: 100%; padding: 9px 8px; border-radius: 10px; font-size: 13px; }
-    .section-nav button.current { background: #e2f5f0; color: #086e65; font-weight: 600; } .section-nav b { background: #fff0d4; color: #825507; padding: 0 6px; border-radius: 9px; }
+    .section-nav button { display: grid; grid-template-columns: 24px 1fr; align-items: center; gap: 8px; text-align: left; width: 100%; padding: 9px 8px; border-radius: 10px; font-size: 13px; }
+    .section-nav button.current { background: #e2f5f0; color: #086e65; font-weight: 600; }
     .answers { min-width: 0; } .section { padding: 24px; margin-bottom: 20px; scroll-margin-top: 20px; }
     header { display: flex; gap: 10px; align-items: center; margin-bottom: 16px; } h2 { font-weight: 600; font-size: 16px; } header p, .muted { color: #6c7771; font-size: 14px; }
     .number { padding: 7px 10px; background: #f4f0e9; border-radius: 8px; font-weight: 600; }
     .subheading { margin: 24px 0 12px; color: #6c7771; }
     .answer-row { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.2fr); gap: 20px; padding: 16px 0; border-top: 1px solid #1b2a2a0d; scroll-margin-top: 30px; break-inside: avoid; }
     .question { display: flex; flex-direction: column; align-items: flex-start; gap: 7px; } .answer { min-width: 0; overflow-wrap: anywhere; }
-    small.attention, small.critical, .missing { font-size: 11px; padding: 2px 8px; border-radius: 999px; }
-    .attention { background: #fff0d4; color: #825507; } .critical { background: #fee9e8; color: #a12d2d; } .missing { background: #f2f0eb; color: #6c6255; }
+    small.owner-report, small.critical, .missing { font-size: 11px; padding: 2px 8px; border-radius: 999px; }
+    .owner-report { background: #fff0d4; color: #825507; } .critical { background: #fee9e8; color: #a12d2d; } .missing { background: #f2f0eb; color: #6c6255; }
     .protocol { background: #ebf8f1; color: #145e4d; border-radius: 10px; padding: 10px; margin-top: 10px; font-size: 14px; }
     .review-sidebar { display: grid; gap: 16px; } .review-sidebar .surface { padding: 20px; } .safety-status { border-radius: 999px; padding: 3px 10px; display: inline-block; font-size: 12px; margin-bottom: 12px; background: #ebf8f1; } .safety-status.critical { background: #fee9e8; }
     .safety-item { display: flex; gap: 10px; text-align: left; width: 100%; margin-top: 12px; font-size: 14px; } .safety-item small { display: block; color: #6c7771; }

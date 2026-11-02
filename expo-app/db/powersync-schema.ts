@@ -556,6 +556,9 @@ const intake_sections = new Table({
 }, { indexes: { byQuestionnaire: ['questionnaire_id'] } });
 
 const intake_fields = new Table({
+  option_effects: column.text,
+  option_keys: column.text,
+  visibility_rule: column.text,
   answer_aliases: column.text,
   date_config: column.text,
   submission_blocks: column.text,
@@ -578,7 +581,6 @@ const intake_fields = new Table({
   link: column.text,
   options: column.text,
   show_if: column.text,
-  flag_if: column.text,
   critical_if: column.text,
   protocol_if: column.text,
   signal_config: column.text,

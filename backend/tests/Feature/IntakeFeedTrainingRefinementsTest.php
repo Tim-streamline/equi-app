@@ -100,7 +100,7 @@ class IntakeFeedTrainingRefinementsTest extends TestCase
         foreach (['huidige-bijvoeding', 'huidig-extra', 'analyse-suiker', 'bloedonderzoek', 'paddock-water', 'training-duur', 'training-knelpunten', 'training-veranderd-details'] as $id) {
             $this->assertFalse($rows->contains('key', $id), $id);
         }
-        $this->assertFalse($rows->firstWhere('key', 'stress-symptomen')['flagged']);
+        $this->assertArrayNotHasKey('flagged', $rows->firstWhere('key', 'stress-symptomen'));
         $html = app(IntakeAnswersPdf::class)->html($booking->fresh());
         // Hidden answers are kept, but only under "Eerder ingevuld", never as a current answer.
         $this->assertStringNotContainsString('HIDDEN-', explode('Eerder ingevuld · ', $html)[0]);

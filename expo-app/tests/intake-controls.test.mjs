@@ -127,13 +127,11 @@ test('field renderer supports multiple medicines, other names, condition introdu
   const na = () => flatten(draw('geschiedenis', events.id)).find(n => n.props.accessibilityRole === 'checkbox');
   const history = fields.find(s => s.id === 'geschiedenis');
   const beforeNa = pure['./logic'].answeredCount(history, state.answers.geschiedenis, state.answers);
-  assert.equal(pure['./logic'].countFlags(state.answers), 1);
   assert.equal(na().props.accessibilityState.checked, false);
   na().props.onPress();
   assert.equal(na().props.accessibilityState.checked, true);
   assert.equal(pure['./logic'].isFieldAnswered(events, state.answers.geschiedenis[events.id], state.answers, 'geschiedenis'), true);
   assert.equal(pure['./logic'].answeredCount(history, state.answers.geschiedenis, state.answers).answered, beforeNa.answered);
-  assert.equal(pure['./logic'].countFlags(state.answers), 0);
   assert.ok(!text(draw('geschiedenis', events.id)).includes('Eerste toevoegen'));
   assert.deepEqual(answerRows(state.answers.geschiedenis[events.id]), [{ verdwenen: 'Verbeterd, maar nog aanwezig' }]);
   na().props.onPress();
@@ -351,3 +349,38 @@ test('a hydrated existing draft opens offline without requesting Plus access', a
   await new Promise(resolve => setImmediate(resolve));
   assert.equal(requests, 1, 'new intake still checks online access');
 });
+
+for (const options of [['A', 'B', 'Solo', 'Geen'], ['A long ordinary answer', 'Another ordinary answer', 'An exclusive answer', 'Geen']]) {
+  test(`exclusive selection uses per-answer effects in ${options[0].length > 14 ? 'checkbox rows' : 'chips'}`, () => {
+    const config = pure['./config'];
+    const [a, b, solo, none] = options;
+    const state = { answers: {} };
+    const synced = config.buildIntakeSchema([{ id: 's', key: 'custom', title: 'Custom' }], [{
+      section_id: 's', key: 'choices', type: 'multi', label: 'Choices', options: JSON.stringify(options),
+      option_effects: JSON.stringify({ [solo]: { exclusive_selection: true }, [none]: { exclusive_selection: false } }),
+    }])[0].fields[0];
+    const { IntakeField } = load('../components/intake/IntakeField.tsx', {
+      'react/jsx-runtime': runtime, 'react-native': native, 'lucide-react-native': icons,
+      './IntakeScrollView': { IntakeTextInput: 'TextInput' },
+      '@/lib/intake/logic': pure['./logic'],
+      '@/lib/intake/store': { useIntake: () => ({ state, setField: (s, f, value) => { (state.answers[s] ??= {})[f] = value; } }) },
+      './AgeField': { AgeField: 'AgeField' }, './PhotoInstructions': { PhotoInstructions: () => null },
+      './ConfiguredPhotoField': { ConfiguredPhotoField: 'ConfiguredPhoto', PhotoExample: () => null },
+      './AttachmentField': { AttachmentField: 'AttachmentField' }, './FieldLabel': { FieldLabel: 'FieldLabel' },
+    });
+    const press = (label, field = synced) => {
+      const drawn = render(IntakeField({ sectionId: 'custom', field, n: 1, noneOptions: [none] }));
+      const button = flatten(drawn).find(n => n.type === 'Pressable' && flatten(n).some(c => c.type === 'Text' && text(c).trim() === label));
+      assert.ok(button, label); button.props.onPress();
+    };
+    const chosen = () => state.answers.custom.choices;
+    press(a); press(b); assert.deepEqual(chosen(), [a, b]);
+    press(solo); assert.deepEqual(chosen(), [solo]);
+    press(solo); assert.deepEqual(chosen(), []);
+    press(solo); press(b); assert.deepEqual(chosen(), [b]);
+    press(none); assert.deepEqual(chosen(), [b, none]); // Global none list no longer controls selection.
+    const bothExclusive = { ...synced, optionEffects: { ...synced.optionEffects, [none]: { exclusive_selection: true } } };
+    press(solo, bothExclusive); press(none, bothExclusive); assert.deepEqual(chosen(), [none]);
+    press(a, { ...synced, optionEffects: undefined }); assert.deepEqual(chosen(), [none, a]);
+  });
+}

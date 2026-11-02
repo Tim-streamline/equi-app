@@ -18,7 +18,7 @@
 {:else if row.type === 'multi'}
     <div class="flex flex-wrap gap-2">
         {#each row.value as option}
-            <span class:attention={row.flagged_options.includes(option)} class="chip">{option}</span>
+            <span class:critical={(row.critical_options ?? []).includes(option)} class="chip">{option}</span>
         {/each}
     </div>
 {:else if row.type === 'photo' || row.type === 'file'}
@@ -46,7 +46,7 @@
 
 <style>
     .chip { padding: 4px 10px; border-radius: 999px; background: #f0f3f2; font-size: 14px; }
-    .attention { background: #fff0d4; color: #825507; }
+    .critical { background: #fee9e8; color: #a12d2d; }
     .photo { display: flex; flex-direction: column; width: 104px; text-align: left; font-size: 12px; overflow-wrap: anywhere; cursor: zoom-in; }
     .photo img { width: 104px; height: 104px; object-fit: cover; border-radius: 12px; margin-bottom: 5px; }
     table { border-collapse: collapse; width: 100%; font-size: 14px; }

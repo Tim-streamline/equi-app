@@ -20,7 +20,7 @@ class IntakeQuestionnaireSnapshot
 
     public const SECTION = ['key', 'order', 'title', 'intro', 'presentation', 'minutes', 'icon', 'subtitle', 'active'];
 
-    public const FIELD = ['key', 'order', 'answer_section_key', 'label', 'type', 'hint', 'required', 'optional', 'unit', 'step', 'tall', 'lines', 'placeholder', 'link', 'options', 'answer_aliases', 'submission_blocks', 'show_if', 'flag_if', 'critical_if', 'protocol_if', 'repeater_sub', 'photo_config', 'age_config', 'signal_config', 'date_config', 'active'];
+    public const FIELD = ['key', 'order', 'answer_section_key', 'label', 'type', 'hint', 'required', 'optional', 'unit', 'step', 'tall', 'lines', 'placeholder', 'link', 'options', 'option_effects', 'option_keys', 'visibility_rule', 'answer_aliases', 'submission_blocks', 'show_if', 'critical_if', 'protocol_if', 'repeater_sub', 'photo_config', 'age_config', 'signal_config', 'date_config', 'active'];
 
     public function assertSchema(): void
     {
@@ -54,6 +54,7 @@ class IntakeQuestionnaireSnapshot
 
     public function validate(array $data): void
     {
+        $data = $this->withoutObsoleteSettings($data);
         Validator::make($data, [
             'format' => ['required', 'integer', 'in:1'],
             'questionnaire' => ['required', 'array:'.implode(',', self::QUESTIONNAIRE)],
@@ -84,11 +85,19 @@ class IntakeQuestionnaireSnapshot
         $this->requireColumns($data['questionnaire'], array_diff(self::QUESTIONNAIRE, ['safety_config']));
         app(IntakeSafetySettings::class)->validate($data['questionnaire']['safety_config'] ?? null);
         $fields = 0;
+        $answerKeys = [];
         foreach ($data['sections'] as $section) {
             $this->requireColumns($section, self::SECTION);
             foreach ($section['fields'] as $field) {
                 // Older snapshots may omit this new optional setting; preserve it on import.
-                $this->requireColumns($field, array_diff(self::FIELD, ['signal_config', 'date_config', 'answer_aliases', 'submission_blocks']));
+                $this->requireColumns($field, array_diff(self::FIELD, ['signal_config', 'date_config', 'answer_aliases', 'submission_blocks', 'option_effects', 'option_keys', 'visibility_rule']));
+                if (isset($field['option_keys'])) {
+                    app(IntakeAnswerConditions::class)->validateKeys($field['option_keys'], $field['options'] ?? []);
+                    if (array_intersect($answerKeys, array_values($field['option_keys']))) throw new RuntimeException('Duplicate global answer key.');
+                    $answerKeys = [...$answerKeys, ...array_values($field['option_keys'])];
+                }
+                if (! app(IntakeConditions::class)->valid($field['visibility_rule'] ?? null)) throw new RuntimeException('Invalid keyed visibility rule.');
+                app(IntakeOptionEffects::class)->validate($field['option_effects'] ?? null, $field['options'] ?? null);
                 app(IntakeSafetySettings::class)->validateAliases($field['answer_aliases'] ?? null);
                 app(IntakeSubmissionBlocks::class)->validate($field['submission_blocks'] ?? null);
                 if (! app(IntakeConditions::class)->valid($field['show_if'] ?? null)) throw new RuntimeException('Invalid intake visibility rule.');
@@ -104,6 +113,21 @@ class IntakeQuestionnaireSnapshot
         if (! $fields) {
             throw new RuntimeException('Refusing an empty questionnaire snapshot.');
         }
+    }
+
+    /** Definition backups from before review flags were retired remain importable. */
+    private function withoutObsoleteSettings(array $data): array
+    {
+        if (! is_array($data['sections'] ?? null)) return $data;
+        foreach ($data['sections'] as $sectionIndex => $section) {
+            if (! is_array($section) || ! is_array($section['fields'] ?? null)) continue;
+            foreach ($section['fields'] as $fieldIndex => $field) {
+                if (! is_array($field)) continue;
+                unset($data['sections'][$sectionIndex]['fields'][$fieldIndex]['flag_if']);
+            }
+        }
+
+        return $data;
     }
 
     private function requireColumns(array $row, array $columns): void
@@ -141,6 +165,7 @@ class IntakeQuestionnaireSnapshot
 
     public function sync(array $data, bool $apply = false, ?string $backupDirectory = null): array
     {
+        $data = $this->withoutObsoleteSettings($data);
         $this->validate($data);
         $this->assertSchema();
 
@@ -155,6 +180,10 @@ class IntakeQuestionnaireSnapshot
                 DB::statement('LOCK TABLE intake_questionnaires, intake_sections, intake_fields IN SHARE ROW EXCLUSIVE MODE');
             }
             $q = IntakeQuestionnaire::where('slug', $data['questionnaire']['slug'])->with('sections.fields')->sole();
+            $incomingKeys = collect($data['sections'])->flatMap(fn ($section) => collect($section['fields'])->flatMap(fn ($field) => array_values($field['option_keys'] ?? [])))->all();
+            foreach (IntakeField::whereHas('section', fn ($query) => $query->where('questionnaire_id', '!=', $q->id))->whereNotNull('option_keys')->get(['option_keys']) as $other) {
+                if (array_intersect($incomingKeys, array_values($other->option_keys))) throw new RuntimeException('An answer key is already used by another questionnaire.');
+            }
             $sections = $q->sections->keyBy('key');
             $existing = $q->sections->flatMap(fn ($s) => $s->fields);
             $duplicates = $existing->groupBy('key')->filter(fn ($group) => $group->count() > 1)->keys();
@@ -234,6 +263,7 @@ class IntakeQuestionnaireSnapshot
                     fclose($handle);
                 }
                 foreach ($operations as $op) {
+                    if ($op['model'] instanceof IntakeField) $op['model']->syncingDefinition = true;
                     $op['model']->forceFill($op['attributes'])->save();
                 }
                 // Verify both exact imported definitions and archived target-only rows.

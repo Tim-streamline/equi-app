@@ -248,17 +248,6 @@
             "Geen van bovenstaande",
             "Weet ik niet",
             "Anders, namelijk"
-          ],
-          "flagIf": [
-            "Teruggetrokken / weinig initiatief",
-            "Veel stilstaan / \"afwezig\" lijken",
-            "Weinig interesse in omgeving of andere paarden",
-            "Weinig spel-, onderzoeks- of sociaal gedrag",
-            "Overmatig alert / gespannen / moeilijk ontspannen",
-            "Veel conflictvermijding / zich klein maken",
-            "Prikkelbaar / snel geïrriteerd / reactief",
-            "Wisselende stemming of gedrag",
-            "Anders, namelijk"
           ]
         },
         "gedrag-signalen-anders": {

@@ -27,10 +27,12 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
     'placeholder',
     'link',
     'options',
+    'option_effects',
+    'option_keys',
+    'visibility_rule',
     'answer_aliases',
     'submission_blocks',
     'show_if',
-    'flag_if',
     'critical_if',
     'protocol_if',
     'signal_config',
@@ -40,6 +42,19 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 class IntakeField extends Model
 {
     use HasUuids;
+
+    public bool $syncingDefinition = false;
+
+    protected static function booted(): void
+    {
+        static::saving(fn (self $field) => app(\App\Support\IntakeAnswerConditions::class)->prepare($field));
+        static::saved(function (self $field) {
+            if (! $field->syncingDefinition && $field->getRawOriginal('option_keys') !== null
+                && $field->wasChanged(['option_keys', 'answer_aliases', 'answer_section_key', 'section_id', 'key', 'active'])) {
+                app(\App\Support\IntakeAnswerConditions::class)->refreshProjections($field);
+            }
+        });
+    }
 
     protected function casts(): array
     {
@@ -55,10 +70,12 @@ class IntakeField extends Model
             'lines' => 'integer',
             'link' => 'array',
             'options' => 'array',
+            'option_effects' => 'array',
+            'option_keys' => 'array',
+            'visibility_rule' => 'array',
             'answer_aliases' => 'array',
             'submission_blocks' => 'array',
             'show_if' => 'array',
-            'flag_if' => 'array',
             'critical_if' => 'array',
             'protocol_if' => 'array',
             'signal_config' => 'array',

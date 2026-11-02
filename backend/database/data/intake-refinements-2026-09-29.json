@@ -182,12 +182,6 @@
             "Ik vermoed dit",
             "Voor zover ik weet niet",
             "Weet ik niet"
-          ],
-          "flagIf": [
-            "aangetoond door dierenarts",
-            "vermoeden van mij",
-            "Vastgesteld door dierenarts/onderzoek",
-            "Ik vermoed dit"
           ]
         },
         "ir-attest": {
@@ -204,12 +198,6 @@
             "Ik vermoed dit",
             "Voor zover ik weet niet",
             "Weet ik niet"
-          ],
-          "flagIf": [
-            "aangetoond door dierenarts",
-            "vermoeden van mij",
-            "Vastgesteld door dierenarts/onderzoek",
-            "Ik vermoed dit"
           ]
         },
         "kpu-status": {
@@ -218,12 +206,6 @@
             "Ik vermoed dit",
             "Voor zover ik weet niet",
             "Weet ik niet"
-          ],
-          "flagIf": [
-            "aangetoond uit urine onderzoek",
-            "vermoeden van mij",
-            "Aangetoond met urineonderzoek",
-            "Ik vermoed dit"
           ]
         },
         "kpu-attest": {

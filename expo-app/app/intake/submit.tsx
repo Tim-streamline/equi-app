@@ -1,5 +1,5 @@
 // Final review screen: lists each section with an edit shortcut and submits
-// the intake. Automatic attention points remain part of the internal review.
+// the intake. Critical answers receive an internal safety review.
 
 import { useMemo, useState } from 'react';
 import { View, Text, ScrollView, Pressable, Alert } from 'react-native';
