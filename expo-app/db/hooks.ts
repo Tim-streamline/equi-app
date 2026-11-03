@@ -436,11 +436,12 @@ export function useStoreMutations() {
         dosage: string | null,
         date: string,
         horseId: string,
+        administration = 1,
       ) {
         const existing = await powersync.getOptional<{ id: string; done: number }>(
           `SELECT id, done FROM protocol_supplement_intakes
-           WHERE protocol_phase_supplement_id = ? AND date = ? LIMIT 1`,
-          [protocolPhaseSupplementId, date],
+           WHERE protocol_phase_supplement_id = ? AND date = ? AND COALESCE(administration, 1) = ? LIMIT 1`,
+          [protocolPhaseSupplementId, date, administration],
         );
         if (existing) {
           const next = existing.done ? 0 : 1;
@@ -451,9 +452,9 @@ export function useStoreMutations() {
         } else {
           await powersync.execute(
             `INSERT INTO protocol_supplement_intakes
-               (id, protocol_phase_supplement_id, horse_id, date, dosage, done, taken_at)
-             VALUES (?, ?, ?, ?, ?, 1, ?)`,
-            [newId(), protocolPhaseSupplementId, horseId, date, dosage, new Date().toISOString()],
+               (id, protocol_phase_supplement_id, horse_id, date, dosage, administration, done, taken_at)
+             VALUES (?, ?, ?, ?, ?, ?, 1, ?)`,
+            [newId(), protocolPhaseSupplementId, horseId, date, dosage, administration, new Date().toISOString()],
           );
         }
       },

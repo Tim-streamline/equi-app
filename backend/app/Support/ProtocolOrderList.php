@@ -22,7 +22,7 @@ class ProtocolOrderList
                 $dose = $this->parseDose($selection->dosage);
                 // Ordering always budgets daily use. The configured weekly number
                 // is a minimum adherence target, not the quantity to purchase.
-                $perDay = max(1, (int) ($selection->supplement?->administrations_per_day ?? $selection->administrations_per_day ?? 1));
+                $perDay = $selection->administrationsPerDay();
                 $frequency = 7 * $perDay;
                 $known = $dose !== null;
                 // Links are deliberately live catalogue data; changing a webshop URL

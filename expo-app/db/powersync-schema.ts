@@ -189,6 +189,7 @@ const protocol_beweging_adviezen = new Table({
 }, { indexes: { byProtocol: ['protocol_id'] } });
 
 const protocol_supplement_intakes = new Table({
+  administration: column.integer,
   protocol_phase_supplement_id: column.text,
   horse_id: column.text,
   date: column.text,

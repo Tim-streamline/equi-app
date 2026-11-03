@@ -58,6 +58,7 @@ class HorseDashboardController extends Controller
             if (! $protocol->started_at) {
                 $protocol->update(['started_at' => $now->toDateString(), 'current_week' => 1]);
             }
+            app(\App\Support\ProtocolTiming::class)->synchronize($protocol, $now);
         });
 
         return response()->json($dashboard->build($user, $horse, $now));
@@ -71,13 +72,14 @@ class HorseDashboardController extends Controller
             'timezone' => ['sometimes', 'timezone'],
             'item_id' => [$request->isMethod('POST') ? 'required' : 'sometimes', 'uuid'],
             'done' => [$request->isMethod('POST') ? 'required' : 'sometimes', 'boolean'],
+            'administration' => ['sometimes', 'integer', 'between:1,24'],
         ]);
         $now = CarbonImmutable::now($data['timezone'] ?? 'Europe/Amsterdam');
         $protocol = $horse->protocols()->whereKey($data['protocol_id'])->where('status', 'active')
             ->whereNotNull('published_at')->where('published_at', '<=', $now)->firstOrFail();
 
         return response()->json($request->isMethod('POST')
-            ? $history->setDone($protocol, $data['date'], $data['item_id'], (bool) $data['done'], $now)
+            ? $history->setDone($protocol, $data['date'], $data['item_id'], (bool) $data['done'], $now, true, $data['administration'] ?? 1)
             : $history->day($protocol, $data['date'], $now));
     }
 

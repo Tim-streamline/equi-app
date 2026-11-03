@@ -104,9 +104,32 @@ class HorseDashboardTest extends TestCase
             ->assertJsonPath('protocol.preparing', false)->assertJsonPath('protocol.startedAt', '2026-08-28')
             ->assertJsonPath('protocol.currentDay', 1)->assertJsonPath('protocol.currentWeek', 1)
             ->assertJsonPath('protocol.phases.0.currentPhaseWeek', 1);
+        $protocol = $this->protocol->fresh();
+        $phases = $protocol->phases;
+        $this->assertSame('active', $phases[0]->state);
+        $this->assertSame('Actief · wk 1–2', $phases[0]->chip_label);
+        $this->assertSame('upcoming', $phases[1]->state);
+        $this->assertSame($phases[0]->id, $protocol->currentPhase->id);
+        $this->assertSame('Week 1 van 4 · Phase 1 actief', $protocol->subtitle_protocol);
+        $this->assertSame('augustus 2026', $protocol->subtitle_calendar);
         $this->travel(2)->days();
         $this->postJson($url, $body + ['confirmed' => true])->assertOk()
             ->assertJsonPath('protocol.startedAt', '2026-08-28')->assertJsonPath('protocol.currentDay', 3);
+    }
+
+    public function test_start_retry_repairs_stale_persisted_phase_labels_without_restarting_the_plan(): void
+    {
+        $this->protocol->phases()->update(['state' => 'upcoming', 'chip_label' => 'Vanaf wk 1']);
+        $this->protocol->update(['subtitle_protocol' => 'Week 0 van 4', 'subtitle_calendar' => null]);
+        // The existing start date is August 15; today is August 28, in week 2.
+        $this->postJson('/api/horses/'.$this->horse->id.'/protocol-start', [
+            'protocol_id' => $this->protocol->id, 'confirmed' => true, 'timezone' => 'Europe/Amsterdam',
+        ])->assertOk()->assertJsonPath('protocol.startedAt', '2026-08-15');
+        $protocol = $this->protocol->fresh();
+        $this->assertSame(2, $protocol->current_week);
+        $this->assertSame('active', $protocol->phases[0]->state);
+        $this->assertSame('Week 2 van 4 · Phase 1 actief', $protocol->subtitle_protocol);
+        $this->assertNotNull($protocol->currentPhase);
     }
 
     public function test_other_owners_and_unpublished_protocols_cannot_start(): void
@@ -118,6 +141,34 @@ class HorseDashboardTest extends TestCase
         $other = Horse::create(['owner_id' => User::factory()->create()->id, 'name' => 'Other', 'status' => 'active']);
         $this->postJson('/api/horses/'.$other->id.'/protocol-start', $body)->assertNotFound();
         $this->assertNull($this->protocol->fresh()->started_at);
+    }
+
+    public function test_twice_daily_gifts_have_separate_today_and_history_checkmarks(): void
+    {
+        $item = $this->protocol->phases()->first()->supplements()->first();
+        $item->update(['administrations_per_day' => 2]);
+        \App\Models\ProtocolSupplementIntake::create([
+            'protocol_phase_supplement_id' => $item->id, 'horse_id' => $this->horse->id,
+            'date' => '2026-08-28', 'administration' => 2, 'done' => true,
+        ]);
+        $today = $this->getJson('/api/horses/'.$this->horse->id.'/dashboard')->assertOk()->json('protocol.today');
+        $this->assertSame(2, $today['total']);
+        $this->assertSame(1, $today['done']);
+        $this->assertFalse($today['items'][0]['done']);
+        $this->assertSame(1, $today['items'][0]['administration']);
+        $this->assertTrue($today['items'][1]['done']);
+        $this->assertSame(2, $today['items'][1]['administration']);
+        $this->assertSame($item->phase->id, $today['items'][1]['phaseId']);
+
+        $this->postJson('/api/horses/'.$this->horse->id.'/protocol-day', [
+            'protocol_id' => $this->protocol->id, 'date' => '2026-08-27', 'item_id' => $item->id,
+            'administration' => 2, 'done' => true, 'timezone' => 'Europe/Amsterdam',
+        ])->assertOk()->assertJsonPath('items.0.done', false)->assertJsonPath('items.1.done', true)->assertJsonPath('state', 'partial');
+        $this->postJson('/api/sync/upload', ['operations' => [[
+            'op' => 'PUT', 'type' => 'protocol_supplement_intakes', 'id' => (string) Str::uuid(),
+            'data' => ['horse_id' => $this->horse->id, 'protocol_phase_supplement_id' => $item->id,
+                'date' => '2026-08-28', 'done' => true, 'administration' => 3],
+        ]]])->assertUnprocessable();
     }
 
     public function test_home_promotion_defaults_and_admin_edits_reach_the_dashboard(): void

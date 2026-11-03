@@ -55,6 +55,11 @@ class ProtocolPhaseSupplement extends Model
         return $this->belongsTo(ProtocolPhase::class, 'protocol_phase_id');
     }
 
+    public function administrationsPerDay(): int
+    {
+        return max(1, (int) ($this->supplement?->administrations_per_day ?? $this->administrations_per_day ?? 1));
+    }
+
     public function supplement(): BelongsTo
     {
         return $this->belongsTo(Supplement::class);

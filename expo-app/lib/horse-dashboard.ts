@@ -12,6 +12,10 @@ export type LibraryRecommendation = {
   phaseContext?: string;
 };
 export type DashboardSupplement = {
+  administration?: number;
+  administrationsPerDay?: number;
+  phaseId?: string;
+  phaseOrder?: number;
   id: string;
   name: string;
   dosage: string | null;
@@ -89,6 +93,8 @@ export type DashboardProtocol = {
   progressPercent: number;
   statusLabel: string;
   todayLabel: string;
+  dateLabel?: string;
+  weekLabel?: string;
   phaseLabel: string;
   phases: DashboardPhase[];
   orderItems: DashboardOrderItem[];

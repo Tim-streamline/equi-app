@@ -241,8 +241,8 @@ class SyncController extends Controller
                         'last_field' => $op['data']['field_id'] ?? $answer?->field_id ?? $booking->last_field])->save();
                 }
                 if ($historical) {
-                    [$protocol, $date, $itemId, $done, $now] = $historical;
-                    app(ProtocolDayHistory::class)->setDone($protocol, $date, $itemId, $done, $now, false);
+                    [$protocol, $date, $itemId, $done, $now, $administration] = $historical;
+                    app(ProtocolDayHistory::class)->setDone($protocol, $date, $itemId, $done, $now, false, $administration);
                 }
                 $applied++;
             }
@@ -280,9 +280,10 @@ class SyncController extends Controller
             return null;
         }
         $data = array_merge($existing?->getAttributes() ?? [], $op['data'] ?? []);
-        validator($data, ['date' => ['required', 'date_format:Y-m-d'], 'done' => ['required', 'boolean']])->validate();
+        $data['administration'] ??= 1;
+        validator($data, ['date' => ['required', 'date_format:Y-m-d'], 'done' => ['required', 'boolean'], 'administration' => ['required', 'integer', 'between:1,24']])->validate();
         if ($existing) {
-            foreach (['date', 'horse_id', 'protocol_phase_supplement_id'] as $key) {
+            foreach (['date', 'horse_id', 'protocol_phase_supplement_id', 'administration'] as $key) {
                 abort_unless((string) $data[$key] === (string) $existing->getRawOriginal($key), 422, 'Een registratie kan niet naar een andere dag of een ander item worden verplaatst.');
             }
         }
@@ -294,11 +295,12 @@ class SyncController extends Controller
         abort_unless($data['date'] >= $now->subDays(14)->toDateString() && $data['date'] <= $now->toDateString(), 422, 'Alleen vandaag en de afgelopen 14 dagen kunnen worden aangepast.');
         if ($data['date'] < $now->toDateString()) {
             $day = $history->day($protocol, $data['date'], $now);
-            abort_unless(collect($day['items'])->contains('id', $item->id), 422, 'Dit item stond niet op deze dag gepland.');
+            abort_unless(collect($day['items'])->contains(fn ($row) => $row['id'] === $item->id && ($row['administration'] ?? 1) === (int) $data['administration']), 422, 'Deze gift stond niet op deze dag gepland.');
 
-            return [$protocol, $data['date'], $item->id, $op['op'] === 'DELETE' ? false : (bool) $data['done'], $now];
+            return [$protocol, $data['date'], $item->id, $op['op'] === 'DELETE' ? false : (bool) $data['done'], $now, (int) $data['administration']];
         }
         $start = $protocol->started_at ? CarbonImmutable::parse($protocol->started_at->toDateString(), $now->timezone) : null;
+        abort_unless((int) $data['administration'] <= $item->administrationsPerDay(), 422, 'Deze gift staat niet gepland.');
         $week = $start ? (int) floor($start->diffInDays($now->startOfDay(), false) / 7) + 1 : 0;
         abort_unless($week > 0 && $item->weeks()->whereHas('protocolPhaseWeek', fn ($query) => $query->where('protocol_week_number', $week))->exists(), 422, 'Dit item staat vandaag niet gepland.');
 

@@ -28,10 +28,6 @@ import {
 import { Button } from "@/components/ui/Button";
 import { useTabBarPadding } from "@/hooks/useTabBarPadding";
 import {
-  useStoreMutations,
-  useSupplementIntakesForDate,
-} from "@/db/hooks";
-import {
   useHorseDashboard,
   dashboardRequest,
   deviceTimezone,
@@ -44,6 +40,7 @@ import {
   type LibraryRecommendation,
 } from "@/lib/horse-dashboard";
 
+import { ProtocolToday } from '@/components/protocol/ProtocolToday';
 import { ProtocolAnalysis } from "@/components/protocol/ProtocolAnalysis";
 import { ProtocolOrderList } from "@/components/protocol/ProtocolOrderList";
 import { CareAdvice } from "@/components/protocol/CareAdvice";
@@ -395,97 +392,9 @@ function Today({
   onPhase: (phase: DashboardPhase) => void;
   onWeekly: () => void;
 }) {
-  const mutations = useStoreMutations();
-  const localIntakes = useSupplementIntakesForDate(date);
-  const [pending, setPending] = useState<string | null>(null);
-  const toggle = async (item: DashboardSupplement) => {
-    selectionHaptic();
-    setPending(item.id);
-    try {
-      await mutations.toggleSupplementIntake(
-        item.id,
-        item.dosage,
-        date,
-        horseId,
-      );
-    } catch {
-      Alert.alert("Niet opgeslagen", "Probeer het opnieuw.");
-    } finally {
-      setPending(null);
-    }
-  };
   return (
     <>
-      <Text accessibilityRole="header" className="mb-3 font-bold text-[20px] leading-[26px] text-ink">
-        {protocol.todayLabel}
-      </Text>
-      {protocol.today.total > 0 && (
-        <View className="mb-4">
-          <Card>
-            <View className="flex-row items-center justify-between">
-              <View>
-                <Text className="font-bold text-[16px] text-ink">
-                  Vandaag afvinken
-                </Text>
-                <Text className="mt-1 text-[13px] text-ink-70">
-                  {protocol.today.done} van {protocol.today.total} gedaan
-                </Text>
-              </View>
-              <Text className="font-bold text-[15px] text-teal-600">
-                {protocol.today.percentage}%
-              </Text>
-            </View>
-            <View className="mt-3 h-1.5 overflow-hidden rounded-full bg-ink-8">
-              <View
-                className="h-full bg-mint-500"
-                style={{ width: `${protocol.today.percentage}%` }}
-              />
-            </View>
-          </Card>
-        </View>
-      )}
-      <Label>Door de geweekte bijvoeding</Label>
-      <View className="mb-4 mt-3 gap-2">
-        {protocol.today.items.map((item) => {
-          const local = localIntakes.find(
-            (row) => row.protocolPhaseSupplementId === item.id,
-          );
-          const done = local ? !!local.done : !!item.done;
-          return (
-            <Pressable
-              key={item.id}
-              accessibilityRole="checkbox"
-              accessibilityLabel={`${item.name}, ${item.dosage ?? "dosering niet ingesteld"}`}
-              accessibilityState={{
-                checked: done,
-                disabled: pending === item.id,
-              }}
-              disabled={pending === item.id}
-              onPress={() => void toggle(item)}
-              className="flex-row items-center gap-3 rounded-[14px] border border-ink-8 bg-white px-3 py-3"
-            >
-              <View
-                className={`h-[22px] w-[22px] items-center justify-center rounded-[7px] border-2 ${done ? "border-mint-500 bg-mint-500" : "border-ink-15"}`}
-              >
-                {done && <Check size={13} color="white" />}
-              </View>
-              <Text
-                className={`flex-1 font-semi text-[14px] ${done ? "text-ink-70 line-through" : "text-ink"}`}
-              >
-                {item.name}
-              </Text>
-              <Text className="max-w-[35%] font-bold text-[13px] text-teal-600">
-                {item.dosage ?? "Dosering niet ingesteld"}
-              </Text>
-            </Pressable>
-          );
-        })}
-        {protocol.today.total === 0 && (
-          <Text className="py-3 text-[14px] text-ink-70">
-            Vandaag staat er niets gepland.
-          </Text>
-        )}
-      </View>
+      <ProtocolToday protocol={protocol} date={date} horseId={horseId} onPhase={onPhase} SheetComponent={Sheet} />
       <View className="gap-3">
         {protocol.notifications.map((notice) => (
           <View
@@ -593,7 +502,7 @@ function Calendar({
     setBusy(true); setDayError(null);
     try {
       const result = await dashboardRequest(`/api/horses/${horseId}/protocol-day`, {
-        protocol_id: protocol.id, date: day.date, item_id: item.id, done: !item.done, timezone: deviceTimezone(),
+        protocol_id: protocol.id, date: day.date, item_id: item.id, administration: item.administration ?? 1, done: !item.done, timezone: deviceTimezone(),
       }) as ProtocolDay;
       if (generation !== request.current) return;
       setDay(result);
@@ -705,14 +614,14 @@ function Calendar({
         {day && !day.editable && <Text className="mb-3 text-[13px] text-ink-70">Deze dag is alleen te bekijken. Je kunt tot 14 dagen terug aanpassen.</Text>}
         {day?.items.length === 0 && <Text className="py-3 text-ink-70">Op deze dag stond niets gepland.</Text>}
         {day?.items.map((item) => (
-          <Pressable key={item.id} accessibilityRole="checkbox" accessibilityLabel={`${item.name}, ${item.dosage ?? "dosering niet ingesteld"}`}
+          <Pressable key={`${item.id}:${item.administration ?? 1}`} accessibilityRole="checkbox" accessibilityLabel={`${item.name}, gift ${item.administration ?? 1}, ${item.dosage ?? "dosering niet ingesteld"}`}
             accessibilityState={{ checked: !!item.done, disabled: busy || !day.editable }} disabled={busy || !day.editable}
             onPress={() => void toggleDayItem(item)} className="mb-2 flex-row items-center gap-3 rounded-xl border border-ink-15 bg-white p-3">
             <View className={`h-[22px] w-[22px] items-center justify-center rounded-md border ${item.done ? "border-mint-500 bg-mint-500" : "border-ink-30"}`}>
               {item.done && <Check size={13} color="white" />}
             </View>
             <View className="flex-1">
-              <Text className={`font-semi text-[14px] ${item.done ? "text-ink-70 line-through" : "text-ink"}`}>{item.name}</Text>
+              <Text className={`font-semi text-[14px] ${item.done ? "text-ink-70 line-through" : "text-ink"}`}>{item.name}{(item.administrationsPerDay ?? 1) > 1 ? ` · gift ${item.administration ?? 1}` : ''}</Text>
               {!!item.instructions && <Text className="mt-1 text-[12px] text-ink-70">{item.instructions}</Text>}
             </View>
             <Text className="max-w-[35%] font-bold text-[13px] text-teal-600">{item.dosage ?? "Dosering niet ingesteld"}</Text>
@@ -917,12 +826,14 @@ function Sheet({
   subtitle,
   children,
   onClose,
+  footer,
 }: {
   visible: boolean;
   title: string;
   subtitle?: string;
   children: ReactNode;
   onClose: () => void;
+  footer?: ReactNode;
 }) {
   const { height } = useWindowDimensions();
   const insets = useSafeAreaInsets();
@@ -960,7 +871,10 @@ function Sheet({
             nestedScrollEnabled
             contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 24 }}
           >
-            <Text accessibilityRole="header" className="font-bold text-[21px] text-ink">{title}</Text>
+            <View className="flex-row items-center gap-3">
+              <Text accessibilityRole="header" className="flex-1 font-bold text-[24px] leading-[30px] text-ink">{title}</Text>
+              <Pressable accessibilityRole="button" accessibilityLabel="Sluiten" onPress={onClose} className="min-h-[44px] min-w-[44px] items-center justify-center"><Text className="text-[28px] text-ink-70">×</Text></Pressable>
+            </View>
             {!!subtitle && (
               <Text className="mt-1 text-[12px] text-ink-70">{subtitle}</Text>
             )}
@@ -972,7 +886,7 @@ function Sheet({
             testID="protocol-sheet-footer"
             style={{ flexShrink: 0, paddingHorizontal: 20, paddingTop: 12, paddingBottom: Math.max(insets.bottom, 12) }}
           >
-            <Button title="Sluiten" onPress={onClose} />
+            {footer ?? <Button title="Sluiten" onPress={onClose} />}
           </View>
         </View>
       </View>

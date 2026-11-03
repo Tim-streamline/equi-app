@@ -224,7 +224,7 @@ class ProtocolEditorIntakeTest extends TestCase
         $preview = $this->postJson('/admin/protocols/'.$stored->id.'/preview', $payload)->assertOk();
         $preview->assertJsonPath('protocol.title', 'Nog niet opgeslagen')->assertJsonPath('protocol.phases.0.supplements.0.dosage', '77 g')
             ->assertJsonPath('protocol.phases.0.supplements.0.instructions', 'Bereiden met water.')
-            ->assertJsonPath('protocol.phases.0.supplements.0.frequencyLabel', '4× per week')
+            ->assertJsonPath('protocol.phases.0.supplements.0.frequencyLabel', '1× per dag')
             ->assertJsonPath('protocol.phases.0.supplements.0.weekNumbers', [1, 3])
             ->assertJsonPath('protocol.analysis.summary', 'Nieuwe persoonlijke analyse.')->assertJsonCount(3, 'protocol.today.items');
         $writes = collect(DB::getQueryLog())->filter(fn ($q) => preg_match('/^\\s*(insert|update|delete|alter|create)\\b/i', $q['query']));

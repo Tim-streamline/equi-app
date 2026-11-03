@@ -279,7 +279,22 @@ class ProtocolSettingsController extends Controller
         }
 
         $before = $supplement->only(array_keys($data));
-        $supplement->update($data);
+        DB::transaction(function () use ($supplement, $data) {
+            \App\Support\LibrarySyncLock::acquire();
+            if (isset($data['administrations_per_day']) && (int) $data['administrations_per_day'] !== $supplement->administrations_per_day) {
+                // Keep elapsed daily lists at the frequency that applied at the time.
+                $history = app(\App\Support\ProtocolDayHistory::class);
+                $protocols = \App\Models\Protocol::whereHas('phases.supplements', fn ($q) => $q->where('supplement_id', $supplement->id))
+                    ->whereNotNull('started_at')->whereNotNull('published_at')->orderBy('id')->lockForUpdate()->get();
+                foreach ($protocols as $protocol) {
+                    $history->preserve($protocol, \Carbon\CarbonImmutable::now($history->timezone($protocol)));
+                }
+            }
+            $supplement->update($data);
+            if (isset($data['administrations_per_day'])) {
+                $supplement->protocolPhaseSupplements()->update(['administrations_per_day' => $data['administrations_per_day']]);
+            }
+        });
 
         if ($supplement->wasChanged('protocol_template_phase_id')) {
             $supplement->weeks()->detach();

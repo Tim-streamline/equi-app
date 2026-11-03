@@ -14,6 +14,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
     'dosage',
     'done',
     'taken_at',
+    'administration',
 ])]
 class ProtocolSupplementIntake extends Model
 {
@@ -22,6 +23,7 @@ class ProtocolSupplementIntake extends Model
     protected function casts(): array
     {
         return [
+            'administration' => 'integer',
             'date' => 'date',
             'done' => 'boolean',
             'taken_at' => 'datetime',

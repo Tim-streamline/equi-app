@@ -139,7 +139,7 @@ class HorseDashboard
     public function protocol(Protocol $protocol, CarbonImmutable $now, ?string $month = null, ?array $answers = null, bool $preview = false): array
     {
         $answers ??= $this->nutrition->answers($protocol);
-        $protocol->loadMissing(['phases.weeks', 'phases.supplements.weeks', 'analysis.advice', 'voedingAdviezen', 'managementAdviezen', 'bewegingAdviezen']);
+        $protocol->loadMissing(['phases.weeks', 'phases.supplements.weeks', 'phases.supplements.supplement', 'analysis.advice', 'voedingAdviezen', 'managementAdviezen', 'bewegingAdviezen']);
         ['start' => $start, 'day' => $day, 'week' => $week, 'totalWeeks' => $totalWeeks, 'running' => $running, 'progressPercent' => $progressPercent, 'statusLabel' => $statusLabel] = $this->progress($protocol, $now);
         $phases = $protocol->phases->map(function ($phase) use ($protocol, $now, $preview) {
             $availability = app(ProtocolPhaseAvailability::class)->forPhase($protocol, $phase, $now);
@@ -152,7 +152,8 @@ class HorseDashboard
                 'supplements' => ($preview || $availability['accessible']) ? $phase->supplements->map(fn ($s) => [
                     'id' => $s->id, 'name' => $s->name, 'dosage' => $s->dosage,
                     'description' => $s->description, 'instructions' => $s->instructions,
-                    'frequencyLabel' => $s->aantal_per_week ? $s->aantal_per_week.'× per week' : null,
+                    'frequencyLabel' => $s->administrationsPerDay().'× per dag',
+                    'administrationsPerDay' => $s->administrationsPerDay(), 'phaseId' => $phase->id,
                     'weekNumbers' => $s->weeks->map(fn ($link) => (int) $weeks->get($link->protocol_phase_week_id))->filter()->values()->all(),
                     'phaseTitle' => $phase->title,
                 ])->values()->all() : [],
@@ -167,10 +168,13 @@ class HorseDashboard
         $historicalDays = $preview ? collect() : $history->days($protocol, $monthDate->format('Y-m'));
         $intakes = $preview ? collect() : $protocol->horse->supplementIntakes()->whereBetween('date', [min($monthDate->startOfMonth()->toDateString(), $now->toDateString()), max($monthDate->endOfMonth()->toDateString(), $now->toDateString())])->get()->groupBy(fn ($i) => $i->date->toDateString());
         $rowsFor = function (int $number, string $date) use ($allSupplements, $intakes) {
-            $records = $intakes->get($date, collect())->keyBy('protocol_phase_supplement_id');
+            $records = $intakes->get($date, collect())->keyBy(fn ($record) => $record->protocol_phase_supplement_id.':'.($record->administration ?? 1));
 
             return $allSupplements->filter(fn ($s) => in_array($number, $s['weekNumbers'], true))
-                ->map(fn ($s) => $s + ['done' => (bool) ($records->get($s['id'])?->done ?? false)])->values();
+                ->flatMap(fn ($s) => collect(range(1, $s['administrationsPerDay']))->map(fn ($administration) => $s + [
+                    'administration' => $administration,
+                    'done' => (bool) ($records->get($s['id'].':'.$administration)?->done ?? false),
+                ]))->values();
         };
         $today = $running ? $rowsFor($week, $now->toDateString()) : collect();
         $done = $today->where('done', true)->count();
@@ -214,6 +218,8 @@ class HorseDashboard
             'preparing' => ! $start, 'startedAt' => $start?->toDateString(),
             'totalWeeks' => $totalWeeks, 'progressPercent' => $progressPercent, 'statusLabel' => $statusLabel,
             'todayLabel' => ! $start ? 'Je protocol staat klaar' : 'Week '.$week.' van '.$totalWeeks.' · '.$now->locale('nl')->translatedFormat('l j F'),
+            'dateLabel' => $now->locale('nl')->translatedFormat('l j F'),
+            'weekLabel' => 'Week '.$week.' van '.$totalWeeks,
             'phaseLabel' => implode(' · ', array_column(array_filter($phases, fn ($p) => $p['state'] === 'active'), 'title')),
             'phases' => $phases, 'today' => ['items' => $today->all(), 'done' => $done, 'total' => $today->count(), 'percentage' => $today->isEmpty() ? 0 : (int) round($done / $today->count() * 100)],
             'notifications' => $notifications,

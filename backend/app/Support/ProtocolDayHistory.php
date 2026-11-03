@@ -25,7 +25,7 @@ class ProtocolDayHistory
 
         DB::transaction(function () use ($protocol, $now) {
             $protocol = Protocol::query()->lockForUpdate()->findOrFail($protocol->id);
-            $protocol->load('phases.weeks', 'phases.supplements.weeks');
+            $protocol->load('phases.weeks', 'phases.supplements.weeks', 'phases.supplements.supplement');
             $start = CarbonImmutable::parse($protocol->started_at->toDateString(), $now->timezone);
             $weeks = max((int) $protocol->total_weeks, (int) $protocol->phases->flatMap->weeks->max('protocol_week_number'));
             $end = $now->startOfDay()->subDay()->min($start->addWeeks($weeks)->subDay());
@@ -40,16 +40,18 @@ class ProtocolDayHistory
                     continue;
                 }
                 $week = (int) floor($start->diffInDays($day) / 7) + 1;
-                $done = $intakes->get($date, collect())->keyBy('protocol_phase_supplement_id');
+                $done = $intakes->get($date, collect())->keyBy(fn ($row) => $row->protocol_phase_supplement_id.':'.($row->administration ?? 1));
                 $items = $protocol->phases->flatMap(function ($phase) use ($week, $done) {
                     $weekIds = $phase->weeks->where('protocol_week_number', $week)->pluck('id');
 
                     return $phase->supplements->filter(fn ($item) => $item->weeks->contains(fn ($link) => $weekIds->contains($link->protocol_phase_week_id)))
-                        ->map(fn ($item) => [
+                        ->flatMap(fn ($item) => collect(range(1, $item->administrationsPerDay()))->map(fn ($administration) => [
                             'id' => $item->id, 'name' => $item->name, 'dosage' => $item->dosage,
                             'description' => $item->description, 'instructions' => $item->instructions,
-                            'phaseTitle' => $phase->title, 'done' => (bool) ($done->get($item->id)?->done ?? false),
-                        ]);
+                            'phaseTitle' => $phase->title, 'phaseId' => $phase->id,
+                            'administration' => $administration, 'administrationsPerDay' => $item->administrationsPerDay(),
+                            'done' => (bool) ($done->get($item->id.':'.$administration)?->done ?? false),
+                        ]));
                 })->values()->all();
                 DB::table('protocol_day_snapshots')->insert([
                     'protocol_id' => $protocol->id, 'date' => $date, 'items' => json_encode($items),
@@ -88,20 +90,20 @@ class ProtocolDayHistory
         return ! $items ? 'default' : ($done === count($items) ? 'complete' : ($done ? 'partial' : 'missed'));
     }
 
-    public function setDone(Protocol $protocol, string $date, string $itemId, bool $done, CarbonImmutable $now, bool $mirrorIntake = true): array
+    public function setDone(Protocol $protocol, string $date, string $itemId, bool $done, CarbonImmutable $now, bool $mirrorIntake = true, int $administration = 1): array
     {
-        return DB::transaction(function () use ($protocol, $date, $itemId, $done, $now, $mirrorIntake) {
+        return DB::transaction(function () use ($protocol, $date, $itemId, $done, $now, $mirrorIntake, $administration) {
             $protocol = Protocol::query()->lockForUpdate()->findOrFail($protocol->id);
             $day = $this->day($protocol, $date, $now);
             abort_unless($day['editable'], 422, 'Je kunt alleen de afgelopen 14 dagen aanpassen.');
-            $index = array_search($itemId, array_column($day['items'], 'id'), true);
+            $index = collect($day['items'])->search(fn ($item) => $item['id'] === $itemId && ($item['administration'] ?? 1) === $administration);
             abort_if($index === false, 422, 'Dit item stond niet op deze dag gepland.');
             $day['items'][$index]['done'] = $done;
             DB::table('protocol_day_snapshots')->where('protocol_id', $protocol->id)->where('date', $date)
                 ->update(['items' => json_encode($day['items']), 'updated_at' => now()]);
             // Keep existing devices in sync, but history also works after a live item is removed.
             if ($mirrorIntake && ProtocolPhaseSupplement::whereKey($itemId)->exists()) {
-                ProtocolSupplementIntake::updateOrCreate(['protocol_phase_supplement_id' => $itemId, 'date' => $date], [
+                ProtocolSupplementIntake::updateOrCreate(['protocol_phase_supplement_id' => $itemId, 'date' => $date, 'administration' => $administration], [
                     'horse_id' => $protocol->horse_id, 'dosage' => $day['items'][$index]['dosage'],
                     'done' => $done, 'taken_at' => $done ? now() : null,
                 ]);
