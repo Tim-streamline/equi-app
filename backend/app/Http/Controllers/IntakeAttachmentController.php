@@ -8,6 +8,7 @@ use App\Models\IntakeBooking;
 use App\Models\IntakeField;
 use App\Rules\IntakePhotoDimensions;
 use App\Support\IntakePhotoPreview;
+use App\Support\IntakeUploadDiagnostics;
 use App\Support\ProtocolAccess;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -16,6 +17,11 @@ use Illuminate\Support\Facades\Storage;
 class IntakeAttachmentController extends Controller
 {
     public function store(Request $request, string $id)
+    {
+        return app(IntakeUploadDiagnostics::class)->run($request, $id, fn () => $this->storeAttachment($request, $id));
+    }
+
+    private function storeAttachment(Request $request, string $id)
     {
         $userId = $request->attributes->get('powersync_user_id');
         $data = $request->validate(['horse_id' => ['required', 'uuid'], 'section' => ['required', 'string', 'max:64'],

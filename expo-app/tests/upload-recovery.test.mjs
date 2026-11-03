@@ -14,6 +14,7 @@ import { refreshWebApp } from '../../web/lib/web-release.ts';
 import { preserveIntakeForRefresh } from '../lib/intake/refresh.ts';
 import { saveAnswer } from '../lib/intake/persistence.ts';
 import { AbortOperation, ConnectionManager } from '@powersync/common';
+import { sanitizeErrorEvent } from '../lib/error-tracking-options.ts';
 
 const settle = async () => { for (let i = 0; i < 80; i++) await Promise.resolve(); };
 const deferred = () => {
@@ -210,6 +211,84 @@ test('reports include operation and HTTP status, suppress repeats, and never inc
   assert.equal(events[0].tags.http_status, '422');
   assert.equal(events[2].tags.failure_kind, 'stalled');
   for (const secret of ['private', 'horse-name', 'secret', 'response-body']) assert.ok(!JSON.stringify(events).includes(secret));
+});
+
+test('rejected uploads correlate frontend and backend without losing original bytes or reading the response body', async t => {
+  const app = setup();
+  const id = '11111111-1111-4111-8111-111111111111', owner = '22222222-2222-4222-8222-222222222222';
+  const bookingId = '33333333-3333-4333-8333-333333333333';
+  let record = { id, userId: owner, bookingId, horseId: owner, section: 'photos', field: 'right',
+    name: 'private-horse.jpg', mime: 'image/jpeg', blob: new Blob(['original private bytes'], { type: 'image/jpeg' }), uploaded: false };
+  const attachmentSync = load('../lib/intake/attachments/sync.ts', {
+    ...app.common, '@/db/auth': { getApiBaseUrl: () => '' }, './upload': uploads,
+    './storage': { attachmentStorage: { get: async () => record, put: async value => { record = value; } } },
+  });
+  const batches = [{ table: 'intake_answers', opData: { value: JSON.stringify([`attachment:${id}:private-horse.jpg`]) } }];
+  const requestIds = [];
+  let responseStatus = 422;
+  t.mock.method(globalThis, 'fetch', async (_url, options) => {
+    requestIds.push(options.headers['X-Upload-Request-Id']);
+    assert.match(requestIds.at(-1), /^[a-f0-9-]{36}$/);
+    assert.equal(options.body.get('attachment_id'), id);
+    assert.equal(await options.body.get('file').text(), 'original private bytes');
+    return responseStatus === 422 ? {
+      ok: false, status: 422, headers: new Headers({ 'X-Upload-Validation': 'file:mimes' }),
+      json: () => assert.fail('raw response bodies must not be read for logging'),
+    } : Response.json({ value: `attachment:${id}:private-horse.jpg` });
+  });
+  await assert.rejects(attachmentSync.uploadIntakeAttachments(batches, owner, 'secret-token', () => {}), error => error.status === 422);
+  const event = sanitizeErrorEvent(app.events[0]);
+  assert.equal(event.tags.upload_request_id, requestIds[0]);
+  assert.equal(event.tags.account_id, owner);
+  assert.equal(event.tags.intake_id, bookingId);
+  assert.equal(event.tags.attachment_id, id);
+  assert.equal(event.tags.validation_failed, 'file:mimes');
+  assert.equal(event.tags.file_bytes, String(record.blob.size));
+  assert.equal(event.tags.blob_mime, 'image/jpeg');
+  assert.equal(event.tags.file_transport, 'blob');
+  assert.equal(record.uploaded, false);
+  for (const value of ['private', 'secret-token']) assert.ok(!JSON.stringify(event).includes(value));
+  responseStatus = 201;
+  await attachmentSync.uploadIntakeAttachments(batches, owner, 'secret-token', () => {});
+  assert.notEqual(requestIds[0], requestIds[1], 'each retry gets a new request reference');
+  assert.equal(record.uploaded, true);
+  assert.equal(app.events.length, 1);
+});
+
+test('diagnostic fields are allowlisted and repetition limits do not hide another account or attachment', () => {
+  const { reporting, events } = setup();
+  const owner = '11111111-1111-4111-8111-111111111111', other = '22222222-2222-4222-8222-222222222222';
+  const details = { account_id: owner, attachment_id: owner, upload_request_id: owner, validation_failed: 'file:mimes' };
+  for (const patch of [{}, { upload_request_id: other }, { account_id: other }, { attachment_id: other }, { validation_failed: 'file:dimensions' }]) {
+    reporting.reportSyncFailure(requests.syncHttpError(422), 'intake.attachment.upload', { ...details, ...patch });
+  }
+  assert.equal(events.length, 4);
+  const isolated = setup();
+  isolated.reporting.reportSyncFailure(requests.syncHttpError(422), 'intake.attachment.upload', {
+    account_id: 'private@example.test', upload_request_id: 'Bearer private-secret',
+    validation_failed: 'file:private-answer', file_bytes: Infinity, client_mime: 'private-photo-name',
+    blob_mime: 'image/jpeg', file_transport: 'private-file-path', raw_response: 'private-body', name: 'private-photo.jpg',
+  });
+  assert.deepEqual(isolated.events[0].tags, { operation: 'intake.attachment.upload', failure_kind: 'http', http_status: '422', client_mime: 'other', blob_mime: 'image/jpeg' });
+  assert.ok(!JSON.stringify(isolated.events).includes('private'));
+});
+
+test('non-JSON upload rejections and telemetry outages preserve the HTTP error and queued bytes', async t => {
+  const app = setup(), id = '11111111-1111-4111-8111-111111111111';
+  let record = { id, userId: 'owner', bookingId: 'booking', horseId: 'horse', section: 'photos', field: 'right',
+    name: 'private.jpg', mime: 'image/jpeg', blob: new Blob(['original bytes']), uploaded: false };
+  const reporting = load('../lib/sync-errors.ts', {
+    '@powersync/common': { AbortOperation }, './sync-request': requests,
+    '@/lib/error-tracking': { captureException: () => { throw new Error('Telemetry unavailable'); } },
+  });
+  const attachmentSync = load('../lib/intake/attachments/sync.ts', {
+    ...app.common, '@/lib/sync-errors': reporting, '@/db/auth': { getApiBaseUrl: () => '' }, './upload': uploads,
+    './storage': { attachmentStorage: { get: async () => record, put: async value => { record = value; } } },
+  });
+  t.mock.method(globalThis, 'fetch', async () => new Response('<html>private upstream error</html>', { status: 413 }));
+  await assert.rejects(attachmentSync.uploadIntakeAttachments([{ table: 'intake_answers', opData: { value: `["attachment:${id}:private.jpg"]` } }], 'owner', 'token', () => {}), error => error.status === 413);
+  assert.equal(record.uploaded, false);
+  assert.equal(await record.blob.text(), 'original bytes');
 });
 
 test('SDK cancellation does not consume the reporting limit for genuine HTTP failures', () => {

@@ -71,7 +71,7 @@ function UploadStatus({ reference }: { reference: string }) {
         : 'Opgeslagen op dit apparaat · wacht op upload'}
     </Text>
     <Pressable accessibilityRole="button" disabled={retryingUploads} onPress={() => void retry()} className="min-h-[44px] justify-center self-start px-1">
-      <Text className="font-semi text-sm text-teal-600">{retryingUploads ? 'Opnieuw verbinden…' : 'Upload opnieuw proberen'}</Text>
+      <Text className="font-semi text-sm text-red-700">{retryingUploads ? 'Opnieuw verbinden…' : 'Upload opnieuw proberen'}</Text>
     </Pressable>
     {!!retryError && <Text accessibilityRole="alert" className="text-xs text-red-700">{retryError}</Text>}
   </View>;
