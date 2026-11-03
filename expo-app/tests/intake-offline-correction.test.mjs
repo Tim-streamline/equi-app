@@ -28,6 +28,66 @@ test('PowerSync tracks unchanged intake identity in every queued correction', ()
   assert.equal(table.include_old_only_when_changed, false);
 });
 
+const viewIdentity = { user_id: 'owner', item_id: 'removed-item' };
+const viewPatch = { table: 'library_progress', op: 'PATCH', id: 'view', opData: { last_viewed_at: '2026-11-03T12:00:00Z' } };
+
+test('PowerSync preserves library identity even when only the viewing time changes', () => {
+  const { AppSchema } = load('../db/powersync-schema.ts', { '@powersync/react-native': common });
+  const table = AppSchema.tables.find(table => table.name === 'library_progress').toJSON();
+  assert.deepEqual(table.include_old, ['user_id', 'item_id']);
+  assert.equal(table.include_old_only_when_changed, false);
+});
+
+test('library identity survives local deletion without replacing the queued timestamp', async () => {
+  const op = { ...viewPatch, opData: Object.freeze({ ...viewPatch.opData }), previousValues: { ...viewIdentity, last_viewed_at: 'old' } };
+  const result = await syncOperations.prepareSyncOperations({ getOptional: () => assert.fail('identity is queued') }, [op]);
+  assert.deepEqual(result, [{ op: 'PATCH', type: 'library_progress', id: 'view', data: { ...viewIdentity, ...viewPatch.opData } }]);
+  assert.deepEqual(op.opData, viewPatch.opData);
+});
+
+test('legacy library patches recover identity from the cached row without changing queued values', async () => {
+  const result = await syncOperations.prepareSyncOperations({ getOptional: async (sql, params) => {
+    assert.equal(sql, 'SELECT user_id, item_id FROM library_progress WHERE id = ?');
+    assert.deepEqual(params, ['view']);
+    return { ...viewIdentity, last_viewed_at: 'newer local value' };
+  } }, [viewPatch]);
+  assert.deepEqual(result[0].data, { ...viewIdentity, ...viewPatch.opData });
+  const missing = await syncOperations.prepareSyncOperations({ getOptional: async () => null }, [viewPatch]);
+  assert.deepEqual(JSON.parse(JSON.stringify(missing[0].data)), viewPatch.opData, 'never invent an identity or discard the operation');
+});
+
+for (const platform of ['native', 'web']) {
+  for (const tracked of [true, false]) {
+    test(`${platform}: ${tracked ? 'tracked' : 'legacy'} library PATCH preserves identity and stays queued until accepted`, async t => {
+      const auth = { loadCredentials: async () => ({ userId: 'owner' }), getApiBaseUrl: () => 'https://api',
+        login: async () => ({ token: 'token', expires_in: 3600 }), getSession: async () => ({ token: 'token', user: { id: 'owner' } }) };
+      const { LaravelConnector } = load(platform === 'native' ? '../db/connector.ts' : '../../web/db/connector.ts', {
+        './auth': auth, '@/lib/account-session': { accountSession: { revision: 0 } }, '@/lib/intake/sync-operations': syncOperations,
+        '@/lib/intake/attachments/sync': { uploadIntakeAttachments: async () => {} },
+      });
+      const previousWindow = globalThis.window;
+      globalThis.window = { location: { origin: 'https://app' } };
+      t.after(() => { globalThis.window = previousWindow; });
+      let acknowledged = 0, status = 403;
+      const op = tracked ? { ...viewPatch, previousValues: viewIdentity } : viewPatch;
+      const db = { getNextCrudTransaction: async () => ({ crud: [op], complete: async () => { acknowledged++; } }),
+        getOptional: async () => { assert.equal(tracked, false); return viewIdentity; } };
+      const requests = [];
+      t.mock.method(globalThis, 'fetch', async (_url, options) => {
+        requests.push(JSON.parse(options.body).operations[0]);
+        return new Response('{}', { status });
+      });
+      const connector = new LaravelConnector('owner');
+      await assert.rejects(connector.uploadData(db), error => error.status === 403);
+      assert.equal(acknowledged, 0);
+      status = 200;
+      await connector.uploadData(db);
+      assert.equal(acknowledged, 1);
+      for (const request of requests) assert.deepEqual(request, { op: 'PATCH', type: 'library_progress', id: 'view', data: { ...viewIdentity, ...viewPatch.opData } });
+    });
+  }
+}
+
 test('queued identity survives local deletion and never replaces the queued correction value', async () => {
   const op = { ...patch, opData: Object.freeze({ ...patch.opData }), previousValues: { ...identity, value: '"obsolete"' } };
   const result = await syncOperations.prepareSyncOperations({ getOptional: () => assert.fail('identity is already queued') }, [op]);

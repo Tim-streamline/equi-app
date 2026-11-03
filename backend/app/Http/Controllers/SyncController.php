@@ -214,10 +214,19 @@ class SyncController extends Controller
                     // Two offline devices may have created different row IDs for
                     // the same view. Merge by owner/item and retain newer history.
                     $existing = Models\LibraryProgress::find($op['id']);
+                    abort_if($existing && $existing->user_id !== $userId, 403);
                     $view = validator($op['data'] + ['item_id' => $existing?->item_id], [
-                        'item_id' => ['required', 'uuid', 'exists:library_items,id'],
+                        'item_id' => ['required', 'uuid'],
                         'last_viewed_at' => ['required', 'date'],
                     ])->validate();
+                    // A lesson can be deleted while a device is offline. Its view
+                    // history is obsolete, and must not block later answers/photos.
+                    // Lock surviving items until the write to prevent a deletion race.
+                    if (! Models\LibraryItem::whereKey($view['item_id'])->sharedLock()->first(['id'])) {
+                        $skipped[] = 'library_progress:removed-item';
+
+                        continue;
+                    }
                     DB::statement('INSERT INTO library_progress (id,user_id,item_id,last_viewed_at,progress,position_sec,completed,created_at,updated_at) VALUES (?,?,?,?,0,0,false,?,?) ON CONFLICT (user_id,item_id) DO UPDATE SET last_viewed_at = GREATEST(library_progress.last_viewed_at, EXCLUDED.last_viewed_at), updated_at = EXCLUDED.updated_at',
                         [$op['id'], $userId, $view['item_id'], $view['last_viewed_at'], now(), now()]);
                     $applied++;
@@ -243,7 +252,7 @@ class SyncController extends Controller
         });
 
         if ($skipped) {
-            Log::warning('[sync] skipped unsupported or completed-intake operations', ['tables' => array_values(array_unique($skipped))]);
+            Log::warning('[sync] skipped unsupported or obsolete operations', ['tables' => array_values(array_unique($skipped))]);
         }
 
         return response()->json([

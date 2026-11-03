@@ -334,7 +334,10 @@ const library_progress = new Table({
   progress: column.real,
   completed: column.integer,
   last_viewed_at: column.text,
-}, { indexes: { byUser: ['user_id'] } });
+}, {
+  indexes: { byUser: ['user_id'] },
+  trackPrevious: { columns: ['user_id', 'item_id'], onlyWhenChanged: false },
+});
 
 const seasonal_tips = new Table({
   month: column.text,
