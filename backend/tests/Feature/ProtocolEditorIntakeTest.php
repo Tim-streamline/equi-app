@@ -237,6 +237,7 @@ class ProtocolEditorIntakeTest extends TestCase
 
     public function test_preview_matches_published_customer_content_with_overlapping_phases_and_advice(): void
     {
+        $this->travelTo(CarbonImmutable::parse('2026-09-01 12:00', 'Europe/Amsterdam'));
         $template = ProtocolTemplate::findOrFail($this->payload['protocol_template_id']);
         $phase = $template->phases()->create(['name' => 'Overlap', 'order' => 1, 'required' => false, 'start_after_previous_phase_weeks' => 1]);
         foreach ([1, 2] as $n) {
@@ -258,7 +259,17 @@ class ProtocolEditorIntakeTest extends TestCase
         $payload['published'] = true;
         $this->post('/admin/protocols', $payload)->assertSessionHasNoErrors();
         $protocol = Protocol::firstOrFail();
-        $customer = app(HorseDashboard::class)->protocol($protocol, CarbonImmutable::parse('2026-09-15', 'Europe/Amsterdam'), answers: app(ProtocolNutrition::class)->answers($this->intake->protocol));
+        $weekThree = CarbonImmutable::parse('2026-09-15', 'Europe/Amsterdam');
+        // Until the owner starts, the published plan is in preparation with nothing scheduled.
+        $this->assertNull($protocol->started_at);
+        $unstarted = app(HorseDashboard::class)->protocol($protocol, $weekThree, answers: app(ProtocolNutrition::class)->answers($this->intake->protocol));
+        $this->assertTrue($unstarted['preparing']);
+        $this->assertSame([], $unstarted['today']['items']);
+        $this->startAsOwner($protocol);
+        $protocol = $protocol->fresh();
+        $this->assertSame('2026-09-01', $protocol->started_at->toDateString());
+        $customer = app(HorseDashboard::class)->protocol($protocol, $weekThree, answers: app(ProtocolNutrition::class)->answers($this->intake->protocol));
+        $this->assertSame(3, $customer['currentWeek']);
         $previewNutrition = $preview->json('protocol.nutrition');
         $customerNutrition = $customer['nutrition'] + ['hayLibraryItem' => null, 'waterLibraryItem' => null];
         // Saving creates snapshot IDs; authored content and calculated values must match.
@@ -274,6 +285,26 @@ class ProtocolEditorIntakeTest extends TestCase
             $this->assertSame($preview->json("protocol.phases.$i.weekEnd"), $customerPhase['weekEnd']);
             $this->assertSame(array_column($preview->json("protocol.phases.$i.supplements"), 'dosage'), array_column($customerPhase['supplements'], 'dosage'));
         }
+    }
+
+    /** Day one is chosen by the owner in the app, never by the admin editor. */
+    private function startAsOwner(Protocol $protocol): void
+    {
+        $ownerId = $protocol->horse->owner_id;
+        $this->app->bind(\App\Http\Middleware\AuthenticatePowerSyncJwt::class, fn () => new class($ownerId)
+        {
+            public function __construct(private string $userId) {}
+
+            public function handle($request, $next)
+            {
+                $request->attributes->set('powersync_user_id', $this->userId);
+
+                return $next($request);
+            }
+        });
+        $this->postJson('/api/horses/'.$protocol->horse_id.'/protocol-start', [
+            'protocol_id' => $protocol->id, 'confirmed' => true, 'timezone' => 'Europe/Amsterdam',
+        ])->assertOk()->assertJsonPath('protocol.preparing', false);
     }
 
     public function test_rounding_boundaries_are_applied_by_the_real_save_path_for_multiple_horses(): void

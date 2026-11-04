@@ -95,12 +95,14 @@ export function deviceCredentials(res: LoginResponse): DeviceCredentials {
 }
 
 const DEVICE_NAME = `${Platform.OS} ${Platform.Version}`;
+// Signed into each fresh JWT so the API and PowerSync agree on the protocol format.
+const CLIENT_CAPABILITIES = ['protocol-doses'];
 
 async function authRequest(path: string, body: object, signal?: AbortSignal): Promise<LoginResponse> {
   const res = await fetch(`${apiBaseUrl}/api/auth/${path}`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
-    body: JSON.stringify(body),
+    body: JSON.stringify({ ...body, capabilities: CLIENT_CAPABILITIES }),
     signal,
   });
   if (!res.ok) {
@@ -134,7 +136,7 @@ export type RegistrationCompletion = { registration_token: string };
 async function registrationRequest(path: string, input: RegistrationInput | RegistrationCompletion & { device_name?: string }, signal?: AbortSignal) {
   const response = await fetch(`${apiBaseUrl}/api/auth/${path}`, {
     method: 'POST', headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
-    body: JSON.stringify(input), signal,
+    body: JSON.stringify({ ...input, capabilities: CLIENT_CAPABILITIES }), signal,
   });
   const data = await response.json().catch(() => ({}));
   if (!response.ok) {

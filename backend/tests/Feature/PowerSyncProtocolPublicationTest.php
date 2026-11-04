@@ -24,6 +24,6 @@ class PowerSyncProtocolPublicationTest extends TestCase
         $this->assertStringNotContainsString('SELECT * FROM protocol_phase_supplement_weeks', $protocolSection);
         $this->assertStringNotContainsString('SELECT * FROM protocol_phases', $protocolSection);
         $this->assertStringContainsString('SELECT id, protocol_id, "order", title, state, week_start', $protocolSection);
-        $this->assertSame(8, substr_count($protocolSection, 'published_at IS NOT NULL'));
+        $this->assertSame(9, substr_count($protocolSection, 'published_at IS NOT NULL'));
     }
 }

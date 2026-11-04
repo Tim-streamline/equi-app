@@ -204,7 +204,8 @@
         protocol_template_id: initialProtocolTemplateId,
         therapist_id: initialProtocol?.therapist_id ?? '',
         title: initialProtocol?.title ?? defaultTitle,
-        started_at: initialProtocol?.started_at?.slice(0, 10) ?? '',
+        // Optional explicit start; empty leaves starting to the owner in the app.
+        start_on: '',
         status: initialProtocol?.status ?? 'paused',
         published: Boolean(initialProtocol?.published_at),
         customer_settings: {
@@ -306,7 +307,7 @@
     ));
     const phaseRanges = $derived(protocolPhaseRanges($form.phases));
     const totalWeeks = $derived(totalProtocolWeeks($form.phases));
-    const currentWeek = $derived(calculateCurrentWeek($form.started_at, $form.status, initialProtocol?.current_week, totalWeeks));
+    const currentWeek = $derived(calculateCurrentWeek(initialProtocol?.started_at?.slice(0, 10) || $form.start_on, $form.status, initialProtocol?.current_week, totalWeeks));
     const availablePhaseDefinitions = $derived((workingTemplate?.phases ?? [])
         .filter((definition) => !$form.phases.some((phase) => phase.protocol_template_phase_id === definition.id)));
     const availablePhaseOptions = $derived(availablePhaseDefinitions.map((definition) => ({
@@ -657,7 +658,7 @@
         }
         return ({
             horse_id: 'Paard', protocol_template_id: 'Protocoltemplate', title: 'Protocolnaam',
-            therapist_id: 'Behandelaar', started_at: 'Startdatum', status: 'Levenscyclus',
+            therapist_id: 'Behandelaar', start_on: 'Startdatum', status: 'Levenscyclus',
             analysis: 'Analyse', advice: 'Adviezen', customer_settings: 'Klantweergave',
             voeding_advies_ids: 'Voeding', management_advies_ids: 'Management', beweging_advies_ids: 'Beweging',
         })[section] || '';
@@ -799,7 +800,13 @@
                                 </div>
                                 <Field label="Protocolnaam" error={$form.errors.title}><Input bind:value={$form.title} /></Field>
                                 <Field label="Behandelaar" error={$form.errors.therapist_id}><Select bind:value={$form.therapist_id} placeholder="Geen behandelaar" options={therapistOptions} /></Field>
-                                <Field label="Startdatum"><p class="text-sm text-[#1B2A2A]/70">{initialProtocol?.started_at?.slice(0, 10) ?? 'Nog niet gestart — de eigenaar start het protocol in de app.'}</p></Field>
+                                {#if initialProtocol?.started_at}
+                                    <Field label="Startdatum" error={$form.errors.start_on}><p class="text-sm text-[#1B2A2A]/70">{initialProtocol.started_at.slice(0, 10)}</p></Field>
+                                {:else}
+                                    <Field label="Startdatum instellen (optioneel)" error={$form.errors.start_on} hint="Laat leeg: de eigenaar start het protocol zelf in de app. Vul alleen een datum in als jullie de start hebben afgesproken, bijvoorbeeld omdat de klant een oudere app-versie zonder startknop gebruikt. Een ingestelde startdatum kan daarna niet meer worden gewijzigd.">
+                                        <Input type="date" bind:value={$form.start_on} />
+                                    </Field>
+                                {/if}
                                 <Field label="Levenscyclus" error={$form.errors.status}><Select bind:value={$form.status} options={statusOptions} disabled={protocol?.status === 'archived'} /></Field>
                                 <div class="rounded-2xl bg-[#EAFBF9] p-4 text-sm text-[#0E6F69]">
                                     <div class="font-bold">Automatisch berekend</div>

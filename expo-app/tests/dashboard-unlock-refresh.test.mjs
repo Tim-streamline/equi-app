@@ -9,7 +9,9 @@ const settle = async () => { for (let i = 0; i < 20; i++) await Promise.resolve(
 test('a mounted dashboard removes a purchased item immediately, replaces it from the API and retires old caches', async t => {
   const state = [], refs = [], effects = [], cleanups = [], removed = [];
   let index = 0, refIndex = 0, started = false, finish;
-  const key = 'horse-dashboard:v3:user:horse:today';
+  const key = 'horse-dashboard:v4:user:horse:today';
+  const legacy = 'horse-dashboard:v3:user:horse:today';
+  const read = [];
   const cached = { recommendations: [{ id: 'bought' }, { id: 'keep' }] };
   const modules = {
     react: {
@@ -19,9 +21,10 @@ test('a mounted dashboard removes a purchased item immediately, replaces it from
     },
     'react-native': {}, 'expo-router': { useFocusEffect: () => {} },
     '@/lib/library-events': events,
+    '@/lib/account-session': { accountSession: { revision: 0 } },
     '@react-native-async-storage/async-storage': { default: {
-      getAllKeys: async () => ['horse-dashboard:v1:old', 'horse-dashboard:v2:old', key, 'other'],
-      multiRemove: async keys => removed.push(...keys), getItem: async () => JSON.stringify(cached),
+      getAllKeys: async () => ['horse-dashboard:v1:old', 'horse-dashboard:v2:old', legacy, key, 'other'],
+      multiRemove: async keys => removed.push(...keys), getItem: async item => { read.push(item); return JSON.stringify(cached); },
       removeItem: async key => removed.push(key), setItem: async () => {},
     } },
     '@/db/provider': { useDb: () => ({ currentUserId: 'user', syncStatus: 'offline' }) },
@@ -40,6 +43,8 @@ test('a mounted dashboard removes a purchased item immediately, replaces it from
   await settle();
   assert.ok(removed.includes(key));
   assert.ok(removed.includes('horse-dashboard:v2:old')); assert.ok(!removed.includes('other'));
+  // v3 snapshots hold the obsolete per-supplement order rows; they are never read and are removed.
+  assert.ok(removed.includes(legacy)); assert.deepEqual([...new Set(read)], [key]);
   finish(new Response(JSON.stringify({ recommendations: [{ id: 'keep' }, { id: 'replacement' }] })));
   await settle();
   assert.deepEqual(render().data.recommendations, [{ id: 'keep' }, { id: 'replacement' }]);

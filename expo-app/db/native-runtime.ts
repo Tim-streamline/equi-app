@@ -9,6 +9,13 @@ import { LaravelConnector } from './connector';
 let database: Promise<AbstractPowerSyncDatabase> | undefined;
 let connecting: Promise<void> | undefined;
 
+export async function replaceNativeDatabase(old: AbstractPowerSyncDatabase): Promise<AbstractPowerSyncDatabase> {
+  await old.close();
+  database = undefined;
+  connecting = undefined;
+  return getNativeDatabase();
+}
+
 export function getNativeDatabase(): Promise<AbstractPowerSyncDatabase> {
   if (!database) {
     const ps = new PowerSyncDatabase({

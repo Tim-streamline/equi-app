@@ -53,13 +53,26 @@ class WebSessionController extends Controller
         $user = $login->user($request);
         abort_unless($user, 401);
 
-        return app(PowerSyncAuthController::class)->tokenResponse($user, $login->expiresAt($request),
-            $request->session()->get(WebLogin::SESSION_KEY.'.support_key'))->header('Cache-Control', 'no-store');
+        $response = app(PowerSyncAuthController::class)->tokenResponse($user, $login->expiresAt($request),
+            $request->session()->get(WebLogin::SESSION_KEY.'.support_key'), \App\Support\ClientCapabilities::claims($request))->header('Cache-Control', 'no-store');
+
+        return $response->setData($response->getData(true) + ['logout_id' => $login->logoutId($request)]);
     }
 
     public function logout(Request $request): JsonResponse
     {
-        if ($request->session()->has(WebLogin::SESSION_KEY.'.support_key')) {
+        if ($request->has('logout_id')) {
+            $data = $request->validate(['logout_id' => ['required', 'uuid']]);
+            $login = app(WebLogin::class);
+            // A deferred logout must never revoke a subsequent login, including
+            // another login to the same account in this browser.
+            if (! $login->user($request) || ! hash_equals($login->logoutId($request), $data['logout_id'])) {
+                return response()->json(['ok' => true])->header('Cache-Control', 'no-store');
+            }
+            // Do not rotate the account-wide remember token: a request already
+            // in flight when the user logs in again belongs to its old session.
+            Auth::guard('web')->logoutCurrentDevice();
+        } elseif ($request->session()->has(WebLogin::SESSION_KEY.'.support_key')) {
             Auth::guard('web')->logoutCurrentDevice();
         } else {
             Auth::guard('web')->logout();

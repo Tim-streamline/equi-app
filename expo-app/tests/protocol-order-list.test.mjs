@@ -45,6 +45,25 @@ test('missing amounts and links are never replaced by daily dosage or invented U
   assert.ok(!flatten(unsafe).some(n => n?.props?.accessibilityRole === 'link'));
 });
 
+test('every distinct safe purchase option gets its own distinguishable link', () => {
+  const links = tree => flatten(tree).filter(n => n?.props?.accessibilityRole === 'link');
+  const options = [{ url: 'https://shop-a.example/herb', label: 'x' }, { url: 'javascript:alert(1)', label: 'x' },
+    { url: 'https://www.shop-b.example/herb?ref=1', label: 'x' }, { url: 'https://shop-a.example/herb', label: 'x' }];
+  const rendered = links(exports.ProtocolOrderList({ items: [{ ...item, purchaseOptions: options }] }));
+  assert.equal(rendered.length, 2);
+  assert.deepEqual(rendered.map(link => link.props.accessibilityLabel),
+    ['Bekijk / bestel Heemstwortel bij shop-a.example', 'Bekijk / bestel Heemstwortel bij shop-b.example']);
+  assert.deepEqual(rendered.map(text), ['Bekijk / bestel product bij shop-a.example →', 'Bekijk / bestel product bij shop-b.example →']);
+  rendered[1].props.onPress();
+  assert.equal(opened.at(-1), 'https://www.shop-b.example/herb?ref=1');
+  const sameShop = links(exports.ProtocolOrderList({ items: [{ ...item, purchaseOptions: [
+    { url: 'https://shop-a.example/small', label: 'x' }, { url: 'https://shop-a.example/large', label: 'x' }] }] }));
+  assert.equal(new Set(sameShop.map(link => link.props.accessibilityLabel)).size, 2);
+  const single = links(exports.ProtocolOrderList({ items: [item] }));
+  assert.equal(single[0].props.accessibilityLabel, 'Bekijk / bestel Heemstwortel');
+  assert.equal(text(single[0]), 'Bekijk / bestel product →');
+});
+
 test('full-protocol aggregate orders survive cached future phase locks', () => {
   const module = {};
   const js = ts.transpileModule(readFileSync(new URL('../lib/horse-dashboard.ts', import.meta.url), 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS } }).outputText;

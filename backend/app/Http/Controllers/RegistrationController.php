@@ -130,7 +130,7 @@ class RegistrationController extends Controller
                 if (! $user) {
                     return 'Dit e-mailadres is al in gebruik. Log in met je bestaande account.';
                 }
-                $response = app(PowerSyncAuthController::class)->tokenResponse($user);
+                $response = app(PowerSyncAuthController::class)->tokenResponse($user, capabilityClaims: \App\Support\ClientCapabilities::claims($request));
                 if (! $request->routeIs('web-session.register.complete')) {
                     // A retry after a lost response replaces the device token that response carried.
                     $tokens = app(DeviceTokens::class);
@@ -159,7 +159,9 @@ class RegistrationController extends Controller
             $request->session()->regenerate();
             $login = app(WebLogin::class);
             $login->start($request, $user);
-            $response = app(PowerSyncAuthController::class)->tokenResponse($user, $login->expiresAt($request));
+            $response = app(PowerSyncAuthController::class)->tokenResponse($user, $login->expiresAt($request),
+                capabilityClaims: \App\Support\ClientCapabilities::claims($request));
+            $response->setData($response->getData(true) + ['logout_id' => $login->logoutId($request)]);
         }
 
         return $response->setStatusCode(201)->header('Cache-Control', 'no-store');

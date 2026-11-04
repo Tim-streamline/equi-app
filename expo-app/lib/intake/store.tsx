@@ -67,6 +67,7 @@ function HorseIntakeProvider({ userId, horseId, selectedId, children }: { userId
   const [unsaved, setUnsaved] = useState(false);
   const locked = useRef(false);
   const mounted = useRef(true);
+  const sessionRevision = useRef(accountSession.revision);
   useEffect(() => { mounted.current = true; return () => { mounted.current = false; }; }, []);
   const queue = useRef<Promise<unknown>>(Promise.resolve());
   const pendingWrites = useRef<PendingWrite[]>([]);
@@ -103,9 +104,11 @@ function HorseIntakeProvider({ userId, horseId, selectedId, children }: { userId
   }, [bookings, answers, loaded, booking, completedAt]);
   const authorizedBooking = useRef<Promise<string> | null>(null);
   const ensureBooking = useCallback(() => {
+    if (!mounted.current || sessionRevision.current !== accountSession.revision) return Promise.reject(new Error('Je sessie is gewijzigd.'));
     if (booking?.id) return Promise.resolve(booking.id);
     if (selectedId) return Promise.reject(new Error('Deze intake wordt nog gesynchroniseerd of hoort niet bij dit paard.'));
     if (!authorizedBooking.current) authorizedBooking.current = openOrCreateIntake(powersync, userId, horseId, async () => {
+      if (!mounted.current || sessionRevision.current !== accountSession.revision) throw new Error('Je sessie is gewijzigd.');
       const { bookingId } = await dashboardRequest('/api/protocol-purchases/open', { horse_id: horseId });
       return bookingId;
     }).then(id => {
@@ -129,6 +132,7 @@ function HorseIntakeProvider({ userId, horseId, selectedId, children }: { userId
     }
     let alert = true;
     const work = queue.current.then(async () => {
+      if (!mounted.current || sessionRevision.current !== accountSession.revision) { pendingWrites.current = []; return; }
       // Retain failed local writes in order. Successful autosaves never need replaying.
       // A failing write only holds back the writes that overlap it, so other answers still save.
       let bookingId: Promise<string> | undefined;
@@ -144,7 +148,9 @@ function HorseIntakeProvider({ userId, horseId, selectedId, children }: { userId
           continue;
         }
         try {
-          await pending.run(await (bookingId ??= currentEnsureBooking.current()));
+          const id = await (bookingId ??= currentEnsureBooking.current());
+          if (!mounted.current || sessionRevision.current !== accountSession.revision) { pendingWrites.current = []; return; }
+          await pending.run(id);
           pendingWrites.current = pendingWrites.current.filter(other => other !== pending);
         } catch (error) {
           if (!pendingWrites.current.includes(pending)) continue;
@@ -162,6 +168,7 @@ function HorseIntakeProvider({ userId, horseId, selectedId, children }: { userId
       if (mounted.current) setUnsaved(false);
     });
     queue.current = work.catch(error => {
+      if (!mounted.current || sessionRevision.current !== accountSession.revision) return;
       // The alert is shown once per failing write; the persistent indicator covers the edits queued behind it.
       if (mounted.current) setUnsaved(true);
       if (alert) Alert.alert('Intake niet opgeslagen', error instanceof Error ? error.message : 'Probeer opnieuw.');

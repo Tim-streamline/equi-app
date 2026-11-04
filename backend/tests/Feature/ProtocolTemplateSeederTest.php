@@ -7,11 +7,13 @@ use App\Models\ProtocolTemplate;
 use App\Models\Supplement;
 use App\Models\Therapist;
 use App\Models\User;
+use App\Support\ProtocolTemplateExport;
 use Database\Seeders\ProtocolSeeder;
 use Database\Seeders\ProtocolTemplateSeeder;
 use Database\Seeders\UserSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Arr;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use RuntimeException;
 use Tests\TestCase;
@@ -56,6 +58,93 @@ class ProtocolTemplateSeederTest extends TestCase
         $this->assertSame($beforeProtocol, $protocol->fresh()->getAttributes());
         $this->assertSame($beforeUnrelatedPhase, $unrelatedPhase->fresh()->getAttributes());
         $this->assertDatabaseCount('protocols', 1);
+    }
+
+    public function test_initial_seed_applies_the_catalog_per_day_frequency_and_defaults(): void
+    {
+        $this->seed(ProtocolTemplateSeeder::class);
+
+        $twiceDaily = collect($this->savedCatalog())->flatMap(fn (array $template) => $template['phases'])
+            ->flatMap(fn (array $phase) => $phase['supplements'])
+            ->filter(fn (array $supplement) => ($supplement['administrations_per_day'] ?? 1) === 2)->pluck('name')->sort()->values();
+        $this->assertCount(4, $twiceDaily);
+        $this->assertSame($twiceDaily->all(), Supplement::query()->where('administrations_per_day', 2)->orderBy('name')->pluck('name')->unique()->values()->all());
+        $this->assertSame(0, Supplement::query()->whereNotIn('administrations_per_day', [1, 2])->count());
+        $this->assertSame(0, Supplement::query()->whereNotNull('product_url')->count());
+    }
+
+    public function test_rerunning_the_seeder_keeps_admin_managed_frequency_and_product_link(): void
+    {
+        $this->seed(ProtocolTemplateSeeder::class);
+        $lijnzaad = Supplement::query()->where('name', 'Gekookt (bio) lijnzaad')->firstOrFail();
+        $other = Supplement::query()->where('administrations_per_day', 1)->orderBy('name')->firstOrFail();
+        $description = $other->description;
+        $lijnzaad->update(['administrations_per_day' => 1, 'product_url' => 'https://shop.example.test/lijnzaad']);
+        $other->update(['administrations_per_day' => 3, 'product_url' => 'https://shop.example.test/other', 'description' => 'Locally changed']);
+
+        $this->seed(ProtocolTemplateSeeder::class);
+
+        $this->assertSame(1, $lijnzaad->fresh()->administrations_per_day);
+        $this->assertSame('https://shop.example.test/lijnzaad', $lijnzaad->fresh()->product_url);
+        $this->assertSame(3, $other->fresh()->administrations_per_day);
+        $this->assertSame('https://shop.example.test/other', $other->fresh()->product_url);
+        // Everything else is still synchronised from the saved catalog, keeping the row ID.
+        $this->assertSame($description, $other->fresh()->description);
+        $this->assertSame($lijnzaad->id, Supplement::query()->where('name', 'Gekookt (bio) lijnzaad')->sole()->id);
+    }
+
+    public function test_new_catalog_products_receive_exported_frequency_and_link(): void
+    {
+        $catalog = [[
+            'name' => 'Exported template',
+            'phases' => [[
+                'order' => 1, 'name' => 'Fase 1', 'description' => null, 'required' => true,
+                'start_after_previous_phase_weeks' => 0, 'weeks' => [1, 2],
+                'supplements' => [
+                    ['name' => 'Driemaal', 'supplement_type' => 'kruid', 'administrations_per_day' => 3,
+                        'product_url' => 'https://shop.example.test/driemaal', 'weeks' => [1]],
+                    ['name' => 'Zonder velden', 'supplement_type' => 'kruid', 'weeks' => [2]],
+                ],
+            ]],
+        ]];
+
+        (new ProtocolTemplateSeeder)->import($catalog);
+
+        $created = Supplement::query()->where('name', 'Driemaal')->sole();
+        $this->assertSame(3, $created->administrations_per_day);
+        $this->assertSame('https://shop.example.test/driemaal', $created->product_url);
+        $default = Supplement::query()->where('name', 'Zonder velden')->sole();
+        $this->assertSame(1, $default->fresh()->administrations_per_day);
+        $this->assertNull($default->fresh()->product_url);
+    }
+
+    public function test_export_retains_frequency_and_product_link_for_a_lossless_reseed(): void
+    {
+        $this->seed(ProtocolTemplateSeeder::class);
+        $lijnzaad = Supplement::query()->where('name', 'Gekookt (bio) lijnzaad')->firstOrFail();
+        $lijnzaad->update(['administrations_per_day' => 3, 'product_url' => 'https://shop.example.test/lijnzaad']);
+
+        $exported = app(ProtocolTemplateExport::class)->catalog();
+        $supplements = $this->supplementsByKey($exported);
+        $this->assertTrue($supplements->every(fn (array $supplement) => array_key_exists('administrations_per_day', $supplement) && array_key_exists('product_url', $supplement)));
+        $row = $supplements->first(fn (array $supplement) => $supplement['name'] === 'Gekookt (bio) lijnzaad');
+        $this->assertSame(3, $row['administrations_per_day']);
+        $this->assertSame('https://shop.example.test/lijnzaad', $row['product_url']);
+        // Every other field in the tracked catalog survives an export unchanged.
+        $saved = $this->supplementsByKey($this->savedCatalog());
+        $this->assertSame($saved->keys()->sort()->values()->all(), $supplements->keys()->sort()->values()->all());
+        foreach ($saved as $key => $savedSupplement) {
+            foreach (Arr::except($savedSupplement, $savedSupplement['name'] === 'Gekookt (bio) lijnzaad' ? ['administrations_per_day'] : []) as $field => $value) {
+                $this->assertEquals($value, $supplements[$key][$field], $key.': '.$field);
+            }
+        }
+
+        // A fresh install seeded from that export gets the edited values.
+        DB::table('supplement_weeks')->delete();
+        Supplement::query()->delete();
+        (new ProtocolTemplateSeeder)->import($exported);
+        $this->assertSame(3, Supplement::query()->where('name', 'Gekookt (bio) lijnzaad')->sole()->administrations_per_day);
+        $this->assertSame('https://shop.example.test/lijnzaad', Supplement::query()->where('name', 'Gekookt (bio) lijnzaad')->sole()->product_url);
     }
 
     public function test_the_demo_protocol_seeder_preserves_the_complete_template_catalog(): void
@@ -121,6 +210,15 @@ class ProtocolTemplateSeederTest extends TestCase
                 }
             }
         }
+    }
+
+    private function supplementsByKey(array $catalog): Collection
+    {
+        return collect($catalog)->flatMap(fn (array $template) => collect($template['phases'])->flatMap(
+            fn (array $phase) => collect($phase['supplements'])->mapWithKeys(
+                fn (array $supplement) => [$template['name'].' | '.$phase['order'].' | '.$supplement['name'] => $supplement],
+            ),
+        ));
     }
 
     private function savedCatalog(): array

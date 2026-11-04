@@ -29,7 +29,7 @@ const settle = () => new Promise(resolve => setImmediate(resolve));
 test('preparation opens orders and confirms before starting; cancellation never saves a date', () => {
   const app = setup();
   assert.equal(app.render().find(n => n.type === 'Sheet').props.visible, false);
-  app.render().find(n => n.props.accessibilityLabel === 'Open bestellijst').props.onPress();
+  app.render().find(n => n.props.accessibilityLabel === 'Open bestellijst voor fase 1').props.onPress();
   assert.equal(app.orders(), 1);
   app.button('Ik start vandaag').props.onPress();
   assert.equal(app.render().find(n => n.type === 'Sheet').props.visible, true);

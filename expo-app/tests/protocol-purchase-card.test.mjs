@@ -23,6 +23,7 @@ function app() {
     ...Object.fromEntries(['Today', 'Calendar', 'Nutrition', 'CareAdvice', 'ProtocolAnalysis', 'Sheet', 'WeeklySheet', 'Supplement', 'Label', 'ProtocolOrderList'].map(name => [name, name])),
     HEADER_ICON: '#466362', useHeaderAction: action => { header = action; },
     router: { push: route => routes.push(route) },
+    scopeOrderItems: (items, scope) => scope === 'all' ? items : [],
   };
   const exports = {};
   new Function('require', 'exports', ...Object.keys(dependencies), code)(() => ({ jsx, jsxs: jsx }), exports, ...Object.values(dependencies));

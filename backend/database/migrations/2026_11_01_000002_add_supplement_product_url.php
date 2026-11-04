@@ -14,12 +14,16 @@ return new class extends Migration
             $table->unsignedSmallInteger('administrations_per_day')->default(1);
         });
         Schema::table('protocol_phase_supplements', fn (Blueprint $table) => $table->unsignedSmallInteger('administrations_per_day')->default(1));
+        // Only the known twice-daily catalog products (see database/data/protocol-templates.json).
+        // Exact names: substring matches would also hit unrelated products such as "Lijnzaadolie".
+        $twiceDaily = [
+            'Gekookt (bio) lijnzaad',
+            'Psyliumzaad (bio)',
+            'Schüsslerzout nr. 10 – Natrium sulfuricum',
+            'Schüsslerzout nr. 27 – Kalium bichromicum',
+        ];
         foreach (['supplements', 'protocol_phase_supplements'] as $table) {
-            DB::table($table)->where(function ($query) {
-                foreach (['psyllium', 'psylium', 'lijnzaad', 'celzout', 'schüsslerzout', 'schusslerzout'] as $name) {
-                    $query->orWhereRaw('lower(name) like ?', ['%'.$name.'%']);
-                }
-            })->update(['administrations_per_day' => 2]);
+            DB::table($table)->whereIn('name', $twiceDaily)->update(['administrations_per_day' => 2]);
         }
     }
 

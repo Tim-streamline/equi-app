@@ -94,6 +94,21 @@ class MasterKeyLoginTest extends TestCase
         $this->assertSame($before, $user->fresh()->getAttributes());
     }
 
+    public function test_browser_support_login_signs_the_protocol_capability_only_when_declared(): void
+    {
+        $user = User::factory()->create();
+        $claims = fn ($response) => JWT::decode($response->assertOk()->json('token'), new Key(file_get_contents($this->publicPath), 'RS256'));
+        $modern = $claims($this->postJson('/web-session/login', [...$this->credentials($user), 'capabilities' => ['protocol-doses']]));
+        $this->assertSame(1, $modern->protocol_doses);
+        $this->assertSame(app(MasterKeyLogin::class)->fingerprint(), $modern->support_key);
+        Auth::forgetGuards();
+        $renewed = $claims($this->postJson('/web-session/token', ['capabilities' => ['protocol-doses']]));
+        $this->assertSame(1, $renewed->protocol_doses);
+        $this->assertSame($modern->support_key, $renewed->support_key);
+        $this->postJson('/web-session/logout')->assertOk();
+        $this->assertFalse(property_exists($claims($this->postJson('/web-session/login', $this->credentials($user))), 'protocol_doses'));
+    }
+
     public function test_support_logout_does_not_rotate_customer_remember_token(): void
     {
         $user = User::factory()->create(['remember_token' => 'customer-remember-token']);

@@ -255,6 +255,25 @@ class RegistrationTest extends TestCase
         $this->assertDatabaseCount('horses', 0);
     }
 
+    public function test_web_registration_completion_signs_the_protocol_capability_only_when_declared(): void
+    {
+        $this->freezeTime();
+        $claims = fn ($response) => JWT::decode($response->assertCreated()->json('token'), new Key($this->publicKey, 'RS256'));
+        $this->withHeader('X-CSRF-TOKEN', $this->getJson('/web-session/csrf')->json('token'));
+        $proof = $this->beginRegistration([], '/web-session/register');
+        $this->get(Mail::sent(RegistrationConfirmation::class)->last()->confirmationUrl)->assertOk();
+        // A released web build that sends no declaration keeps the legacy whole-day format.
+        $this->assertFalse(property_exists($claims($this->postJson('/web-session/register/complete', $proof)), 'protocol_doses'));
+        // A lost-response retry from a current build is signed for per-dose tracking.
+        $this->withHeader('X-CSRF-TOKEN', $this->getJson('/web-session/csrf')->json('token'));
+        $completion = $this->postJson('/web-session/register/complete', [...$proof, 'capabilities' => ['protocol-doses']]);
+        $this->assertTrue(\Illuminate\Support\Str::isUuid($completion->json('logout_id')));
+        $modern = $claims($completion);
+        $this->assertSame(1, $modern->protocol_doses);
+        $this->assertSame(User::sole()->id, $modern->sub);
+        $this->assertAuthenticatedAs(User::sole(), 'web');
+    }
+
     public function test_registration_is_rate_limited(): void
     {
         for ($i = 0; $i < 5; $i++) {

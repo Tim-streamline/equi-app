@@ -134,7 +134,7 @@ class ProtocolController extends Controller
                 }
                 $protocol = $drafts->first() ?? new Protocol;
                 $protocol->assertIntakeSubmitted();
-                $protocol->fill($this->protocolAttributes($data, $protocolTemplate))->save();
+                $protocol->fill($this->protocolAttributes($data, $protocolTemplate) + $this->startDate($protocol, $data))->save();
                 $this->syncStructure($protocol, $data);
                 AuditLogger::created($protocol);
 
@@ -180,7 +180,8 @@ class ProtocolController extends Controller
                 $protocol->assertIntakeSubmitted();
                 $history = app(ProtocolDayHistory::class);
                 $history->preserve($protocol, CarbonImmutable::now($history->timezone($protocol)));
-                $attributes = $this->protocolAttributes($data, $protocol->protocol_template_id ? null : ProtocolTemplate::findOrFail($data['protocol_template_id']));
+                $attributes = $this->protocolAttributes($data, $protocol->protocol_template_id ? null : ProtocolTemplate::findOrFail($data['protocol_template_id']))
+                    + $this->startDate($protocol, $data);
                 if ($data['published'] && $protocol->published_at) {
                     $attributes['published_at'] = $protocol->published_at;
                 }
@@ -280,6 +281,32 @@ class ProtocolController extends Controller
             'managementAdviezen',
             'bewegingAdviezen',
         ]);
+    }
+
+    /**
+     * An explicit start date chosen by the therapist, set only while the plan has none.
+     * Call with the protocol row locked: a date from a form opened before the owner (or
+     * another admin) started the plan must not move day one.
+     *
+     * @param  array<string, mixed>  $data
+     * @return array<string, string>
+     */
+    private function startDate(Protocol $protocol, array $data): array
+    {
+        $date = $data['start_on'] ?? null;
+        if (! $date) {
+            return [];
+        }
+        if ($protocol->started_at) {
+            $current = $protocol->started_at->toDateString();
+            if ($current !== $date) {
+                throw ValidationException::withMessages(['start_on' => 'Dit protocol is al gestart op '.$current.'. De startdatum kan niet meer worden gewijzigd.']);
+            }
+
+            return [];
+        }
+
+        return ['started_at' => $date];
     }
 
     /** @param array<string, mixed> $data

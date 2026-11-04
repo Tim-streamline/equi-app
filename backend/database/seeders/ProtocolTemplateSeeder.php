@@ -9,14 +9,23 @@ use Illuminate\Support\Facades\DB;
 
 class ProtocolTemplateSeeder extends Seeder
 {
+    /**
+     * Admin-managed in Instellingen and followed live by published protocols.
+     * The catalog file only supplies them for products that do not exist yet.
+     */
+    private const CREATE_ONLY_SUPPLEMENT_FIELDS = ['administrations_per_day', 'product_url'];
+
     public function run(): void
     {
-        $templates = json_decode(
+        $this->import(json_decode(
             file_get_contents(database_path('data/protocol-templates.json')),
             true,
             flags: JSON_THROW_ON_ERROR,
-        );
+        ));
+    }
 
+    public function import(array $templates): void
+    {
         DB::transaction(function () use ($templates): void {
             foreach ($templates as $templateData) {
                 $template = ProtocolTemplate::query()->firstOrCreate(['name' => $templateData['name']]);
@@ -33,10 +42,10 @@ class ProtocolTemplateSeeder extends Seeder
                     }
 
                     foreach ($phaseData['supplements'] as $supplementData) {
-                        $supplement = $phase->supplements()->updateOrCreate(
-                            ['name' => $supplementData['name']],
-                            Arr::except($supplementData, ['weeks']),
-                        );
+                        $supplement = $phase->supplements()->firstOrNew(['name' => $supplementData['name']]);
+                        $supplement->fill(Arr::except($supplementData, $supplement->exists
+                            ? ['weeks', ...self::CREATE_ONLY_SUPPLEMENT_FIELDS]
+                            : ['weeks']))->save();
 
                         $supplement->weeks()->sync(array_map(
                             fn (int $number): string => $weekIds[$number],

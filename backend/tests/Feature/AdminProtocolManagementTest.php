@@ -235,7 +235,17 @@ class AdminProtocolManagementTest extends TestCase
 
     public function test_protocol_list_shows_and_searches_protocol_template_and_includes_the_current_phase(): void
     {
-        $this->actingAs($this->admin, 'admin')->post('/admin/protocols', $this->payload());
+        $this->travelTo(now()->setDate(2026, 9, 24)->setTime(12, 0));
+        $this->actingAs($this->admin, 'admin')->post('/admin/protocols', [...$this->payload(), 'status' => 'active', 'published' => true])
+            ->assertSessionHasNoErrors();
+        $protocol = Protocol::query()->where('title', 'Boaz recovery protocol')->firstOrFail();
+        // The submitted start date is ignored: a published plan waits in preparation for the owner.
+        $this->assertNull($protocol->started_at);
+        $this->actingAs($this->admin, 'admin')->get('/admin/protocols?q=Darm')->assertOk()
+            ->assertInertia(fn (Assert $page) => $page->where('protocols.data.0.current_phase', null));
+
+        $this->startAsOwner($protocol);
+        $this->assertSame('2026-09-24', $protocol->fresh()->started_at->toDateString());
 
         $this->actingAs($this->admin, 'admin')
             ->get('/admin/protocols?q=Darm')
@@ -849,6 +859,77 @@ class AdminProtocolManagementTest extends TestCase
             $this->assertDatabaseCount('protocols', 1);
             $this->assertDatabaseCount('protocol_phases', 3);
         }
+    }
+
+    public function test_repeated_published_editor_saves_keep_a_reopened_intake_review(): void
+    {
+        $this->actingAs($this->admin, 'admin')->post('/admin/protocols', [...$this->payload(), 'published' => true])
+            ->assertSessionHasNoErrors();
+        $protocol = Protocol::firstOrFail();
+        $intake = $protocol->intake()->firstOrFail();
+        $this->assertSame('done', $intake->fresh()->status);
+        $intake->update(['status' => 'confirmed']);
+
+        $payload = [...$this->storedPayload($protocol), 'published' => true, 'title' => 'Bijgewerkte titel'];
+        $this->travel(5)->minutes();
+        $this->put('/admin/protocols/'.$protocol->id, $payload)->assertSessionHasNoErrors();
+        $this->travel(5)->minutes();
+        $this->put('/admin/protocols/'.$protocol->id, $payload)->assertSessionHasNoErrors();
+        $this->assertSame('Bijgewerkte titel', $protocol->fresh()->title);
+        $this->assertSame('confirmed', $intake->fresh()->status);
+
+        $this->put('/admin/protocols/'.$protocol->id, [...$payload, 'published' => false])->assertSessionHasNoErrors();
+        $this->put('/admin/protocols/'.$protocol->id, $payload)->assertSessionHasNoErrors();
+        $this->assertSame('done', $intake->fresh()->status);
+    }
+
+    public function test_therapist_can_explicitly_start_an_unstarted_plan_but_cannot_move_day_one(): void
+    {
+        $this->travelTo(now()->setDate(2026, 11, 4)->setTime(12, 0));
+        $this->actingAs($this->admin, 'admin')->post('/admin/protocols', [...$this->payload(), 'published' => true])
+            ->assertSessionHasNoErrors();
+        $protocol = Protocol::firstOrFail();
+        $this->assertNull($protocol->started_at);
+        $payload = [...$this->storedPayload($protocol), 'start_on' => '2026-11-04', 'published' => true];
+        $this->put('/admin/protocols/'.$protocol->id, $payload)->assertSessionHasNoErrors();
+        $this->assertSame('2026-11-04', $protocol->fresh()->started_at->toDateString());
+        $this->assertSame(1, $protocol->fresh()->current_week);
+        $this->assertNotNull($protocol->fresh()->currentPhase);
+        // A stale editor cannot replace a date the owner or another therapist chose.
+        $this->put('/admin/protocols/'.$protocol->id, [...$payload, 'start_on' => '2026-11-05'])
+            ->assertSessionHasErrors('start_on');
+        $this->put('/admin/protocols/'.$protocol->id, [...$payload, 'start_on' => ''])
+            ->assertSessionHasNoErrors();
+        $this->assertSame('2026-11-04', $protocol->fresh()->started_at->toDateString());
+    }
+
+    public function test_therapist_start_on_creation_is_explicit_and_validated(): void
+    {
+        $this->travelTo(now()->setDate(2026, 11, 4)->setTime(12, 0));
+        $payload = [...$this->payload(), 'published' => true, 'start_on' => 'not-a-date'];
+        $this->actingAs($this->admin, 'admin')->post('/admin/protocols', $payload)->assertSessionHasErrors('start_on');
+        $this->post('/admin/protocols', [...$payload, 'start_on' => '2026-11-04'])->assertSessionHasNoErrors();
+        $this->assertSame('2026-11-04', Protocol::firstOrFail()->started_at->toDateString());
+    }
+
+    /** Day one is chosen explicitly, here through the owner endpoint. */
+    private function startAsOwner(Protocol $protocol): void
+    {
+        $ownerId = $protocol->horse->owner_id;
+        $this->app->bind(\App\Http\Middleware\AuthenticatePowerSyncJwt::class, fn () => new class($ownerId)
+        {
+            public function __construct(private string $userId) {}
+
+            public function handle($request, $next)
+            {
+                $request->attributes->set('powersync_user_id', $this->userId);
+
+                return $next($request);
+            }
+        });
+        $this->postJson('/api/horses/'.$protocol->horse_id.'/protocol-start', [
+            'protocol_id' => $protocol->id, 'confirmed' => true, 'timezone' => 'Europe/Amsterdam',
+        ])->assertOk()->assertJsonPath('protocol.preparing', false);
     }
 
     private function storedPayload(Protocol $protocol): array

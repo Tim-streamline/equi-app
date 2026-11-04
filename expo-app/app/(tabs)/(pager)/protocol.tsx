@@ -43,6 +43,7 @@ import {
 import { ProtocolToday } from '@/components/protocol/ProtocolToday';
 import { ProtocolAnalysis } from "@/components/protocol/ProtocolAnalysis";
 import { ProtocolOrderList } from "@/components/protocol/ProtocolOrderList";
+import { scopeOrderItems, type OrderScope } from "@/lib/protocol-order-scope";
 import { CareAdvice } from "@/components/protocol/CareAdvice";
 import { ProtocolTabs } from "@/components/protocol/ProtocolTabs";
 import { HorseSwitcher } from "@/components/horse/HorseSwitcher";
@@ -71,8 +72,10 @@ export default function ProtocolListScreen() {
   const handledOrderLink = useRef<string | null>(null);
   const [month, setMonth] = useState<string>();
   const { data, error, refresh, horseId } = useHorseDashboard(month);
-  // 'all' is the protocol's full order list; otherwise a phase's or notice's items.
-  const [orders, setOrders] = useState<DashboardSupplement[] | 'all' | null>(null);
+  // 'all' is the protocol's full order list; otherwise only a phase's or notice's share of it.
+  const [orders, setOrders] = useState<OrderScope | null>(null);
+  const orderSelections = (items: DashboardSupplement[], label?: string): OrderScope =>
+    ({ selections: items.map((item) => ({ id: item.id, phaseId: item.phaseId })), label });
   const [phase, setPhase] = useState<DashboardPhase | null>(null);
   const [weeklyOpen, setWeeklyOpen] = useState(false);
   const padBottom = useTabBarPadding();
@@ -118,8 +121,8 @@ export default function ProtocolListScreen() {
   // Keep an open sheet in sync when a therapist changes the schedule or content.
   const visiblePhase = phase ? protocol?.phases.find((item) => item.id === phase.id && item.accessible) : null;
 
-  const visibleOrders = orders === 'all' ? protocol?.orderItems : protocol?.orderItems.filter((item) =>
-    orders?.some((selected) => item.selectionIds?.includes(selected.id) || item.id === selected.id));
+  const visibleOrders = scopeOrderItems(protocol?.orderItems, orders);
+  const firstPhase = protocol?.phases[0];
   const linkedPhases = protocol?.phases.filter((item) => item.accessible && requestedPhases?.split(',').includes(item.id)) ?? [];
 
   // The selected horse and the order list live in the shared header, only while Protocol is visible.
@@ -189,11 +192,12 @@ export default function ProtocolListScreen() {
           >
             {tab === "vandaag" && (
               protocol.preparing ? <ProtocolPreparation key={`${horseId}:${protocol.id}`}
-                protocol={protocol} horseId={horseId} horseName={data.horse.name} onOrder={() => setOrders('all')} onRefresh={refresh} /> : <Today
+                protocol={protocol} horseId={horseId} horseName={data.horse.name}
+                onOrder={() => setOrders(firstPhase ? { phaseId: firstPhase.id, label: firstPhase.title } : 'all')} onRefresh={refresh} /> : <Today
                 protocol={protocol}
                 date={data.date}
                 horseId={horseId}
-                onOrder={setOrders}
+                onOrder={(items, label) => setOrders(orderSelections(items, label))}
                 onPhase={openPhase}
                 onWeekly={() => setWeeklyOpen(true)}
               />
@@ -221,9 +225,13 @@ export default function ProtocolListScreen() {
           <Sheet
             visible={orders !== null}
             title="Bestellijst"
+            subtitle={orders && orders !== 'all' && orders.label ? `Voor ${orders.label}` : undefined}
             onClose={() => setOrders(null)}
           >
-            <ProtocolOrderList items={visibleOrders ?? []} discount={protocol.orderDiscount} />
+            <ProtocolOrderList items={visibleOrders} discount={protocol.orderDiscount} />
+            {orders !== null && orders !== 'all' && (
+              <Button variant="ghost" title="Bekijk volledige bestellijst" className="mt-4" onPress={() => setOrders('all')} />
+            )}
           </Sheet>
           <Sheet
             visible={!!visiblePhase}
@@ -259,7 +267,7 @@ export default function ProtocolListScreen() {
             )}
             {visiblePhase?.contentAvailable && (
               <Button title="Bekijk bestellijst" className="mt-5" onPress={() => {
-                setOrders(visiblePhase.supplements);
+                setOrders({ phaseId: visiblePhase.id, label: visiblePhase.title });
                 setPhase(null);
               }} />
             )}
@@ -354,9 +362,9 @@ function ProtocolPreparation({ protocol, horseId, horseName, onOrder, onRefresh 
     </View>
     <Card>
       <Text className="mb-2 font-bold text-[19px] text-ink">Wat heb je nodig voor fase 1?</Text>
-      <Text className="mb-4 text-[16px] leading-[24px] text-ink-70">Bekijk je complete bestellijst met alle producten en hoeveelheden.</Text>
-      <Pressable accessibilityRole="button" accessibilityLabel="Open bestellijst" onPress={onOrder}>
-        <Text className="font-semi text-[16px] text-teal-600">Bekijk je bestellijst →</Text>
+      <Text className="mb-4 text-[16px] leading-[24px] text-ink-70">Bekijk welke producten en hoeveelheden je voor de eerste fase nodig hebt.</Text>
+      <Pressable accessibilityRole="button" accessibilityLabel="Open bestellijst voor fase 1" onPress={onOrder}>
+        <Text className="font-semi text-[16px] text-teal-600">Bekijk bestellijst voor fase 1 →</Text>
       </Pressable>
     </Card>
     <View className="mt-2 gap-5 rounded-[22px] border border-mint-100 bg-mint-50 p-5">
@@ -388,7 +396,7 @@ function Today({
   protocol: DashboardProtocol;
   date: string;
   horseId: string;
-  onOrder: (items: DashboardSupplement[]) => void;
+  onOrder: (items: DashboardSupplement[], label?: string) => void;
   onPhase: (phase: DashboardPhase) => void;
   onWeekly: () => void;
 }) {
@@ -436,7 +444,8 @@ function Today({
               onPress={() =>
                 notice.type === "weekly_update"
                   ? onWeekly()
-                  : onOrder(notice.orderItems ?? notice.items)
+                  : onOrder(notice.orderItems ?? notice.items,
+                    protocol.phases.find((item) => item.id === notice.phaseId)?.title)
               }
               className="mt-3 rounded-full border border-[#DCCBA8] py-3"
             >

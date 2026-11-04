@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Http\Middleware\AuthenticatePowerSyncJwt;
 use App\Models\AdminUser;
 use App\Models\Horse;
 use App\Models\IntakeBooking;
@@ -18,7 +19,7 @@ class PublishedProtocolIntakeStatusTest extends TestCase
     private function booking(string $status = 'pending', bool $submitted = true): IntakeBooking
     {
         $user = User::factory()->create();
-        $horse = Horse::create(['owner_id' => $user->id, 'name' => 'Moos']);
+        $horse = Horse::create(['owner_id' => $user->id, 'name' => 'Moos', 'status' => 'active']);
 
         return IntakeBooking::create(['user_id' => $user->id, 'horse_id' => $horse->id,
             'status' => $status, 'submitted_at' => $submitted ? now() : null]);
@@ -53,6 +54,44 @@ class PublishedProtocolIntakeStatusTest extends TestCase
         $booking->protocol->update(['published_at' => now()]);
         $this->assertSame('done', $booking->fresh()->status);
         $booking->protocol->update(['published_at' => null]);
+        $this->assertSame('done', $booking->fresh()->status);
+    }
+
+    public function test_later_saves_of_a_published_protocol_keep_a_reopened_review_until_republication(): void
+    {
+        $booking = $this->booking();
+        $protocol = $booking->protocol;
+        $protocol->update(['published_at' => now()->subMinute(), 'status' => 'active']);
+        $this->assertSame('done', $booking->fresh()->status);
+        $booking->update(['status' => 'confirmed']);
+
+        $protocol->fresh()->update(['title' => 'Nieuwe titel']);
+        $this->assertSame('confirmed', $booking->fresh()->status);
+        // Changing an existing publication timestamp is not a new publication.
+        $protocol->fresh()->update(['published_at' => now()]);
+        $this->assertSame('confirmed', $booking->fresh()->status);
+        $ownerId = $booking->user_id;
+        $this->app->bind(AuthenticatePowerSyncJwt::class, fn () => new class($ownerId)
+        {
+            public function __construct(private string $userId) {}
+
+            public function handle($request, $next)
+            {
+                $request->attributes->set('powersync_user_id', $this->userId);
+
+                return $next($request);
+            }
+        });
+        $this->postJson('/api/horses/'.$booking->horse_id.'/protocol-start', [
+            'protocol_id' => $protocol->id, 'confirmed' => true,
+        ])->assertOk();
+        $this->assertNotNull($protocol->fresh()->started_at);
+        $this->assertSame('confirmed', $booking->fresh()->status);
+
+        // Unpublishing keeps the review; publishing again completes it like the first publication.
+        $protocol->fresh()->update(['published_at' => null]);
+        $this->assertSame('confirmed', $booking->fresh()->status);
+        $protocol->fresh()->update(['published_at' => now()]);
         $this->assertSame('done', $booking->fresh()->status);
     }
 

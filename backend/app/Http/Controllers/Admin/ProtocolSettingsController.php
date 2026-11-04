@@ -293,6 +293,11 @@ class ProtocolSettingsController extends Controller
             $supplement->update($data);
             if (isset($data['administrations_per_day'])) {
                 $supplement->protocolPhaseSupplements()->update(['administrations_per_day' => $data['administrations_per_day']]);
+                foreach ($supplement->protocolPhaseSupplements()->with('phase.protocol.horse.owner.notificationPreferences')->get() as $selection) {
+                    $protocol = $selection->phase->protocol;
+                    $date = \Carbon\CarbonImmutable::now(app(\App\Support\ProtocolDayHistory::class)->timezone($protocol))->toDateString();
+                    app(\App\Support\LegacyProtocolClient::class)->refreshDayDone($selection->id, $date, (int) $data['administrations_per_day']);
+                }
             }
         });
 

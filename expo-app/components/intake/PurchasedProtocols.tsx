@@ -23,11 +23,18 @@ export function PurchasedProtocols({ allHorses = false, excludeProtocolIds = [] 
       const completedAt = protocol.completed_at ?? protocol.submitted_at;
       const horseName = protocol.horse_name || 'je paard';
       const generic = protocol.title === 'Persoonlijk protocol';
+      // Drafts can already be active; only a published plan is ready for the owner.
+      const ready = protocol.published === 1 && (protocol.status === 'active' || protocol.status === 'paused');
+      const named = protocol.status === 'completed' || ready;
+      const body = protocol.status === 'completed' ? 'Afgerond'
+        : ready ? (protocol.status === 'paused' ? 'Je herstelplan is gepauzeerd.' : 'Je herstelplan staat klaar.')
+          : completedAt ? 'Je intake is verstuurd. Je behandelaar stelt je herstelplan op.'
+            : allHorses ? 'Vul dit intake voor de EquiBoost traject in' : 'Vul de intake voor dit herstelplan in.';
       return <View key={protocol.id} className="gap-3 rounded-card bg-white p-5">
       {/* With several horses a custom title alone does not say which horse it is for. */}
-      {allHorses && !generic && protocol.status === 'completed' && <Text className="-mb-2 font-semi text-[14px] text-ink-70">{horseName}</Text>}
-      <Text className="font-bold text-[18px] text-teal-700">{protocol.status === 'completed' ? (generic ? `Herstelplan van ${horseName}` : protocol.title) : `Het EquiBoost traject van ${horseName}`}</Text>
-      <Text>{protocol.status === 'completed' ? 'Afgerond' : completedAt ? 'Je intake is verstuurd. Je behandelaar stelt je herstelplan op.' : allHorses ? 'Vul dit intake voor de EquiBoost traject in' : 'Vul de intake voor dit herstelplan in.'}</Text>
+      {allHorses && !generic && named && <Text className="-mb-2 font-semi text-[14px] text-ink-70">{horseName}</Text>}
+      <Text className="font-bold text-[18px] text-teal-700">{named ? (generic ? `Herstelplan van ${horseName}` : protocol.title) : `Het EquiBoost traject van ${horseName}`}</Text>
+      <Text>{body}</Text>
       {!!completedAt && <Text className="text-sm text-ink-70">Intake ingestuurd op {formatIntakeDate(completedAt)}</Text>}
       {(!!completedAt || protocol.status !== 'completed') && <Button title={completedAt ? 'Intake bekijken' : 'Intake openen'} onPress={() => {
         // The intake looks up its booking under the selected horse.

@@ -5,6 +5,8 @@ namespace App\Http\Controllers;
 use App\Models;
 use App\Support\IntakeSubmission;
 use App\Support\ProtocolAccess;
+use App\Support\ClientCapabilities;
+use App\Support\LegacyProtocolClient;
 use App\Support\ProtocolDayHistory;
 use App\Support\SyncAccessPolicy;
 use Carbon\CarbonImmutable;
@@ -115,9 +117,15 @@ class SyncController extends Controller
 
         $policy = new SyncAccessPolicy;
 
-        DB::transaction(function () use ($payload, &$applied, &$skipped, $policy, $userId) {
+        DB::transaction(function () use ($request, $payload, &$applied, &$skipped, $policy, $userId) {
             $newSubmissions = [];
             foreach ($payload['operations'] as $op) {
+                if ($op['type'] === 'protocol_supplement_intakes') {
+                    // Offline devices can create different IDs for the same product-day.
+                    // Resolve previously accepted IDs before the ordinary ownership/identity checks.
+                    $op['id'] = DB::table('protocol_intake_client_ids')->where('user_id', $userId)
+                        ->where('client_id', $op['id'])->value('intake_id') ?? $op['id'];
+                }
                 abort_if(in_array($op['type'], ['library_item_access', 'library_contents'], true), 403, 'Library access and content are server-managed.');
                 abort_if($op['type'] === 'intake_responses', 409, 'Werk de app bij om de intake te synchroniseren.');
                 // Shelby's chat is written by the server only, so answers cannot be forged from a device.
@@ -233,16 +241,54 @@ class SyncController extends Controller
 
                     continue;
                 }
-                $historical = $op['type'] === 'protocol_supplement_intakes' ? $this->validateIntake($op, $payload['timezone'] ?? null) : null;
-                $this->applyOp($modelClass, $op);
+                $intakeDay = $op['type'] === 'protocol_supplement_intakes' ? $this->intakeDay($op) : null;
+                $historical = $intakeDay ? $this->validateIntake($op, $payload['timezone'] ?? null) : null;
+                if ($intakeDay && $op['op'] === 'PUT'
+                    && ! Models\ProtocolSupplementIntake::whereKey($op['id'])->exists()) {
+                    // validateIntake holds the protocol lock, so concurrent devices converge on
+                    // one row. Retain the alternate ID for later PATCH/DELETE operations too.
+                    $canonicalId = Models\ProtocolSupplementIntake::where('protocol_phase_supplement_id', $intakeDay[0])
+                        ->where('date', $intakeDay[1])->where('administration', $op['data']['administration'] ?? 1)->value('id');
+                    if ($canonicalId) {
+                        DB::table('protocol_intake_client_ids')->updateOrInsert(['user_id' => $userId, 'client_id' => $op['id']], ['intake_id' => $canonicalId]);
+                        $op['id'] = $canonicalId;
+                    }
+                }
+                $legacyPut = $op['op'] === 'PUT' && ! array_key_exists('administration', $op['data'] ?? []);
+                if ($intakeDay && (! ClientCapabilities::protocolDoses($request) || $legacyPut)) {
+                    // A released app's whole-day checkbox can remain queued across an upgrade.
+                    // New inserts name their dose; PATCH payloads cannot identify the old format.
+                    $this->applyWholeDayIntake($op, $intakeDay, $historical);
+                    $applied++;
+
+                    continue;
+                }
+                if ($intakeDay && $op['op'] === 'DELETE' && Models\ProtocolSupplementIntake::find($op['id'])?->administration === 1) {
+                    // Keep the legacy projection's identity stable, including any offline aliases.
+                    $this->patch($modelClass, $op['id'], ['done' => false, 'taken_at' => null]);
+                } else {
+                    $this->applyOp($modelClass, $op);
+                }
                 if ($op['type'] === 'intake_answers' && isset($booking)) {
                     app(\App\Support\IntakeObsoleteAnswers::class)->discardObsoleteAnswer(Models\IntakeAnswer::find($op['id']));
                     $booking->forceFill(['last_activity_at' => now(), 'last_section' => $op['data']['section_id'] ?? $answer?->section_id ?? $booking->last_section,
                         'last_field' => $op['data']['field_id'] ?? $answer?->field_id ?? $booking->last_field])->save();
                 }
                 if ($historical) {
-                    [$protocol, $date, $itemId, $done, $now, $administration] = $historical;
-                    app(ProtocolDayHistory::class)->setDone($protocol, $date, $itemId, $done, $now, false, $administration);
+                    if ($historical['scheduled']) {
+                        app(ProtocolDayHistory::class)->setDone($historical['protocol'], $historical['date'], $historical['item_id'],
+                            $historical['done'], $historical['now'], false, $historical['administration']);
+                    } else {
+                        // Retain the offline record without adding a dose to a frozen day.
+                        app(LegacyProtocolClient::class)->refreshDayDone($historical['item_id'], $historical['date'], $historical['dose_count']);
+                    }
+                } elseif ($intakeDay) {
+                    // Only scheduled doses count toward today's whole-day checkmark.
+                    [$itemId, $date] = $intakeDay;
+                    $item = Models\ProtocolPhaseSupplement::find($itemId);
+                    if ($item) {
+                        app(LegacyProtocolClient::class)->refreshDayDone($itemId, $date, $item->administrationsPerDay());
+                    }
                 }
                 $applied++;
             }
@@ -273,6 +319,58 @@ class SyncController extends Controller
             'data.value' => ['sometimes', 'nullable', 'json']])->validate();
     }
 
+    /** [item ID, date] of an intake operation, or null for a PATCH/DELETE of an unknown row (a no-op). */
+    private function intakeDay(array $op): ?array
+    {
+        $existing = Models\ProtocolSupplementIntake::find($op['id']);
+        if (! $existing && $op['op'] !== 'PUT') {
+            return null;
+        }
+
+        return $existing ? [$existing->protocol_phase_supplement_id, $existing->date->toDateString()]
+            : [(string) ($op['data']['protocol_phase_supplement_id'] ?? ''), (string) ($op['data']['date'] ?? '')];
+    }
+
+    /**
+     * Apply a released app's checkbox to every scheduled dose of that product and day,
+     * after the same ownership, identity, date and plan validation as a single dose.
+     *
+     * @param  array{0: string, 1: string}  $intakeDay
+     * @param  array|null  $historical  validateIntake() result: history arguments, or null for today
+     */
+    private function applyWholeDayIntake(array $op, array $intakeDay, ?array $historical): void
+    {
+        [$itemId, $date] = $intakeDay;
+        $existing = Models\ProtocolSupplementIntake::find($op['id']);
+        $done = $op['op'] !== 'DELETE' && (bool) (($op['data'] ?? [])['done'] ?? $existing?->done);
+        $takenAt = $done ? (($op['data'] ?? [])['taken_at'] ?? now()) : null;
+        $item = Models\ProtocolPhaseSupplement::findOrFail($itemId);
+        // The app keeps its own row ID; reuse it for the first dose when that is still free.
+        if (! $existing && ! Models\ProtocolSupplementIntake::where('protocol_phase_supplement_id', $itemId)->where('date', $date)->where('administration', 1)->exists()) {
+            $this->upsert(Models\ProtocolSupplementIntake::class, $op['id'], ['protocol_phase_supplement_id' => $itemId,
+                'horse_id' => $op['data']['horse_id'], 'date' => $date, 'dosage' => $op['data']['dosage'] ?? $item->dosage,
+                'administration' => 1, 'done' => $done, 'taken_at' => $takenAt]);
+        }
+        if ($historical) {
+            app(ProtocolDayHistory::class)->setDone($historical['protocol'], $date, $itemId, $done, $historical['now'], true, null);
+
+            return;
+        }
+        $horseId = $existing?->horse_id ?? $op['data']['horse_id'];
+        foreach (range(1, $item->administrationsPerDay()) as $administration) {
+            Models\ProtocolSupplementIntake::updateOrCreate(
+                ['protocol_phase_supplement_id' => $itemId, 'date' => $date, 'administration' => $administration],
+                ['horse_id' => $horseId, 'dosage' => $item->dosage, 'done' => $done, 'taken_at' => $takenAt],
+            );
+        }
+        app(LegacyProtocolClient::class)->refreshDayDone($itemId, $date, $item->administrationsPerDay());
+    }
+
+    /**
+     * Valid offline records survive frequency changes; daily frequency controls display, not storage.
+     *
+     * @return array{protocol: Models\Protocol, date: string, item_id: string, done: bool, now: CarbonImmutable, administration: int, scheduled: bool, dose_count: int}|null
+     */
     private function validateIntake(array $op, ?string $timezone): ?array
     {
         $existing = Models\ProtocolSupplementIntake::find($op['id']);
@@ -295,12 +393,14 @@ class SyncController extends Controller
         abort_unless($data['date'] >= $now->subDays(14)->toDateString() && $data['date'] <= $now->toDateString(), 422, 'Alleen vandaag en de afgelopen 14 dagen kunnen worden aangepast.');
         if ($data['date'] < $now->toDateString()) {
             $day = $history->day($protocol, $data['date'], $now);
-            abort_unless(collect($day['items'])->contains(fn ($row) => $row['id'] === $item->id && ($row['administration'] ?? 1) === (int) $data['administration']), 422, 'Deze gift stond niet op deze dag gepland.');
-
-            return [$protocol, $data['date'], $item->id, $op['op'] === 'DELETE' ? false : (bool) $data['done'], $now, (int) $data['administration']];
+            $doses = collect($day['items'])->where('id', $item->id);
+            abort_if($doses->isEmpty(), 422, 'Deze gift stond niet op deze dag gepland.');
+            return ['protocol' => $protocol, 'date' => $data['date'], 'item_id' => $item->id,
+                'done' => $op['op'] === 'DELETE' ? false : (bool) $data['done'], 'now' => $now,
+                'administration' => (int) $data['administration'], 'dose_count' => $doses->count(),
+                'scheduled' => $doses->contains(fn ($row) => ($row['administration'] ?? 1) === (int) $data['administration'])];
         }
         $start = $protocol->started_at ? CarbonImmutable::parse($protocol->started_at->toDateString(), $now->timezone) : null;
-        abort_unless((int) $data['administration'] <= $item->administrationsPerDay(), 422, 'Deze gift staat niet gepland.');
         $week = $start ? (int) floor($start->diffInDays($now->startOfDay(), false) / 7) + 1 : 0;
         abort_unless($week > 0 && $item->weeks()->whereHas('protocolPhaseWeek', fn ($query) => $query->where('protocol_week_number', $week))->exists(), 422, 'Dit item staat vandaag niet gepland.');
 

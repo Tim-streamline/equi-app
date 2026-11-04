@@ -90,23 +90,35 @@ class ProtocolDayHistory
         return ! $items ? 'default' : ($done === count($items) ? 'complete' : ($done ? 'partial' : 'missed'));
     }
 
-    public function setDone(Protocol $protocol, string $date, string $itemId, bool $done, CarbonImmutable $now, bool $mirrorIntake = true, int $administration = 1): array
+    /**
+     * Check or uncheck one dose, or with $administration null every dose of the item on
+     * that day: the whole-day checkbox of released apps (see LegacyProtocolClient).
+     */
+    public function setDone(Protocol $protocol, string $date, string $itemId, bool $done, CarbonImmutable $now, bool $mirrorIntake = true, ?int $administration = 1): array
     {
         return DB::transaction(function () use ($protocol, $date, $itemId, $done, $now, $mirrorIntake, $administration) {
             $protocol = Protocol::query()->lockForUpdate()->findOrFail($protocol->id);
             $day = $this->day($protocol, $date, $now);
             abort_unless($day['editable'], 422, 'Je kunt alleen de afgelopen 14 dagen aanpassen.');
-            $index = collect($day['items'])->search(fn ($item) => $item['id'] === $itemId && ($item['administration'] ?? 1) === $administration);
-            abort_if($index === false, 422, 'Dit item stond niet op deze dag gepland.');
-            $day['items'][$index]['done'] = $done;
+            $doses = collect($day['items'])->filter(fn ($item) => $item['id'] === $itemId);
+            $targets = $doses->filter(fn ($item) => $administration === null || ($item['administration'] ?? 1) === $administration);
+            abort_if($targets->isEmpty(), 422, 'Dit item stond niet op deze dag gepland.');
+            foreach ($targets as $index => $item) {
+                $day['items'][$index]['done'] = $done;
+            }
             DB::table('protocol_day_snapshots')->where('protocol_id', $protocol->id)->where('date', $date)
                 ->update(['items' => json_encode($day['items']), 'updated_at' => now()]);
             // Keep existing devices in sync, but history also works after a live item is removed.
-            if ($mirrorIntake && ProtocolPhaseSupplement::whereKey($itemId)->exists()) {
-                ProtocolSupplementIntake::updateOrCreate(['protocol_phase_supplement_id' => $itemId, 'date' => $date, 'administration' => $administration], [
-                    'horse_id' => $protocol->horse_id, 'dosage' => $day['items'][$index]['dosage'],
-                    'done' => $done, 'taken_at' => $done ? now() : null,
-                ]);
+            if (ProtocolPhaseSupplement::whereKey($itemId)->exists()) {
+                if ($mirrorIntake) {
+                    foreach ($targets as $item) {
+                        ProtocolSupplementIntake::updateOrCreate(['protocol_phase_supplement_id' => $itemId, 'date' => $date, 'administration' => $item['administration'] ?? 1], [
+                            'horse_id' => $protocol->horse_id, 'dosage' => $item['dosage'],
+                            'done' => $done, 'taken_at' => $done ? now() : null,
+                        ]);
+                    }
+                }
+                app(LegacyProtocolClient::class)->refreshDayDone($itemId, $date, $doses->count());
             }
             $day['state'] = $this->state($day['items']);
 

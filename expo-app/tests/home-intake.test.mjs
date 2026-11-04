@@ -194,6 +194,49 @@ test('an older cached dashboard without per-horse summaries still shows the sele
   assert.ok(text(cards[0]).includes('Actief voor partial'));
 });
 
+test('a published plan without a protocol card says it is ready, while active drafts still say it is being written', () => {
+  const app = screen();
+  // No dashboard card (e.g. offline or no response yet): the local query decides.
+  app.purchases.submitted[0] = { ...app.purchases.submitted[0], title: 'Persoonlijk protocol', status: 'active', published: 1 };
+  let copy = text(app.render());
+  assert.ok(copy.includes('Herstelplan van submitted'));
+  assert.ok(copy.includes('Je herstelplan staat klaar.'));
+  assert.ok(!copy.includes('Je behandelaar stelt je herstelplan op.'));
+  assert.ok(app.render().some(n => n?.type === 'Button' && n.props.title === 'Intake bekijken'));
+  app.purchases.submitted[0] = { ...app.purchases.submitted[0], status: 'paused' };
+  assert.ok(text(app.render()).includes('Je herstelplan is gepauzeerd.'));
+  // Unpublished (or not yet published) plans can be active drafts: keep the writing copy.
+  for (const row of [{ status: 'active', published: 0 }, { status: 'draft', published: 1 }]) {
+    app.purchases.submitted[0] = { ...app.purchases.submitted[0], ...row };
+    copy = text(app.render());
+    assert.ok(copy.includes('Je intake is verstuurd. Je behandelaar stelt je herstelplan op.'));
+    assert.ok(!copy.includes('Je herstelplan staat klaar.'));
+  }
+  // A dashboard card still replaces the fallback card for that exact protocol.
+  app.purchases.submitted[0] = { ...app.purchases.submitted[0], id: 'p-submitted', status: 'active', published: 1 };
+  app.activeProtocols.push('submitted');
+  assert.ok(!text(app.render()).includes('Je herstelplan staat klaar.'));
+});
+
+test('the local intake query derives publication like the dashboard, ignoring future dates', async () => {
+  const { DatabaseSync } = await import('node:sqlite');
+  const queries = await import('../lib/intake/protocol-queries.ts');
+  const db = new DatabaseSync(':memory:');
+  db.exec(`CREATE TABLE protocols (id TEXT, title TEXT, status TEXT, horse_id TEXT, published_at TEXT, created_at TEXT);
+    CREATE TABLE intake_bookings (id TEXT, protocol_id TEXT, user_id TEXT, status TEXT, submitted_at TEXT, completed_at TEXT);
+    CREATE TABLE horses (id TEXT, name TEXT, status TEXT);
+    INSERT INTO horses VALUES ('h', 'Nova', 'active');`);
+  const rows = [['past', '2026-01-01 10:00:00.000Z'], ['future', '2999-01-01T10:00:00+00:00'], ['draft', null]];
+  rows.forEach(([id, published], index) => {
+    db.prepare("INSERT INTO protocols VALUES (?, 'Plan', 'active', 'h', ?, ?)").run(id, published, `2026-01-0${index + 1}`);
+    db.prepare("INSERT INTO intake_bookings VALUES (?, ?, 'u', 'pending', '2026-01-01', NULL)").run(`i-${id}`, id);
+  });
+  const published = sql => Object.fromEntries(sql.map(row => [row.id, row.published]));
+  const expected = { past: 1, future: 0, draft: 0 };
+  assert.deepEqual(published(db.prepare(queries.PROTOCOLS_FOR_HORSE).all('h', 'u')), expected);
+  assert.deepEqual(published(db.prepare(queries.PROTOCOLS_FOR_ALL_HORSES).all('u')), expected);
+});
+
 test('Home removes only the intake card whose published protocol already has a protocol card', () => {
   const app = screen();
   app.activeProtocols.push('submitted');

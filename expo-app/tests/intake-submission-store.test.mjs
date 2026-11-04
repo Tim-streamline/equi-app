@@ -21,7 +21,7 @@ const config = { recovery: {require: {}} };
 // Keep answers hydrated while local submittedAt is optionally still stale, as
 // happens on the render before the booking hydration effect runs.
 function context({ answers, episode, questionnaire = config, submitted_at = null, completed_at = null, localSubmittedAt = null,
- save = async () => {}, waitForUploads = async () => {}, request = async () => ({ completed_at: 'today' }), execute = async () => {} }) {
+ save = async () => {}, waitForUploads = async () => {}, request = async () => ({ completed_at: 'today' }), execute = async () => {}, session = { revision: 1 } }) {
  const writes = [];
  const recordWrite = (...args) => { writes.push(args); return Promise.resolve({completed_at:'today'}); };
  const db = { execute: async (...args) => { writes.push(args); return execute(...args); }, writeTransaction: recordWrite };
@@ -41,7 +41,7 @@ function context({ answers, episode, questionnaire = config, submitted_at = null
   '@/db/provider': { useDb: () => ({ powersync: db }) },
   '@/db/hooks': { useCurrentUserId: () => 'owner', useCurrentHorseSelection: () => ({ horseId: 'horse', loading: false }) },
   '@/hooks/useHorseDashboard': { dashboardRequest: async (...args) => { writes.push(args); return request(...args); } },
-  '@/lib/account-session': { accountSession: { revision: 1 } },
+  '@/lib/account-session': { accountSession: session },
   './schema-provider': { useIntakeSchema: () => ({ schema, noneOptions: [] }) },
   './submission-blocks': rules,
   './persistence': { bookingQuery: 'SELECT * FROM intake_bookings', saveAnswer: async (...args) => { writes.push(args); return save(...args); } },
@@ -53,6 +53,16 @@ function context({ answers, episode, questionnaire = config, submitted_at = null
  assert.equal(node.type, 'IntakeContext');
  return { ...node.props.value, writes };
 }
+
+test('reset invalidates in-memory autosaves queued by the previous intake screen', async () => {
+ const session = { revision: 1 };
+ const store = context({ answers: {}, session });
+ store.setField('custom-safety', 'condition', 'none');
+ session.revision++;
+ await new Promise(resolve => setImmediate(resolve));
+ assert.deepEqual(store.writes, []);
+ await assert.rejects(store.ensureBooking(), /sessie/);
+});
 
 for (const completion of [{ submitted_at:'yesterday' }, { completed_at:'yesterday' }, { localSubmittedAt:'yesterday' }]) {
  test(`completed intake remains read-only (${Object.keys(completion)[0]})`, async () => {
