@@ -149,12 +149,13 @@ class HorseDashboard
 
             return $availability + [
                 'id' => $phase->id, 'title' => $phase->title,
-                'description' => ($preview || $availability['accessible']) ? $phase->description : null,
+                'description' => $phase->description,
                 'contentAvailable' => $preview || $availability['accessible'],
                 'supplements' => ($preview || $availability['accessible']) ? $phase->supplements->map(fn ($s) => [
                     'id' => $s->id, 'name' => $s->name, 'dosage' => $s->dosage,
                     'description' => $s->description, 'instructions' => $s->instructions,
                     'buildupLabel' => $buildup->label($s->dose_buildup),
+                    'buildup' => $buildup->presentation($s, $now->toDateString()),
                     'frequencyLabel' => $s->administrationsPerDay().'× per dag',
                     'administrationsPerDay' => $s->administrationsPerDay(), 'phaseId' => $phase->id,
                     'weekNumbers' => $s->weeks->map(fn ($link) => (int) $weeks->get($link->protocol_phase_week_id))->filter()->values()->all(),
@@ -209,9 +210,12 @@ class HorseDashboard
                 $state = $completed === $rows->count() ? 'complete' : ($completed ? 'partial' : ($iso < $now->toDateString() ? 'missed' : 'default'));
             }
             if ($iso < $now->toDateString() && $historicalDays->has($iso)) {
-                $state = $history->state($historicalDays->get($iso));
+                $rows = collect($historicalDays->get($iso));
+                $completed = $rows->where('done', true)->count();
+                $state = $history->state($rows->all());
             }
-            $cells[] = ['available' => (bool) $start && $iso < $now->toDateString() && $historicalDays->has($iso), 'date' => $iso, 'day' => $dayNumber, 'state' => $state, 'isToday' => (bool) $start && $iso === $now->toDateString()];
+            $cells[] = ['available' => (bool) $start && $iso < $now->toDateString() && $historicalDays->has($iso), 'date' => $iso, 'day' => $dayNumber, 'state' => $state, 'isToday' => (bool) $start && $iso === $now->toDateString(),
+                'total' => $iso <= $now->toDateString() ? $rows->count() : 0, 'done' => $iso <= $now->toDateString() ? $completed : 0];
         }
         while (count($cells) % 7) {
             $cells[] = null;

@@ -420,7 +420,7 @@ class SyncController extends Controller
         $protocol = Models\Protocol::query()->lockForUpdate()->findOrFail($item->phase->protocol_id);
         $now = CarbonImmutable::now($timezone ?? $history->timezone($protocol));
         abort_unless($protocol->published_at && $protocol->published_at->lte($now) && $protocol->status === 'active', 422);
-        abort_unless($data['date'] >= $now->subDays(14)->toDateString() && $data['date'] <= $now->toDateString(), 422, 'Alleen vandaag en de afgelopen 14 dagen kunnen worden aangepast.');
+        abort_unless($data['date'] >= $now->subDays(7)->toDateString() && $data['date'] <= $now->toDateString(), 422, 'Alleen vandaag en de afgelopen 7 dagen kunnen worden aangepast.');
         if ($data['date'] < $now->toDateString()) {
             $day = $history->day($protocol, $data['date'], $now);
             $doses = collect($day['items'])->where('id', $item->id);

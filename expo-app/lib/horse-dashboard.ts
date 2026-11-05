@@ -11,7 +11,18 @@ export type LibraryRecommendation = {
   unlocked: boolean;
   phaseContext?: string;
 };
+export type DoseBuildupDisplay = {
+  date: string;
+  currentStep: number | null;
+  totalSteps: number;
+  currentDosage: string | null;
+  previousDosage: string | null;
+  fullDosage: string | null;
+  next: { day: number; dosage: string | null; afterRecordedDays: number } | null;
+  schedule: { day: number; dosage: string | null }[];
+};
 export type DashboardSupplement = {
+  buildup?: DoseBuildupDisplay | null;
   buildupLabel?: string | null;
   administration?: number;
   administrationsPerDay?: number;
@@ -118,6 +129,8 @@ export type DashboardProtocol = {
       state: "default" | "complete" | "partial" | "missed";
       isToday: boolean;
       available?: boolean;
+      total?: number;
+      done?: number;
     } | null)[];
   };
   nutrition: {
@@ -241,7 +254,7 @@ export function dashboardAtTime(data: HorseDashboard, now: Date): HorseDashboard
       statusLabel: state === 'active' ? `Actief · week ${currentPhaseWeek} van ${durationWeeks}`
         : state === 'preview' ? 'Start volgende week' : state === 'done' ? 'Afgerond'
           : phase.weekStart ? `Start in protocolweek ${phase.weekStart}` : 'Nog niet ingepland',
-      description: state === 'locked' ? undefined : phase.description,
+      description: phase.description,
       supplements: state === 'locked' ? [] : phase.supplements,
     };
   });

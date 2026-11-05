@@ -461,4 +461,25 @@ class DoseBuildupTest extends TestCase
         $catalog = $this->item->phase->phase()->firstOrFail()->supplements()->create(['name' => 'Default', 'supplement_type' => 'supplement']);
         $this->assertSame(DoseBuildup::NONE_ID, $catalog->fresh()->dose_buildup_id);
     }
+
+    public function test_buildup_presentation_uses_recorded_days_rounding_and_frozen_daily_amounts(): void
+    {
+        $this->record('2026-11-01', 1, '5 g');
+        $this->record('2026-11-01', 2, '5 g');
+        $service = app(ProtocolDoseBuildup::class);
+        $display = $service->presentation($this->item->fresh(), '2026-11-05');
+        $this->assertSame(2, $display['currentStep']);
+        $this->assertSame('7.5 g', $display['currentDosage']);
+        $this->assertSame('5 g', $display['previousDosage']);
+        $this->assertSame('10 g', $display['next']['dosage']);
+        $this->assertCount(7, $display['schedule']);
+        $this->assertSame('20 g', $display['schedule'][6]['dosage']);
+        $this->record('2026-11-05', 1, '7.5 g', false);
+        $this->record('2026-11-02', 1, '7.5 g');
+        $display = $service->presentation($this->item->fresh(), '2026-11-05');
+        $this->assertSame('7.5 g', $display['currentDosage']);
+        $this->assertNull($display['currentStep']);
+        $this->item->update(['dose_buildup' => null]);
+        $this->assertNull($service->presentation($this->item->fresh(), '2026-11-05'));
+    }
 }

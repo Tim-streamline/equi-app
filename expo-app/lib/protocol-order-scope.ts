@@ -7,6 +7,7 @@ import type { DashboardOrderItem } from "@/lib/horse-dashboard";
 export type OrderScope =
   | "all"
   | { phaseId: string; label?: string }
+  | { phaseIds: string[]; label?: string }
   | { selections: { id: string; phaseId?: string }[]; label?: string };
 
 type Component = DashboardOrderItem["components"][number];
@@ -32,7 +33,7 @@ export function scopeOrderItems(items: DashboardOrderItem[] | undefined, scope: 
   if (scope === "all") return items;
   const matches: (component: Component) => boolean = "phaseId" in scope
     ? (component) => component.phaseId === scope.phaseId
-    : (() => {
+    : "phaseIds" in scope ? (component) => scope.phaseIds.includes(component.phaseId) : (() => {
         const selected = new Map(scope.selections.map((item) => [item.id, item.phaseId]));
         return (component: Component) => selected.has(component.selectionId)
           && (!selected.get(component.selectionId) || selected.get(component.selectionId) === component.phaseId);

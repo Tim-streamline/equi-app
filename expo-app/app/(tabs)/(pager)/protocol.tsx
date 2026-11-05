@@ -1,7 +1,7 @@
 import { PurchasedProtocols } from '@/components/intake/PurchasedProtocols';
 import { KeyboardTextInput as TextInput, KeyboardViewport as KeyboardAvoidingView, KeyboardScrollView } from '@/components/ui/KeyboardForm';
 import { LibraryThumbnail } from "@/components/library/LibraryThumbnail";
-import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useRef, useState, type ReactNode, type ComponentProps } from "react";
 import {
   View,
   Text,
@@ -18,12 +18,10 @@ import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context"
 import {
   Check,
   X,
-  ChevronLeft,
   ChevronRight,
   ShoppingBag,
   TriangleAlert,
   Leaf,
-  LockKeyhole,
 } from "lucide-react-native";
 import { Button } from "@/components/ui/Button";
 import { useTabBarPadding } from "@/hooks/useTabBarPadding";
@@ -40,6 +38,9 @@ import {
   type LibraryRecommendation,
 } from "@/lib/horse-dashboard";
 
+import { ProtocolPhaseContent } from '@/components/protocol/ProtocolPhaseContent';
+import { ProtocolCalendar } from '@/components/protocol/ProtocolCalendar';
+import { phaseOrderItems, phaseSubtitle } from '@/lib/protocol-calendar';
 import { ProtocolToday } from '@/components/protocol/ProtocolToday';
 import { ProtocolAnalysis } from "@/components/protocol/ProtocolAnalysis";
 import { ProtocolOrderList } from "@/components/protocol/ProtocolOrderList";
@@ -54,7 +55,6 @@ import { useHeaderAction } from "@/components/navigation/headerActions";
 import { accessibleNotificationPhase } from "@/lib/protocol-notifications";
 import { useDb } from "@/db/provider";
 import { protocolTab, type ProtocolTab } from "@/lib/protocol-tabs";
-import { selectionHaptic } from "@/lib/haptics";
 
 export default function ProtocolListScreen() {
   const { tab: tabParam, t: nonce, horseId: requestedHorse, protocolId: requestedProtocol, phaseIds: requestedPhases, horsePicker, orderList: requestedOrderList } = useLocalSearchParams<{
@@ -98,10 +98,6 @@ export default function ProtocolListScreen() {
     setOrders('all');
   }, [requestedOrderList, protocol, horseId, requestedHorse, requestedProtocol, nonce]);
   const openPhase = (selected: DashboardPhase) => {
-    if (!selected.accessible) {
-      Alert.alert("Deze fase is nog niet toegankelijk", "Je kunt deze fase vanaf één week voor de start bekijken.");
-      return;
-    }
     setPhase(selected);
   };
   useEffect(() => {
@@ -119,7 +115,7 @@ export default function ProtocolListScreen() {
     setPhase(selected);
   }, [protocol, horseId, requestedHorse, requestedProtocol, requestedPhases, nonce]);
   // Keep an open sheet in sync when a therapist changes the schedule or content.
-  const visiblePhase = phase ? protocol?.phases.find((item) => item.id === phase.id && item.accessible) : null;
+  const visiblePhase = phase ? protocol?.phases.find((item) => item.id === phase.id) : null;
 
   const visibleOrders = scopeOrderItems(protocol?.orderItems, orders);
   const firstPhase = protocol?.phases[0];
@@ -206,10 +202,11 @@ export default function ProtocolListScreen() {
               <Calendar
                 key={`${horseId}:${protocol.id}`}
                 protocol={protocol}
+                today={data.date}
+                onOrder={phaseIds => setOrders(phaseIds ? { phaseIds } : 'all')}
                 onMonth={setMonth}
                 onPhase={openPhase}
                 horseId={horseId}
-                onToday={() => setTab("vandaag")}
                 onRefresh={refresh}
               />
             )}
@@ -236,41 +233,16 @@ export default function ProtocolListScreen() {
           <Sheet
             visible={!!visiblePhase}
             title={visiblePhase?.title ?? ""}
-            subtitle={visiblePhase ? `${visiblePhase.weekLabel} · ${visiblePhase.statusLabel}` : ""}
+            subtitle={visiblePhase ? phaseSubtitle(visiblePhase) : ""}
             onClose={() => setPhase(null)}
+            footer={visiblePhase ? <Button title="Bekijk bestellijst" onPress={() => { setOrders({ phaseIds: [visiblePhase.id] }); setPhase(null); }} /> : undefined}
           >
             {linkedPhases.length > 1 && (
               <View className="mb-4 gap-2">
                 {linkedPhases.map((item) => <Button key={item.id} variant={item.id === visiblePhase?.id ? "primary" : "ghost"} title={item.title} onPress={() => openPhase(item)} />)}
               </View>
             )}
-            {visiblePhase && !visiblePhase.contentAvailable && (
-              <View className="mb-4 gap-3">
-                <Text className="text-[14px] text-ink-70">Deze fase is nu beschikbaar. Maak verbinding om de volledige fase en bestellijst op te halen.</Text>
-                <Button title="Opnieuw laden" onPress={() => void refresh()} />
-              </View>
-            )}
-            {!!visiblePhase?.description && (
-              <Text className="mb-5 text-[14px] leading-[23px] text-ink-70">
-                {visiblePhase.description}
-              </Text>
-            )}
-            {!!visiblePhase?.supplements.length && (
-              <>
-                <Label>Per kruid</Label>
-                <View className="mt-3 gap-2">
-                  {visiblePhase.supplements.map((item) => (
-                    <Supplement key={item.id} item={item} />
-                  ))}
-                </View>
-              </>
-            )}
-            {visiblePhase?.contentAvailable && (
-              <Button title="Bekijk bestellijst" className="mt-5" onPress={() => {
-                setOrders({ phaseId: visiblePhase.id, label: visiblePhase.title });
-                setPhase(null);
-              }} />
-            )}
+            {visiblePhase && <ProtocolPhaseContent key={visiblePhase.id} phase={visiblePhase} orderItems={protocol.orderItems} onRefresh={refresh} />}
           </Sheet>
           <WeeklySheet
             visible={weeklyOpen}
@@ -463,214 +435,8 @@ function Today({
   );
 }
 
-type ProtocolDay = {
-  date: string;
-  label: string;
-  editable: boolean;
-  items: DashboardSupplement[];
-  state: "default" | "missed" | "partial" | "complete";
-};
-
-function Calendar({
-  protocol,
-  onMonth,
-  onPhase,
-  horseId,
-  onToday,
-  onRefresh,
-}: {
-  horseId: string;
-  onToday: () => void;
-  onRefresh: () => Promise<void>;
-  protocol: DashboardProtocol;
-  onMonth: (month: string) => void;
-  onPhase: (phase: DashboardPhase) => void;
-}) {
-  const [selected, setSelected] = useState<string>();
-  const [day, setDay] = useState<ProtocolDay | null>(null);
-  const [dayError, setDayError] = useState<string | null>(null);
-  const [busy, setBusy] = useState(false);
-  const request = useRef(0);
-  const [states, setStates] = useState<Record<string, ProtocolDay["state"]>>({});
-  useEffect(() => () => { request.current++; }, []);
-  const closeDay = () => { request.current++; setSelected(undefined); setDay(null); setDayError(null); setBusy(false); };
-  const openDay = async (date: string) => {
-    const generation = ++request.current;
-    setSelected(date); setDay(null); setDayError(null); setBusy(true);
-    try {
-      const query = new URLSearchParams({ protocol_id: protocol.id, date, timezone: deviceTimezone() });
-      const result = await dashboardRequest(`/api/horses/${horseId}/protocol-day?${query}`) as ProtocolDay;
-      if (generation === request.current) setDay(result);
-    } catch {
-      if (generation === request.current) setDayError("De daglijst kon niet worden geladen. Probeer het opnieuw.");
-    } finally { if (generation === request.current) setBusy(false); }
-  };
-  const toggleDayItem = async (item: DashboardSupplement) => {
-    if (!day?.editable || busy) return;
-    selectionHaptic();
-    const generation = ++request.current;
-    setBusy(true); setDayError(null);
-    try {
-      const result = await dashboardRequest(`/api/horses/${horseId}/protocol-day`, {
-        protocol_id: protocol.id, date: day.date, item_id: item.id, administration: item.administration ?? 1, done: !item.done, timezone: deviceTimezone(),
-      }) as ProtocolDay;
-      if (generation !== request.current) return;
-      setDay(result);
-      setStates((previous) => ({ ...previous, [result.date]: result.state }));
-      void onRefresh();
-    } catch {
-      if (generation === request.current) setDayError("Niet opgeslagen. Controleer je verbinding; alleen de afgelopen 14 dagen kunnen worden aangepast.");
-    } finally { if (generation === request.current) setBusy(false); }
-  };
-  const calendar = protocol.calendar;
-  useEffect(() => { setStates({}); }, [calendar]);
-  const colors = {
-    default: ["#FFFFFF", "#E8ECEB", "#9EA6A5"],
-    complete: ["#18BAB0", "#18BAB0", "#FFFFFF"],
-    partial: ["#CFF2EB", "#A9DFD4", "#23796E"],
-    missed: ["#F9E6C4", "#E8B864", "#8B621C"],
-  };
-  return (
-    <>
-      {protocol.preparing && <View className="mb-4"><Text accessibilityRole="header" className="font-bold text-[20px] text-ink">Nog niet gestart</Text><Text className="mt-2 text-[15px] leading-[22px] text-ink-70">Je planning begint zodra je bij Vandaag je protocol start.</Text></View>}
-      <Card>
-        <View className="mb-4 flex-row items-center justify-between">
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel="Vorige maand"
-            onPress={() => onMonth(calendar.previousMonth)}
-            className="p-2"
-          >
-            <ChevronLeft size={18} color="#536C6B" />
-          </Pressable>
-          <Text className="font-bold text-[15px] text-ink">
-            {calendar.label}
-          </Text>
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel="Volgende maand"
-            onPress={() => onMonth(calendar.nextMonth)}
-            className="p-2"
-          >
-            <ChevronRight size={18} color="#536C6B" />
-          </Pressable>
-        </View>
-        <View className="mb-2 flex-row">
-          {["MA", "DI", "WO", "DO", "VR", "ZA", "ZO"].map((day) => (
-            <Text
-              key={day}
-              className="flex-1 text-center text-[10px] text-ink-30"
-            >
-              {day}
-            </Text>
-          ))}
-        </View>
-        <View className="flex-row flex-wrap">
-          {calendar.cells.map((cell, index) => {
-            const tone = cell?.isToday
-              ? ["#0B4A49", "#0B4A49", "#FFFFFF"]
-              : colors[(cell && states[cell.date]) ?? cell?.state ?? "default"];
-            return (
-              <View
-                key={cell?.date ?? `blank-${index}`}
-                style={{ width: "14.285714%", aspectRatio: 1, padding: 2 }}
-              >
-                {cell && (
-                  <Pressable
-                    accessibilityRole="button"
-                    accessibilityLabel={`${cell.date}, ${states[cell.date] ?? cell.state}`}
-                    accessibilityState={{ selected: selected === cell.date }}
-                    disabled={!cell.isToday && !cell.available}
-                    onPress={() => cell.isToday ? onToday() : void openDay(cell.date)}
-                    className="flex-1 items-center justify-center rounded-xl"
-                    style={{
-                      backgroundColor: tone[0],
-                      borderWidth: 1,
-                      borderColor: selected === cell.date ? "#0B4A49" : tone[1],
-                    }}
-                  >
-                    <Text
-                      className="font-semi text-[13px]"
-                      style={{ color: tone[2] }}
-                    >
-                      {cell.day}
-                    </Text>
-                  </Pressable>
-                )}
-              </View>
-            );
-          })}
-        </View>
-        <View className="mt-3 flex-row gap-3">
-          {[
-            ["#18BAB0", "Compleet"],
-            ["#99E8DF", "Deels"],
-            ["#E8A33C", "Gemist"],
-          ].map(([color, label]) => (
-            <View key={label} className="flex-row items-center gap-1">
-              <View
-                className="h-2 w-2 rounded-full"
-                style={{ backgroundColor: color }}
-              />
-              <Text className="text-[10px] text-ink-70">{label}</Text>
-            </View>
-          ))}
-        </View>
-      </Card>
-      <Sheet visible={!!selected} title={day?.label ?? selected ?? ""} subtitle="Daglijst van deze dag" onClose={closeDay}>
-        {busy && !day && <ActivityIndicator color="#18BAB0" />}
-        {!!dayError && <Text accessibilityRole="alert" className="mb-3 text-[13px] text-[#8B621C]">{dayError}</Text>}
-        {!day && !busy && selected && <Button title="Opnieuw proberen" onPress={() => void openDay(selected)} />}
-        {day && !day.editable && <Text className="mb-3 text-[13px] text-ink-70">Deze dag is alleen te bekijken. Je kunt tot 14 dagen terug aanpassen.</Text>}
-        {day?.items.length === 0 && <Text className="py-3 text-ink-70">Op deze dag stond niets gepland.</Text>}
-        {day?.items.map((item) => (
-          <Pressable key={`${item.id}:${item.administration ?? 1}`} accessibilityRole="checkbox" accessibilityLabel={`${item.name}, gift ${item.administration ?? 1}, ${item.dosage ?? "dosering niet ingesteld"}`}
-            accessibilityState={{ checked: !!item.done, disabled: busy || !day.editable }} disabled={busy || !day.editable}
-            onPress={() => void toggleDayItem(item)} className="mb-2 flex-row items-center gap-3 rounded-xl border border-ink-15 bg-white p-3">
-            <View className={`h-[22px] w-[22px] items-center justify-center rounded-md border ${item.done ? "border-mint-500 bg-mint-500" : "border-ink-30"}`}>
-              {item.done && <Check size={13} color="white" />}
-            </View>
-            <View className="flex-1">
-              <Text className={`font-semi text-[14px] ${item.done ? "text-ink-70 line-through" : "text-ink"}`}>{item.name}{(item.administrationsPerDay ?? 1) > 1 ? ` · gift ${item.administration ?? 1}` : ''}</Text>
-              {!!item.instructions && <Text className="mt-1 text-[12px] text-ink-70">{item.instructions}</Text>}
-            </View>
-            <Text className="max-w-[35%] font-bold text-[13px] text-teal-600">{item.dosage ?? "Dosering niet ingesteld"}</Text>
-          </Pressable>
-        ))}
-      </Sheet>
-      <View className="mb-3 mt-5">
-        <Label>Verloop van het protocol</Label>
-      </View>
-      <View className="gap-2">
-        {protocol.phases.map((phase) => (
-          <Pressable
-            key={phase.id}
-            accessibilityRole="button"
-            accessibilityLabel={`${phase.title}, ${phase.state === "locked" ? "vergrendeld, " : ""}${phase.statusLabel}`}
-            accessibilityHint={phase.accessible ? "Bekijk de fase" : "Beschikbaar vanaf één week voor de start"}
-            onPress={() => onPhase(phase)}
-            className={`flex-row items-center gap-2 rounded-2xl border p-4 ${phase.state === "active" ? "border-mint-500 bg-white" : phase.state === "preview" ? "border-mint-200 bg-mint-50" : "border-ink-8 bg-white/70"}`}
-          >
-            <View className="flex-1">
-              <Text className="font-semi text-[14px] text-ink">
-                {phase.title}
-              </Text>
-              <Text className="mt-1 text-[12px] text-ink-70">
-                {phase.durationLabel}
-              </Text>
-            </View>
-            {phase.state === "locked" && <LockKeyhole size={13} color="#8A9292" />}
-            <Text
-              className={`max-w-[40%] rounded-full px-2 py-1 text-[10px] ${phase.state === "active" || phase.state === "preview" ? "bg-mint-50 text-teal-600" : "bg-ink-8 text-ink-70"}`}
-            >
-              {phase.statusLabel}
-            </Text>
-            <ChevronRight size={15} color="#97A3A2" />
-          </Pressable>
-        ))}
-      </View>
-    </>
-  );
+function Calendar(props: Omit<ComponentProps<typeof ProtocolCalendar>, 'SheetComponent'>) {
+  return <ProtocolCalendar {...props} SheetComponent={Sheet} />;
 }
 
 function LibraryLink({
@@ -882,7 +648,7 @@ function Sheet({
             contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 24 }}
           >
             <View className="flex-row items-center gap-3">
-              <Text accessibilityRole="header" className="flex-1 font-bold text-[24px] leading-[30px] text-ink">{title}</Text>
+              <Text accessibilityRole="header" className="flex-1 font-semi text-[20px] leading-[26px] text-ink">{title}</Text>
               <Pressable accessibilityRole="button" accessibilityLabel="Sluiten" onPress={onClose} className="min-h-[44px] min-w-[44px] items-center justify-center"><Text className="text-[28px] text-ink-70">×</Text></Pressable>
             </View>
             {!!subtitle && (

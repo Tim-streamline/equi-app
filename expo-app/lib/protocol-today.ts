@@ -1,5 +1,7 @@
 import type { DashboardSupplement } from './horse-dashboard';
 
+export const PHASE_COLORS = ['#18BAB0', '#0D5C5B', '#5FD7CB', '#B58339'];
+
 export const administrationKey = (item: DashboardSupplement) => `${item.id}:${item.administration ?? 1}`;
 
 export function administrationLabel(item: DashboardSupplement): string {

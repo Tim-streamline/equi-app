@@ -61,3 +61,15 @@ When an intake is accepted for a frozen day, its preserved dosage is saved as
 `recorded_dosage` on the matching snapshot item in the same transaction. Calendar
 responses display that recorded amount when present, while the original snapshot
 `dosage` remains unchanged. Untouched historical snapshots are not backfilled.
+
+## Customer-facing buildup guidance
+
+The dashboard exposes a structured buildup presentation alongside the effective
+per-gift dose: rounded schedule entries, current recorded-day step, previous
+recorded dose, full dose and next distinct dose. Today shows a mint change card
+and product badges; change cards remain visible after check-off. Product details
+group consecutive equal doses and highlight the current step. Future dates are
+not promised because progression depends on registered intake dates. Local saved
+doses remain authoritative during sync; a mismatching or stale presentation does
+not predict the next dose. The active phase detail uses the effective dose and
+its buildup schedule, while future phase overviews remain order summaries.

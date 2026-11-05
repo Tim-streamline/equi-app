@@ -107,6 +107,34 @@ class ProtocolDoseBuildup
         return $this->dose($item, $priorDays);
     }
 
+    /** Presentation uses the same recorded-date progression and rounding as dosing. */
+    public function presentation(ProtocolPhaseSupplement $item, string $date): ?array
+    {
+        if (! $this->enabled($item->dose_buildup)) return null;
+        $records = $item->exists || $item->relationLoaded('intakes') ? $item->intakes : collect();
+        $prior = $records->filter(fn ($row) => $row->date->toDateString() < $date);
+        $count = $prior->map(fn ($row) => $row->date->toDateString())->unique()->count();
+        $days = max(1, (int) $item->dose_buildup['days']);
+        $current = $this->forDay($item, $date, $records);
+        $previous = $prior->sortByDesc(fn ($row) => $row->date->toDateString())->first()?->dosage;
+        $step = min($count + 1, $days);
+        // A saved day's dose is immutable, even if a past date was recorded later.
+        $matchesStep = $current === $this->dose($item, $count);
+        $schedule = [];
+        $next = null;
+        foreach (range(1, $days) as $number) {
+            $dosage = $this->dose($item, $number - 1);
+            $schedule[] = ['day' => $number, 'dosage' => $dosage];
+            if ($next === null && $number > $step && $dosage !== $current) {
+                $next = ['day' => $number, 'dosage' => $dosage, 'afterRecordedDays' => $number - $step];
+            }
+        }
+
+        return ['date' => $date, 'currentStep' => $matchesStep ? $step : null, 'totalSteps' => $days,
+            'currentDosage' => $current, 'previousDosage' => $previous,
+            'fullDosage' => $this->dose($item, $days - 1), 'next' => $next, 'schedule' => $schedule];
+    }
+
     public function label(?array $settings): ?string
     {
         if (! $this->enabled($settings)) {

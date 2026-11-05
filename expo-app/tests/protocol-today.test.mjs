@@ -10,6 +10,7 @@ const load = (file, modules) => {
   return exports;
 };
 const logic = load('../lib/protocol-today.ts', {});
+const buildupLogic = load('../lib/protocol-buildup.ts', {});
 const items = [
   { id: 'one', phaseId: 'phase1', phaseTitle: 'Phase A', name: 'Actual A', dosage: '12 g', administration: 1, administrationsPerDay: 1, instructions: 'Instructions from admin.', description: 'Description from admin.' },
   { id: 'two', phaseId: 'phase2', phaseTitle: 'Phase B', name: 'Actual B', dosage: '8 ml', administration: 1, administrationsPerDay: 2 },
@@ -37,12 +38,12 @@ function screen(phases = 2) {
     'expo-router': { router: { push: r => opened.push(r) } },
     '@/components/ui/Button': { Button: 'Button' },
     '@/db/hooks': { useSupplementIntakesForDate: () => local, useStoreMutations: () => ({ toggleSupplementIntake: async (...args) => mutations.push(args) }) },
-    '@/lib/protocol-today': logic, '@/lib/haptics': { selectionHaptic() {} },
+    '@/lib/protocol-buildup': buildupLogic, './DoseBuildupSchedule': { DoseBuildupSchedule: 'DoseBuildupSchedule' }, '@/lib/protocol-today': logic, '@/lib/haptics': { selectionHaptic() {} },
   };
   const component = load('../components/protocol/ProtocolToday.tsx', modules).ProtocolToday;
   const props = { protocol: { id: 'protocol', currentWeek: 2, totalWeeks: 10, dateLabel: 'Actual date', weekLabel: 'Week 2 van 10', today: { items }, phases: [{ id: 'phase1', title: 'Phase A', state: 'active' }, { id: 'phase2', title: 'Phase B', state: phases === 2 ? 'active' : 'locked' }] }, date: '2026-11-03', horseId: 'horse', onPhase: p => opened.push(p.id), SheetComponent: 'Sheet' };
   const render = () => { cursor = 0; return flatten(component(props)); };
-  return { render, mutations, opened, setLocal: rows => { local = rows; } };
+  return { render, mutations, opened, props, setLocal: rows => { local = rows; } };
 }
 const flatten = n => Array.isArray(n) ? n.flatMap(flatten) : n && typeof n === 'object' ? [n, ...flatten(n.props?.children)] : [n];
 const copy = nodes => nodes.filter(n => typeof n === 'string').join('');
@@ -123,4 +124,32 @@ test('recorded local buildup doses survive refreshed server amounts and fix othe
   flatten(sheet.props.footer).find(n => n?.props?.title === 'Markeer als gegeven').props.onPress();
   await new Promise(resolve => setImmediate(resolve));
   assert.deepEqual(app.mutations, [['two', '2 ml', '2026-11-03', 'horse', 2]]);
+});
+
+const buildup = { date: '2026-11-03', currentStep: 3, totalSteps: 4, currentDosage: '10 g', previousDosage: '5 g', fullDosage: '15 g', next: {day:4,dosage:'15 g',afterRecordedDays:1}, schedule: [{day:1,dosage:'5 g'},{day:2,dosage:'5 g'},{day:3,dosage:'10 g'},{day:4,dosage:'15 g'}] };
+test('one compact buildup reminder stays visible after completing all gifts',()=>{
+  const app=screen();app.props.protocol.today.items=items.map(item=>({...item,dosage:'10 g',done:true,buildup}));
+  let nodes=app.render();assert.ok(copy(nodes).includes('Vandaag een nieuwe opbouwdag'));
+  assert.equal(nodes.filter(n=>n==='Vandaag een nieuwe opbouwdag').length,1);
+  assert.ok(copy(nodes).includes('Opbouwdosering'));
+  assert.ok(!nodes.some(n=>n?.props?.accessibilityLabel?.startsWith('Bekijk nieuwe dosering')));
+  nodes.find(n=>n?.props?.accessibilityLabel==='Uitleg over Actual B, Ochtend').props.onPress();
+  const detail=app.render().find(n=>n?.type==='DoseBuildupSchedule');assert.equal(detail.props.item.id,'two');assert.equal(detail.props.date,'2026-11-03');
+});
+test('local recorded amount wins, and stale schedules never predict a new dose',()=>{
+  assert.equal(buildupLogic.buildupState({...items[0],dosage:'5 g',buildup},'2026-11-03').changed,false);
+  assert.equal(buildupLogic.buildupState({...items[0],dosage:'5 g',buildup},'2026-11-03').next,null);
+  assert.equal(buildupLogic.buildupState({...items[0],buildup},'2026-11-04'),null);
+  const schedule=buildupLogic.buildupSchedule({...items[0],dosage:'10 g',buildup},'2026-11-03');
+  assert.deepEqual(schedule.map(row=>[row.from,row.to,row.current]),[[1,2,false],[3,3,true],[4,4,false]]);
+  assert.deepEqual(buildupLogic.dailyDoseChanges(items,'2026-11-03'),[]);
+});
+
+test('the actual schedule groups equal doses and highlights the present step',()=>{
+  const jsx=(type,props)=>({type,props});
+  const component=load('../components/protocol/DoseBuildupSchedule.tsx',{'react/jsx-runtime':{jsx,jsxs:jsx,Fragment:'Fragment'},'react-native':{View:'View',Text:'Text'},'@/lib/protocol-buildup':buildupLogic}).DoseBuildupSchedule;
+  const text=copy(flatten(component({item:{...items[0],dosage:'10 g',buildup},date:'2026-11-03'})));
+  assert.ok(text.includes('Dag 1–2'));assert.ok(text.includes('Huidige stap'));assert.ok(text.includes('Vandaag: 10 g'));
+  assert.equal(component({item:items[0]}),null);
+  assert.equal(buildupLogic.buildupState({...items[0],dosage:'5.0 g',buildup},'2026-11-03').changed,false);
 });

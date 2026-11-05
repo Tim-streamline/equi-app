@@ -79,7 +79,9 @@ class ProtocolDayHistory
 
         return [
             'date' => $date, 'label' => CarbonImmutable::parse($date, $now->timezone)->locale('nl')->translatedFormat('l j F Y'),
-            'editable' => $date >= $now->subDays(14)->toDateString(),
+            'editable' => $date >= $now->subDays(7)->toDateString(),
+            'editableUntil' => CarbonImmutable::parse($date, $now->timezone)->addDays(7)->toDateString(),
+            'weekNumber' => $protocol->started_at ? (int) floor(CarbonImmutable::parse($protocol->started_at->toDateString(), $now->timezone)->diffInDays(CarbonImmutable::parse($date, $now->timezone)) / 7) + 1 : null,
             'items' => $items, 'state' => $this->state($items),
         ];
     }
@@ -112,7 +114,7 @@ class ProtocolDayHistory
         return DB::transaction(function () use ($protocol, $date, $itemId, $done, $now, $mirrorIntake, $administration) {
             $protocol = Protocol::query()->lockForUpdate()->findOrFail($protocol->id);
             $day = $this->day($protocol, $date, $now);
-            abort_unless($day['editable'], 422, 'Je kunt alleen de afgelopen 14 dagen aanpassen.');
+            abort_unless($day['editable'], 422, 'Je kunt alleen de afgelopen 7 dagen aanpassen.');
             // Mutate raw storage, never the response with recorded doses substituted.
             $items = json_decode(DB::table('protocol_day_snapshots')->where('protocol_id', $protocol->id)
                 ->where('date', $date)->value('items'), true);

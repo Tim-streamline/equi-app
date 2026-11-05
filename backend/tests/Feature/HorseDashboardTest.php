@@ -160,11 +160,19 @@ class HorseDashboardTest extends TestCase
         $this->assertTrue($today['items'][1]['done']);
         $this->assertSame(2, $today['items'][1]['administration']);
         $this->assertSame($item->phase->id, $today['items'][1]['phaseId']);
+        $cells = $this->getJson('/api/horses/'.$this->horse->id.'/dashboard')->assertOk()->json('protocol.calendar.cells');
+        $cell = collect($cells)->filter()->firstWhere('date', '2026-08-28');
+        $this->assertSame(2, $cell['total']);
+        $this->assertSame(1, $cell['done']);
 
         $this->postJson('/api/horses/'.$this->horse->id.'/protocol-day', [
             'protocol_id' => $this->protocol->id, 'date' => '2026-08-27', 'item_id' => $item->id,
             'administration' => 2, 'done' => true, 'timezone' => 'Europe/Amsterdam',
         ])->assertOk()->assertJsonPath('items.0.done', false)->assertJsonPath('items.1.done', true)->assertJsonPath('state', 'partial');
+        $historyCells = $this->getJson('/api/horses/'.$this->horse->id.'/dashboard')->assertOk()->json('protocol.calendar.cells');
+        $historyCell = collect($historyCells)->filter()->firstWhere('date', '2026-08-27');
+        $this->assertSame(2, $historyCell['total']);
+        $this->assertSame(1, $historyCell['done']);
         // Keep a valid offline dose even if the current plan no longer includes it.
         $this->postJson('/api/sync/upload', ['operations' => [[
             'op' => 'PUT', 'type' => 'protocol_supplement_intakes', 'id' => (string) Str::uuid(),
@@ -416,12 +424,12 @@ class HorseDashboardTest extends TestCase
     public function test_historical_correction_window_is_inclusive_and_older_days_are_read_only(): void
     {
         $this->travelTo(now()->setDate(2026, 9, 1));
-        $itemId = $this->getJson($this->dayUrl('2026-08-18'))->assertOk()->assertJsonPath('editable', true)->json('items.0.id');
-        $this->postJson($this->dayUrl('2026-08-18'), ['item_id' => $itemId, 'done' => true])->assertOk();
-        $this->postJson($this->dayUrl('2026-08-18'), ['item_id' => $itemId, 'done' => false])->assertOk();
-        $this->getJson($this->dayUrl('2026-08-17'))->assertOk()->assertJsonPath('editable', false);
+        $itemId = $this->getJson($this->dayUrl('2026-08-25'))->assertOk()->assertJsonPath('editable', true)->json('items.0.id');
+        $this->postJson($this->dayUrl('2026-08-25'), ['item_id' => $itemId, 'done' => true])->assertOk();
+        $this->postJson($this->dayUrl('2026-08-25'), ['item_id' => $itemId, 'done' => false])->assertOk();
+        $this->getJson($this->dayUrl('2026-08-24'))->assertOk()->assertJsonPath('editable', false);
         foreach ([true, false] as $done) {
-            $this->postJson($this->dayUrl('2026-08-17'), ['item_id' => $itemId, 'done' => $done])->assertUnprocessable();
+            $this->postJson($this->dayUrl('2026-08-24'), ['item_id' => $itemId, 'done' => $done])->assertUnprocessable();
         }
         foreach (['2026-09-01', '2026-09-02'] as $date) {
             $this->getJson($this->dayUrl($date))->assertUnprocessable();
@@ -462,7 +470,7 @@ class HorseDashboardTest extends TestCase
         $this->getJson($this->dayUrl('2026-08-27'))->assertOk();
         $this->postJson('/api/sync/upload', ['operations' => [$operation]])->assertOk();
         $this->getJson($this->dayUrl('2026-08-27'))->assertJsonPath('state', 'complete');
-        foreach (['2026-08-29', '2026-08-13'] as $date) {
+        foreach (['2026-08-29', '2026-08-20', '2026-08-13'] as $date) {
             $bad = $operation;
             $bad['id'] = (string) Str::uuid();
             $bad['data']['date'] = $date;
@@ -634,7 +642,7 @@ class HorseDashboardTest extends TestCase
         $locked = $this->getJson($url)->assertOk()
             ->assertJsonPath('protocol.phases.1.state', 'locked')
             ->assertJsonPath('protocol.phases.1.accessible', false)
-            ->assertJsonPath('protocol.phases.1.description', null)
+            ->assertJsonPath('protocol.phases.1.description', 'Personal phase purpose')
             ->assertJsonCount(0, 'protocol.phases.1.supplements')
             ->json();
         // The order list deliberately covers the full protocol: product names and totals only.
