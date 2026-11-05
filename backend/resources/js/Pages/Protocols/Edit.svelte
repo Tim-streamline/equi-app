@@ -204,7 +204,8 @@
         protocol_template_id: initialProtocolTemplateId,
         therapist_id: initialProtocol?.therapist_id ?? '',
         title: initialProtocol?.title ?? defaultTitle,
-        started_at: initialProtocol?.started_at?.slice(0, 10) ?? '',
+        // Optional explicit start; empty leaves starting to the owner in the app.
+        start_on: '',
         status: initialProtocol?.status ?? 'paused',
         published: Boolean(initialProtocol?.published_at),
         customer_settings: {
@@ -306,7 +307,7 @@
     ));
     const phaseRanges = $derived(protocolPhaseRanges($form.phases));
     const totalWeeks = $derived(totalProtocolWeeks($form.phases));
-    const currentWeek = $derived(calculateCurrentWeek($form.started_at, $form.status, initialProtocol?.current_week, totalWeeks));
+    const currentWeek = $derived(calculateCurrentWeek(initialProtocol?.started_at?.slice(0, 10) || $form.start_on, $form.status, initialProtocol?.current_week, totalWeeks));
     const availablePhaseDefinitions = $derived((workingTemplate?.phases ?? [])
         .filter((definition) => !$form.phases.some((phase) => phase.protocol_template_phase_id === definition.id)));
     const availablePhaseOptions = $derived(availablePhaseDefinitions.map((definition) => ({
@@ -386,7 +387,8 @@
     function calculateCurrentWeek(startDate, status, storedCurrentWeek, weeks) {
         if (!weeks) return 0;
         if (status === 'completed') return weeks;
-        if (status === 'paused' || !startDate) return Math.max(1, Math.min(weeks, Number(storedCurrentWeek || 1)));
+        if (!startDate) return 0;
+        if (status === 'paused') return Math.max(1, Math.min(weeks, Number(storedCurrentWeek || 1)));
         const start = new Date(`${startDate}T00:00:00`);
         const today = new Date();
         const days = Math.max(0, Math.floor((today.setHours(0, 0, 0, 0) - start.getTime()) / 86400000));
@@ -656,7 +658,7 @@
         }
         return ({
             horse_id: 'Paard', protocol_template_id: 'Protocoltemplate', title: 'Protocolnaam',
-            therapist_id: 'Behandelaar', started_at: 'Startdatum', status: 'Levenscyclus',
+            therapist_id: 'Behandelaar', start_on: 'Startdatum', status: 'Levenscyclus',
             analysis: 'Analyse', advice: 'Adviezen', customer_settings: 'Klantweergave',
             voeding_advies_ids: 'Voeding', management_advies_ids: 'Management', beweging_advies_ids: 'Beweging',
         })[section] || '';
@@ -798,7 +800,13 @@
                                 </div>
                                 <Field label="Protocolnaam" error={$form.errors.title}><Input bind:value={$form.title} /></Field>
                                 <Field label="Behandelaar" error={$form.errors.therapist_id}><Select bind:value={$form.therapist_id} placeholder="Geen behandelaar" options={therapistOptions} /></Field>
-                                <Field label="Startdatum" error={$form.errors.started_at}><Input type="date" bind:value={$form.started_at} /></Field>
+                                {#if initialProtocol?.started_at}
+                                    <Field label="Startdatum" error={$form.errors.start_on}><p class="text-sm text-[#1B2A2A]/70">{initialProtocol.started_at.slice(0, 10)}</p></Field>
+                                {:else}
+                                    <Field label="Startdatum instellen (optioneel)" error={$form.errors.start_on} hint="Laat leeg: de eigenaar start het protocol zelf in de app. Vul alleen een datum in als jullie de start hebben afgesproken, bijvoorbeeld omdat de klant een oudere app-versie zonder startknop gebruikt. Een ingestelde startdatum kan daarna niet meer worden gewijzigd.">
+                                        <Input type="date" bind:value={$form.start_on} />
+                                    </Field>
+                                {/if}
                                 <Field label="Levenscyclus" error={$form.errors.status}><Select bind:value={$form.status} options={statusOptions} disabled={protocol?.status === 'archived'} /></Field>
                                 <div class="rounded-2xl bg-[#EAFBF9] p-4 text-sm text-[#0E6F69]">
                                     <div class="font-bold">Automatisch berekend</div>
@@ -952,8 +960,9 @@
                                                     {#if selected}
                                                         <div class="ml-[54px] mt-4 grid gap-3 md:grid-cols-2">
                                                             <div>
-                                                                <Field label="Dosering voor dit paard" error={errorFor(`phases.${activePhaseIndex}.supplements.${selectionIndex}.dosage`)}>
-                                                                    <Input value={selection.dosage} oninput={(e) => changeDosage(selectionIndex, e.currentTarget.value)} placeholder="Bijv. 20 g per dag" />
+                                                                <Field label="Dosering per gift voor dit paard" error={errorFor(`phases.${activePhaseIndex}.supplements.${selectionIndex}.dosage`)}>
+                                                                    <Input value={selection.dosage} oninput={(e) => changeDosage(selectionIndex, e.currentTarget.value)} placeholder="Bijv. 20 g" />
+                                                                    <p class="mt-1 text-xs text-[#1B2A2A]/60">Vul één hoeveelheid met eenheid in, zoals 20 g of 10 ml. De bestellijst berekent het totaal voor alle gekozen weken.</p>
                                                                     {#if selection.dosage_mode === 'manual'}<p class="mt-1 text-xs text-[#A06A1B]">Handmatig aangepast — blijft behouden bij een gewichtsverandering.</p><button type="button" class="mt-1 text-xs underline" onclick={() => changeDosage(selectionIndex, '', true)}>Automatische dosering herstellen</button>{/if}
                                                                 </Field>
                                                                 {#if displaySupplement.dosis_type === 'per_kg' || displaySupplement.dosis_type === 'per_600_kg'}
@@ -970,7 +979,7 @@
                                                                     </p>
                                                                 {/if}
                                                             </div>
-                                                            <Field label="Aantal per week" error={errorFor(`phases.${activePhaseIndex}.supplements.${selectionIndex}.aantal_per_week`)}><Input type="number" min="0" bind:value={$form.phases[activePhaseIndex].supplements[selectionIndex].aantal_per_week} /></Field>
+                                                            <Field label="Aantal per week" error={errorFor(`phases.${activePhaseIndex}.supplements.${selectionIndex}.aantal_per_week`)} hint="De bestellijst gebruikt dosering × giften per dag × 7 dagen × geselecteerde weken. Giften per dag stel je in bij het supplement, los van dit minimum."><Input type="number" min="0" step="1" bind:value={$form.phases[activePhaseIndex].supplements[selectionIndex].aantal_per_week} /></Field>
                                                             <div class="md:col-span-2">
                                                                 <Field label="Instructies" error={errorFor(`phases.${activePhaseIndex}.supplements.${selectionIndex}.instructions`)}>
                                                                     <Textarea bind:value={$form.phases[activePhaseIndex].supplements[selectionIndex].instructions} rows="3" placeholder="Optionele instructie voor de klant" />

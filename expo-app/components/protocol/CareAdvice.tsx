@@ -35,13 +35,22 @@ export function CareAdvice({ protocol }: {
                     <Text className="flex-1 font-semi text-[16px] text-ink">{item.title}</Text>
                   </View>
                   {!!item.description && (
-                    <Text className="mt-1 text-[14px] leading-[22px] text-ink-70">{item.description}</Text>
+                    <View className="mt-4 gap-2">
+                      <Text accessibilityRole="header" className="font-semi text-[13px] text-teal-700">Instructies</Text>
+                      <Text className="text-[15px] leading-[24px] text-ink-70">{item.description}</Text>
+                    </View>
                   )}
                   {!!item.frequency && (
-                    <Text className="mt-2 text-[13px] leading-[20px] text-ink-70">{item.frequency}</Text>
+                    <View className="mt-3 flex-row flex-wrap gap-1">
+                      <Text className="font-semi text-[13px] leading-[20px] text-ink">Frequentie:</Text>
+                      <Text className="text-[13px] leading-[20px] text-ink-70">{item.frequency}</Text>
+                    </View>
                   )}
                   {!!item.note && (
-                    <Text className="mt-2 text-[13px] leading-[20px] text-ink-70">{item.note}</Text>
+                    <View className="mt-5 gap-2 rounded-xl border-l-[3px] border-mint-500 bg-mint-50 p-4">
+                      <Text accessibilityRole="header" className="font-semi text-[13px] text-teal-700">Persoonlijke toelichting van je therapeut</Text>
+                      <Text className="text-[15px] leading-[24px] text-ink">{item.note}</Text>
+                    </View>
                   )}
                   {!!item.url && /^https?:\/\//i.test(item.url) && (
                     <Pressable

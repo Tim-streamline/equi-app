@@ -76,6 +76,71 @@ class WebSessionTest extends TestCase
         $this->postJson('/web-session/token')->assertUnauthorized();
     }
 
+    public function test_web_login_and_renewal_sign_the_protocol_capability_only_when_declared(): void
+    {
+        $user = User::factory()->create(['password' => 'web-password']);
+        $claims = fn ($response) => JWT::decode($response->assertOk()->json('token'), new Key($this->publicKey, 'RS256'));
+        $this->csrf();
+        // A released web build that sends no declaration keeps the legacy whole-day format.
+        $legacy = $this->postJson('/web-session/login', ['email' => $user->email, 'password' => 'web-password']);
+        $this->assertFalse(property_exists($claims($legacy), 'protocol_doses'));
+        $this->csrf();
+        $this->assertFalse(property_exists($claims($this->postJson('/web-session/token')), 'protocol_doses'));
+        $this->assertSame(1, $claims($this->postJson('/web-session/token', ['capabilities' => ['protocol-doses']]))->protocol_doses);
+        // Each token carries only its own request's declaration, never the session's history.
+        $this->assertFalse(property_exists($claims($this->postJson('/web-session/token', ['capabilities' => ['unknown']])), 'protocol_doses'));
+        $this->postJson('/web-session/logout')->assertOk();
+        $this->csrf();
+        $modern = $this->postJson('/web-session/login', ['email' => $user->email, 'password' => 'web-password', 'capabilities' => ['protocol-doses', 'unknown']]);
+        $this->assertSame(1, $claims($modern)->protocol_doses);
+        $this->assertSame($user->id, $claims($modern)->sub);
+    }
+
+    public function test_deferred_logout_is_scoped_to_one_login_and_cannot_revoke_a_later_login(): void
+    {
+        $user = User::factory()->create(['password' => 'web-password']);
+        $this->csrf();
+        $first = $this->postJson('/web-session/login', ['email' => $user->email, 'password' => 'web-password'])
+            ->assertOk()->json('logout_id');
+        $this->assertTrue(Str::isUuid($first));
+        $this->csrf();
+        $this->postJson('/web-session/token')->assertOk()->assertJsonPath('logout_id', $first);
+
+        // Same account, different login: comparing only user_id would revoke it.
+        $second = $this->postJson('/web-session/login', ['email' => $user->email, 'password' => 'web-password'])
+            ->assertOk()->json('logout_id');
+        $this->assertNotSame($first, $second);
+        $rememberToken = $user->fresh()->getRememberToken();
+        $this->csrf();
+        $this->postJson('/web-session/logout', ['logout_id' => $first])->assertOk();
+        Auth::forgetGuards();
+        $this->postJson('/web-session/token')->assertOk()->assertJsonPath('logout_id', $second);
+        $this->assertSame($rememberToken, $user->fresh()->getRememberToken());
+
+        $this->postJson('/web-session/logout', ['logout_id' => $second])->assertOk();
+        $this->csrf();
+        Auth::forgetGuards();
+        $this->postJson('/web-session/token')->assertUnauthorized();
+        $this->assertSame($rememberToken, $user->fresh()->getRememberToken(), 'Scoped logout does not revoke other browser logins.');
+    }
+
+    public function test_existing_login_gets_a_stable_logout_id_without_extending_its_deadline(): void
+    {
+        $user = User::factory()->create(['password' => 'web-password']);
+        $this->csrf();
+        $this->postJson('/web-session/login', ['email' => $user->email, 'password' => 'web-password'])->assertOk();
+        $login = session(WebLogin::SESSION_KEY);
+        $deadline = $login['expires_at'];
+        unset($login['id']);
+        $this->withSession([WebLogin::SESSION_KEY => $login]);
+        $this->travel(10)->minutes();
+        $this->csrf();
+        $id = $this->postJson('/web-session/token')->assertOk()->json('logout_id');
+        $this->assertTrue(Str::isUuid($id));
+        $this->assertSame($deadline, session(WebLogin::SESSION_KEY.'.expires_at'));
+        $this->postJson('/web-session/token')->assertOk()->assertJsonPath('logout_id', $id);
+    }
+
     public function test_session_mutations_require_csrf_and_disabled_users_cannot_login_or_renew(): void
     {
         $user = User::factory()->create(['password' => 'web-password']);

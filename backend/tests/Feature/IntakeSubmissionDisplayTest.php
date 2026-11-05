@@ -42,7 +42,7 @@ class IntakeSubmissionDisplayTest extends TestCase
             ->where('bookings.data.0.submitted_at_label', '30-09-2026 00:24')
             ->where('bookings.data.0.status_label', 'Te beoordelen')
             ->where('bookings.data.1.id', $older->id)
-            ->where('bookings.data.1.status_label', 'done')
+            ->where('bookings.data.1.status_label', 'Beoordeeld')
             ->where('bookings.data.2.id', $draft->id)
             ->where('bookings.data.2.submitted_at_label', 'Nog niet ingediend')->where('bookings.data.2.status_label', 'Nog niet ingediend')->where('counts.pending', 1));
         $this->get('/admin/bookings?status=pending')->assertInertia(fn (Assert $page) => $page->has('bookings.data', 1)->where('bookings.data.0.id', $submitted->id));

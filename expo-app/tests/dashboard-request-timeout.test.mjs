@@ -136,7 +136,7 @@ test('successful unregistration authenticates and clears its deadline', async ()
   });
   const result = await app.dashboardRequest('/api/notifications/push-token', { token: null });
   assert.equal(result.saved, true);
-  assert.equal(calls[0].options.body, '{"device_token":"1|old-device"}');
+  assert.deepEqual(JSON.parse(calls[0].options.body), { device_token: '1|old-device', capabilities: ['protocol-doses'] });
   assert.equal(calls[1].options.headers.Authorization, 'Bearer token');
   assert.equal(calls[1].options.body, '{"token":null}');
   assert.equal(app.timers.size, 0);
@@ -151,11 +151,11 @@ test('a password stored by an older version is exchanged once for a device token
       : { token: 'token-2', expires_in: 3600, endpoint: 'https://sync.test' } };
   }, { legacy: { email: 'old@example.test', password: 'secret', userId: 'old', endpoint: 'https://sync.test' } });
   assert.equal(await app.connector.getOrMintToken(), 'token');
-  assert.deepEqual(calls[0], { url: 'http://localhost/api/auth/login', body: { email: 'old@example.test', password: 'secret', device_name: 'android 34' } });
+  assert.deepEqual(calls[0], { url: 'http://localhost/api/auth/login', body: { email: 'old@example.test', password: 'secret', device_name: 'android 34', capabilities: ['protocol-doses'] } });
   assert.equal(app.stored.legacy, null);
   assert.deepEqual(JSON.parse(app.stored.secure), { email: 'old@example.test', userId: 'old', endpoint: 'https://sync.test', deviceToken: '3|device' });
   assert.equal(await app.connector.getOrMintToken(undefined, true), 'token-2');
-  assert.deepEqual(calls[1], { url: 'http://localhost/api/auth/token', body: { device_token: '3|device' } });
+  assert.deepEqual(calls[1], { url: 'http://localhost/api/auth/token', body: { device_token: '3|device', capabilities: ['protocol-doses'] } });
 });
 
 test('an older stored password stays in use while the server cannot issue device tokens yet', async () => {
@@ -212,4 +212,16 @@ test('when the device token cannot be stored, sync still gets its token and the 
   assert.deepEqual(calls.map(call => call.url.replace('http://localhost', '')), ['/api/auth/login', '/api/auth/logout']);
   assert.deepEqual(calls[1].body, { device_token: '1|device' });
   assert.equal(JSON.parse(app.stored.legacy).password, 'secret');
+});
+
+
+test('registration completion requests the same signed protocol capability as login and refresh', async () => {
+  const calls = [];
+  const app = harness(async (url, options) => {
+    calls.push({ url, body: JSON.parse(options.body) });
+    return { ok: true, json: async () => ({ token: 'jwt', expires_in: 3600 }) };
+  });
+  await app.auth.completeRegistration({ registration_token: 'proof' });
+  assert.deepEqual(calls[0].body.capabilities, ['protocol-doses']);
+  assert.equal(calls[0].body.registration_token, 'proof');
 });

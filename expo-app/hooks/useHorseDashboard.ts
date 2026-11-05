@@ -7,12 +7,17 @@ import { useDb } from "@/db/provider";
 import { useCurrentHorseId } from "@/db/hooks";
 import { getApiBaseUrl } from "@/db/auth";
 import { getOrMintToken } from "@/db/connector";
+import { accountSession } from "@/lib/account-session";
 import { dashboardAtTime, dashboardForHorse, type HorseDashboard } from "@/lib/horse-dashboard";
 
 export const deviceTimezone = () =>
   Intl.DateTimeFormat().resolvedOptions().timeZone || "Europe/Amsterdam";
 
 export async function dashboardRequest(path: string, body?: object) {
+  const revision = accountSession.revision;
+  const checkSession = () => {
+    if (revision !== accountSession.revision) throw new Error('Je sessie is gewijzigd.');
+  };
   const controller = new AbortController();
   let timeout: ReturnType<typeof setTimeout> | undefined;
   // Bound token acquisition and response parsing too. The race releases account
@@ -26,6 +31,7 @@ export async function dashboardRequest(path: string, body?: object) {
   try {
     return await Promise.race([deadline, (async () => {
       const token = await getOrMintToken(controller.signal);
+      checkSession();
       if (controller.signal.aborted) throw new Error("Request cancelled.");
       if (!token) throw new Error("Meld je opnieuw aan om gegevens op te halen.");
       const response = await fetch(`${getApiBaseUrl()}${path}`, {
@@ -42,7 +48,9 @@ export async function dashboardRequest(path: string, body?: object) {
         throw new Error(
           `Gegevens konden niet worden bijgewerkt (${response.status}).`,
         );
-      return await response.json();
+      const result = await response.json();
+      checkSession();
+      return result;
     })()]);
   } finally {
     clearTimeout(timeout);
@@ -52,17 +60,18 @@ export async function dashboardRequest(path: string, body?: object) {
 export function useHorseDashboard(month?: string) {
   const horseId = useCurrentHorseId();
   const { currentUserId, syncStatus } = useDb();
-  const key = `horse-dashboard:v3:${currentUserId}:${horseId}:${month ?? "today"}`;
+  const key = `horse-dashboard:v4:${currentUserId}:${horseId}:${month ?? "today"}`;
   const [snapshot, setSnapshot] = useState<{
     key: string;
     data: HorseDashboard;
   } | null>(null);
   const [error, setError] = useState<string | null>(null);
   const generation = useRef(0);
+  const sessionRevision = useRef(accountSession.revision);
   const [clock, setClock] = useState(() => new Date());
   const refresh = useCallback(async () => {
     setClock(new Date());
-    if (!currentUserId) return;
+    if (!currentUserId || sessionRevision.current !== accountSession.revision) return;
     const request = ++generation.current;
     try {
       const params = new URLSearchParams({
@@ -72,7 +81,7 @@ export function useHorseDashboard(month?: string) {
       const data = (await dashboardRequest(
         horseId ? `/api/horses/${horseId}/dashboard?${params}` : `/api/home?${params}`,
       )) as HorseDashboard;
-      if (request !== generation.current) return;
+      if (request !== generation.current || sessionRevision.current !== accountSession.revision) return;
       setSnapshot({ key, data });
       setError(null);
       await AsyncStorage.setItem(key, JSON.stringify(data));
@@ -95,8 +104,9 @@ export function useHorseDashboard(month?: string) {
   useEffect(() => {
     let active = true;
     setError(null);
-    // Remove unrestricted snapshots written by older app versions.
-    void AsyncStorage.getAllKeys().then((keys) => AsyncStorage.multiRemove(keys.filter((item) => /^horse-dashboard:v[12]:/.test(item))));
+    // Remove snapshots written by older app versions: v1/v2 were unrestricted and v3 stored
+    // per-supplement order rows instead of aggregated order items (no quantity, no links).
+    void AsyncStorage.getAllKeys().then((keys) => AsyncStorage.multiRemove(keys.filter((item) => /^horse-dashboard:v[123]:/.test(item))));
     AsyncStorage.getItem(key).then((raw) => {
       if (active && raw) {
         try {

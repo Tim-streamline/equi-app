@@ -24,9 +24,8 @@ class HorseSeederTest extends TestCase
             'owner_id' => $anchorUser->id,
             'name' => 'Nova',
         ]);
-        $this->assertSame(
-            $anchorUser->id,
-            Horse::where('name', 'Nova')->firstOrFail()->owner_id,
-        );
+        // Random users may also own a horse named Nova; an unordered global
+        // first() is not necessarily the anchor user's hand-crafted horse.
+        $this->assertSame(1, Horse::where('owner_id', $anchorUser->id)->where('name', 'Nova')->count());
     }
 }

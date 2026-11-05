@@ -76,6 +76,25 @@ class AdminProtocolSettingsTest extends TestCase
                 ->where('protocolTemplates.0.phases.0.supplements.0.weeks.0.id', $week->id));
     }
 
+    public function test_product_links_can_be_edited_and_unsafe_schemes_are_rejected(): void
+    {
+        $template = ProtocolTemplate::create(['name' => 'Ordering']);
+        $phase = $template->phases()->create(['name' => 'Phase', 'order' => 1]);
+        $supplement = $phase->supplements()->create(['name' => 'Heemstwortel', 'supplement_type' => SupplementType::Herb]);
+        $body = ['protocol_template_phase_id' => $phase->id, 'name' => $supplement->name,
+            'supplement_type' => 'kruid', 'product_url' => 'https://example.com/product', 'administrations_per_day' => 2];
+        $this->actingAs($this->admin, 'admin')->put('/admin/protocol-settings/supplements/'.$supplement->id, $body)
+            ->assertSessionHasNoErrors();
+        $this->assertSame($body['product_url'], $supplement->fresh()->product_url);
+        $this->assertSame(2, $supplement->fresh()->administrations_per_day);
+        $body['product_url'] = 'javascript:alert(1)';
+        $this->put('/admin/protocol-settings/supplements/'.$supplement->id, $body)->assertSessionHasErrors('product_url');
+        $this->assertSame('https://example.com/product', $supplement->fresh()->product_url);
+        $body['product_url'] = 'https://example.com/product';
+        $body['administrations_per_day'] = 0;
+        $this->put('/admin/protocol-settings/supplements/'.$supplement->id, $body)->assertSessionHasErrors('administrations_per_day');
+    }
+
     public function test_admin_can_create_update_and_remove_protocol_templates(): void
     {
         $this->actingAs($this->admin, 'admin')

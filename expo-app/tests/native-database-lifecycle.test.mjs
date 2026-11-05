@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import ts from 'typescript';
 
-function setup() {
+function setup({ allowClose = false } = {}) {
   const instances = [];
   let finishInit, finishConnect;
   class Database {
@@ -17,7 +17,7 @@ function setup() {
       this.currentStatus.connecting = true;
       return new Promise(resolve => { finishConnect = () => { this.currentStatus = { connected: true, connecting: false }; resolve(); }; });
     }
-    close() { assert.fail('a provider remount must not close the shared database'); }
+    close() { assert.ok(allowClose, 'a provider remount must not close the shared database'); this.closed = true; }
   }
   const modules = {
     '@powersync/react-native': { PowerSyncDatabase: Database },
@@ -42,6 +42,18 @@ test('provider remount during initialization shares one SQLite and sync client',
   db.answers.set('offline-intake-answer', 'Ja');
   assert.equal(await app.getNativeDatabase(), db);
   assert.equal((await remount).answers.get('offline-intake-answer'), 'Ja');
+});
+
+test('explicit sync reset replaces the singleton and leaves old screen handles closed', async () => {
+  const app = setup({ allowClose: true });
+  const loading = app.getNativeDatabase(); app.ready(); const old = await loading;
+  const replacing = app.replaceNativeDatabase(old);
+  await new Promise(resolve => setImmediate(resolve));
+  assert.equal(old.closed, true);
+  assert.equal(app.instances.length, 2);
+  app.ready(); const fresh = await replacing;
+  assert.notEqual(fresh, old);
+  assert.equal(await app.getNativeDatabase(), fresh);
 });
 
 test('login and a provider remount share the in-flight stream; logout permits reconnect', async () => {

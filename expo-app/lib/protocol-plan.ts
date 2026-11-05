@@ -106,6 +106,7 @@ export type ProtocolSupplementRow = {
 };
 
 export type ProtocolSupplementIntakeRow = Row & {
+  administration?: number | null;
   protocolPhaseSupplementId: string;
   dosage?: string | null;
   done?: number | boolean;

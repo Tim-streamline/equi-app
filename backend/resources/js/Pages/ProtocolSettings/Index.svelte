@@ -53,6 +53,8 @@
         start_after_previous_phase_weeks: null,
     });
     const supplementForm = useForm({
+        product_url: '',
+        administrations_per_day: 1,
         protocol_template_phase_id: '',
         name: '',
         description: '',
@@ -218,6 +220,8 @@
     function createSupplement(phase) {
         editingSupplement = null;
         $supplementForm.defaults({
+            product_url: '',
+            administrations_per_day: 1,
             protocol_template_phase_id: phase.id,
             name: '',
             description: '',
@@ -240,6 +244,8 @@
         editingSupplement = supplement;
         $supplementForm.defaults({
             protocol_template_phase_id: supplement.protocol_template_phase_id,
+            product_url: supplement.product_url ?? '',
+            administrations_per_day: supplement.administrations_per_day ?? 1,
             name: supplement.name,
             description: supplement.description ?? '',
             instructions: supplement.instructions ?? '',
@@ -750,6 +756,12 @@
             </div>
             <Field label="Beschrijving" error={$supplementForm.errors.description}>
                 <Textarea bind:value={$supplementForm.description} rows="3" />
+            </Field>
+            <Field label="Productlink voor de bestellijst" error={$supplementForm.errors.product_url} hint="Link naar de productpagina bij Dtails.nl, Pure Horse of een andere webshop. Geldt ook voor bestaande protocollen.">
+                <Input type="url" bind:value={$supplementForm.product_url} placeholder="https://…" />
+            </Field>
+            <Field label="Giften per dag voor de bestellijst" error={$supplementForm.errors.administrations_per_day} hint="Per gift telt de volledige ingevulde dosering. De bestellijst rekent met 7 dagen per week, los van het minimum per week.">
+                <Input type="number" min="1" max="24" step="1" bind:value={$supplementForm.administrations_per_day} />
             </Field>
             <Field label="Instructie" error={$supplementForm.errors.instructions}>
                 <Textarea bind:value={$supplementForm.instructions} rows="3" placeholder="bijv. Goed door het voer mengen" />

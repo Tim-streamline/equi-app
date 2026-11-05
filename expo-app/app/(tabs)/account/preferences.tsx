@@ -6,6 +6,7 @@ import { router } from 'expo-router';
 import { SubHeader } from '@/components/ui/SubHeader';
 import { useTabBarPadding } from '@/hooks/useTabBarPadding';
 import { useHomePreferences } from '@/hooks/useHomePreferences';
+import { ResetSyncSettings } from '@/components/sync/ResetSyncSettings';
 
 export default function PreferencesScreen() {
   const padBottom = useTabBarPadding();
@@ -28,6 +29,7 @@ export default function PreferencesScreen() {
           </View>
         )}
         <BrowserPushSettings />
+        <ResetSyncSettings />
       </ScrollView>
     </SafeAreaView>
   );

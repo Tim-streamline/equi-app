@@ -28,6 +28,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
     'dosage_mode',
     'aantal_per_week',
     'instructions',
+    'administrations_per_day',
 ])]
 class ProtocolPhaseSupplement extends Model
 {
@@ -36,6 +37,7 @@ class ProtocolPhaseSupplement extends Model
     protected function casts(): array
     {
         return [
+            'administrations_per_day' => 'integer',
             'supplement_type' => SupplementType::class,
             'dosis_type' => SupplementDoseType::class,
             'dosis' => 'float',
@@ -51,6 +53,11 @@ class ProtocolPhaseSupplement extends Model
     public function phase(): BelongsTo
     {
         return $this->belongsTo(ProtocolPhase::class, 'protocol_phase_id');
+    }
+
+    public function administrationsPerDay(): int
+    {
+        return max(1, (int) ($this->supplement?->administrations_per_day ?? $this->administrations_per_day ?? 1));
     }
 
     public function supplement(): BelongsTo

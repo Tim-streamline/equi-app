@@ -134,7 +134,7 @@ class ProtocolController extends Controller
                 }
                 $protocol = $drafts->first() ?? new Protocol;
                 $protocol->assertIntakeSubmitted();
-                $protocol->fill($this->protocolAttributes($data, $protocolTemplate))->save();
+                $protocol->fill($this->protocolAttributes($data, $protocolTemplate) + $this->startDate($protocol, $data))->save();
                 $this->syncStructure($protocol, $data);
                 AuditLogger::created($protocol);
 
@@ -180,7 +180,8 @@ class ProtocolController extends Controller
                 $protocol->assertIntakeSubmitted();
                 $history = app(ProtocolDayHistory::class);
                 $history->preserve($protocol, CarbonImmutable::now($history->timezone($protocol)));
-                $attributes = $this->protocolAttributes($data, $protocol->protocol_template_id ? null : ProtocolTemplate::findOrFail($data['protocol_template_id']));
+                $attributes = $this->protocolAttributes($data, $protocol->protocol_template_id ? null : ProtocolTemplate::findOrFail($data['protocol_template_id']))
+                    + $this->startDate($protocol, $data);
                 if ($data['published'] && $protocol->published_at) {
                     $attributes['published_at'] = $protocol->published_at;
                 }
@@ -227,7 +228,7 @@ class ProtocolController extends Controller
             if ($status === 'active') $protocol->assertIntakeSubmitted();
             $before = $protocol->only('status');
             $protocol->update(['status' => $status]);
-            $this->synchronizeProtocolTiming($protocol);
+            app(\App\Support\ProtocolTiming::class)->synchronize($protocol);
             AuditLogger::updated($protocol, $before, $request->input('reason'));
         });
 
@@ -282,6 +283,32 @@ class ProtocolController extends Controller
         ]);
     }
 
+    /**
+     * An explicit start date chosen by the therapist, set only while the plan has none.
+     * Call with the protocol row locked: a date from a form opened before the owner (or
+     * another admin) started the plan must not move day one.
+     *
+     * @param  array<string, mixed>  $data
+     * @return array<string, string>
+     */
+    private function startDate(Protocol $protocol, array $data): array
+    {
+        $date = $data['start_on'] ?? null;
+        if (! $date) {
+            return [];
+        }
+        if ($protocol->started_at) {
+            $current = $protocol->started_at->toDateString();
+            if ($current !== $date) {
+                throw ValidationException::withMessages(['start_on' => 'Dit protocol is al gestart op '.$current.'. De startdatum kan niet meer worden gewijzigd.']);
+            }
+
+            return [];
+        }
+
+        return ['started_at' => $date];
+    }
+
     /** @param array<string, mixed> $data
      * @return array<string, mixed>
      */
@@ -292,7 +319,6 @@ class ProtocolController extends Controller
             'protocol_template_id',
             'therapist_id',
             'title',
-            'started_at',
             'status',
             'customer_settings',
         ]);
@@ -360,7 +386,7 @@ class ProtocolController extends Controller
         $this->syncAdviceSelections($protocol, $data['voeding_advies_ids'], 'voedingAdviezen', VoedingAdvies::class, 'voeding_advies_id');
         $this->syncAdviceSelections($protocol, $data['management_advies_ids'], 'managementAdviezen', ManagementAdvies::class, 'management_advies_id');
         $this->syncAdviceSelections($protocol, $data['beweging_advies_ids'], 'bewegingAdviezen', BewegingAdvies::class, 'beweging_advies_id');
-        $this->synchronizeProtocolTiming($protocol);
+        app(\App\Support\ProtocolTiming::class)->synchronize($protocol);
     }
 
     /** @param array<string, mixed> $data
@@ -474,6 +500,7 @@ class ProtocolController extends Controller
             if ($catalogSupplement) {
                 $attributes += [
                     'supplement_id' => $catalogSupplement->id,
+                    'administrations_per_day' => $catalogSupplement->administrations_per_day,
                     'name' => $catalogSupplement->name,
                     'description' => $catalogSupplement->description,
                     'supplement_type' => $catalogSupplement->supplement_type->value,
@@ -601,92 +628,6 @@ class ProtocolController extends Controller
         $protocol->{$relation}()
             ->when($snapshotIds, fn ($query) => $query->whereNotIn('id', $snapshotIds))
             ->delete();
-    }
-
-    private function synchronizeProtocolTiming(Protocol $protocol): void
-    {
-        $protocol->load('phases.weeks', 'horse');
-        $previousWeekStart = null;
-        $previousWeekEnd = null;
-        $latestWeekEnd = 0;
-
-        foreach ($protocol->phases as $phaseIndex => $phase) {
-            $phaseWeekStart = match (true) {
-                $phaseIndex === 0 => 1,
-                $phase->start_after_previous_phase_weeks !== null && $previousWeekStart !== null => $previousWeekStart + $phase->start_after_previous_phase_weeks,
-                $previousWeekEnd !== null => $previousWeekEnd + 1,
-                default => $latestWeekEnd + 1,
-            };
-
-            foreach ($phase->weeks as $weekIndex => $week) {
-                $week->update(['protocol_week_number' => $phaseWeekStart + $weekIndex]);
-            }
-
-            $previousWeekStart = $phase->weeks->isNotEmpty() ? $phaseWeekStart : null;
-            $previousWeekEnd = $phase->weeks->isNotEmpty()
-                ? $phaseWeekStart + $phase->weeks->count() - 1
-                : null;
-            $latestWeekEnd = max($latestWeekEnd, $previousWeekEnd ?? 0);
-        }
-
-        $totalWeeks = $latestWeekEnd;
-        $currentWeek = $this->currentWeek($protocol, $totalWeeks);
-
-        foreach ($protocol->phases as $phase) {
-            $weekStart = $phase->weeks->first()?->protocol_week_number;
-            $weekEnd = $phase->weeks->last()?->protocol_week_number;
-            $state = match (true) {
-                $weekStart === null => 'upcoming',
-                $protocol->status === 'completed' => 'done',
-                $weekEnd < $currentWeek => 'done',
-                $weekStart <= $currentWeek && $weekEnd >= $currentWeek => 'active',
-                default => 'upcoming',
-            };
-            $chip = match ($state) {
-                'done' => 'Afgerond',
-                'active' => "Actief · wk {$weekStart}–{$weekEnd}",
-                default => $weekStart ? "Vanaf wk {$weekStart}" : 'Geen weken',
-            };
-
-            $phase->update([
-                'state' => $state,
-                'week_start' => $weekStart,
-                'week_end' => $weekEnd,
-                'chip_label' => $chip,
-            ]);
-        }
-
-        $activePhase = $protocol->phases->firstWhere('state', 'active');
-        $analysisParts = collect([$protocol->horse?->breed])->filter()->values();
-
-        $protocol->update([
-            'total_weeks' => $totalWeeks ?: null,
-            'current_week' => $totalWeeks ? $currentWeek : null,
-            'subtitle_analyse' => $analysisParts->join(' · ') ?: null,
-            'subtitle_protocol' => $totalWeeks
-                ? "Week {$currentWeek} van {$totalWeeks}".($activePhase ? " · {$activePhase->title} actief" : '')
-                : 'Planning nog niet compleet',
-            'subtitle_calendar' => $protocol->started_at?->locale('nl')->translatedFormat('F Y'),
-        ]);
-    }
-
-    private function currentWeek(Protocol $protocol, int $totalWeeks): int
-    {
-        if ($totalWeeks < 1) {
-            return 1;
-        }
-
-        if ($protocol->status === 'completed') {
-            return $totalWeeks;
-        }
-
-        if ($protocol->status === 'paused' || ! $protocol->started_at) {
-            return max(1, min($totalWeeks, (int) ($protocol->current_week ?: 1)));
-        }
-
-        $days = $protocol->started_at->startOfDay()->diffInDays(now()->startOfDay(), false);
-
-        return max(1, min($totalWeeks, (int) floor(max(0, $days) / 7) + 1));
     }
 
     private function nullableValue(mixed $value): mixed

@@ -1,8 +1,9 @@
 <script>
-    import { X, ArrowLeft, Leaf, Check, ChevronRight } from '@lucide/svelte';
+    import { X, ArrowLeft, Leaf, Check, ChevronRight, Soup } from '@lucide/svelte';
     import { onMount } from 'svelte';
     import { PROTOCOL_TABS } from '../../../../../expo-app/lib/protocol-tabs.ts';
     import { careSections } from '../../../../../expo-app/lib/protocol-care.ts';
+    import { administrationKey, todayGroups } from '../../../../../expo-app/lib/protocol-today.ts';
     import { csrfHeaders } from '$lib/csrf.js';
     let { payload, protocolId = null, onclose } = $props();
     let result = $state(null);
@@ -11,6 +12,8 @@
     let week = $state(1);
     let tab = $state('vandaag');
     let phaseId = $state(null);
+    let ordersOpen = $state(false);
+    let productKey = $state(null);
     let request = 0;
     const tabs = PROTOCOL_TABS.map((item) => ({ id: item.key, label: item.label }));
     let dialog;
@@ -22,6 +25,7 @@
     });
     const protocol = $derived(result?.protocol);
     const phase = $derived(protocol?.phases.find((p) => p.id === phaseId));
+    const product = $derived(protocol?.today.items.find(item => administrationKey(item) === productKey));
     $effect(() => { void load(week); });
     async function load(selectedWeek) {
         const version = ++request;
@@ -36,7 +40,7 @@
             });
             const data = await response.json();
             if (!response.ok) throw new Error(Object.values(data.errors ?? {}).flat().join(' ') || data.message || 'De preview kon niet worden geladen.');
-            if (version === request) { result = data; phaseId = null; }
+            if (version === request) { result = data; phaseId = null; productKey = null; }
         } catch (e) { if (version === request) error = e.message || 'De preview kon niet worden geladen.'; }
         finally { if (version === request) loading = false; }
     }
@@ -52,24 +56,76 @@
         </div>
         <div class="flex items-center justify-between gap-3 bg-[#EAFBF9] px-4 py-2 text-xs text-[#0E6F69]">
             <span>Preview · niet opgeslagen</span>
+            <button type="button" class="font-semibold underline" onclick={() => ordersOpen = !ordersOpen}>{ordersOpen ? 'Terug naar protocol' : 'Bestellijst'}</button>
             <label>Bekijk week <select class="rounded border bg-white p-1" aria-label="Previewweek" bind:value={week} disabled={loading}>{#each Array.from({ length: Math.max(1, protocol?.totalWeeks ?? 1) }, (_, i) => i + 1) as n}<option value={n}>{n}</option>{/each}</select></label>
         </div>
         {#if error}<div role="alert" class="m-4 rounded-xl bg-red-50 p-4 text-sm text-red-800">{error}<button type="button" class="mt-3 block underline" onclick={() => load(week)}>Opnieuw proberen</button></div>{/if}
         {#if loading}<p role="status" class="p-4 text-sm">Preview laden…</p>{/if}
         {#if protocol && !error && !loading}
             <header class="px-5 py-4"><p class="text-xs text-[#1B2A2A]/55">{result.horse.name}</p><h2 class="mt-1 text-xl font-bold">{protocol.title}</h2><p class="mt-1 text-xs text-[#1B2A2A]/55">Week {protocol.currentWeek} van {protocol.totalWeeks}{protocol.phaseLabel ? ` · ${protocol.phaseLabel}` : ''}</p></header>
-            <nav aria-label="Protocolonderdelen" class="flex border-b px-2">{#each tabs as item}<button type="button" class={`min-h-12 flex-1 border-b-2 text-[13px] font-semibold ${tab === item.id ? 'border-[#18BAB0] text-[#108A82]' : 'border-transparent text-[#1B2A2A]/65'}`} aria-pressed={tab === item.id} onclick={() => { tab = item.id; phaseId = null; }}>{item.label}</button>{/each}</nav>
+            <nav aria-label="Protocolonderdelen" class="flex border-b px-2">{#each tabs as item}<button type="button" class={`min-h-12 flex-1 border-b-2 text-[13px] font-semibold ${tab === item.id ? 'border-[#18BAB0] text-[#108A82]' : 'border-transparent text-[#1B2A2A]/65'}`} aria-pressed={tab === item.id} onclick={() => { tab = item.id; phaseId = null; productKey = null; }}>{item.label}</button>{/each}</nav>
             <div class="min-h-0 flex-1 space-y-4 overflow-y-auto px-5 pb-8 pt-4">
-                {#if phase}
+                {#if ordersOpen}
+                    <h3 class="text-xl font-bold">Bestellijst</h3>
+                    <p class="rounded-2xl bg-[#EAFBF9] p-4 text-sm font-semibold text-[#0E6F69]">{protocol.orderDiscount}</p>
+                    {#each protocol.orderItems as item}
+                        <section class="rounded-2xl border bg-white p-4">
+                            <h4 class="text-lg font-semibold">{item.name}</h4>
+                            <p class="mt-2 text-sm">Totaal nodig: <strong>{item.quantityLabel ?? 'hoeveelheid nog te bepalen'}</strong></p>
+                            {#each item.purchaseOptions as option}
+                                <a class="mt-3 inline-block text-sm font-semibold text-[#0E6F69]" href={option.url} target="_blank" rel="noopener noreferrer">{option.label}</a>
+                            {/each}
+                        </section>
+                    {:else}<p class="text-sm">Er staan geen producten op deze bestellijst.</p>{/each}
+                {:else if product}
+                    <button type="button" class="text-sm text-[#108A82]" onclick={() => productKey = null}>← Terug naar Vandaag</button>
+                    <h3 class="text-2xl font-bold">{product.name}</h3>
+                    <p class="text-sm text-[#1B2A2A]/60">{product.dosage} · {product.frequencyLabel}</p>
+                    {#if product.instructions}<h4 class="pt-3 text-lg font-bold">Instructies</h4><p class="whitespace-pre-wrap text-base leading-7 text-[#1B2A2A]/70">{product.instructions}</p>{/if}
+                    {#if product.description}<h4 class="pt-3 text-lg font-bold">Over dit product</h4><p class="whitespace-pre-wrap text-base leading-7 text-[#1B2A2A]/70">{product.description}</p>{/if}
+                    <button type="button" disabled class="mt-5 w-full rounded-full bg-[#18BAB0]/50 p-4 font-semibold">Markeer als gegeven · alleen in de app</button>
+                {:else if phase}
                     <button type="button" class="text-sm text-[#108A82]" onclick={() => (phaseId = null)}>← Terug naar {tab === 'vandaag' ? 'Vandaag' : 'Kalender'}</button>
                     <h3 class="text-lg font-bold">{phase.title}</h3><p class="text-xs text-[#1B2A2A]/55">{phase.weekLabel} · {phase.statusLabel}</p>
                     {#if phase.state === 'locked'}<p class="text-xs text-[#A06A1B]">Voor de klant beschikbaar vanaf één week voor de start. In deze preview kun je de inhoud alvast controleren.</p>{/if}
                     {#if phase.description}<p class="whitespace-pre-line text-sm leading-6">{phase.description}</p>{/if}
                     {#each phase.supplements as item}{@render supplement(item)}{/each}
                 {:else if tab === 'vandaag'}
-                    <div class="rounded-[22px] bg-[#105C5B] p-5 text-white"><p class="text-xs text-[#99E8DF]">{protocol.statusLabel}</p><h3 class="mt-2 text-xl font-bold">Vandaag voor {result.horse.name}</h3><p class="mt-2 text-xs">{protocol.todayLabel}</p></div>
-                    {#each protocol.today.items as item}{@render supplement(item)}{:else}<p class="text-sm text-[#1B2A2A]/55">Geen kruiden of supplementen ingepland in deze week.</p>{/each}
-                    {@render phases()}
+                    <div class="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
+                        <h3 class="text-[21px] font-bold leading-7 text-[#083635]">{protocol.weekLabel}</h3>
+                        <p class="text-sm text-[#1B2A2A]/60">{protocol.dateLabel}</p>
+                    </div>
+                    {#if protocol.today.items.length > 0}
+                        {@const done = protocol.today.items.filter(item => item.done).length}
+                        {@const percent = Math.round(done / protocol.today.items.length * 100)}
+                        <div>
+                            <div class="mb-2 flex items-center justify-between gap-3 text-sm font-semibold"><span>Vandaag afvinken · {done} van {protocol.today.items.length} gedaan</span><span class="text-[#106E6D]">{percent}%</span></div>
+                            <progress aria-label="Dagelijkse voortgang" max={protocol.today.items.length} value={done} class="block h-2 w-full overflow-hidden rounded-full [&::-webkit-progress-bar]:bg-[#1B2A2A]/10 [&::-webkit-progress-value]:bg-[#18BAB0] [&::-moz-progress-bar]:bg-[#18BAB0]"></progress>
+                        </div>
+                    {/if}
+                    <div class="overflow-hidden rounded-[22px] bg-[#EAFBF9]">
+                        {#each protocol.phases.filter(p => p.state === 'active') as item}
+                            <button type="button" onclick={() => phaseId = item.id} class="flex w-full items-center gap-3 border-b border-[#C9F3EE] p-4 text-left text-[#0D5C5B]">
+                                <span class="size-2.5 shrink-0 rounded-full" style:background={protocol.phases.indexOf(item) % 2 ? '#0D5C5B' : '#18BAB0'}></span>
+                                <span class="flex-1 text-base font-semibold">Fase {protocol.phases.indexOf(item) + 1} · {item.title}</span><span class="flex items-center gap-1 text-sm font-semibold">Uitleg<ChevronRight class="size-4 shrink-0" /></span>
+                            </button>
+                        {/each}
+                    </div>
+                    {#if protocol.today.items.length > 0}
+                        <p class="flex items-center gap-2 font-semibold text-[#106E6D]"><Soup class="size-5 shrink-0" />Meng alles door de geweekte bijvoeding</p>
+                    {/if}
+                    {#each todayGroups(protocol.today.items, []) as group}
+                        <section class="pt-2">
+                            <div class="flex items-center justify-between"><h4 class="text-xl font-bold">{group.label}</h4><span class="text-sm text-[#1B2A2A]/55">{group.done} van {group.items.length}</span></div>
+                            {#each group.items as item}
+                                <div class="flex items-center gap-3 py-3">
+                                    <span class="size-7 shrink-0 rounded-full border-2 border-[#1B2A2A]/30"></span>
+                                    <div class="flex-1 border-b border-[#1B2A2A]/10 pb-2"><span class="text-base font-semibold">{item.name}</span><span class="ml-2 text-base text-[#1B2A2A]/60">{item.dosage}</span><p class="mt-1 text-xs text-[#1B2A2A]/55">{item.phaseTitle}</p></div>
+                                    <button type="button" class="text-sm font-semibold text-[#106E6D]" onclick={() => productKey = administrationKey(item)}>Uitleg ›</button>
+                                </div>
+                            {/each}
+                        </section>
+                    {:else}<p class="text-sm text-[#1B2A2A]/55">Vandaag staat er niets gepland.</p>{/each}
                 {:else if tab === 'kalender'}
                     <h3 class="font-bold">{protocol.calendar.label}</h3>
                     <div class="grid grid-cols-7 gap-1 text-center text-xs">{#each ['ma','di','wo','do','vr','za','zo'] as d}<span class="p-2 text-[#1B2A2A]/50">{d}</span>{/each}{#each protocol.calendar.cells as day}<span class={`rounded-lg p-2 ${day?.isToday ? 'bg-[#18BAB0] font-bold text-white' : ''}`}>{day?.day ?? ''}</span>{/each}</div>
@@ -102,7 +158,24 @@
     {#each protocol.phases as item}<button type="button" onclick={() => (phaseId = item.id)} class={`flex w-full items-center gap-2 rounded-2xl border bg-white p-4 text-left ${item.state === 'active' ? 'border-[#18BAB0]' : 'border-[#1B2A2A]/10'}`}><div class="flex-1"><h4 class="text-sm font-semibold">{item.title}</h4><p class="mt-1 text-xs text-[#1B2A2A]/55">{item.weekLabel} · {item.durationLabel}</p></div><span class="max-w-[40%] rounded-full bg-[#EAFBF9] px-2 py-1 text-[10px] text-[#108A82]">{item.statusLabel}</span><ChevronRight class="size-4 shrink-0" /></button>{/each}
 {/snippet}
 {#snippet adviceCard(advice)}
-    <article class="rounded-2xl border border-[#1B2A2A]/10 bg-white p-4"><h4 class="text-sm font-semibold">{advice.title}</h4>{#if advice.action}<p class="mt-1 text-xs font-semibold text-[#108A82]">{advice.action === 'avoid' ? 'Vermijden' : 'Doen'}</p>{/if}{#if advice.description}<p class="mt-2 whitespace-pre-line text-sm leading-6 text-[#1B2A2A]/70">{advice.description}</p>{/if}{#if advice.frequency}<p class="mt-2 text-xs">{advice.frequency}</p>{/if}{#if advice.note}<p class="mt-2 whitespace-pre-line text-sm">{advice.note}</p>{/if}{#if advice.url}<a class="mt-3 block text-sm text-[#108A82] underline" href={advice.url} target="_blank" rel="noreferrer">{advice.ctaLabel || 'Meer informatie'}</a>{/if}</article>
+    <article class="rounded-2xl border border-[#1B2A2A]/10 bg-white p-5">
+        <h4 class="text-base font-semibold">{advice.title}</h4>
+        {#if advice.action}<p class="mt-1 text-xs font-semibold text-[#108A82]">{advice.action === 'avoid' ? 'Vermijden' : 'Doen'}</p>{/if}
+        {#if advice.description}
+            <section class="mt-4 space-y-2">
+                <h5 class="text-[13px] font-semibold text-[#0D5C5B]">Instructies</h5>
+                <p class="whitespace-pre-wrap text-[15px] leading-6 text-[#1B2A2A]/70">{advice.description}</p>
+            </section>
+        {/if}
+        {#if advice.frequency}<p class="mt-3 text-[13px]"><strong>Frequentie:</strong> {advice.frequency}</p>{/if}
+        {#if advice.note}
+            <section class="mt-5 space-y-2 rounded-xl border-l-[3px] border-[#18BAB0] bg-[#EAFBF9] p-4">
+                <h5 class="text-[13px] font-semibold text-[#0D5C5B]">Persoonlijke toelichting van je therapeut</h5>
+                <p class="whitespace-pre-wrap text-[15px] leading-6">{advice.note}</p>
+            </section>
+        {/if}
+        {#if advice.url}<a class="mt-3 block text-sm text-[#108A82] underline" href={advice.url} target="_blank" rel="noreferrer">{advice.ctaLabel || 'Meer informatie'}</a>{/if}
+    </article>
 {/snippet}
 
 {#snippet libraryLink(title, description, item)}

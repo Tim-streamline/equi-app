@@ -29,7 +29,9 @@ class SaveProtocolRequest extends FormRequest
             'protocol_template_id' => ['required', 'uuid', 'exists:protocol_templates,id'],
             'therapist_id' => ['nullable', 'uuid', Therapist::assignmentRule($this->route('protocol')?->therapist_id)],
             'title' => ['required', 'string', 'max:255'],
-            'started_at' => ['nullable', 'date'],
+            // Optional, for owners on app versions without a start button. Empty leaves
+            // starting to the owner; `started_at` from older editor pages is ignored.
+            'start_on' => ['nullable', 'date_format:Y-m-d', 'after_or_equal:'.now()->subDays(14)->toDateString()],
             'status' => ['required', $this->route('protocol')?->status === 'archived' ? 'in:archived' : 'in:draft,active,paused,completed'],
             'published' => ['required', 'boolean'],
 
@@ -312,10 +314,6 @@ class SaveProtocolRequest extends FormRequest
             }
 
             if ($this->boolean('published')) {
-                if (! $this->filled('started_at')) {
-                    $validator->errors()->add('started_at', 'Een gepubliceerd protocol heeft een startdatum nodig.');
-                }
-
                 $submittedPhases = collect($this->input('phases', []));
                 $missingRequiredDefinitions = $protocol
                     ? collect()

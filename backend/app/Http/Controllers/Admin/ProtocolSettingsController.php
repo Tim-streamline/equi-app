@@ -279,7 +279,27 @@ class ProtocolSettingsController extends Controller
         }
 
         $before = $supplement->only(array_keys($data));
-        $supplement->update($data);
+        DB::transaction(function () use ($supplement, $data) {
+            \App\Support\LibrarySyncLock::acquire();
+            if (isset($data['administrations_per_day']) && (int) $data['administrations_per_day'] !== $supplement->administrations_per_day) {
+                // Keep elapsed daily lists at the frequency that applied at the time.
+                $history = app(\App\Support\ProtocolDayHistory::class);
+                $protocols = \App\Models\Protocol::whereHas('phases.supplements', fn ($q) => $q->where('supplement_id', $supplement->id))
+                    ->whereNotNull('started_at')->whereNotNull('published_at')->orderBy('id')->lockForUpdate()->get();
+                foreach ($protocols as $protocol) {
+                    $history->preserve($protocol, \Carbon\CarbonImmutable::now($history->timezone($protocol)));
+                }
+            }
+            $supplement->update($data);
+            if (isset($data['administrations_per_day'])) {
+                $supplement->protocolPhaseSupplements()->update(['administrations_per_day' => $data['administrations_per_day']]);
+                foreach ($supplement->protocolPhaseSupplements()->with('phase.protocol.horse.owner.notificationPreferences')->get() as $selection) {
+                    $protocol = $selection->phase->protocol;
+                    $date = \Carbon\CarbonImmutable::now(app(\App\Support\ProtocolDayHistory::class)->timezone($protocol))->toDateString();
+                    app(\App\Support\LegacyProtocolClient::class)->refreshDayDone($selection->id, $date, (int) $data['administrations_per_day']);
+                }
+            }
+        });
 
         if ($supplement->wasChanged('protocol_template_phase_id')) {
             $supplement->weeks()->detach();
@@ -383,6 +403,8 @@ class ProtocolSettingsController extends Controller
             'name' => ['required', 'string', 'max:255'],
             'description' => ['nullable', 'string', 'max:10000'],
             'instructions' => ['nullable', 'string', 'max:10000'],
+            'product_url' => ['nullable', 'url:http,https', 'max:2048'],
+            'administrations_per_day' => ['sometimes', 'integer', 'between:1,24'],
             'supplement_type' => ['required', Rule::enum(SupplementType::class)],
             'dosis_type' => ['nullable', 'required_with:dosis,unit', Rule::enum(SupplementDoseType::class)],
             'dosis' => ['nullable', 'required_with:dosis_type,unit', 'numeric', 'gt:0'],

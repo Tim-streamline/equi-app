@@ -25,7 +25,11 @@ import { PowerSyncContext } from '@powersync/react';
 
 import { accountSession } from '@/lib/account-session';
 import { captureException } from '@/lib/error-tracking';
-import { getNativeDatabase, connectNativeDatabase } from './native-runtime';
+import { getNativeDatabase, connectNativeDatabase, replaceNativeDatabase } from './native-runtime';
+import { hasPendingSyncReset, resetSyncKey } from './reset-sync';
+import { clearLocalSyncData } from './reset-local-data';
+import { useSyncReset } from './use-sync-reset';
+import { SyncResetBoundary } from '@/components/sync/SyncResetBoundary';
 import { LaravelConnector } from './connector';
 import { refreshSubscriptionConnection } from './refresh-subscription';
 import {
@@ -73,6 +77,7 @@ type DbContextValue = {
   refreshSubscriptionAccess: (signal: AbortSignal) => Promise<void>;
   retryUploads: () => Promise<void>;
   retryingUploads: boolean;
+  resetSync: () => Promise<void>;
 };
 
 const DbContext = createContext<DbContextValue | null>(null);
@@ -85,36 +90,57 @@ export function DbProvider({ children }: { children: ReactNode }) {
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const connectedRef = useRef(false);
   const [selectedHorseId, selectHorse] = useState<string | null>(null);
+  const databaseRef = useRef<AbstractPowerSyncDatabase | null>(null);
+  const reset = useSyncReset({
+    getDatabase: () => {
+      if (!databaseRef.current) throw new Error('Database not ready');
+      return databaseRef.current;
+    },
+    prepare: (userId) => {
+      const connector = new LaravelConnector();
+      return {
+        markerKey: resetSyncKey(userId), connector,
+        fetchCredentials: (signal: AbortSignal) => connector.fetchCredentials(signal),
+        replaceDatabase: async (old: AbstractPowerSyncDatabase) => {
+          connectedRef.current = false;
+          const next = await replaceNativeDatabase(old);
+          databaseRef.current = next;
+          return next;
+        },
+        clearLocalData: () => clearLocalSyncData(userId),
+      };
+    },
+    activate: (db) => {
+      connectedRef.current = true;
+      selectHorse(null);
+      setPowersync(db);
+      setSyncStatus(mapStatus(db.currentStatus));
+    },
+  });
+  const resetSync = useCallback(() => {
+    if (!currentUserId) return Promise.reject(new Error('Meld je opnieuw aan.'));
+    return reset.run(currentUserId);
+  }, [currentUserId, reset.run]);
 
   useEffect(() => {
     let cancelled = false;
-    let unregister: (() => void) | undefined;
     (async () => {
       try {
         const ps = await getNativeDatabase();
         if (cancelled) return;
 
-        // Drive syncStatus from the real connection lifecycle (reconnects,
-        // drops, in-flight transfers) instead of one-shot setState calls.
-        // Ignored until connectToBackend flips connectedRef, so a logged-out
-        // boot doesn't flash "offline".
-        unregister = ps.registerListener({
-          statusChanged: (status) => {
-            if (!connectedRef.current) return;
-            setSyncStatus(mapStatus(status));
-            if (status.dataFlowStatus?.uploadError) reportSyncFailure(status.dataFlowStatus.uploadError, 'sync.upload');
-            if (status.dataFlowStatus?.downloadError) reportSyncFailure(status.dataFlowStatus.downloadError, 'sync.download');
-          },
-        });
-
-        setPowersync(ps);
-
+        databaseRef.current = ps;
         const creds = await loadCredentials();
         if (creds) {
           setIsLoggedIn(true);
           setCurrentUserId(creds.userId);
+          if (await hasPendingSyncReset(resetSyncKey(creds.userId))) {
+            await reset.run(creds.userId, true);
+            return;
+          }
+          setPowersync(ps);
           connectToBackend(ps);
-        }
+        } else setPowersync(ps);
       } catch (err) {
         console.error('[provider] boot failed', err);
         captureException(err, { tags: { operation: 'database.boot' } });
@@ -122,10 +148,16 @@ export function DbProvider({ children }: { children: ReactNode }) {
     })();
     return () => {
       cancelled = true;
-      unregister?.();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  useEffect(() => powersync?.registerListener({ statusChanged: status => {
+    if (!connectedRef.current || databaseRef.current !== powersync) return;
+    setSyncStatus(mapStatus(status));
+    if (status.dataFlowStatus?.uploadError) reportSyncFailure(status.dataFlowStatus.uploadError, 'sync.upload');
+    if (status.dataFlowStatus?.downloadError) reportSyncFailure(status.dataFlowStatus.downloadError, 'sync.download');
+  } }), [powersync]);
 
   const connectToBackend = useCallback(async (ps: AbstractPowerSyncDatabase) => {
     if (connectedRef.current) return;
@@ -144,15 +176,21 @@ export function DbProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const login = useCallback(
-    (email: string, password: string) => accountSession.transition(async () => {
-      if (!powersync) throw new Error('Database not ready');
-      const res: LoginResponse = await loginRequest(email, password);
-      await saveCredentials(deviceCredentials(res));
-      setIsLoggedIn(true);
-      setCurrentUserId(String(res.user.id));
-      await connectToBackend(powersync);
-    }),
-    [powersync, connectToBackend],
+    async (email: string, password: string) => {
+      const pendingUser = await accountSession.transition(async () => {
+        if (!powersync) throw new Error('Database not ready');
+        const res: LoginResponse = await loginRequest(email, password);
+        await saveCredentials(deviceCredentials(res));
+        setIsLoggedIn(true);
+        setCurrentUserId(String(res.user.id));
+        const id = String(res.user.id);
+        if (await hasPendingSyncReset(resetSyncKey(id))) return id;
+        await connectToBackend(powersync);
+        return null;
+      });
+      if (pendingUser) await reset.run(pendingUser, true);
+    },
+    [powersync, connectToBackend, reset.run],
   );
 
   const retryUploads = useCallback(async () => {
@@ -181,7 +219,14 @@ export function DbProvider({ children }: { children: ReactNode }) {
   }), [powersync, connectToBackend]);
 
   const logout = useCallback(() => accountSession.transition(async () => {
-    if (!powersync) return;
+    let db = databaseRef.current;
+    if (!db) return;
+    // Recovery can have replaced (or closed) the handle still in React state.
+    // Reopen it before signing out, leaving a usable empty database for login.
+    if (db.closed) {
+      db = await replaceNativeDatabase(db);
+      databaseRef.current = db;
+    }
     try {
       const { dashboardRequest, deviceTimezone } = await import('@/hooks/useHorseDashboard');
       await dashboardRequest('/api/notifications/push-token', { token: null, timezone: deviceTimezone() });
@@ -193,8 +238,9 @@ export function DbProvider({ children }: { children: ReactNode }) {
     setSyncStatus('idle');
     connectedRef.current = false;
     try {
-      await powersync.disconnectAndClear();
+      await db.disconnectAndClear();
     } catch (err) {
+      if (reset.state.error) throw err;
       if (__DEV__) console.warn('[provider] disconnect failed', err);
     }
     // Sign this device out on the server too; offline, the unused token expires on its own.
@@ -207,9 +253,10 @@ export function DbProvider({ children }: { children: ReactNode }) {
       captureException(err, { tags: { operation: 'auth.logout' } });
     }
     setIsLoggedIn(false);
+    setPowersync(db);
     setCurrentUserId(null);
     selectHorse(null);
-  }), [powersync]);
+  }), [reset.state.error]);
 
   const value = useMemo<DbContextValue | null>(() => {
     if (!powersync) return null;
@@ -226,24 +273,24 @@ export function DbProvider({ children }: { children: ReactNode }) {
       completeRegistration,
       logout,
       refreshSubscriptionAccess,
-      retryUploads, retryingUploads,
+      retryUploads, retryingUploads, resetSync,
     };
-  }, [powersync, isLoggedIn, syncStatus, currentUserId, selectedHorseId, login, register, completeRegistration, logout, refreshSubscriptionAccess, retryUploads, retryingUploads]);
+  }, [powersync, isLoggedIn, syncStatus, currentUserId, selectedHorseId, login, register, completeRegistration, logout, refreshSubscriptionAccess, retryUploads, retryingUploads, resetSync]);
 
   if (!powersync || !value) {
     return (
-      <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: '#FBF8F3' }}>
+      <SyncResetBoundary state={reset.state} retry={reset.retry} onSignOut={() => void reset.signOut(logout)}><View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: '#FBF8F3' }}>
         <ActivityIndicator color="#18BAB0" />
-      </View>
+      </View></SyncResetBoundary>
     );
   }
 
   return (
-    <DbContext.Provider value={value}>
+    <SyncResetBoundary state={reset.state} retry={reset.retry} onSignOut={() => void reset.signOut(logout)}><DbContext.Provider value={value}>
       <PowerSyncContext.Provider value={powersync}>
         {children}
       </PowerSyncContext.Provider>
-    </DbContext.Provider>
+    </DbContext.Provider></SyncResetBoundary>
   );
 }
 

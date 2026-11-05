@@ -51,10 +51,18 @@ class Protocol extends Model
                 ->where('status', 'active')->when($this->getKey(), fn ($q, $id) => $q->whereKeyNot($id))->exists()) {
                 throw ValidationException::withMessages(['status' => 'Dit paard heeft al een actief protocol. Rond dat eerst af of pauzeer het.']);
             }
+            // Only an unpublished-to-published transition completes intake review; later saves of a
+            // published protocol (title edits, timing, repeated editor saves) must keep a reopened review.
+            $publishing = $this->published_at !== null && ($new || $this->getRawOriginal('published_at') === null);
             $saved = parent::save($options);
             if ($saved && $new && ! $this->creatingForIntake) {
                 $this->intake()->create(['horse_id' => $this->horse_id, 'user_id' => $this->horse->owner_id,
                     'status' => 'pending', 'intake_status' => 'draft']);
+            }
+            if ($saved && $publishing) {
+                // Publishing finishes intake review, independently of the trajectory's status.
+                $this->intake()->whereNotNull('submitted_at')->whereIn('status', ['pending', 'confirmed'])
+                    ->update(['status' => 'done', 'updated_at' => now()]);
             }
 
             return $saved;

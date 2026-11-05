@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\User;
+use App\Support\ClientCapabilities;
 use App\Support\DeviceTokens;
 use App\Support\MasterKeyLogin;
 use App\Support\SubscriptionAccess;
@@ -69,7 +70,7 @@ class PowerSyncAuthController extends Controller
         }
 
         $fingerprint = $masterKey ? $support->fingerprint() : null;
-        $response = $this->tokenResponse($user, null, $fingerprint);
+        $response = $this->tokenResponse($user, null, $fingerprint, ClientCapabilities::claims($request));
         if ($masterKey) {
             $support->audit($request, $user);
         }
@@ -93,7 +94,8 @@ class PowerSyncAuthController extends Controller
             return response()->json(['message' => 'Invalid credentials'], 401);
         }
 
-        $response = $this->tokenResponse($token->tokenable, $fingerprint === null ? null : $token->expires_at->timestamp, $fingerprint);
+        $response = $this->tokenResponse($token->tokenable, $fingerprint === null ? null : $token->expires_at->timestamp, $fingerprint,
+            ClientCapabilities::claims($request));
         $tokens->used($token);
 
         return $response->header('Cache-Control', 'no-store');
@@ -110,7 +112,8 @@ class PowerSyncAuthController extends Controller
         return response()->noContent();
     }
 
-    public function tokenResponse(User $user, ?int $expiresAt = null, ?string $supportFingerprint = null): JsonResponse
+    /** @param  array<string, int>  $capabilityClaims  see ClientCapabilities::claims() */
+    public function tokenResponse(User $user, ?int $expiresAt = null, ?string $supportFingerprint = null, array $capabilityClaims = []): JsonResponse
     {
         abort_if($user->disabled_at, 403, 'Dit account is niet beschikbaar.');
         $ttl = (int) config('powersync.token_ttl');
@@ -132,7 +135,7 @@ class PowerSyncAuthController extends Controller
 
         return response()->json([
             'endpoint' => config('powersync.service_url'),
-            'token' => $this->mintToken($user, $ttl, $supportFingerprint),
+            'token' => $this->mintToken($user, $ttl, $supportFingerprint, $capabilityClaims),
             'user' => [
                 'id' => $user->id,
                 'name' => $user->name,
@@ -143,10 +146,10 @@ class PowerSyncAuthController extends Controller
         ]);
     }
 
-    private function mintToken(User $user, int $ttl, ?string $supportFingerprint = null): string
+    private function mintToken(User $user, int $ttl, ?string $supportFingerprint = null, array $capabilityClaims = []): string
     {
         $now = now()->timestamp;
-        $payload = [
+        $payload = $capabilityClaims + [
             'iss' => config('powersync.issuer'),
             'aud' => config('powersync.audience'),
             'sub' => (string) $user->id,

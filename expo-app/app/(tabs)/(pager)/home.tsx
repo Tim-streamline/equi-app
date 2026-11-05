@@ -38,6 +38,7 @@ export default function HomeScreen() {
   const seasonal = data?.seasonalTip;
   const { preferences, ready: preferencesReady, saving, save } = useHomePreferences();
   const openLibrary = () => router.push("/(tabs)/(pager)/library");
+  const cards = protocolCards(data);
   const seasonalCard = hasHorse && preferencesReady && seasonal && seasonalTipVisible(seasonal, preferences) && (
     <SeasonalTipCard
       tip={seasonal}
@@ -71,8 +72,8 @@ export default function HomeScreen() {
           {data?.greeting ?? greeting}
         </Text>
         {/* Every horse's intake gets its own card; Home does not depend on a selected horse for this. */}
-        <PurchasedProtocols allHorses />
-        {protocolCards(data).map((card) => <ProtocolCard key={card.horseId} {...card} />)}
+        <PurchasedProtocols allHorses excludeProtocolIds={cards.map(card => card.id)} />
+        {cards.map((card) => <ProtocolCard key={card.horseId} {...card} />)}
         {!hasHorse && <View className="mb-5 rounded-2xl bg-white p-5">
           <Text className="mb-2 font-semi text-[20px] text-ink">Je paard toevoegen aan {BRAND_NAME}?</Text>
           <Text className="mb-4 text-[14px] text-ink-70">Voeg je paard toe aan je account, zodat je alle gegevens op één plek kunt bewaren.</Text>
@@ -141,39 +142,41 @@ function protocolCards(data: HorseDashboard | null): HorseProtocolSummary[] {
 }
 
 /** A horse's protocol in progress; opens Protocol on that horse. */
-function ProtocolCard({ horseId, horseName, statusLabel, currentDay, currentWeek, phaseLabel, progressPercent }: HorseProtocolSummary) {
+function ProtocolCard({ id, horseId, horseName, statusLabel, currentDay, currentWeek, phaseLabel, progressPercent, preparing }: HorseProtocolSummary) {
   const { selectHorse } = useDb();
+  const readyToStart = preparing ?? (currentDay <= 0);
   return (
     <Pressable
       accessibilityRole="button"
+      accessibilityLabel={`Protocol van ${horseName || 'je paard'}`}
       onPress={() => {
         // Protocol shows the selected horse.
         selectHorse(horseId);
         router.push({
           pathname: "/(tabs)/(pager)/protocol",
-          params: { tab: "vandaag", t: String(Date.now()) },
+          params: { tab: "vandaag", horseId, protocolId: id, orderList: readyToStart ? '1' : '0', t: String(Date.now()) },
         });
       }}
       className="mb-4 rounded-[22px] bg-white p-5"
     >
-      <Text className="text-[10px] uppercase tracking-[1.3px] text-ink-70">
+      {!readyToStart && <Text className="text-[10px] uppercase tracking-[1.3px] text-ink-70">
         {horseName ? `${horseName}'s protocol` : "Protocol"}
+      </Text>}
+      <Text className={`${readyToStart ? '' : 'mt-3'} font-bold text-[20px] leading-[26px] text-ink`}>
+        {readyToStart ? `Je herstelplan voor ${horseName || 'je paard'} staat klaar` : statusLabel}
       </Text>
-      <Text className="mt-3 font-bold text-[18px] text-ink">
-        {statusLabel}
+      <Text className={readyToStart ? 'mt-3 text-[16px] leading-[24px] text-ink-70' : 'mt-1 text-[13px] text-ink-70'}>
+        {readyToStart ? 'Controleer wat je al in huis hebt en welke kruiden of andere producten je nog moet bestellen, zodat je zo snel mogelijk van start kan gaan.' : `Dag ${currentDay} · Week ${currentWeek}`}
+        {!readyToStart && phaseLabel ? ` · ${phaseLabel}` : ""}
       </Text>
-      <Text className="mt-1 text-[13px] text-ink-70">
-        Dag {currentDay} · Week {currentWeek}
-        {phaseLabel ? ` · ${phaseLabel}` : ""}
-      </Text>
-      <View className="mt-4 h-1.5 overflow-hidden rounded-full bg-ink-8">
+      {!readyToStart && <View className="mt-4 h-1.5 overflow-hidden rounded-full bg-ink-8">
         <View
           className="h-full bg-mint-500"
           style={{ width: `${progressPercent}%` }}
         />
-      </View>
+      </View>}
       <Text className="mt-4 font-semi text-[14px] text-teal-600">
-        Ga verder met het protocol →
+        {readyToStart ? 'Bekijk hier je bestellijst →' : 'Ga verder met het protocol →'}
       </Text>
     </Pressable>
   );

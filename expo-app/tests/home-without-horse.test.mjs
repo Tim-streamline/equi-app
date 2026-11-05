@@ -18,6 +18,7 @@ test('dashboard loads account home without a horse and ignores its late response
     },
     'react-native': {}, 'expo-router': { useFocusEffect: () => {} },
     '@/lib/library-events': { onLibraryUnlock: () => () => {} },
+    '@/lib/account-session': { accountSession: { revision: 0 } },
     '@react-native-async-storage/async-storage': { default: { setItem: async (key, value) => writes.push([key, value]) } },
     '@/db/provider': { useDb: () => ({ currentUserId: userId, syncStatus: 'offline' }) },
     '@/db/hooks': { useCurrentHorseId: () => horseId },

@@ -1,5 +1,6 @@
 import * as syncRequests from '../lib/sync-request.ts';
 import * as syncOperations from '../lib/intake/sync-operations.ts';
+import * as storageWrites from '../lib/intake/attachments/storage-writes.ts';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { attachmentIds, flushAttachmentUploads } from '../lib/intake/attachments/upload.ts';
@@ -110,6 +111,7 @@ test('native storage copies picker bytes to documents and recovers the pending r
     },
     '@react-native-async-storage/async-storage': { default: { getItem: async key => metadata.get(key), setItem: async (key, value) => { metadata.set(key, value); } } },
     './events': { attachmentsChanged() {} },
+    './storage-writes': storageWrites,
   };
   const before = load('../lib/intake/attachments/storage.ts', modules);
   await before.saveAttachment({ id, userId: 'owner', uploaded: false }, { uri: 'cache/photo.jpg' });

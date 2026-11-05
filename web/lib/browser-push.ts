@@ -70,7 +70,7 @@ export async function enableBrowserPush(userId: string, requestPermission = true
     await writeBinding(userId, isCurrent);
   }));
 }
-export async function disableBrowserPush(userId?: string) {
+export async function disableBrowserPush(userId?: string, notifyBackend = true) {
   // Invalidate immediately, including while permission/configuration is pending.
   enrollmentRevision++;
   if (userId) localStorage.setItem(`equi-push-opt:${userId}`, 'no');
@@ -82,7 +82,7 @@ export async function disableBrowserPush(userId?: string) {
       const subscription = await registration?.pushManager.getSubscription();
       if (subscription) {
         // Run after any in-flight registration, even if binding/removal fails.
-        try { await dashboardRequest('/api/notifications/web-push/remove', { endpoint: subscription.endpoint }); }
+        try { if (notifyBackend) await dashboardRequest('/api/notifications/web-push/remove', { endpoint: subscription.endpoint }); }
         finally { await subscription.unsubscribe(); }
       }
     }

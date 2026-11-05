@@ -122,6 +122,17 @@ test('logout invalidates in-flight enrollment and finishes cleanup without a que
   assert.equal(b.browserPushOptedIn('user'), true, 'logout does not change the saved opt-in preference');
 });
 
+test('local logout disables browser delivery without waiting for a backend request', async () => {
+  const b = browser();
+  await b.enableBrowserPush('user');
+  b.failRemoval = true;
+  await b.disableBrowserPush(undefined, false);
+  assert.equal(b.subscribed, false);
+  assert.equal(b.bound, null);
+  assert.equal(b.events.some(([event]) => event === 'remove'), false);
+  assert.equal(b.browserPushOptedIn('user'), true);
+});
+
 for (const failure of ['failRemoval', 'failWorker']) {
   test(`opt-out still unsubscribes when ${failure} fails, and the queue recovers`, async () => {
     const b = browser();

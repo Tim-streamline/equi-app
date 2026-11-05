@@ -20,9 +20,10 @@ function app() {
     useHorseDashboard: () => ({ horseId, data, refresh() {} }),
     useTabBarPadding: () => 76,
     ...Object.fromEntries(['HorseSwitcher', 'OfflineStrip', 'IconButton', 'ShoppingBag', 'ProtocolTabs'].map(name => [name, name])),
-    ...Object.fromEntries(['Today', 'Calendar', 'Nutrition', 'CareAdvice', 'ProtocolAnalysis', 'Sheet', 'WeeklySheet', 'Supplement', 'Label'].map(name => [name, name])),
+    ...Object.fromEntries(['Today', 'Calendar', 'Nutrition', 'CareAdvice', 'ProtocolAnalysis', 'Sheet', 'WeeklySheet', 'Supplement', 'Label', 'ProtocolOrderList'].map(name => [name, name])),
     HEADER_ICON: '#466362', useHeaderAction: action => { header = action; },
     router: { push: route => routes.push(route) },
+    scopeOrderItems: (items, scope) => scope === 'all' ? items : [],
   };
   const exports = {};
   new Function('require', 'exports', ...Object.keys(dependencies), code)(() => ({ jsx, jsxs: jsx }), exports, ...Object.values(dependencies));

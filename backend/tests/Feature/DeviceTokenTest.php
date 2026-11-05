@@ -100,6 +100,19 @@ class DeviceTokenTest extends TestCase
         $this->exchange($token)->assertOk();
     }
 
+    public function test_protocol_capability_is_per_token_and_absence_keeps_legacy_clients(): void
+    {
+        $user = User::factory()->create(['password' => 'customer-password']);
+        $old = $this->postJson('/api/auth/login', ['email' => $user->email, 'password' => 'customer-password', 'device_name' => 'old'])->assertOk();
+        $this->assertFalse(property_exists($this->claims($old->json('token')), 'protocol_doses'));
+        $new = $this->postJson('/api/auth/login', ['email' => $user->email, 'password' => 'customer-password',
+            'device_name' => 'new', 'capabilities' => ['protocol-doses', 'unknown']])->assertOk();
+        $this->assertSame(1, $this->claims($new->json('token'))->protocol_doses);
+        $refreshed = $this->postJson('/api/auth/token', ['device_token' => $old->json('device_token'), 'capabilities' => ['protocol-doses']])->assertOk();
+        $this->assertSame(1, $this->claims($refreshed->json('token'))->protocol_doses);
+        $this->assertFalse(property_exists($this->claims($this->exchange($new->json('device_token'))->json('token')), 'protocol_doses'));
+    }
+
     public function test_login_without_a_device_name_keeps_working_for_older_app_versions(): void
     {
         $user = User::factory()->create(['password' => 'customer-password']);

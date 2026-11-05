@@ -6,6 +6,7 @@ use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Cookie;
+use Illuminate\Support\Str;
 
 class WebLogin
 {
@@ -22,6 +23,7 @@ class WebLogin
     public function start(Request $request, User $user): void
     {
         $login = [
+            'id' => (string) Str::uuid(),
             'user_id' => (string) $user->id,
             'expires_at' => now()->addMinutes(self::MINUTES)->timestamp,
             'token_hash' => hash('sha256', (string) $user->getRememberToken()),
@@ -74,9 +76,27 @@ class WebLogin
         return (int) $request->session()->get(self::SESSION_KEY.'.expires_at', 0);
     }
 
+    /** Stable across token renewals and remember-cookie restoration, unique per login. */
+    public function logoutId(Request $request): string
+    {
+        $login = $request->session()->get(self::SESSION_KEY);
+        if (! isset($login['id'])) {
+            // Upgrade an existing login without extending its original deadline.
+            $login['id'] = (string) Str::uuid();
+            $request->session()->put(self::SESSION_KEY, $login);
+            if (! isset($login['support_key'])) {
+                $minutes = max(1, (int) ceil(($login['expires_at'] - now()->timestamp) / 60));
+                Cookie::queue(Cookie::make($this->cookieName(), json_encode($login), $minutes));
+            }
+        }
+
+        return $login['id'];
+    }
+
     public function startSupport(Request $request, User $user): void
     {
         $request->session()->put(self::SESSION_KEY, [
+            'id' => (string) Str::uuid(),
             'user_id' => (string) $user->id,
             'expires_at' => now()->addSeconds(MasterKeyLogin::SESSION_SECONDS)->timestamp,
             'token_hash' => hash('sha256', (string) $user->getRememberToken()),
