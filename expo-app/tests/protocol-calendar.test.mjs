@@ -34,18 +34,78 @@ test('rings reflect exact daily completion and handle old or empty calendars', (
   assert.equal(logic.dayProgress({state:'default'}),null);
 });
 const flatten = n => Array.isArray(n) ? n.flatMap(flatten) : n && typeof n === 'object' ? [n,...flatten(n.props?.children)] : [n];
-function screen(editable=true) {
-  const states=[], refs=[]; let hook=0, local=[]; const calls=[], opened=[];
+function screen(editable=true, requestDay) {
+  const states=[], refs=[], effects=[]; let hook=0, local=[], dirty=false, pendingEffects=[]; const calls=[], opened=[];
+  const react = {
+    useEffect(callback, dependencies) {
+      const i = hook++, previous = effects[i];
+      if (!previous || dependencies.some((value, index) => !Object.is(value, previous.dependencies[index]))) {
+        pendingEffects.push(() => {
+          previous?.cleanup?.();
+          effects[i] = { dependencies, cleanup: callback() };
+        });
+      }
+    },
+    useRef(value) { const i = hook++; return refs[i] ??= { current: value }; },
+    useState(initial) {
+      const i = hook++;
+      if (!(i in states)) states[i] = initial;
+      return [states[i], value => {
+        const next = typeof value === 'function' ? value(states[i]) : value;
+        dirty ||= !Object.is(next, states[i]); states[i] = next;
+      }];
+    },
+  };
   const items=[{id:'herb',name:'Real herb',dosage:'15 g',instructions:'Real instructions',administration:1,administrationsPerDay:2,done:false},{id:'herb',name:'Real herb',dosage:'15 g',administration:2,administrationsPerDay:2,done:false}];
   const day={date:'2026-11-02',label:'Actual date',editable,items,state:'missed'};
   const jsx=(type,props)=>({type,props});
-  const modules={react:{useEffect(){},useRef:value=>{const i=hook++;return refs[i]??=( {current:value} );},useState:initial=>{const i=hook++;if(!(i in states))states[i]=initial;return[states[i],value=>states[i]=typeof value==='function'?value(states[i]):value];}},'react/jsx-runtime':{jsx,jsxs:jsx,Fragment:'Fragment'},'react-native':Object.fromEntries(['View','Text','Pressable','ActivityIndicator'].map(n=>[n,n])), 'react-native-svg':{default:'Svg',Circle:'Circle'}, 'lucide-react-native':Object.fromEntries(['Check','ChevronLeft','ChevronRight','ShoppingBag'].map(n=>[n,n])), '@/components/ui/Button':{Button:'Button'},'@/db/hooks':{useSupplementIntakesForDate:()=>local,useStoreMutations:()=>({toggleSupplementIntake:async(id,dose,date,horse,n)=>{local=[{protocolPhaseSupplementId:id,administration:n,done:1}];}})},'@/hooks/useHorseDashboard':{deviceTimezone:()=> 'Europe/Amsterdam',dashboardRequest:async(url,body)=>{calls.push({url,body});return body?{...day,state:'partial',items:items.map(item=>({...item,done:item.administration===body.administration}))}:day;}},'@/lib/protocol-today':daily,'./DoseBuildupSchedule':{DoseBuildupSchedule:'DoseBuildupSchedule'},'@/lib/protocol-calendar':logic,'@/lib/haptics':{selectionHaptic(){}}};
+  const modules={react,'react/jsx-runtime':{jsx,jsxs:jsx,Fragment:'Fragment'},'react-native':Object.fromEntries(['View','Text','Pressable','ActivityIndicator'].map(n=>[n,n])), 'react-native-svg':{default:'Svg',Circle:'Circle'}, 'lucide-react-native':Object.fromEntries(['Check','ChevronLeft','ChevronRight','ShoppingBag'].map(n=>[n,n])), '@/components/ui/Button':{Button:'Button'},'@/db/hooks':{useSupplementIntakesForDate:()=>local,useStoreMutations:()=>({toggleSupplementIntake:async(id,dose,date,horse,n)=>{local=[{protocolPhaseSupplementId:id,administration:n,done:1}];}})},'@/hooks/useHorseDashboard':{deviceTimezone:()=> 'Europe/Amsterdam',dashboardRequest:async(url,body)=>{calls.push({url,body});return requestDay ? requestDay(url,body) : body?{...day,state:'partial',items:items.map(item=>({...item,done:item.administration===body.administration}))}:day;}},'@/lib/protocol-today':daily,'./DoseBuildupSchedule':{DoseBuildupSchedule:'DoseBuildupSchedule'},'@/lib/protocol-calendar':logic,'@/lib/haptics':{selectionHaptic(){}}};
   const component=load('../components/protocol/ProtocolCalendar.tsx',modules).ProtocolCalendar;
   const props={protocol:{id:'p',phases,today:{items},calendar:{label:'Actual month',previousMonth:'2026-10',nextMonth:'2026-12',cells:[{date:'2026-11-02',day:2,available:true,state:'missed',total:2,done:0},{date:'2026-11-03',day:3,isToday:true,state:'default'},{date:'2026-11-15',day:15,state:'default'}]}},today:'2026-11-03',horseId:'h',onMonth:m=>opened.push(m),onPhase:p=>opened.push(p.id),onToday:()=>opened.push('today'),onOrder:ids=>opened.push(ids),onRefresh:async()=>{},SheetComponent:'Sheet'};
-  const render=()=>{hook=0;return flatten(component(props));};
+  const render=()=>{
+    let nodes;
+    do {
+      hook=0; dirty=false; pendingEffects=[]; nodes=flatten(component(props));
+      pendingEffects.forEach(effect=>effect());
+    } while (dirty);
+    return nodes;
+  };
   const open=async()=>{await render().find(n=>n?.props?.accessibilityLabel?.startsWith('maandag 2')).props.onPress();};
-  return{render,open,calls,opened,setLocal:rows=>local=rows};
+  return{render,open,calls,opened,props,setLocal:rows=>local=rows};
 }
+
+test('midnight closes the checked Today sheet and reopening yesterday fetches its saved state', async () => {
+  const app = screen(true, async () => ({ date:'2026-11-03', label:'Yesterday', editable:true, state:'complete',
+    items:[{id:'herb',name:'Real herb',dosage:'15 g',administration:2,administrationsPerDay:2,done:true}] }));
+  app.render().find(n=>n?.props?.accessibilityLabel?.startsWith('dinsdag 3')).props.onPress();
+  await app.render().find(n=>n?.props?.accessibilityLabel==='Real herb, Avond, 15 g').props.onPress();
+  assert.equal(app.render().find(n=>n?.props?.accessibilityRole==='checkbox' && n.props.accessibilityLabel.includes('Avond')).props.accessibilityState.checked,true);
+  app.props.today='2026-11-04'; app.setLocal([]);
+  app.props.protocol.calendar={...app.props.protocol.calendar,cells:[{date:'2026-11-03',day:3,available:true,state:'complete',total:1,done:1}]};
+  assert.ok(!app.render().some(n=>n?.type==='Sheet' && n.props.visible));
+  assert.equal(app.calls.length,0);
+  await app.render().find(n=>n?.props?.accessibilityLabel?.startsWith('dinsdag 3')).props.onPress();
+  await new Promise(resolve=>setImmediate(resolve));
+  assert.ok(app.calls[0].url.includes('date=2026-11-03'));
+  assert.equal(app.render().find(n=>n?.props?.accessibilityRole==='checkbox').props.accessibilityState.checked,true);
+});
+
+test('a historical response started before midnight cannot repopulate the closed day sheet', async () => {
+  let finish;
+  const app=screen(true,()=>new Promise(resolve=>{finish=resolve;}));
+  const pending=app.open();
+  app.props.today='2026-11-04';
+  app.props.protocol.calendar={...app.props.protocol.calendar,cells:[{date:'2026-11-04',day:4,isToday:true,state:'default'}]};
+  assert.ok(!app.render().some(n=>n?.type==='Sheet' && n.props.visible));
+  finish({date:'2026-11-02',label:'Stale response',editable:true,items:[],state:'default'});
+  await pending;
+  await new Promise(resolve=>setImmediate(resolve));
+  assert.ok(!app.render().some(n=>n?.type==='Sheet' && n.props.title==='Stale response'));
+  app.render().find(n=>n?.props?.accessibilityLabel?.startsWith('woensdag 4')).props.onPress();
+  const sheet=app.render().find(n=>n?.type==='Sheet' && n.props.visible);
+  assert.ok(sheet.props.title.includes('woensdag 4'));
+  assert.ok(app.render().some(n=>n?.props?.accessibilityRole==='checkbox'));
+});
 test('day sheet groups doses and Uitleg never changes a checkbox; historical evening saves separately', async()=>{
   const app=screen();await app.open();
   let nodes=app.render();assert.ok(nodes.includes('Ochtend') && nodes.includes('Avond'));
@@ -88,10 +148,11 @@ test('order reminder opens the grouped future phases without marking any day',()
  test('future preview contains order totals and description without per-gift doses',()=>{
    let detail=null;const jsx=(type,props)=>({type,props});
    const component=load('../components/protocol/ProtocolPhaseContent.tsx',{
+     '@/db/hooks':{useSupplementIntakesForDate:()=>[]},'@/lib/protocol-today':daily,
      react:{useState:()=>[detail,value=>detail=value]},'react/jsx-runtime':{jsx,jsxs:jsx,Fragment:'Fragment'},'react-native':{View:'View',Text:'Text',Pressable:'Pressable'},'lucide-react-native':{ChevronRight:'ChevronRight'},'@/components/ui/Button':{Button:'Button'},'./DoseBuildupSchedule':{DoseBuildupSchedule:'DoseBuildupSchedule'},'@/lib/protocol-calendar':logic,
    }).ProtocolPhaseContent;
    const phase={id:'b',state:'preview',description:'Authored phase description',supplements:[{id:'x',name:'Herb',dosage:'SECRET DOSE',instructions:'SECRET INSTRUCTIONS'}]};
-   const props={phase,orderItems:[{id:'x',name:'Herb',unit:'g',components:[{phaseId:'b',quantity:420}]}],onRefresh:async()=>{}};
+   const props={phase,date:'2026-11-03',orderItems:[{id:'x',name:'Herb',unit:'g',components:[{phaseId:'b',quantity:420}]}],onRefresh:async()=>{}};
    const nodes=flatten(component(props));assert.ok(nodes.includes('420 g'));assert.ok(nodes.includes('Authored phase description'));assert.ok(!nodes.includes('SECRET DOSE'));assert.ok(!nodes.includes('SECRET INSTRUCTIONS'));
    phase.state='active';component(props);const active=flatten(component(props));active.find(n=>n?.props?.accessibilityLabel==='Uitleg over Herb').props.onPress();assert.ok(flatten(component(props)).includes('SECRET INSTRUCTIONS'));
  });

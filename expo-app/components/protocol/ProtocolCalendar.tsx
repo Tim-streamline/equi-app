@@ -38,7 +38,11 @@ export function ProtocolCalendar({ protocol, today, horseId, onMonth, onPhase, o
   const request = useRef(0), saving = useRef(false);
   const local = useSupplementIntakesForDate(today);
   const mutations = useStoreMutations();
-  useEffect(() => () => { request.current++; }, []);
+  useEffect(() => {
+    // A day opened as Today must be fetched as history after the date changes.
+    setSelected(undefined); setDay(null); setDetail(null); setDayError(null); setBusy(false);
+    return () => { request.current++; };
+  }, [today]);
   const closeDay = () => { request.current++; setSelected(undefined); setDay(null); setDetail(null); setDayError(null); setBusy(false); };
   const openDay = async (date: string) => {
     const generation = ++request.current;

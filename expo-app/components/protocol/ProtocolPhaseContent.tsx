@@ -2,21 +2,28 @@ import { useState } from 'react';
 import { Pressable, Text, View } from 'react-native';
 import { ChevronRight } from 'lucide-react-native';
 import { Button } from '@/components/ui/Button';
+import { useSupplementIntakesForDate } from '@/db/hooks';
 import type { DashboardPhase, DashboardOrderItem } from '@/lib/horse-dashboard';
 import { phaseOrderItems } from '@/lib/protocol-calendar';
+import { todayGroups } from '@/lib/protocol-today';
 import { DoseBuildupSchedule } from './DoseBuildupSchedule';
 
-export function ProtocolPhaseContent({ phase, orderItems, onRefresh }: {
-  phase: DashboardPhase; orderItems: DashboardOrderItem[]; onRefresh: () => Promise<void>;
+export function ProtocolPhaseContent({ phase, date, orderItems, onRefresh }: {
+  phase: DashboardPhase; date: string; orderItems: DashboardOrderItem[]; onRefresh: () => Promise<void>;
 }) {
   const [detail, setDetail] = useState<string | null>(null);
+  const local = useSupplementIntakesForDate(date);
+  // Start with the server's effective dose, then honor the same saved daily dose as Today.
+  const supplements = todayGroups(phase.supplements.map(item => ({
+    ...item, dosage: item.buildup?.currentDosage ?? item.dosage,
+  })), local).flatMap(group => group.items);
   const active = phase.state === 'active' || phase.state === 'done';
-  const selected = active ? phase.supplements.find(item => item.id === detail) : null;
+  const selected = active ? supplements.find(item => item.id === detail) : null;
   if (selected) return <View className="gap-4">
     <Button title="Terug naar fase" variant="text" onPress={() => setDetail(null)} />
     <Text className="font-semi text-[18px] text-ink">{selected.name}</Text>
-    <Text className="font-sans text-[14px] text-ink-70">{selected.buildup?.currentDosage ?? selected.dosage} · {selected.frequencyLabel}</Text>
-    <DoseBuildupSchedule item={{ ...selected, dosage: selected.buildup?.currentDosage ?? selected.dosage }} date={selected.buildup?.date} />
+    <Text className="font-sans text-[14px] text-ink-70">{selected.dosage ?? 'Dosering niet ingesteld'} · {selected.frequencyLabel}</Text>
+    <DoseBuildupSchedule item={selected} date={date} />
     {!!selected.instructions && <View className="gap-2"><Text className="font-semi text-[16px] text-ink">Instructies</Text><Text className="font-sans text-[15px] leading-[24px] text-ink-70">{selected.instructions}</Text></View>}
     {!!selected.description && <View className="gap-2"><Text className="font-semi text-[16px] text-ink">Over dit product</Text><Text className="font-sans text-[15px] leading-[24px] text-ink-70">{selected.description}</Text></View>}
   </View>;
@@ -24,8 +31,8 @@ export function ProtocolPhaseContent({ phase, orderItems, onRefresh }: {
     {!!phase.description && <Text className="font-sans text-[15px] leading-[24px] text-ink-70">{phase.description}</Text>}
     {active ? <>
       {!phase.contentAvailable && <View className="gap-2"><Text className="text-[14px] text-ink-70">Maak verbinding om de volledige fase op te halen.</Text><Button title="Opnieuw laden" onPress={() => void onRefresh()} /></View>}
-      {phase.supplements.map(item => <View key={item.id} className="flex-row items-center gap-3 border-b border-ink-8 py-3">
-        <View className="flex-1 gap-1"><Text className="font-semi text-[16px] text-ink">{item.name}</Text><Text className="font-sans text-[14px] text-ink-70">{item.buildup?.currentDosage ?? item.dosage ?? 'Dosering niet ingesteld'} per gift</Text></View>
+      {supplements.map(item => <View key={item.id} className="flex-row items-center gap-3 border-b border-ink-8 py-3">
+        <View className="flex-1 gap-1"><Text className="font-semi text-[16px] text-ink">{item.name}</Text><Text className="font-sans text-[14px] text-ink-70">{item.dosage ?? 'Dosering niet ingesteld'} per gift</Text></View>
         <Pressable accessibilityRole="button" accessibilityLabel={`Uitleg over ${item.name}`} onPress={() => setDetail(item.id)} className="min-h-[44px] flex-row items-center gap-1"><Text className="font-semi text-[13px] text-teal-600">Uitleg</Text><ChevronRight size={17} color="#106E6D" /></Pressable>
       </View>)}
     </> : <>

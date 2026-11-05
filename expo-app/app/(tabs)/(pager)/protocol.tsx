@@ -242,7 +242,7 @@ export default function ProtocolListScreen() {
                 {linkedPhases.map((item) => <Button key={item.id} variant={item.id === visiblePhase?.id ? "primary" : "ghost"} title={item.title} onPress={() => openPhase(item)} />)}
               </View>
             )}
-            {visiblePhase && <ProtocolPhaseContent key={visiblePhase.id} phase={visiblePhase} orderItems={protocol.orderItems} onRefresh={refresh} />}
+            {visiblePhase && <ProtocolPhaseContent key={visiblePhase.id} phase={visiblePhase} date={data.date} orderItems={protocol.orderItems} onRefresh={refresh} />}
           </Sheet>
           <WeeklySheet
             visible={weeklyOpen}
