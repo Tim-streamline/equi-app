@@ -254,6 +254,9 @@ class SyncController extends Controller
                         $op['id'] = $canonicalId;
                     }
                 }
+                if ($intakeDay && $op['op'] !== 'DELETE') {
+                    $op = $this->withRecordedDosage($op, $intakeDay, $historical);
+                }
                 $legacyPut = $op['op'] === 'PUT' && ! array_key_exists('administration', $op['data'] ?? []);
                 if ($intakeDay && (! ClientCapabilities::protocolDoses($request) || $legacyPut)) {
                     // A released app's whole-day checkbox can remain queued across an upgrade.
@@ -263,8 +266,10 @@ class SyncController extends Controller
 
                     continue;
                 }
-                if ($intakeDay && $op['op'] === 'DELETE' && Models\ProtocolSupplementIntake::find($op['id'])?->administration === 1) {
-                    // Keep the legacy projection's identity stable, including any offline aliases.
+                if ($intakeDay && $op['op'] === 'DELETE'
+                    && (Models\ProtocolSupplementIntake::find($op['id'])?->administration === 1
+                        || app(\App\Support\ProtocolDoseBuildup::class)->enabled(Models\ProtocolPhaseSupplement::find($intakeDay[0])?->dose_buildup))) {
+                    // Retain recorded dates for buildup, including unchecked doses and offline aliases.
                     $this->patch($modelClass, $op['id'], ['done' => false, 'taken_at' => null]);
                 } else {
                     $this->applyOp($modelClass, $op);
@@ -331,6 +336,30 @@ class SyncController extends Controller
             : [(string) ($op['data']['protocol_phase_supplement_id'] ?? ''), (string) ($op['data']['date'] ?? '')];
     }
 
+    /** Keep the amount the client actually displayed, including delayed offline uploads. */
+    private function withRecordedDosage(array $op, array $intakeDay, ?array $historical): array
+    {
+        [$itemId, $date] = $intakeDay;
+        $existing = Models\ProtocolSupplementIntake::find($op['id']);
+        if ($existing) {
+            $op['data']['dosage'] = $existing->dosage;
+            return $op;
+        }
+        $item = Models\ProtocolPhaseSupplement::findOrFail($itemId);
+        $sameDay = $item->intakes()->where('date', $date)->orderBy('created_at')->orderBy('id')->first();
+        if ($sameDay) {
+            $op['data']['dosage'] = $sameDay->dosage;
+        } elseif (! array_key_exists('dosage', $op['data'])) {
+            $frozen = $historical ? app(ProtocolDayHistory::class)->day($historical['protocol'], $date, $historical['now']) : null;
+            $op['data']['dosage'] = $frozen
+                ? collect($frozen['items'])->firstWhere('id', $itemId)['dosage']
+                : app(\App\Support\ProtocolDoseBuildup::class)->forDay($item, $date);
+        }
+        validator($op['data'], ['dosage' => ['nullable', 'string', 'max:255']])->validate();
+
+        return $op;
+    }
+
     /**
      * Apply a released app's checkbox to every scheduled dose of that product and day,
      * after the same ownership, identity, date and plan validation as a single dose.
@@ -357,10 +386,11 @@ class SyncController extends Controller
             return;
         }
         $horseId = $existing?->horse_id ?? $op['data']['horse_id'];
+        $dosage = app(\App\Support\ProtocolDoseBuildup::class)->forDay($item->fresh(), $date);
         foreach (range(1, $item->administrationsPerDay()) as $administration) {
             Models\ProtocolSupplementIntake::updateOrCreate(
                 ['protocol_phase_supplement_id' => $itemId, 'date' => $date, 'administration' => $administration],
-                ['horse_id' => $horseId, 'dosage' => $item->dosage, 'done' => $done, 'taken_at' => $takenAt],
+                ['horse_id' => $horseId, 'dosage' => $dosage, 'done' => $done, 'taken_at' => $takenAt],
             );
         }
         app(LegacyProtocolClient::class)->refreshDayDone($itemId, $date, $item->administrationsPerDay());

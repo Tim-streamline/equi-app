@@ -101,11 +101,26 @@ test('actual local mutation persists each gift and still handles old rows withou
     }), fn => fn(), () => String(++id));
     const mutation = exports.useStoreMutations().toggleSupplementIntake;
     await mutation('product', '10 g', '2026-11-03', 'horse', 1);
-    await mutation('product', '10 g', '2026-11-03', 'horse', 2);
+    await mutation('product', '20 g', '2026-11-03', 'horse', 2);
+    assert.deepEqual(db.prepare('SELECT dosage FROM protocol_supplement_intakes ORDER BY administration').all().map(r => r.dosage), ['10 g', '10 g']);
     await mutation('product', '10 g', '2026-11-03', 'horse', 1);
     assert.deepEqual(db.prepare('SELECT administration,done FROM protocol_supplement_intakes ORDER BY administration').all().map(r => [r.administration,r.done]), [[1,0],[2,1]]);
     db.exec('UPDATE protocol_supplement_intakes SET administration = NULL WHERE administration = 1');
     await mutation('product', '10 g', '2026-11-03', 'horse');
     assert.equal(db.prepare('SELECT COUNT(*) AS n FROM protocol_supplement_intakes').get().n, 2);
   } finally { db.close(); }
+});
+
+
+test('recorded local buildup doses survive refreshed server amounts and fix other gifts that day', async () => {
+  const app = screen();
+  app.setLocal([{protocolPhaseSupplementId: 'two', administration: 1, done: false, dosage: '2 ml'}]);
+  const nodes = app.render();
+  assert.ok(copy(nodes).includes('2 ml'));
+  assert.ok(!copy(nodes).includes('8 ml'));
+  nodes.find(n => n?.props?.accessibilityLabel === 'Uitleg over Actual B, Avond').props.onPress();
+  const sheet = app.render().find(n => n?.type === 'Sheet');
+  flatten(sheet.props.footer).find(n => n?.props?.title === 'Markeer als gegeven').props.onPress();
+  await new Promise(resolve => setImmediate(resolve));
+  assert.deepEqual(app.mutations, [['two', '2 ml', '2026-11-03', 'horse', 2]]);
 });

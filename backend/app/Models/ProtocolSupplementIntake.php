@@ -20,6 +20,16 @@ class ProtocolSupplementIntake extends Model
 {
     use HasUuids;
 
+    protected static function booted(): void
+    {
+        static::saving(function (self $intake): void {
+            // Check/uncheck, retries, and plan edits must not rewrite a recorded dose.
+            if ($intake->exists) {
+                $intake->dosage = $intake->getRawOriginal('dosage');
+            }
+        });
+    }
+
     protected function casts(): array
     {
         return [

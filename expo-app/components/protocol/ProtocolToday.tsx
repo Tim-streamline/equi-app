@@ -110,6 +110,7 @@ export function ProtocolToday({ protocol, date, horseId, onPhase, SheetComponent
           onPress={() => void toggle(selected).then(saved => { if (saved) setDetailKey(null); })} />
         <Button title="Vraag Shelby" variant="text" onPress={() => { setDetailKey(null); router.push({ pathname: '/nova-chat', params: { horseId, protocolId: protocol.id } }); }} />
       </View> : undefined}>
+      {!!selected?.buildupLabel && <Text className="mb-3 text-[14px] leading-[20px] text-ink-70">{selected.buildupLabel}</Text>}
       {!!selected?.instructions && <View className="mb-6 gap-3"><Text className="font-bold text-[19px] text-ink">Instructies</Text><Text className="text-[16px] leading-[26px] text-ink-70">{selected.instructions}</Text></View>}
       {!!selected?.description && <View className="gap-3"><Text className="font-bold text-[19px] text-ink">Over dit product</Text><Text className="text-[16px] leading-[26px] text-ink-70">{selected.description}</Text></View>}
       {!selected?.instructions && !selected?.description && <Text className="text-[15px] leading-[24px] text-ink-70">Er is voor dit product nog geen toelichting toegevoegd.</Text>}

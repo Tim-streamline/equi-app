@@ -450,11 +450,16 @@ export function useStoreMutations() {
             [next, next ? new Date().toISOString() : null, existing.id],
           );
         } else {
+          const sameDay = await powersync.getOptional<{ dosage: string | null }>(
+            `SELECT dosage FROM protocol_supplement_intakes
+             WHERE protocol_phase_supplement_id = ? AND date = ? ORDER BY id LIMIT 1`,
+            [protocolPhaseSupplementId, date],
+          );
           await powersync.execute(
             `INSERT INTO protocol_supplement_intakes
                (id, protocol_phase_supplement_id, horse_id, date, dosage, administration, done, taken_at)
              VALUES (?, ?, ?, ?, ?, ?, 1, ?)`,
-            [newId(), protocolPhaseSupplementId, horseId, date, dosage, administration, new Date().toISOString()],
+            [newId(), protocolPhaseSupplementId, horseId, date, sameDay ? sameDay.dosage : dosage, administration, new Date().toISOString()],
           );
         }
       },

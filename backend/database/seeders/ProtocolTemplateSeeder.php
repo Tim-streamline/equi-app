@@ -2,18 +2,21 @@
 
 namespace Database\Seeders;
 
+use App\Models\DoseBuildup;
 use App\Models\ProtocolTemplate;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\DB;
+use RuntimeException;
 
 class ProtocolTemplateSeeder extends Seeder
 {
     /**
-     * Admin-managed in Instellingen and followed live by published protocols.
-     * The catalog file only supplies them for products that do not exist yet.
+     * Preserve admin-managed settings when reseeding existing products.
+     * Frequency and links are live; buildup is copied into protocol selections.
+     * The catalog file only supplies these fields for new products.
      */
-    private const CREATE_ONLY_SUPPLEMENT_FIELDS = ['administrations_per_day', 'product_url'];
+    private const CREATE_ONLY_SUPPLEMENT_FIELDS = ['administrations_per_day', 'product_url', 'dose_buildup_id'];
 
     public function run(): void
     {
@@ -42,6 +45,15 @@ class ProtocolTemplateSeeder extends Seeder
                     }
 
                     foreach ($phaseData['supplements'] as $supplementData) {
+                        if (isset($supplementData['dose_buildup'])) {
+                            $definition = $supplementData['dose_buildup'];
+                            $buildup = DoseBuildup::firstOrCreate(['id' => $definition['id']], Arr::except($definition, ['id']));
+                            if (! $buildup->matchesDosingSettings($definition)) {
+                                throw new RuntimeException("Dose buildup {$definition['id']} has conflicting dosing settings. Import cancelled; create a new definition with a new ID for the changed schedule.");
+                            }
+                            $supplementData['dose_buildup_id'] = $buildup->id;
+                        }
+                        unset($supplementData['dose_buildup']);
                         $supplement = $phase->supplements()->firstOrNew(['name' => $supplementData['name']]);
                         $supplement->fill(Arr::except($supplementData, $supplement->exists
                             ? ['weeks', ...self::CREATE_ONLY_SUPPLEMENT_FIELDS]

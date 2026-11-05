@@ -9,7 +9,28 @@
     import { fade } from 'svelte/transition';
     import { untrack } from 'svelte';
 
-    let { protocolTemplates, selectedTemplateId: initialTemplateId = null } = $props();
+    let { protocolTemplates, doseBuildups = [], selectedTemplateId: initialTemplateId = null } = $props();
+
+    const noBuildupId = 'f5907240-5f13-4f87-a032-000000000001';
+    const buildupOptions = $derived(doseBuildups.map((b) => ({ value: b.id, label: b.name })));
+    let buildupModalOpen = $state(false);
+    let editingBuildup = $state(null);
+    const buildupForm = useForm({ name: '', type: 'linear', start_dose_ratio: 0.25, days: 7, schedule: null });
+    function openBuildup(buildup = null, duplicate = false) {
+        editingBuildup = duplicate ? null : buildup;
+        $buildupForm.defaults(buildup ? { name: duplicate ? `${buildup.name} (kopie)` : buildup.name, type: buildup.type, start_dose_ratio: buildup.start_dose_ratio, days: buildup.days, schedule: buildup.schedule?.map((step) => ({...step})) ?? null } : { name: '', type: 'linear', start_dose_ratio: 0.25, days: 7, schedule: null });
+        $buildupForm.reset();
+        $buildupForm.clearErrors();
+        buildupModalOpen = true;
+    }
+    function submitBuildup(event) {
+        event.preventDefault();
+        if ($buildupForm.type === 'linear') $buildupForm.schedule = null;
+        $buildupForm.transform((data) => editingBuildup ? { name: data.name } : data);
+        const options = { preserveScroll: true, onSuccess: () => (buildupModalOpen = false) };
+        if (editingBuildup) $buildupForm.put(`/admin/protocol-settings/dose-buildups/${editingBuildup.id}`, options);
+        else $buildupForm.post('/admin/protocol-settings/dose-buildups', options);
+    }
 
     let selectedTemplateId = $state(untrack(() => initialTemplateId) ?? '');
     let templateModalOpen = $state(false);
@@ -53,6 +74,7 @@
         start_after_previous_phase_weeks: null,
     });
     const supplementForm = useForm({
+        dose_buildup_id: noBuildupId,
         product_url: '',
         administrations_per_day: 1,
         protocol_template_phase_id: '',
@@ -220,6 +242,7 @@
     function createSupplement(phase) {
         editingSupplement = null;
         $supplementForm.defaults({
+            dose_buildup_id: noBuildupId,
             product_url: '',
             administrations_per_day: 1,
             protocol_template_phase_id: phase.id,
@@ -243,6 +266,7 @@
     function editSupplement(supplement) {
         editingSupplement = supplement;
         $supplementForm.defaults({
+            dose_buildup_id: supplement.dose_buildup_id ?? noBuildupId,
             protocol_template_phase_id: supplement.protocol_template_phase_id,
             product_url: supplement.product_url ?? '',
             administrations_per_day: supplement.administrations_per_day ?? 1,
@@ -379,6 +403,17 @@
             </div>
         {/snippet}
     </PageHeader>
+
+    <details class="mb-6 rounded-lg border bg-white p-4">
+        <summary class="cursor-pointer font-semibold">Dosisopbouw beheren</summary>
+        <p class="mt-2 text-sm text-muted-foreground">Opbouw telt geregistreerde dagen per supplement. Meerdere giften op één dag tellen als één dag.</p>
+        <div class="my-3 flex flex-wrap gap-2">
+            {#each doseBuildups as buildup (buildup.id)}
+                <Button variant="outline" onclick={() => openBuildup(buildup)}>{buildup.name}</Button>
+            {/each}
+            <Button onclick={() => openBuildup()}>Dosisopbouw toevoegen</Button>
+        </div>
+    </details>
 
     <div class="min-h-[650px] overflow-hidden rounded-xl border bg-white shadow-sm">
         <div class="flex flex-col gap-3 border-b bg-muted/20 px-5 py-4 sm:flex-row sm:items-end sm:justify-between sm:px-7">
@@ -763,6 +798,9 @@
             <Field label="Giften per dag voor de bestellijst" error={$supplementForm.errors.administrations_per_day} hint="Per gift telt de volledige ingevulde dosering. De bestellijst rekent met 7 dagen per week, los van het minimum per week.">
                 <Input type="number" min="1" max="24" step="1" bind:value={$supplementForm.administrations_per_day} />
             </Field>
+            <Field label="Dosisopbouw" error={$supplementForm.errors.dose_buildup_id} hint="Wordt overgenomen bij het toevoegen aan een protocol. Bestaande protocollen behouden hun eigen instellingen.">
+                <Select bind:value={$supplementForm.dose_buildup_id} options={buildupOptions} />
+            </Field>
             <Field label="Instructie" error={$supplementForm.errors.instructions}>
                 <Textarea bind:value={$supplementForm.instructions} rows="3" placeholder="bijv. Goed door het voer mengen" />
             </Field>
@@ -802,6 +840,55 @@
             <Button type="submit" form="supplement-form" disabled={$supplementForm.processing}>
                 {editingSupplement ? 'Wijzigingen opslaan' : 'Supplement aanmaken'}
             </Button>
+        {/snippet}
+    </Modal>
+
+    <Modal bind:open={buildupModalOpen} title={editingBuildup ? 'Dosisopbouw bekijken en hernoemen' : 'Dosisopbouw toevoegen'} description="Na het opslaan kun je alleen de naam wijzigen. Dupliceer een dosisopbouw om een ander schema te maken. Bestaande protocollen behouden hun opgeslagen opbouw." size="lg">
+        <form id="buildup-form" class="space-y-4" onsubmit={submitBuildup}>
+            <Field label="Naam" error={$buildupForm.errors.name}><Input bind:value={$buildupForm.name} /></Field>
+            {#if editingBuildup}
+                <div class="space-y-2 text-sm">
+                    <p>Type: {editingBuildup.type === 'linear' ? 'Lineair' : 'Per dag ingesteld'}</p>
+                    <p>Startdosis: {editingBuildup.start_dose_ratio * 100}%</p>
+                    <p>Aantal geregistreerde dagen tot de volledige dosis: {editingBuildup.days}</p>
+                    {#if editingBuildup.type === 'custom'}
+                        {#each editingBuildup.schedule ?? [] as step}
+                            <p>Dag {step.day}: {step.dose_ratio * 100}%</p>
+                        {/each}
+                    {/if}
+                </div>
+            {:else}
+            <Field label="Type" error={$buildupForm.errors.type}>
+                <Select bind:value={$buildupForm.type} options={[{value: 'linear', label: 'Lineair'}, {value: 'custom', label: 'Per dag instellen'}]} />
+            </Field>
+            {#if $buildupForm.type === 'linear'}
+                <Field label="Startdosis (%)" error={$buildupForm.errors.start_dose_ratio}>
+                    <Input type="number" min="0.000001" max="100" step="any" value={$buildupForm.start_dose_ratio * 100} oninput={(e) => $buildupForm.start_dose_ratio = Number(e.currentTarget.value) / 100} />
+                </Field>
+                <Field label="Aantal geregistreerde dagen tot de volledige dosis" error={$buildupForm.errors.days} hint="Op de laatste opbouwdag wordt 100% bereikt. Eén dag betekent meteen de volledige dosis.">
+                    <Input type="number" min="1" max="730" step="1" bind:value={$buildupForm.days} />
+                </Field>
+            {:else}
+                <p class="text-sm text-muted-foreground">Stel voor iedere opbouwdag een percentage in. De laatste dag moet 100% zijn.</p>
+                {#each $buildupForm.schedule ?? [] as step, index}
+                    <Field label={`Dag ${index + 1} (%)`} error={$buildupForm.errors[`schedule.${index}.dose_ratio`]}>
+                        <Input type="number" min="0.000001" max="100" step="any" value={step.dose_ratio * 100} oninput={(e) => $buildupForm.schedule = $buildupForm.schedule.map((row, i) => i === index ? {...row, dose_ratio: Number(e.currentTarget.value) / 100} : row)} />
+                    </Field>
+                {/each}
+                <div class="flex gap-2">
+                    <Button type="button" variant="outline" onclick={() => $buildupForm.schedule = [...($buildupForm.schedule ?? []), {day: ($buildupForm.schedule?.length ?? 0) + 1, dose_ratio: 1}]}>Dag toevoegen</Button>
+                    <Button type="button" variant="outline" disabled={!$buildupForm.schedule?.length} onclick={() => $buildupForm.schedule = $buildupForm.schedule.slice(0, -1)}>Laatste dag verwijderen</Button>
+                </div>
+                {#if $buildupForm.errors.schedule}<p class="text-sm text-destructive">{$buildupForm.errors.schedule}</p>{/if}
+            {/if}
+            {/if}
+        </form>
+        {#snippet footer()}
+            {#if editingBuildup}
+                <Button variant="outline" disabled={$buildupForm.processing} onclick={() => openBuildup(editingBuildup, true)}>Dupliceren als nieuw schema</Button>
+            {/if}
+            <Button variant="outline" onclick={() => buildupModalOpen = false}>Annuleren</Button>
+            <Button type="submit" form="buildup-form" disabled={$buildupForm.processing}>Opslaan</Button>
         {/snippet}
     </Modal>
 

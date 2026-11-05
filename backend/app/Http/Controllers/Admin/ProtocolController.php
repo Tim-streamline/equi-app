@@ -254,11 +254,12 @@ class ProtocolController extends Controller
             'voedingAdviezen' => VoedingAdvies::query()->orderBy('title')->get(),
             'managementAdviezen' => ManagementAdvies::query()->orderBy('title')->get(),
             'bewegingAdviezen' => BewegingAdvies::query()->orderBy('title')->get(),
+            'doseBuildups' => \App\Models\DoseBuildup::orderBy('name')->get(),
             'protocolTemplates' => ProtocolTemplate::query()
                 ->with([
                     'phases:id,protocol_template_id,order,name,description,required,start_after_previous_phase_weeks',
                     'phases.weeks:id,protocol_template_phase_id,number',
-                    'phases.supplements:id,protocol_template_phase_id,name,description,instructions,supplement_type,dosis_type,dosis,unit,add_by_default,max_aantal_in_fase,min_aantal_per_week,rust_periode_in_weken',
+                    'phases.supplements:id,dose_buildup_id,protocol_template_phase_id,name,description,instructions,supplement_type,dosis_type,dosis,unit,add_by_default,max_aantal_in_fase,min_aantal_per_week,rust_periode_in_weken',
                     'phases.supplements.weeks:id,number',
                 ])
                 ->orderBy('name')
@@ -477,7 +478,7 @@ class ProtocolController extends Controller
         $nutrition = app(ProtocolNutrition::class);
         $weight = $nutrition->actualWeight($protocol, $nutrition->answers($protocol));
 
-        foreach ($supplements as $supplementData) {
+        foreach ($supplements as $supplementIndex => $supplementData) {
             $isExisting = filled($supplementData['id'] ?? null);
             $selection = $isExisting
                 ? $phase->supplements()->whereKey($supplementData['id'])->firstOrFail()
@@ -491,9 +492,6 @@ class ProtocolController extends Controller
             $attributes = [
                 'protocol_phase_id' => $phase->id,
                 'dosage_mode' => $supplementData['dosage_mode'] ?? 'manual',
-                'dosage' => ($supplementData['dosage_mode'] ?? 'manual') === 'automatic'
-                    ? app(ProtocolDosage::class)->calculate($catalogSupplement ?? $selection, $weight)
-                    : $this->nullableValue($supplementData['dosage'] ?? null),
                 'aantal_per_week' => $supplementData['aantal_per_week'] ?? null,
                 'instructions' => $this->nullableValue($supplementData['instructions'] ?? null),
             ];
@@ -513,6 +511,10 @@ class ProtocolController extends Controller
                     'rust_periode_in_weken' => $catalogSupplement->rust_periode_in_weken,
                 ];
             }
+            $phaseIndex = $phase->order;
+            $attributes = array_replace($attributes, app(\App\Support\ProtocolDoseBuildup::class)->attributes(
+                $catalogSupplement ?? $selection, $supplementData, $weight, "phases.{$phaseIndex}.supplements.{$supplementIndex}.dosage",
+            ));
             $selection->fill($attributes)->save();
             $selectionIds[] = $selection->id;
             $this->syncProtocolSupplementWeeks($selection, $phase, $supplementData['week_numbers']);

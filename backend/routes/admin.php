@@ -233,6 +233,9 @@ Route::middleware('auth:admin')->group(function () {
             Route::delete('fields/{intakeField}', 'destroyField')->name('fields.destroy');
         });
 
+        Route::post('protocol-settings/dose-buildups', [\App\Http\Controllers\Admin\DoseBuildupController::class, 'store'])->name('dose-buildups.store');
+        Route::put('protocol-settings/dose-buildups/{doseBuildup}', [\App\Http\Controllers\Admin\DoseBuildupController::class, 'update'])->name('dose-buildups.update');
+
         Route::controller(ProtocolSettingsController::class)->prefix('protocol-settings')->as('protocol-settings.')->group(function () {
             Route::get('/', 'index')->name('index');
             Route::post('templates', 'storeTemplate')->name('templates.store');

@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Models\DoseBuildup;
 use App\Models\Horse;
 use App\Models\ProtocolTemplate;
 use App\Models\Supplement;
@@ -21,6 +22,61 @@ use Tests\TestCase;
 class ProtocolTemplateSeederTest extends TestCase
 {
     use RefreshDatabase;
+
+    public function test_import_rejects_conflicting_definition_settings_and_rolls_back_catalog_changes(): void
+    {
+        $this->seed(ProtocolTemplateSeeder::class);
+        $exported = app(ProtocolTemplateExport::class)->catalog();
+        $before = $this->catalogRows();
+        $definition = DoseBuildup::findOrFail(DoseBuildup::SEVEN_DAYS_ID)->snapshot();
+        foreach (['type' => 'custom', 'start_dose_ratio' => 0.5, 'days' => 3,
+            'schedule' => [['day' => 1, 'dose_ratio' => 1]]] as $field => $value) {
+            $conflicting = $exported;
+            $conflicting[0]['phases'][0]['name'] = 'Must roll back';
+            $conflicting[0]['phases'][0]['supplements'][0]['dose_buildup'] = [...$definition, $field => $value];
+            try {
+                (new ProtocolTemplateSeeder)->import($conflicting);
+                $this->fail('Expected the import to reject conflicting dosing settings.');
+            } catch (RuntimeException $exception) {
+                $this->assertStringContainsString($definition['id'], $exception->getMessage());
+                $this->assertStringContainsString('conflicting dosing settings', $exception->getMessage());
+            }
+            $this->assertSame($before, $this->catalogRows());
+            $this->assertSame($definition, DoseBuildup::findOrFail($definition['id'])->snapshot());
+        }
+    }
+
+    public function test_import_reuses_matching_definitions_with_different_names_without_duplicates(): void
+    {
+        $this->seed(ProtocolTemplateSeeder::class);
+        $exported = app(ProtocolTemplateExport::class)->catalog();
+        $buildup = DoseBuildup::findOrFail(DoseBuildup::NONE_ID);
+        $buildup->update(['name' => 'Locally renamed']);
+        (new ProtocolTemplateSeeder)->import($exported);
+        (new ProtocolTemplateSeeder)->import($exported);
+        $this->assertSame('Locally renamed', $buildup->fresh()->name);
+        $this->assertSame(3, DoseBuildup::count());
+    }
+
+    public function test_export_and_reseed_preserve_custom_buildup_without_overwriting_admin_changes(): void
+    {
+        $this->seed(ProtocolTemplateSeeder::class);
+        $buildup = DoseBuildup::create(['name' => 'Custom export', 'type' => 'custom', 'days' => 2, 'start_dose_ratio' => 0.3,
+            'schedule' => [['day' => 1, 'dose_ratio' => 0.3], ['day' => 2, 'dose_ratio' => 1]]]);
+        $supplement = Supplement::firstOrFail();
+        $supplement->update(['dose_buildup_id' => $buildup->id]);
+        $name = $supplement->name;
+        $phaseId = $supplement->protocol_template_phase_id;
+        $exported = app(ProtocolTemplateExport::class)->catalog();
+        $supplement->delete();
+        $buildup->delete();
+        (new ProtocolTemplateSeeder)->import($exported);
+        $restored = Supplement::where('protocol_template_phase_id', $phaseId)->where('name', $name)->firstOrFail();
+        $this->assertSame($buildup->snapshot(), $restored->doseBuildup->snapshot());
+        $restored->update(['dose_buildup_id' => DoseBuildup::NONE_ID]);
+        (new ProtocolTemplateSeeder)->import($exported);
+        $this->assertSame(DoseBuildup::NONE_ID, $restored->fresh()->dose_buildup_id);
+    }
 
     public function test_it_seeds_the_complete_saved_catalog_and_can_be_rerun_without_duplicates(): void
     {

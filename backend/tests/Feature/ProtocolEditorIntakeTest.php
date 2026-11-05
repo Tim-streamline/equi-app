@@ -64,6 +64,60 @@ class ProtocolEditorIntakeTest extends TestCase
         $this->actingAs($admin, 'admin');
     }
 
+    public function test_buildup_is_copied_on_save_and_survives_template_changes_and_later_saves(): void
+    {
+        $catalog = \App\Models\Supplement::findOrFail($this->payload['phases'][0]['supplements'][0]['supplement_id']);
+        $catalog->update(['dose_buildup_id' => \App\Models\DoseBuildup::SEVEN_DAYS_ID]);
+        $this->post('/admin/protocols', $this->payload)->assertSessionHasNoErrors();
+        $protocol = $this->intake->protocol->fresh();
+        $phase = $protocol->phases()->firstOrFail();
+        $selection = $phase->supplements()->where('supplement_id', $catalog->id)->firstOrFail();
+        $this->assertSame(0.25, $selection->dose_buildup['start_dose_ratio']);
+        $this->assertSame(90.0, $selection->full_dose_amount);
+        $this->assertSame('g', $selection->full_dose_unit);
+        $this->assertSame('90 g', $selection->dosage);
+        $original = $selection->dose_buildup;
+        $replacement = $catalog->doseBuildup->replicate();
+        $replacement->fill(['name' => 'Revised buildup', 'start_dose_ratio' => 0.5, 'days' => 3])->save();
+        $catalog->update(['dose_buildup_id' => $replacement->id]);
+        $payload = $this->payload;
+        $payload['phases'][0]['id'] = $phase->id;
+        foreach ($payload['phases'][0]['supplements'] as &$row) {
+            $saved = $phase->supplements()->where('supplement_id', $row['supplement_id'])->firstOrFail();
+            $row['id'] = $saved->id;
+            $row['dose_buildup_id'] = $saved->dose_buildup['id'];
+        }
+        unset($row);
+        $this->put('/admin/protocols/'.$protocol->id, $payload)->assertSessionHasNoErrors();
+        $this->assertSame($original, $selection->fresh()->dose_buildup);
+        $preview = $this->postJson('/admin/protocols/'.$protocol->id.'/preview', $payload)->assertOk()->json('protocol');
+        $item = collect($preview['today']['items'])->firstWhere('id', $selection->id);
+        $this->assertSame('25 g', $item['dosage']);
+        $this->assertStringContainsString('7 geregistreerde dagen', $item['buildupLabel']);
+    }
+
+    public function test_buildup_requires_structured_manual_dose_but_preserves_legacy_text_without_buildup(): void
+    {
+        $payload = $this->payload;
+        $payload['phases'][0]['supplements'][0] = array_replace($payload['phases'][0]['supplements'][0], [
+            'dosage_mode' => 'manual', 'dosage' => 'Een halve schep', 'dose_buildup_id' => \App\Models\DoseBuildup::SEVEN_DAYS_ID,
+        ]);
+        $this->postJson('/admin/protocols', $payload)->assertUnprocessable()->assertJsonValidationErrors('phases.0.supplements.0.dosage');
+        $payload['phases'][0]['supplements'][0]['full_dose_amount'] = 40;
+        $payload['phases'][0]['supplements'][0]['full_dose_unit'] = 'g';
+        $payload['phases'][0]['supplements'][1]['dosage_mode'] = 'manual';
+        $payload['phases'][0]['supplements'][1]['dosage'] = 'Een halve schep';
+        $this->post('/admin/protocols', $payload)->assertSessionHasNoErrors();
+        $items = $this->intake->protocol->fresh()->phases()->firstOrFail()->supplements->keyBy('supplement_id');
+        $manual = $items[$payload['phases'][0]['supplements'][0]['supplement_id']];
+        $this->assertSame(40.0, $manual->full_dose_amount);
+        $this->assertSame('40 g', $manual->dosage);
+        $this->assertSame('10 g', app(\App\Support\ProtocolDoseBuildup::class)->dose($manual, 0));
+        $legacy = $items[$payload['phases'][0]['supplements'][1]['supplement_id']];
+        $this->assertSame('Een halve schep', $legacy->dosage);
+        $this->assertNull($legacy->full_dose_amount);
+    }
+
     public function test_unsubmitted_intake_blocks_protocol_save_preview_and_activation(): void
     {
         $this->intake->update(['submitted_at' => null, 'completed_at' => null, 'intake_status' => 'draft']);

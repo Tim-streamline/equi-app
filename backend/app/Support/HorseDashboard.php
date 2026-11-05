@@ -139,9 +139,11 @@ class HorseDashboard
     public function protocol(Protocol $protocol, CarbonImmutable $now, ?string $month = null, ?array $answers = null, bool $preview = false): array
     {
         $answers ??= $this->nutrition->answers($protocol);
-        $protocol->loadMissing(['phases.weeks', 'phases.supplements.weeks', 'phases.supplements.supplement', 'analysis.advice', 'voedingAdviezen', 'managementAdviezen', 'bewegingAdviezen']);
+        $protocol->loadMissing(['phases.weeks', 'phases.supplements.weeks', 'phases.supplements.intakes', 'phases.supplements.supplement', 'analysis.advice', 'voedingAdviezen', 'managementAdviezen', 'bewegingAdviezen']);
         ['start' => $start, 'day' => $day, 'week' => $week, 'totalWeeks' => $totalWeeks, 'running' => $running, 'progressPercent' => $progressPercent, 'statusLabel' => $statusLabel] = $this->progress($protocol, $now);
-        $phases = $protocol->phases->map(function ($phase) use ($protocol, $now, $preview) {
+        $buildup = app(ProtocolDoseBuildup::class);
+        $selections = $protocol->phases->flatMap->supplements->keyBy('id');
+        $phases = $protocol->phases->map(function ($phase) use ($protocol, $now, $preview, $buildup) {
             $availability = app(ProtocolPhaseAvailability::class)->forPhase($protocol, $phase, $now);
             $weeks = $phase->weeks->pluck('protocol_week_number', 'id');
 
@@ -152,6 +154,7 @@ class HorseDashboard
                 'supplements' => ($preview || $availability['accessible']) ? $phase->supplements->map(fn ($s) => [
                     'id' => $s->id, 'name' => $s->name, 'dosage' => $s->dosage,
                     'description' => $s->description, 'instructions' => $s->instructions,
+                    'buildupLabel' => $buildup->label($s->dose_buildup),
                     'frequencyLabel' => $s->administrationsPerDay().'× per dag',
                     'administrationsPerDay' => $s->administrationsPerDay(), 'phaseId' => $phase->id,
                     'weekNumbers' => $s->weeks->map(fn ($link) => (int) $weeks->get($link->protocol_phase_week_id))->filter()->values()->all(),
@@ -167,14 +170,15 @@ class HorseDashboard
         }
         $historicalDays = $preview ? collect() : $history->days($protocol, $monthDate->format('Y-m'));
         $intakes = $preview ? collect() : $protocol->horse->supplementIntakes()->whereBetween('date', [min($monthDate->startOfMonth()->toDateString(), $now->toDateString()), max($monthDate->endOfMonth()->toDateString(), $now->toDateString())])->get()->groupBy(fn ($i) => $i->date->toDateString());
-        $rowsFor = function (int $number, string $date) use ($allSupplements, $intakes) {
+        $rowsFor = function (int $number, string $date) use ($allSupplements, $intakes, $selections, $buildup) {
             $records = $intakes->get($date, collect())->keyBy(fn ($record) => $record->protocol_phase_supplement_id.':'.($record->administration ?? 1));
 
             return $allSupplements->filter(fn ($s) => in_array($number, $s['weekNumbers'], true))
-                ->flatMap(fn ($s) => collect(range(1, $s['administrationsPerDay']))->map(fn ($administration) => $s + [
+                ->flatMap(fn ($s) => collect(range(1, $s['administrationsPerDay']))->map(fn ($administration) => array_replace($s, [
+                    'dosage' => $records->get($s['id'].':'.$administration)?->dosage ?? $buildup->forDay($selections->get($s['id']), $date),
                     'administration' => $administration,
                     'done' => (bool) ($records->get($s['id'].':'.$administration)?->done ?? false),
-                ]))->values();
+                ])))->values();
         };
         $today = $running ? $rowsFor($week, $now->toDateString()) : collect();
         $done = $today->where('done', true)->count();

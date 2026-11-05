@@ -38,6 +38,7 @@
         horses,
         therapists,
         protocolTemplates,
+        doseBuildups = [],
         voedingAdviezen,
         managementAdviezen,
         bewegingAdviezen,
@@ -47,6 +48,10 @@
         weeklyUpdates = [],
         libraryItems = [],
     } = $props();
+
+    const noBuildupId = 'f5907240-5f13-4f87-a032-000000000001';
+    const buildupOptions = $derived(doseBuildups.map(b => ({value: b.id, label: b.name})));
+    const fullDoseUnits = ['g', 'ml', 'theelepel', 'eetlepel', 'druppels', 'pillen', 'capsules'].map(unit => ({value: unit, label: unit}));
 
     const initialProtocol = untrack(() => protocol);
     const initialProtocolTemplates = untrack(() => protocolTemplates);
@@ -75,6 +80,7 @@
                 weeks: (phase.weeks ?? []).map((week) => ({ id: week.id, number: week.number })),
                 supplements: (phase.supplements ?? []).map((supplement) => ({
                     id: supplement.id,
+                    dose_buildup_id: supplement.dose_buildup_id ?? noBuildupId,
                     name: supplement.name,
                     description: supplement.description,
                     instructions: supplement.instructions,
@@ -96,6 +102,9 @@
         return {
             id: null,
             supplement_id: supplement.id,
+            dose_buildup_id: supplement.dose_buildup_id ?? noBuildupId,
+            full_dose_amount: null,
+            full_dose_unit: null,
             name: supplement.name,
             description: supplement.description,
             supplement_type: supplement.supplement_type,
@@ -164,6 +173,10 @@
 
                 return {
                     id: selection.id ?? null,
+                    dose_buildup_id: selection.dose_buildup?.id ?? selection.dose_buildup_id ?? noBuildupId,
+                    dose_buildup: selection.dose_buildup,
+                    full_dose_amount: selection.full_dose_amount ?? null,
+                    full_dose_unit: selection.full_dose_unit ?? null,
                     supplement_id: selection.supplement_id ?? null,
                     name: selection.name ?? selection.supplement?.name ?? '',
                     description: selection.description ?? selection.supplement?.description ?? '',
@@ -477,6 +490,36 @@
             ...phase, supplements: phase.supplements.map((selection, selectionIndex) => selectionIndex !== index ? selection : {
                 ...selection, dosage_mode: automatic ? 'automatic' : 'manual',
                 dosage: automatic ? templateDosage(selection, actualWeight) : value,
+                full_dose_amount: null, full_dose_unit: null,
+            }),
+        });
+    }
+
+    function buildupOptionsFor(selection) {
+        return buildupOptions.map(option => option.value === selection.dose_buildup?.id
+            ? {...option, label: selection.dose_buildup.name} : option);
+    }
+
+    function buildupDescription(selection) {
+        const settings = selection.dose_buildup?.id === selection.dose_buildup_id
+            ? selection.dose_buildup : doseBuildups.find(item => item.id === selection.dose_buildup_id);
+        if (!settings || settings.id === noBuildupId) return 'Vanaf de eerste gift de volledige dosis.';
+        return settings.type === 'custom'
+            ? `${settings.days} opbouwdagen met een percentage per dag. Alleen geregistreerde dagen tellen mee.`
+            : `Van ${Number((settings.start_dose_ratio * 100).toFixed(6))}% naar 100% in ${settings.days} geregistreerde dagen.`;
+    }
+
+    function changeBuildup(index, id) {
+        $form.phases = $form.phases.map((phase, phaseIndex) => phaseIndex !== activePhaseIndex ? phase : {
+            ...phase, supplements: phase.supplements.map((selection, i) => i !== index ? selection : {...selection, dose_buildup_id: id}),
+        });
+    }
+
+    function changeFullDose(index, amount, unit) {
+        $form.phases = $form.phases.map((phase, phaseIndex) => phaseIndex !== activePhaseIndex ? phase : {
+            ...phase, supplements: phase.supplements.map((selection, i) => i !== index ? selection : {
+                ...selection, dosage_mode: 'manual', full_dose_amount: amount === '' ? null : amount,
+                full_dose_unit: unit, dosage: amount === '' ? '' : `${amount} ${unit}`,
             }),
         });
     }
@@ -960,9 +1003,21 @@
                                                     {#if selected}
                                                         <div class="ml-[54px] mt-4 grid gap-3 md:grid-cols-2">
                                                             <div>
+                                                                <Field label="Dosisopbouw" error={errorFor(`phases.${activePhaseIndex}.supplements.${selectionIndex}.dose_buildup_id`)}>
+                                                                    <Select value={selection.dose_buildup_id} onchange={(event) => changeBuildup(selectionIndex, event.currentTarget.value)} options={buildupOptionsFor(selection)} />
+                                                                    <p class="mt-1 text-xs text-muted-foreground">{buildupDescription(selection)}</p>
+                                                                </Field>
                                                                 <Field label="Dosering per gift voor dit paard" error={errorFor(`phases.${activePhaseIndex}.supplements.${selectionIndex}.dosage`)}>
-                                                                    <Input value={selection.dosage} oninput={(e) => changeDosage(selectionIndex, e.currentTarget.value)} placeholder="Bijv. 20 g" />
-                                                                    <p class="mt-1 text-xs text-[#1B2A2A]/60">Vul één hoeveelheid met eenheid in, zoals 20 g of 10 ml. De bestellijst berekent het totaal voor alle gekozen weken.</p>
+                                                                    {#if selection.dose_buildup_id !== noBuildupId}
+                                                                        <div class="grid grid-cols-2 gap-2">
+                                                                            <Input aria-label="Volledige dosis" type="number" min="0.000001" step="any" value={selection.dosage_mode === 'automatic' ? selection.dosage.split(' ')[0] : selection.full_dose_amount ?? ''} oninput={(e) => changeFullDose(selectionIndex, e.currentTarget.value, selection.full_dose_unit ?? selection.unit ?? 'g')} />
+                                                                            <Select value={selection.full_dose_unit ?? selection.unit ?? 'g'} onchange={(event) => changeFullDose(selectionIndex, selection.dosage_mode === 'automatic' ? selection.dosage.split(' ')[0] : selection.full_dose_amount ?? '', event.currentTarget.value)} options={fullDoseUnits} />
+                                                                        </div>
+                                                                        {#if errorFor(`phases.${activePhaseIndex}.supplements.${selectionIndex}.full_dose_amount`)}<p class="text-xs text-destructive">{errorFor(`phases.${activePhaseIndex}.supplements.${selectionIndex}.full_dose_amount`)}</p>{/if}
+                                                                    {:else}
+                                                                        <Input value={selection.dosage} oninput={(e) => changeDosage(selectionIndex, e.currentTarget.value)} placeholder="Bijv. 20 g" />
+                                                                    {/if}
+                                                                    <p class="mt-1 text-xs text-[#1B2A2A]/60">De volledige dosis per gift, vóór opbouw. De bestellijst rekent met deze volledige dosis voor alle gekozen weken.</p>
                                                                     {#if selection.dosage_mode === 'manual'}<p class="mt-1 text-xs text-[#A06A1B]">Handmatig aangepast — blijft behouden bij een gewichtsverandering.</p><button type="button" class="mt-1 text-xs underline" onclick={() => changeDosage(selectionIndex, '', true)}>Automatische dosering herstellen</button>{/if}
                                                                 </Field>
                                                                 {#if displaySupplement.dosis_type === 'per_kg' || displaySupplement.dosis_type === 'per_600_kg'}

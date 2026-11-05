@@ -26,6 +26,9 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
     'rust_periode_in_weken',
     'dosage',
     'dosage_mode',
+    'dose_buildup',
+    'full_dose_amount',
+    'full_dose_unit',
     'aantal_per_week',
     'instructions',
     'administrations_per_day',
@@ -37,6 +40,8 @@ class ProtocolPhaseSupplement extends Model
     protected function casts(): array
     {
         return [
+            'dose_buildup' => 'array',
+            'full_dose_amount' => 'float',
             'administrations_per_day' => 'integer',
             'supplement_type' => SupplementType::class,
             'dosis_type' => SupplementDoseType::class,

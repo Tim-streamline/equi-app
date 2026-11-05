@@ -307,9 +307,10 @@ function Supplement({ item }: { item: DashboardSupplement }) {
           {item.name}
         </Text>
         <Text className="max-w-[40%] font-bold text-[13px] text-teal-600">
-          {item.dosage ?? "Dosering niet ingesteld"}
+          {item.buildupLabel ? `Volledige dosis: ${item.dosage}` : item.dosage ?? "Dosering niet ingesteld"}
         </Text>
       </View>
+      {!!item.buildupLabel && <Text className="mt-2 text-[12px] leading-[18px] text-ink-70">{item.buildupLabel}</Text>}
       {!!item.description && (
         <Text className="mt-1 text-[12px] leading-[18px] text-ink-70">
           {item.description}
@@ -429,7 +430,7 @@ function Today({
                   <Text className="flex-1 font-semi text-[13px] text-ink">
                     {item.name}
                   </Text>
-                  <Text className="text-[13px] text-ink-70">{item.dosage}</Text>
+                  <Text className="text-[13px] text-ink-70">{item.buildupLabel ? `Volledige dosis: ${item.dosage} · met opbouw` : item.dosage}</Text>
                 </View>
               ))}
             </View>

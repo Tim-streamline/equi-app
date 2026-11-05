@@ -17,7 +17,7 @@ class ProtocolTemplateExport
     public function catalog(): array
     {
         $templates = ProtocolTemplate::query()
-            ->with(['phases.weeks', 'phases.supplements.weeks'])
+            ->with(['phases.weeks', 'phases.supplements.weeks', 'phases.supplements.doseBuildup'])
             ->orderBy('name')
             ->get();
 
@@ -50,6 +50,7 @@ class ProtocolTemplateExport
                 'weeks' => $phase->weeks->pluck('number')->all(),
                 'supplements' => $phase->supplements->map(fn ($supplement) => [
                     ...Arr::only($supplement->getRawOriginal(), self::SUPPLEMENT_FIELDS),
+                    'dose_buildup' => $supplement->doseBuildup->snapshot(),
                     'weeks' => $supplement->weeks->pluck('number')->all(),
                 ])->all(),
             ])->all(),

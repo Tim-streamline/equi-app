@@ -25,6 +25,7 @@ class ProtocolSettingsController extends Controller
     public function index(Request $request): Response
     {
         return Inertia::render('ProtocolSettings/Index', [
+            'doseBuildups' => \App\Models\DoseBuildup::orderBy('name')->get(),
             'selectedTemplateId' => $request->query('template'),
             'protocolTemplates' => ProtocolTemplate::query()
                 ->with([
@@ -404,6 +405,7 @@ class ProtocolSettingsController extends Controller
             'description' => ['nullable', 'string', 'max:10000'],
             'instructions' => ['nullable', 'string', 'max:10000'],
             'product_url' => ['nullable', 'url:http,https', 'max:2048'],
+            'dose_buildup_id' => ['sometimes', 'required', 'uuid', 'exists:dose_buildups,id'],
             'administrations_per_day' => ['sometimes', 'integer', 'between:1,24'],
             'supplement_type' => ['required', Rule::enum(SupplementType::class)],
             'dosis_type' => ['nullable', 'required_with:dosis,unit', Rule::enum(SupplementDoseType::class)],
@@ -414,6 +416,12 @@ class ProtocolSettingsController extends Controller
             'min_aantal_per_week' => ['sometimes', 'integer', 'min:0'],
             'rust_periode_in_weken' => ['sometimes', 'integer', 'min:0'],
         ]);
+
+        $buildupId = $data['dose_buildup_id'] ?? $request->route('supplement')?->dose_buildup_id ?? \App\Models\DoseBuildup::NONE_ID;
+        $settings = \App\Models\DoseBuildup::findOrFail($buildupId)->snapshot();
+        if (app(\App\Support\ProtocolDoseBuildup::class)->enabled($settings) && (! isset($data['dosis'], $data['dosis_type'], $data['unit']))) {
+            throw \Illuminate\Validation\ValidationException::withMessages(['dosis' => 'Vul een numerieke dosis, dosistype en eenheid in voor dosisopbouw.']);
+        }
 
         if ($creating) {
             $data += [

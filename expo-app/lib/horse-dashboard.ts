@@ -12,6 +12,7 @@ export type LibraryRecommendation = {
   phaseContext?: string;
 };
 export type DashboardSupplement = {
+  buildupLabel?: string | null;
   administration?: number;
   administrationsPerDay?: number;
   phaseId?: string;

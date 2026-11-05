@@ -12,15 +12,21 @@ export function administrationLabel(item: DashboardSupplement): string {
 }
 
 export function todayGroups(items: DashboardSupplement[], records: {
-  protocolPhaseSupplementId: string; administration?: number | null; done?: boolean | number;
+  protocolPhaseSupplementId: string; administration?: number | null; done?: boolean | number; dosage?: string | null;
 }[]) {
   const local = new Map(records.map(row => [`${row.protocolPhaseSupplementId}:${row.administration ?? 1}`, row]));
+  const dailyDosages = new Map<string, string | null>();
+  for (const record of records) {
+    if (record.dosage !== undefined && !dailyDosages.has(record.protocolPhaseSupplementId)) {
+      dailyDosages.set(record.protocolPhaseSupplementId, record.dosage);
+    }
+  }
   const groups = new Map<string, DashboardSupplement[]>();
   for (const item of items) {
     const record = local.get(administrationKey(item));
     const label = administrationLabel(item);
     const rows = groups.get(label) ?? [];
-    rows.push({ ...item, done: record ? !!record.done : !!item.done });
+    rows.push({ ...item, dosage: record?.dosage !== undefined ? record.dosage : dailyDosages.has(item.id) ? dailyDosages.get(item.id)! : item.dosage, done: record ? !!record.done : !!item.done });
     groups.set(label, rows);
   }
   const rank = (label: string) => ['Ochtend', 'Middag', 'Avond'].includes(label) ? ['Ochtend', 'Middag', 'Avond'].indexOf(label) : 3;

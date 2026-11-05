@@ -14,6 +14,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 #[Fillable([
     'protocol_template_phase_id',
+    'dose_buildup_id',
     'name',
     'description',
     'instructions',
@@ -45,6 +46,11 @@ class Supplement extends Model
             'min_aantal_per_week' => 'integer',
             'rust_periode_in_weken' => 'integer',
         ];
+    }
+
+    public function doseBuildup(): BelongsTo
+    {
+        return $this->belongsTo(DoseBuildup::class);
     }
 
     public function phase(): BelongsTo

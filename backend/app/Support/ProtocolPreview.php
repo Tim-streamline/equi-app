@@ -63,6 +63,9 @@ class ProtocolPreview
                 $item->setRelation('supplement', $source instanceof \App\Models\Supplement ? $source : $source->supplement);
                 $item->dosage = ($selection['dosage_mode'] ?? 'manual') === 'automatic'
                     ? app(ProtocolDosage::class)->calculate($item, $weight) : ($selection['dosage'] ?? null);
+                $item->fill(app(ProtocolDoseBuildup::class)->attributes($source, $selection, $weight));
+                // Preview uses actual recorded progress only for existing selections.
+                $item->setRelation('intakes', $source instanceof ProtocolPhaseSupplement ? $source->intakes : new Collection);
                 $item->instructions = $selection['instructions'] ?? null;
                 $item->aantal_per_week = $selection['aantal_per_week'] ?? null;
                 $item->setRelation('weeks', new Collection($weeks->whereIn('number', $selection['week_numbers'])->map(
