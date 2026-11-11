@@ -153,7 +153,7 @@ export type DashboardProtocol = {
     water: { types: string[]; needsAnalysis: boolean; advice?: string };
   };
   management: { id: string; title: string; items: DashboardAdvice[] }[];
-  movement: { id: string; title: string; description?: string }[];
+  movement: (Omit<DashboardAdvice, "action"> & { action?: DashboardAdvice["action"] })[];
   analysis: {
     summary: string;
     priorities: { id: string; title: string; body: string }[];

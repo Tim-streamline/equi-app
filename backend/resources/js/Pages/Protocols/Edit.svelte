@@ -232,6 +232,8 @@
             weekly_update_day: initialProtocol?.customer_settings?.weekly_update_day ?? 7,
             feed_overrides: initialProtocol?.customer_settings?.feed_overrides ?? [],
             management: initialProtocol?.customer_settings?.management ?? [],
+            movement: initialProtocol?.customer_settings?.movement ?? [],
+            nutrition_advice: initialProtocol?.customer_settings?.nutrition_advice ?? [],
         },
         analysis: {
             cause: initialProtocol?.analysis?.cause ?? '',
@@ -259,16 +261,27 @@
         const current = rows.find((row) => row.id === feed.id) ?? { id: feed.id, status: feed.status, note: '' };
         $form.customer_settings.feed_overrides = [...rows.filter((row) => row.id !== feed.id), { ...current, [key]: value }];
     }
-    function managementSetting(advice) {
+    function adviceSetting(advice) {
+        if (activeSection === 'voeding') {
+            return $form.customer_settings.nutrition_advice.find((row) => row.id === advice.id) ?? {
+                id: advice.id, instruction: advice.description,
+            };
+        }
+        if (activeSection === 'beweging') {
+            return $form.customer_settings.movement.find((row) => row.id === advice.id) ?? {
+                id: advice.id, action: 'do', instruction: advice.description, note: '', frequency: '', url: '', cta_label: '',
+            };
+        }
         return $form.customer_settings.management.find((row) => row.id === advice.id) ?? {
             id: advice.id,
             category: /mestonderzoek|bloed|urine|onderzoek|monitor/i.test(advice.title) ? 'monitoring' : /hoef|gebit|tand|behandel|verzorg/i.test(advice.title) ? 'care' : 'environment',
             action: 'do', instruction: advice.description, note: '', frequency: '', url: '', cta_label: '',
         };
     }
-    function updateManagement(advice, key, value) {
-        const rows = $form.customer_settings.management;
-        $form.customer_settings.management = [...rows.filter((row) => row.id !== advice.id), { ...managementSetting(advice), [key]: value }];
+    function updateAdvice(advice, key, value) {
+        const group = activeSection === 'voeding' ? 'nutrition_advice' : activeSection === 'beweging' ? 'movement' : 'management';
+        const rows = $form.customer_settings[group];
+        $form.customer_settings[group] = [...rows.filter((row) => row.id !== advice.id), { ...adviceSetting(advice), [key]: value }];
     }
 
     let workingTemplate = $state(initialTemplate);
@@ -1136,15 +1149,24 @@
                                             <Check class="size-3.5" />
                                         </span>
                                     </label>
-                                    {#if selected && activeSection === 'management'}
+                                    {#if selected && activeSection === 'voeding'}
+                                        <div class="bg-[#FBF8F3] px-7 py-4">
+                                            <Field label="Instructie"><Textarea value={adviceSetting(advice).instruction} oninput={(e) => updateAdvice(advice, 'instruction', e.currentTarget.value)} /></Field>
+                                        </div>
+                                    {/if}
+                                    {#if selected && ['management', 'beweging'].includes(activeSection)}
                                         <div class="grid gap-3 bg-[#FBF8F3] px-7 py-4 md:grid-cols-2">
-                                            <Field label="Categorie"><select class="w-full rounded border p-2" value={managementSetting(advice).category} onchange={(e) => updateManagement(advice, 'category', e.currentTarget.value)}><option value="environment">Leefomgeving & weide</option><option value="care">Lichamelijke zorg</option><option value="monitoring">Onderzoek</option></select></Field>
-                                            <Field label="Actie"><select class="w-full rounded border p-2" value={managementSetting(advice).action} onchange={(e) => updateManagement(advice, 'action', e.currentTarget.value)}><option value="do">Aanbevolen</option><option value="avoid">Vermijden / stoppen</option></select></Field>
-                                            <Field label="Instructie"><Textarea value={managementSetting(advice).instruction} oninput={(e) => updateManagement(advice, 'instruction', e.currentTarget.value)} /></Field>
-                                            <Field label="Persoonlijke toelichting"><Textarea value={managementSetting(advice).note} oninput={(e) => updateManagement(advice, 'note', e.currentTarget.value)} /></Field>
-                                            <Field label="Frequentie"><Input value={managementSetting(advice).frequency} oninput={(e) => updateManagement(advice, 'frequency', e.currentTarget.value)} /></Field>
-                                            <Field label="Link (https://)"><Input value={managementSetting(advice).url} oninput={(e) => updateManagement(advice, 'url', e.currentTarget.value)} /></Field>
-                                            <Field label="Tekst bij link"><Input value={managementSetting(advice).cta_label} oninput={(e) => updateManagement(advice, 'cta_label', e.currentTarget.value)} /></Field>
+                                            {#if activeSection === 'management'}
+                                                <Field label="Categorie"><select class="w-full rounded border p-2" value={adviceSetting(advice).category} onchange={(e) => updateAdvice(advice, 'category', e.currentTarget.value)}><option value="environment">Leefomgeving & weide</option><option value="care">Lichamelijke zorg</option><option value="monitoring">Onderzoek</option></select></Field>
+                                            {:else}
+                                                <Field label="Categorie"><Input value="Beweging & belasting" readonly /></Field>
+                                            {/if}
+                                            <Field label="Actie"><select class="w-full rounded border p-2" value={adviceSetting(advice).action} onchange={(e) => updateAdvice(advice, 'action', e.currentTarget.value)}><option value="do">Aanbevolen</option><option value="avoid">Vermijden / stoppen</option></select></Field>
+                                            <Field label="Instructie"><Textarea value={adviceSetting(advice).instruction} oninput={(e) => updateAdvice(advice, 'instruction', e.currentTarget.value)} /></Field>
+                                            <Field label="Persoonlijke toelichting"><Textarea value={adviceSetting(advice).note} oninput={(e) => updateAdvice(advice, 'note', e.currentTarget.value)} /></Field>
+                                            <Field label="Frequentie"><Input value={adviceSetting(advice).frequency} oninput={(e) => updateAdvice(advice, 'frequency', e.currentTarget.value)} /></Field>
+                                            <Field label="Link (https://)"><Input value={adviceSetting(advice).url} oninput={(e) => updateAdvice(advice, 'url', e.currentTarget.value)} /></Field>
+                                            <Field label="Tekst bij link"><Input value={adviceSetting(advice).cta_label} oninput={(e) => updateAdvice(advice, 'cta_label', e.currentTarget.value)} /></Field>
                                         </div>
                                     {/if}
                                 {:else}

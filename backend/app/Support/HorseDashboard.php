@@ -234,9 +234,9 @@ class HorseDashboard
             'orderItems' => app(ProtocolOrderList::class)->forProtocol($protocol),
             'orderDiscount' => ProtocolOrderList::DISCOUNT,
             'calendar' => ['month' => $monthDate->format('Y-m'), 'label' => $monthDate->locale('nl')->translatedFormat('F Y'), 'previousMonth' => $monthDate->subMonth()->format('Y-m'), 'nextMonth' => $monthDate->addMonth()->format('Y-m'), 'cells' => $cells],
-            'nutrition' => $this->nutrition->forProtocol($protocol, $answers) + ['advice' => $protocol->voedingAdviezen->map(fn ($a) => ['id' => $a->id, 'title' => $a->title, 'description' => $a->description])->values()->all()],
+            'nutrition' => $this->nutrition->forProtocol($protocol, $answers) + ['advice' => $this->nutritionAdvice($protocol)],
             'management' => $this->management($protocol),
-            'movement' => $protocol->bewegingAdviezen->map(fn ($a) => ['id' => $a->id, 'title' => $a->title, 'description' => $a->description])->all(),
+            'movement' => $this->movement($protocol),
             'analysis' => filled($protocol->analysis?->summary) ? [
                 'summary' => $protocol->analysis->summary,
                 'priorities' => collect($protocol->analysis->focus_points ?? [])->take(4)
@@ -262,6 +262,31 @@ class HorseDashboard
         }
 
         return $links;
+    }
+
+    private function nutritionAdvice(Protocol $protocol): array
+    {
+        $overrides = collect($protocol->customer_settings['nutrition_advice'] ?? [])->keyBy('id');
+
+        return $protocol->voedingAdviezen->map(fn ($advice) => [
+            'id' => $advice->id, 'title' => $advice->title,
+            'description' => $overrides->get($advice->voeding_advies_id)['instruction'] ?? $advice->description,
+        ])->values()->all();
+    }
+
+    private function movement(Protocol $protocol): array
+    {
+        $overrides = collect($protocol->customer_settings['movement'] ?? [])->keyBy('id');
+
+        return $protocol->bewegingAdviezen->map(function ($advice) use ($overrides) {
+            $settings = $overrides->get($advice->beweging_advies_id, []);
+
+            return ['id' => $advice->id, 'title' => $advice->title,
+                'description' => $settings['instruction'] ?? $advice->description,
+                'action' => $settings['action'] ?? 'do', 'note' => $settings['note'] ?? null,
+                'frequency' => $settings['frequency'] ?? null, 'url' => $settings['url'] ?? null,
+                'ctaLabel' => $settings['cta_label'] ?? null];
+        })->all();
     }
 
     private function management(Protocol $protocol): array

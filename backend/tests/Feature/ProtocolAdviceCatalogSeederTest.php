@@ -21,6 +21,20 @@ class ProtocolAdviceCatalogSeederTest extends TestCase
 {
     use RefreshDatabase;
 
+    public function test_additional_advice_is_idempotent_and_preserves_existing_edits(): void
+    {
+        $advice = ManagementAdvies::where('title', 'Wateropname controleren')->sole();
+        $advice->update(['title' => ' WATEROPNAME CONTROLEREN ', 'description' => 'Eigen bibliotheektekst']);
+        $before = [VoedingAdvies::count(), ManagementAdvies::count(), BewegingAdvies::count()];
+        $this->seed(\Database\Seeders\EquiBoostStandardAdviceSeeder::class);
+        $this->seed(\Database\Seeders\EquiBoostStandardAdviceSeeder::class);
+        $this->assertSame($before, [VoedingAdvies::count(), ManagementAdvies::count(), BewegingAdvies::count()]);
+        $this->assertSame('Eigen bibliotheektekst', $advice->fresh()->description);
+        $this->assertCount(8, \App\Support\EquiBoostStandardAdvice::ITEMS['management_adviezen']);
+        $this->assertDatabaseHas('voeding_adviezen', ['title' => 'Langdurige ruwvoerpauzes voorkomen']);
+        $this->assertDatabaseHas('beweging_adviezen', ['title' => 'Natuurlijke beweging via terreininrichting stimuleren']);
+    }
+
     public function test_the_design_advice_catalogs_are_seeded_idempotently(): void
     {
         $this->seed([
@@ -34,9 +48,9 @@ class ProtocolAdviceCatalogSeederTest extends TestCase
             BewegingAdviesSeeder::class,
         ]);
 
-        $this->assertDatabaseCount('voeding_adviezen', 14);
-        $this->assertDatabaseCount('management_adviezen', 9);
-        $this->assertDatabaseCount('beweging_adviezen', 6);
+        $this->assertDatabaseCount('voeding_adviezen', 15);
+        $this->assertDatabaseCount('management_adviezen', 17);
+        $this->assertDatabaseCount('beweging_adviezen', 7);
 
         $this->assertDatabaseHas('voeding_adviezen', [
             'title' => 'Ruwvoer als basis',
@@ -89,8 +103,8 @@ class ProtocolAdviceCatalogSeederTest extends TestCase
         $this->assertCount(VoedingAdvies::query()->count(), $protocol->voedingAdviezen);
         $this->assertCount(ManagementAdvies::query()->count(), $protocol->managementAdviezen);
         $this->assertCount(BewegingAdvies::query()->count(), $protocol->bewegingAdviezen);
-        $this->assertSame(14, $protocol->voedingAdviezen->count());
-        $this->assertSame(9, $protocol->managementAdviezen->count());
-        $this->assertSame(6, $protocol->bewegingAdviezen->count());
+        $this->assertSame(15, $protocol->voedingAdviezen->count());
+        $this->assertSame(17, $protocol->managementAdviezen->count());
+        $this->assertSame(7, $protocol->bewegingAdviezen->count());
     }
 }
