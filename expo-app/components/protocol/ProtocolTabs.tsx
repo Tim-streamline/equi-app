@@ -17,11 +17,13 @@ export function ProtocolTabs({ selected, onSelect }: {
           className="min-h-[48px] min-w-0 flex-1 items-center justify-center border-b-2 px-0.5 py-2"
           style={{ borderBottomColor: selected === tab.key ? '#18BAB0' : 'transparent' }}
         >
+          {/* Five labels share the width: shrink to fit, but never below 12px, and cap system scaling so they fit. */}
           <Text
             numberOfLines={1}
             adjustsFontSizeToFit
-            minimumFontScale={0.75}
-            className={`w-full text-center font-semi text-[13px] ${selected === tab.key ? 'text-teal-600' : 'text-ink-70'}`}
+            minimumFontScale={12 / 14}
+            maxFontSizeMultiplier={1.2}
+            className={`w-full text-center font-semi text-[14px] ${selected === tab.key ? 'text-teal-600' : 'text-ink-70'}`}
           >
             {tab.label}
           </Text>

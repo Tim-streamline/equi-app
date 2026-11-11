@@ -47,6 +47,8 @@ import { ProtocolOrderList } from "@/components/protocol/ProtocolOrderList";
 import { scopeOrderItems, type OrderScope } from "@/lib/protocol-order-scope";
 import { CareAdvice } from "@/components/protocol/CareAdvice";
 import { ProtocolTabs } from "@/components/protocol/ProtocolTabs";
+import { PROTOCOL_SCALE as S, PROTOCOL_TEXT as T } from "@/components/protocol/styles";
+import { EYEBROW, PLAIN_CARD } from "@/components/ui/styles";
 import { HorseSwitcher } from "@/components/horse/HorseSwitcher";
 import { OfflineStrip } from "@/components/ui/OfflineStrip";
 import { HEADER_ICON } from "@/components/ui/AppHeader";
@@ -145,11 +147,11 @@ export default function ProtocolListScreen() {
         >
           <PurchasedProtocols />
           {!horseId && !!data && (
-            <View className="rounded-2xl bg-white p-5">
-              <Text className="mb-2 font-semi text-[20px] leading-[26px] text-ink">
+            <View className={PLAIN_CARD}>
+              <Text className={`mb-2 ${T.title}`}>
                 Nog geen paard toegevoegd
               </Text>
-              <Text className="mb-4 font-sans text-[15px] leading-[22px] text-ink-70">
+              <Text className={`mb-4 ${T.body}`}>
                 Voeg eerst je paard toe. Daarna kun je hier een persoonlijk protocol voor je paard volgen.
               </Text>
               <Button title="Paard toevoegen" onPress={() => router.push('/onboarding/add-horse')} />
@@ -257,46 +259,6 @@ export default function ProtocolListScreen() {
   );
 }
 
-function Card({ children }: { children: ReactNode }) {
-  return (
-    <View className="rounded-[20px] border border-ink-8 bg-white p-[18px]">
-      {children}
-    </View>
-  );
-}
-function Label({ children }: { children: ReactNode }) {
-  return (
-    <Text className="font-semi text-[10px] uppercase tracking-[1.3px] text-ink-70">
-      {children}
-    </Text>
-  );
-}
-function Supplement({ item }: { item: DashboardSupplement }) {
-  return (
-    <View className="rounded-2xl border border-ink-8 bg-white p-4">
-      <View className="flex-row items-start justify-between gap-3">
-        <Text className="flex-1 font-semi text-[14px] text-ink">
-          {item.name}
-        </Text>
-        <Text className="max-w-[40%] font-bold text-[13px] text-teal-600">
-          {item.buildupLabel ? `Volledige dosis: ${item.dosage}` : item.dosage ?? "Dosering niet ingesteld"}
-        </Text>
-      </View>
-      {!!item.buildupLabel && <Text className="mt-2 text-[12px] leading-[18px] text-ink-70">{item.buildupLabel}</Text>}
-      {!!item.description && (
-        <Text className="mt-1 text-[12px] leading-[18px] text-ink-70">
-          {item.description}
-        </Text>
-      )}
-      {!!item.instructions && (
-        <Text className="mt-1 text-[12px] leading-[18px] text-ink-70">
-          {item.instructions}
-        </Text>
-      )}
-    </View>
-  );
-}
-
 function ProtocolPreparation({ protocol, horseId, horseName, onOrder, onRefresh }: {
   protocol: DashboardProtocol;
   horseId: string;
@@ -327,28 +289,26 @@ function ProtocolPreparation({ protocol, horseId, horseName, onOrder, onRefresh 
     }
   };
   return <View className="gap-5">
-    <Text accessibilityRole="header" className="font-bold text-[24px] leading-[30px] text-ink">Je herstelplan{horseName ? ` voor ${horseName}` : ''} staat klaar</Text>
+    <Text accessibilityRole="header" className={T.title}>Je herstelplan{horseName ? ` voor ${horseName}` : ''} staat klaar</Text>
     <View className="gap-4">
-      <Text className="text-[16px] leading-[24px] text-ink-70">Je herstelplan bestaat uit adviezen over <Text className="font-semi text-ink">voeding, beweging, huisvesting en management</Text>, plus een <Text className="font-semi text-ink">herstelprotocol</Text> waarmee je het lichaam stap voor stap ondersteunt bij herstel van binnenuit.</Text>
-      <Text className="text-[16px] leading-[24px] text-ink-70">De verschillende onderdelen zijn <Text className="font-semi text-ink">bewust op elkaar afgestemd</Text>. Het resultaat hangt daarom af van hoe consequent je <Text className="font-semi text-ink">álle adviezen opvolgt</Text>.</Text>
-      <Text className="text-[16px] leading-[24px] text-ink-70">Bekijk eerst welke kruiden en andere producten je voor de <Text className="font-semi text-ink">eerste fase</Text> nodig hebt en zorg dat je die <Text className="font-semi text-ink">in huis hebt voordat je begint</Text>. Daarna kun je het protocol starten.</Text>
+      <Text className={T.lead}>Je herstelplan bestaat uit adviezen over <Text className="font-semi text-ink">voeding, beweging, huisvesting en management</Text>, plus een <Text className="font-semi text-ink">herstelprotocol</Text> waarmee je het lichaam stap voor stap ondersteunt bij herstel van binnenuit.</Text>
+      <Text className={T.lead}>De verschillende onderdelen zijn <Text className="font-semi text-ink">bewust op elkaar afgestemd</Text>. Het resultaat hangt daarom af van hoe consequent je <Text className="font-semi text-ink">álle adviezen opvolgt</Text>.</Text>
+      <Text className={T.lead}>Bekijk eerst welke kruiden en andere producten je voor de <Text className="font-semi text-ink">eerste fase</Text> nodig hebt en zorg dat je die <Text className="font-semi text-ink">in huis hebt voordat je begint</Text>. Daarna kun je het protocol starten.</Text>
     </View>
-    <Card>
-      <Text className="mb-2 font-bold text-[19px] text-ink">Wat heb je nodig voor fase 1?</Text>
-      <Text className="mb-4 text-[16px] leading-[24px] text-ink-70">Bekijk welke producten en hoeveelheden je voor de eerste fase nodig hebt.</Text>
-      <Pressable accessibilityRole="button" accessibilityLabel="Open bestellijst voor fase 1" onPress={onOrder}>
-        <Text className="font-semi text-[16px] text-teal-600">Bekijk bestellijst voor fase 1 →</Text>
+    <View className={PLAIN_CARD}>
+      <Text className={`mb-2 ${T.cardTitle}`}>Wat heb je nodig voor fase 1?</Text>
+      <Text className={`mb-4 ${T.lead}`}>Bekijk welke producten en hoeveelheden je voor de eerste fase nodig hebt.</Text>
+      <Pressable accessibilityRole="button" accessibilityLabel="Open bestellijst voor fase 1" onPress={onOrder} className="min-h-[44px] justify-center">
+        <Text className={T.link}>Bekijk bestellijst voor fase 1 →</Text>
       </Pressable>
-    </Card>
-    <View className="mt-2 gap-5 rounded-[22px] border border-mint-100 bg-mint-50 p-5">
-      <Text className="font-bold text-[20px] text-ink">Heb je alles in huis?</Text>
-      <Text className="text-[16px] leading-[24px] text-ink-70">Start je protocol op de dag dat je daadwerkelijk met alle producten uit de eerste fase begint. Klik die dag op de button hieronder.</Text>
-      <View className="mt-1 w-full self-center">
-        <Button title="Ik start vandaag" className="min-h-[56px] justify-center" textClassName="text-center font-semi text-[17px]" onPress={() => { setError(null); setConfirm(true); }} />
-      </View>
+    </View>
+    <View className="gap-4 rounded-[22px] bg-mint-50 p-5">
+      <Text className={T.cardTitle}>Heb je alles in huis?</Text>
+      <Text className={T.lead}>Start je protocol op de dag dat je daadwerkelijk met alle producten uit de eerste fase begint. Klik die dag op de button hieronder.</Text>
+      <Button title="Ik start vandaag" className="mt-1" onPress={() => { setError(null); setConfirm(true); }} />
     </View>
     <Sheet visible={confirm} title="Vandaag wordt dag 1 van je protocol" onClose={() => { if (!busy.current) setConfirm(false); }}>
-      <Text className="mb-5 text-[16px] leading-[24px] text-ink-70">Weet je zeker dat je vandaag wilt beginnen?</Text>
+      <Text className={`mb-5 ${T.body}`}>Weet je zeker dat je vandaag wilt beginnen?</Text>
       {!!error && <Text accessibilityRole="alert" className="mb-4 text-[14px] text-danger">{error}</Text>}
       <View className="gap-3">
         <Button title={starting ? 'Protocol starten…' : 'Ja, start mijn protocol'} disabled={starting} onPress={() => void start()} />
@@ -380,54 +340,50 @@ function Today({
         {protocol.notifications.map((notice) => (
           <View
             key={notice.id}
-            className="rounded-[20px] border border-[#E9D9B8] bg-[#FBF4E8] p-4"
+            className="rounded-[22px] border border-[#E9D9B8] bg-[#FBF4E8] p-5"
           >
             <View className="flex-row items-start gap-2">
-              <TriangleAlert size={18} color="#9B792F" />
+              <TriangleAlert size={18} color="#9B792F" style={{ marginTop: 2 }} />
               <View className="flex-1">
-                <Text className="font-bold text-[14px] text-[#6C5426]">
+                <Text className={`${S.section} text-[#6C5426]`}>
                   {notice.title}
                 </Text>
-                <Text className="mt-2 text-[13px] leading-[19px] text-ink-70">
+                <Text className={`mt-2 ${T.secondary}`}>
                   {notice.body}
                 </Text>
               </View>
             </View>
-            <View className="mt-2">
+            <View className="mt-3">
               {notice.items.map((item) => (
                 <View
                   key={item.id}
-                  className="flex-row justify-between gap-3 py-2"
+                  className="flex-row flex-wrap justify-between gap-x-3 py-2"
                 >
-                  <Text className="flex-1 font-semi text-[13px] text-ink">
+                  <Text className={T.rowTitle}>
                     {item.name}
                   </Text>
-                  <Text className="text-[13px] text-ink-70">{item.buildupLabel ? `Volledige dosis: ${item.dosage} · met opbouw` : item.dosage}</Text>
+                  <Text className={T.row}>{item.buildupLabel ? `Volledige dosis: ${item.dosage} · met opbouw` : item.dosage}</Text>
                 </View>
               ))}
             </View>
-            {notice.type === "next_phase" && notice.phaseId && (
-              <Button variant="ghost" title="Bekijk de fase" className="mt-3" onPress={() => {
-                const selected = protocol.phases.find((item) => item.id === notice.phaseId);
-                if (selected) onPhase(selected);
-              }} />
-            )}
-            <Pressable
-              accessibilityRole="button"
-              onPress={() =>
-                notice.type === "weekly_update"
-                  ? onWeekly()
-                  : onOrder(notice.orderItems ?? notice.items,
-                    protocol.phases.find((item) => item.id === notice.phaseId)?.title)
-              }
-              className="mt-3 rounded-full border border-[#DCCBA8] py-3"
-            >
-              <Text className="text-center font-semi text-[13px] text-[#6C5426]">
-                {notice.type === "weekly_update"
-                  ? "Weekupdate invullen"
-                  : "Bekijk bestellijst"}
-              </Text>
-            </Pressable>
+            <View className="mt-4 gap-3">
+              {notice.type === "next_phase" && notice.phaseId && (
+                <Button variant="ghost" title="Bekijk de fase" onPress={() => {
+                  const selected = protocol.phases.find((item) => item.id === notice.phaseId);
+                  if (selected) onPhase(selected);
+                }} />
+              )}
+              <Button
+                variant="ghost"
+                title={notice.type === "weekly_update" ? "Weekupdate invullen" : "Bekijk bestellijst"}
+                onPress={() =>
+                  notice.type === "weekly_update"
+                    ? onWeekly()
+                    : onOrder(notice.orderItems ?? notice.items,
+                      protocol.phases.find((item) => item.id === notice.phaseId)?.title)
+                }
+              />
+            </View>
           </View>
         ))}
       </View>
@@ -445,12 +401,15 @@ function LibraryLink({
   item,
   search,
   selection,
+  nested,
 }: {
   title: string;
   description: string;
   item: LibraryRecommendation | null;
   search: string;
   selection?: boolean;
+  /** Inside a white card: outlined, since a white tile would have no visible edge. */
+  nested?: boolean;
 }) {
   return (
     <Pressable
@@ -467,12 +426,12 @@ function LibraryLink({
               },
         )
       }
-      className="flex-row items-center gap-3 rounded-[18px] border border-ink-8 bg-white p-4"
+      className={`flex-row items-center gap-3 p-4 ${nested ? 'rounded-2xl border border-ink-8' : 'rounded-[22px] bg-white'}`}
     >
       <LibraryThumbnail uri={item?.heroImageUrl} format={item?.format} style={{ width: 64 }} />
       <View className="flex-1">
-        <Text className="font-semi text-[13px] text-ink">{title}</Text>
-        <Text className="mt-1 text-[11px] leading-[16px] text-ink-70">
+        <Text className={T.section}>{title}</Text>
+        <Text className={`mt-1 ${T.meta}`}>
           {description}
         </Text>
       </View>
@@ -492,18 +451,18 @@ function Nutrition({
     <View className="gap-4">
       <View className="rounded-[22px] bg-[#105C5B] p-5">
         <View className="mb-3 flex-row gap-2">
-          <Leaf size={15} color="#99E8DF" />
-          <Text className="font-semi text-[10px] uppercase tracking-[1px] text-[#99E8DF]">
+          <Leaf size={16} color="#99E8DF" />
+          <Text className={`${EYEBROW} text-[#99E8DF]`}>
             Ruwvoer, de basis
           </Text>
         </View>
         {!!roughage.rangeLabel && (
-          <Text className="font-bold text-[25px] text-white">
+          <Text className="font-bold text-[25px] leading-[31px] text-white">
             {roughage.rangeLabel}{" "}
-            <Text className="text-[11px]">per 24 uur</Text>
+            <Text className="font-sans text-[14px]">per 24 uur</Text>
           </Text>
         )}
-        <Text className="mt-2 text-[13px] leading-[21px] text-white/85">
+        <Text className={`mt-2 ${S.body} text-white/85`}>
           {roughage.description}
         </Text>
         <View className="mt-4 flex-row gap-2 border-t border-white/15 pt-3">
@@ -512,10 +471,10 @@ function Nutrition({
             ["Eiwit", roughage.protein],
           ].map(([label, value]) => (
             <View key={label} className="flex-1 rounded-xl bg-white/10 p-3">
-              <Text className="text-[9px] uppercase text-white/65">
+              <Text className={`${EYEBROW} text-white/70`}>
                 {label}
               </Text>
-              <Text className="mt-1 font-bold text-[14px] text-white">
+              <Text className="mt-1 font-bold text-[16px] text-white">
                 {value}
               </Text>
             </View>
@@ -530,8 +489,8 @@ function Nutrition({
         selection
       />
       {nutrition.feeds.length > 0 && (
-        <Card>
-          <Text className="mb-3 font-bold text-[16px] text-ink">
+        <View className={PLAIN_CARD}>
+          <Text className={`mb-4 ${T.cardTitle}`}>
             Actuele voerproducten
           </Text>
           <View className="gap-4">
@@ -543,17 +502,17 @@ function Nutrition({
                   <X size={17} color="#CB655D" />
                 )}
                 <View className="flex-1">
-                  <Text className="font-semi text-[14px] text-ink">
+                  <Text className={T.section}>
                     {feed.name}
                     {feed.dosage ? ` · ${feed.dosage}` : ""}
                   </Text>
                   <Text
-                    className={`mt-1 font-semi text-[12px] ${feed.status === "continue" ? "text-teal-600" : "text-[#B45E56]"}`}
+                    className={`mt-1 font-semi text-[14px] ${feed.status === "continue" ? "text-teal-600" : "text-[#B45E56]"}`}
                   >
                     {feed.status === "continue" ? "Doorgaan" : "Stoppen"}
                   </Text>
                   {!!feed.note && (
-                    <Text className="mt-1 text-[12px] leading-[19px] text-ink-70">
+                    <Text className={`mt-1 ${T.secondary}`}>
                       {feed.note}
                     </Text>
                   )}
@@ -561,23 +520,23 @@ function Nutrition({
               </View>
             ))}
           </View>
-        </Card>
+        </View>
       )}
       {(nutrition.advice ?? []).map((advice) => (
-        <Card key={advice.id}>
-          <Text className="font-bold text-[16px] text-ink">{advice.title}</Text>
-          {!!advice.description && <Text className="mt-2 text-[13px] leading-[21px] text-ink-70">{advice.description}</Text>}
-        </Card>
+        <View key={advice.id} className={PLAIN_CARD}>
+          <Text className={T.cardTitle}>{advice.title}</Text>
+          {!!advice.description && <Text className={`mt-2 ${T.body}`}>{advice.description}</Text>}
+        </View>
       ))}
-      <Card>
-        <Text className="font-bold text-[16px] text-ink">Water</Text>
-        <Text className="mt-2 text-[13px] leading-[20px] text-ink-70">
+      <View className={PLAIN_CARD}>
+        <Text className={T.cardTitle}>Water</Text>
+        <Text className={`mt-2 ${T.body}`}>
           {nutrition.water.types.join(" · ") ||
             "Nog geen drinkwater ingevuld in de intake."}
         </Text>
         {nutrition.water.needsAnalysis && (
           <>
-            <Text className="mb-3 mt-3 text-[13px] leading-[20px] text-ink-70">
+            <Text className={`mb-3 mt-3 ${T.body}`}>
               {nutrition.water.advice}
             </Text>
             <LibraryLink
@@ -589,10 +548,11 @@ function Nutrition({
               }
               item={nutrition.waterLibraryItem}
               search="Wateranalyse"
+              nested
             />
           </>
         )}
-      </Card>
+      </View>
     </View>
   );
 }
@@ -648,11 +608,11 @@ function Sheet({
             contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 24 }}
           >
             <View className="flex-row items-center gap-3">
-              <Text accessibilityRole="header" className="flex-1 font-semi text-[20px] leading-[26px] text-ink">{title}</Text>
-              <Pressable accessibilityRole="button" accessibilityLabel="Sluiten" onPress={onClose} className="min-h-[44px] min-w-[44px] items-center justify-center"><Text className="text-[28px] text-ink-70">×</Text></Pressable>
+              <Text accessibilityRole="header" className={`flex-1 ${T.title}`}>{title}</Text>
+              <Pressable accessibilityRole="button" accessibilityLabel="Sluiten" onPress={onClose} className="min-h-[44px] min-w-[44px] items-center justify-center"><X size={22} color="#1B2A2A" /></Pressable>
             </View>
             {!!subtitle && (
-              <Text className="mt-1 text-[12px] text-ink-70">{subtitle}</Text>
+              <Text className={`mt-1 ${T.secondary}`}>{subtitle}</Text>
             )}
             <View className="mt-4">
               {children}
@@ -722,7 +682,7 @@ function WeeklySheet({
           className="rounded-t-[28px] bg-canvas"
         >
           <KeyboardScrollView style={{ flexGrow: 0 }} contentContainerStyle={{ padding: 20 }}>
-          <Text className="mb-3 font-bold text-[21px] text-ink">
+          <Text className={`mb-3 ${T.title}`}>
             Weekupdate invullen
           </Text>
           <TextInput
@@ -740,11 +700,7 @@ function WeeklySheet({
             onPress={() => void save()}
             disabled={busy || !note.trim()}
           />
-          <Pressable disabled={busy} onPress={onClose} className="mt-3 py-2">
-            <Text className="text-center text-[14px] text-ink-70">
-              Annuleren
-            </Text>
-          </Pressable>
+          <Button variant="text" title="Annuleren" disabled={busy} onPress={onClose} className="mt-2" />
           </KeyboardScrollView>
         </SafeAreaView>
       </KeyboardAvoidingView>

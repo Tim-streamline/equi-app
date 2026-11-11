@@ -3,6 +3,7 @@ import { readFileSync } from 'node:fs';
 import { DatabaseSync } from 'node:sqlite';
 import test from 'node:test';
 import ts from 'typescript';
+import { protocolStyleModules } from './protocol-styles.mjs';
 const load = (file, modules) => {
   const exports = {};
   const code = ts.transpileModule(readFileSync(new URL(file, import.meta.url), 'utf8'), { compilerOptions: { jsx: ts.JsxEmit.ReactJSX, module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 } }).outputText;
@@ -32,7 +33,7 @@ function screen(phases = 2) {
   const jsx = (type, props) => ({ type, props });
   const modules = {
     react: { useState: initial => { const i = cursor++; if (!(i in state)) state[i] = initial; return [state[i], value => { state[i] = value; }]; }, useRef: () => ref },
-    'react/jsx-runtime': { jsx, jsxs: jsx, Fragment: 'Fragment' },
+    'react/jsx-runtime': { jsx, jsxs: jsx, Fragment: 'Fragment' }, ...protocolStyleModules,
     'react-native': { View: 'View', Text: 'Text', Pressable: 'Pressable', Alert: { alert() {} } },
     'lucide-react-native': { Check: 'Check', ChevronRight: 'ChevronRight', Info: 'Info', Soup: 'Soup' },
     'expo-router': { router: { push: r => opened.push(r) } },
@@ -147,7 +148,7 @@ test('local recorded amount wins, and stale schedules never predict a new dose',
 
 test('the actual schedule groups equal doses and highlights the present step',()=>{
   const jsx=(type,props)=>({type,props});
-  const component=load('../components/protocol/DoseBuildupSchedule.tsx',{'react/jsx-runtime':{jsx,jsxs:jsx,Fragment:'Fragment'},'react-native':{View:'View',Text:'Text'},'@/lib/protocol-buildup':buildupLogic}).DoseBuildupSchedule;
+  const component=load('../components/protocol/DoseBuildupSchedule.tsx',{'react/jsx-runtime':{jsx,jsxs:jsx,Fragment:'Fragment'},...protocolStyleModules,'react-native':{View:'View',Text:'Text'},'@/lib/protocol-buildup':buildupLogic}).DoseBuildupSchedule;
   const text=copy(flatten(component({item:{...items[0],dosage:'10 g',buildup},date:'2026-11-03'})));
   assert.ok(text.includes('Dag 1–2'));assert.ok(text.includes('Huidige stap'));assert.ok(text.includes('Vandaag: 10 g'));
   assert.equal(component({item:items[0]}),null);

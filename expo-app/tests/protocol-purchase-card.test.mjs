@@ -2,9 +2,10 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import test from 'node:test';
 import ts from 'typescript';
+import { protocolStyleGlobals } from './protocol-styles.mjs';
 
 const source = readFileSync(new URL('../app/(tabs)/(pager)/protocol.tsx', import.meta.url), 'utf8');
-const screen = source.slice(source.indexOf('export default function ProtocolListScreen()'), source.indexOf('\nfunction Card('));
+const screen = source.slice(source.indexOf('export default function ProtocolListScreen()'), source.indexOf('\nfunction ProtocolPreparation('));
 const code = ts.transpileModule(screen, { compilerOptions: { jsx: ts.JsxEmit.ReactJSX, module: ts.ModuleKind.CommonJS } }).outputText;
 const flatten = node => Array.isArray(node) ? node.flatMap(flatten) : node && typeof node === 'object' ? [node, ...flatten(node.props?.children)] : [];
 function app() {
@@ -24,6 +25,7 @@ function app() {
     HEADER_ICON: '#466362', useHeaderAction: action => { header = action; },
     router: { push: route => routes.push(route) },
     scopeOrderItems: (items, scope) => scope === 'all' ? items : [],
+    ...protocolStyleGlobals,
   };
   const exports = {};
   new Function('require', 'exports', ...Object.keys(dependencies), code)(() => ({ jsx, jsxs: jsx }), exports, ...Object.values(dependencies));

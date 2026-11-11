@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import test from 'node:test';
 import ts from 'typescript';
+import { protocolStyleModules } from './protocol-styles.mjs';
 const load = (file, modules = {}) => {
   const exports = {};
   const code = ts.transpileModule(readFileSync(new URL(file, import.meta.url), 'utf8'), { compilerOptions: { jsx: ts.JsxEmit.ReactJSX, module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 } }).outputText;
@@ -59,7 +60,7 @@ function screen(editable=true, requestDay) {
   const items=[{id:'herb',name:'Real herb',dosage:'15 g',instructions:'Real instructions',administration:1,administrationsPerDay:2,done:false},{id:'herb',name:'Real herb',dosage:'15 g',administration:2,administrationsPerDay:2,done:false}];
   const day={date:'2026-11-02',label:'Actual date',editable,items,state:'missed'};
   const jsx=(type,props)=>({type,props});
-  const modules={react,'react/jsx-runtime':{jsx,jsxs:jsx,Fragment:'Fragment'},'react-native':Object.fromEntries(['View','Text','Pressable','ActivityIndicator'].map(n=>[n,n])), 'react-native-svg':{default:'Svg',Circle:'Circle'}, 'lucide-react-native':Object.fromEntries(['Check','ChevronLeft','ChevronRight','ShoppingBag'].map(n=>[n,n])), '@/components/ui/Button':{Button:'Button'},'@/db/hooks':{useSupplementIntakesForDate:()=>local,useStoreMutations:()=>({toggleSupplementIntake:async(id,dose,date,horse,n)=>{local=[{protocolPhaseSupplementId:id,administration:n,done:1}];}})},'@/hooks/useHorseDashboard':{deviceTimezone:()=> 'Europe/Amsterdam',dashboardRequest:async(url,body)=>{calls.push({url,body});return requestDay ? requestDay(url,body) : body?{...day,state:'partial',items:items.map(item=>({...item,done:item.administration===body.administration}))}:day;}},'@/lib/protocol-today':daily,'./DoseBuildupSchedule':{DoseBuildupSchedule:'DoseBuildupSchedule'},'@/lib/protocol-calendar':logic,'@/lib/haptics':{selectionHaptic(){}}};
+  const modules={react,'react/jsx-runtime':{jsx,jsxs:jsx,Fragment:'Fragment'},...protocolStyleModules,'react-native':Object.fromEntries(['View','Text','Pressable','ActivityIndicator'].map(n=>[n,n])), 'react-native-svg':{default:'Svg',Circle:'Circle'}, 'lucide-react-native':Object.fromEntries(['Check','ChevronLeft','ChevronRight','ShoppingBag'].map(n=>[n,n])), '@/components/ui/Button':{Button:'Button'},'@/db/hooks':{useSupplementIntakesForDate:()=>local,useStoreMutations:()=>({toggleSupplementIntake:async(id,dose,date,horse,n)=>{local=[{protocolPhaseSupplementId:id,administration:n,done:1}];}})},'@/hooks/useHorseDashboard':{deviceTimezone:()=> 'Europe/Amsterdam',dashboardRequest:async(url,body)=>{calls.push({url,body});return requestDay ? requestDay(url,body) : body?{...day,state:'partial',items:items.map(item=>({...item,done:item.administration===body.administration}))}:day;}},'@/lib/protocol-today':daily,'./DoseBuildupSchedule':{DoseBuildupSchedule:'DoseBuildupSchedule'},'@/lib/protocol-calendar':logic,'@/lib/haptics':{selectionHaptic(){}}};
   const component=load('../components/protocol/ProtocolCalendar.tsx',modules).ProtocolCalendar;
   const props={protocol:{id:'p',phases,today:{items},calendar:{label:'Actual month',previousMonth:'2026-10',nextMonth:'2026-12',cells:[{date:'2026-11-02',day:2,available:true,state:'missed',total:2,done:0},{date:'2026-11-03',day:3,isToday:true,state:'default'},{date:'2026-11-15',day:15,state:'default'}]}},today:'2026-11-03',horseId:'h',onMonth:m=>opened.push(m),onPhase:p=>opened.push(p.id),onToday:()=>opened.push('today'),onOrder:ids=>opened.push(ids),onRefresh:async()=>{},SheetComponent:'Sheet'};
   const render=()=>{
@@ -149,7 +150,7 @@ test('order reminder opens the grouped future phases without marking any day',()
    let detail=null;const jsx=(type,props)=>({type,props});
    const component=load('../components/protocol/ProtocolPhaseContent.tsx',{
      '@/db/hooks':{useSupplementIntakesForDate:()=>[]},'@/lib/protocol-today':daily,
-     react:{useState:()=>[detail,value=>detail=value]},'react/jsx-runtime':{jsx,jsxs:jsx,Fragment:'Fragment'},'react-native':{View:'View',Text:'Text',Pressable:'Pressable'},'lucide-react-native':{ChevronRight:'ChevronRight'},'@/components/ui/Button':{Button:'Button'},'./DoseBuildupSchedule':{DoseBuildupSchedule:'DoseBuildupSchedule'},'@/lib/protocol-calendar':logic,
+     react:{useState:()=>[detail,value=>detail=value]},'react/jsx-runtime':{jsx,jsxs:jsx,Fragment:'Fragment'},...protocolStyleModules,'react-native':{View:'View',Text:'Text',Pressable:'Pressable'},'lucide-react-native':{ChevronRight:'ChevronRight'},'@/components/ui/Button':{Button:'Button'},'./DoseBuildupSchedule':{DoseBuildupSchedule:'DoseBuildupSchedule'},'@/lib/protocol-calendar':logic,
    }).ProtocolPhaseContent;
    const phase={id:'b',state:'preview',description:'Authored phase description',supplements:[{id:'x',name:'Herb',dosage:'SECRET DOSE',instructions:'SECRET INSTRUCTIONS'}]};
    const props={phase,date:'2026-11-03',orderItems:[{id:'x',name:'Herb',unit:'g',components:[{phaseId:'b',quantity:420}]}],onRefresh:async()=>{}};

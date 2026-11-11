@@ -1,12 +1,6 @@
 import { Text } from 'react-native';
+import { EYEBROW } from './styles';
 
 export function Eyebrow({ children, className = '' }: { children: string; className?: string }) {
-  return (
-    <Text
-      className={`font-semi text-[11px] uppercase text-ink-70 ${className}`}
-      style={{ letterSpacing: 1.4 }}
-    >
-      {children}
-    </Text>
-  );
+  return <Text className={`${EYEBROW} text-ink-70 ${className}`}>{children}</Text>;
 }

@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import ts from 'typescript';
+import * as uiStyles from '../components/ui/styles.ts';
 import { AccountSessionQueue } from '../lib/account-session.ts';
 import * as syncRequests from '../lib/sync-request.ts';
 import * as attachmentWrites from '../lib/intake/attachments/storage-writes.ts';
@@ -171,6 +172,7 @@ test('Reset sync requires explicit confirmation and Cancel never resets', async 
     'react/jsx-runtime': { jsx, jsxs: jsx, Fragment: 'Fragment' },
     'react-native': { Platform: { OS: 'web' }, Text: 'Text', View: 'View' },
     '@/components/ui/Button': { Button: 'Button' },
+    '@/components/ui/styles': uiStyles,
     '@/db/provider': { useDb: () => ({ resetSync: async () => { resets++; } }) },
   });
   const render = () => { cursor = 0; return ResetSyncSettings(); };

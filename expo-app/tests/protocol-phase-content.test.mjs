@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import test from 'node:test';
 import ts from 'typescript';
+import { protocolStyleModules } from './protocol-styles.mjs';
 
 function load(file, modules = {}) {
   const exports = {};
@@ -26,6 +27,7 @@ function screen(records = []) {
   const component = load('../components/protocol/ProtocolPhaseContent.tsx', {
     react: { useState: () => [detail, value => { detail = value; }] },
     'react/jsx-runtime': { jsx, jsxs: jsx, Fragment: 'Fragment' },
+    ...protocolStyleModules,
     'react-native': { View: 'View', Text: 'Text', Pressable: 'Pressable' },
     'lucide-react-native': { ChevronRight: 'ChevronRight' },
     '@/components/ui/Button': { Button: 'Button' },

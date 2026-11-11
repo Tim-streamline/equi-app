@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import test from 'node:test';
 import ts from 'typescript';
+import { protocolStyleGlobals } from './protocol-styles.mjs';
 
 const source = readFileSync(new URL('../app/(tabs)/(pager)/protocol.tsx', import.meta.url), 'utf8');
 const component = source.slice(source.indexOf('function ProtocolPreparation('), source.indexOf('function Today('));
@@ -12,11 +13,12 @@ function setup(request = async () => ({})) {
   let hook = 0, refreshed = 0, orders = 0;
   const jsx = (type, props) => ({ type, props });
   const deps = {
-    ...Object.fromEntries(['View', 'Text', 'Card', 'Pressable', 'Button', 'Sheet'].map(n => [n, n])),
+    ...Object.fromEntries(['View', 'Text', 'Pressable', 'Button', 'Sheet'].map(n => [n, n])),
     useState: initial => { const i = hook++; if (!(i in state)) state[i] = initial; return [state[i], v => { state[i] = v; }]; },
     useRef: () => ref,
     dashboardRequest: async (...args) => { requests.push(args); return request(...args); },
     deviceTimezone: () => 'Europe/Amsterdam',
+    ...protocolStyleGlobals,
   };
   const exports = {};
   new Function('require', 'exports', ...Object.keys(deps), code)(() => ({ jsx, jsxs: jsx }), exports, ...Object.values(deps));

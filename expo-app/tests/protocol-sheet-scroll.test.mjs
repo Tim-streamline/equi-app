@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import test from 'node:test';
 import ts from 'typescript';
+import { protocolStyleGlobals } from './protocol-styles.mjs';
 
 const source = await readFile(new URL('../app/(tabs)/(pager)/protocol.tsx', import.meta.url), 'utf8');
 const sheet = source.slice(source.indexOf('function Sheet('), source.indexOf('function WeeklySheet('));
@@ -15,6 +16,8 @@ function render(height, insets) {
     ...Object.fromEntries(['View', 'Text', 'ScrollView', 'Pressable', 'Modal', 'SafeAreaView', 'Button'].map(name => [name, name])),
     useWindowDimensions: () => ({ width: 320, height }),
     useSafeAreaInsets: () => insets,
+    X: 'X',
+    ...protocolStyleGlobals,
   };
   const exports = {};
   new Function('require', 'exports', ...Object.keys(dependencies), outputText)(
@@ -80,6 +83,7 @@ test('weekupdate input and save/cancel actions share the bounded keyboard scroll
     useState: initial => { const index = hook++; return [state[index] ?? initial, value => { state[index] = value; }]; },
     dashboardRequest: async (...args) => requests.push(args), deviceTimezone: () => 'Europe/Amsterdam',
     Alert: { alert: () => assert.fail('Unexpected save failure') },
+    ...protocolStyleGlobals,
   };
   const exports = {};
   new Function('require', 'exports', ...Object.keys(dependencies), code)(() => ({ jsx, jsxs: jsx }), exports, ...Object.values(dependencies));
@@ -90,7 +94,7 @@ test('weekupdate input and save/cancel actions share the bounded keyboard scroll
   assert.equal(panel.props.style.flexShrink, 1);
   const scroll = find(panel, node => node.type === 'KeyboardScrollView');
   assert.ok(find(scroll, node => node.type === 'TextInput' && node.props.multiline));
-  assert.ok(find(scroll, node => node.type === 'Pressable' && node.props.onPress === props.onClose));
+  assert.ok(find(scroll, node => node.type === 'Button' && node.props.title === 'Annuleren' && node.props.onPress === props.onClose));
   const button = find(scroll, node => node.type === 'Button');
   assert.equal(button.props.title, 'Weekupdate opslaan');
   button.props.onPress();

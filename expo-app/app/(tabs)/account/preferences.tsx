@@ -4,6 +4,7 @@ import { SwitchRow } from '@/components/ui/SwitchRow';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import { SubHeader } from '@/components/ui/SubHeader';
+import { PLAIN_CARD } from '@/components/ui/styles';
 import { useTabBarPadding } from '@/hooks/useTabBarPadding';
 import { useHomePreferences } from '@/hooks/useHomePreferences';
 import { ResetSyncSettings } from '@/components/sync/ResetSyncSettings';
@@ -16,7 +17,7 @@ export default function PreferencesScreen() {
       <SubHeader title="Voorkeuren" onBack={() => router.canGoBack() ? router.back() : router.replace('/(tabs)/account')} />
       <ScrollView contentContainerStyle={{ padding: 20, paddingBottom: padBottom }}>
         {!ready ? <ActivityIndicator color="#18BAB0" /> : (
-          <View className="rounded-[22px] bg-white p-5">
+          <View className={PLAIN_CARD}>
             <SwitchRow
               label="Seizoenstips op Home"
               description="Toon praktische tips die passen bij het seizoen."

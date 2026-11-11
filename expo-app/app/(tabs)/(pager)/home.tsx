@@ -25,6 +25,7 @@ import { BRAND_NAME } from "@/constants/brand";
 import { OfflineStrip } from "@/components/ui/OfflineStrip";
 import { ShelbyChatButton } from "@/components/shelby/ShelbyChatButton";
 import { Button, PRIMARY_INK } from "@/components/ui/Button";
+import { PLAIN_CARD } from "@/components/ui/styles";
 
 export default function HomeScreen() {
   const { data, error, refresh, loading } = useHorseDashboard();
@@ -157,7 +158,7 @@ function ProtocolCard({ id, horseId, horseName, statusLabel, currentDay, current
           params: { tab: "vandaag", horseId, protocolId: id, orderList: readyToStart ? '1' : '0', t: String(Date.now()) },
         });
       }}
-      className="mb-4 rounded-[22px] bg-white p-5"
+      className={`mb-4 ${PLAIN_CARD}`}
     >
       {!readyToStart && <Text className="text-[10px] uppercase tracking-[1.3px] text-ink-70">
         {horseName ? `${horseName}'s protocol` : "Protocol"}

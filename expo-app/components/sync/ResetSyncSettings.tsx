@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Platform, Text, View } from 'react-native';
 import { useDb } from '@/db/provider';
 import { Button } from '@/components/ui/Button';
+import { PLAIN_CARD } from '@/components/ui/styles';
 
 export function ResetSyncSettings() {
   const { resetSync } = useDb();
@@ -15,7 +16,7 @@ export function ResetSyncSettings() {
     catch (cause) { setError(cause instanceof Error ? cause.message : 'Herstellen is niet gelukt. Probeer opnieuw.'); }
     finally { setBusy(false); }
   };
-  return <View className="mt-5 gap-4 rounded-[22px] bg-white p-5">
+  return <View className={`mt-5 gap-4 ${PLAIN_CARD}`}>
     <Text className="font-heading text-xl text-ink">Reset sync</Text>
     <Text className="font-body text-base text-ink">Loopt de synchronisatie vast? Wis je lokale gegevens en laad opnieuw wat online is opgeslagen.</Text>
     {confirming ? <>

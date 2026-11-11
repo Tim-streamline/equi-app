@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import test from 'node:test';
 import ts from 'typescript';
+import { protocolStyleModules } from './protocol-styles.mjs';
 
 const code = ts.transpileModule(readFileSync(new URL('../components/protocol/ProtocolAnalysis.tsx', import.meta.url), 'utf8'), {
   compilerOptions: { jsx: ts.JsxEmit.ReactJSX, module: ts.ModuleKind.CommonJS },
@@ -10,6 +11,7 @@ const jsx = (type, props) => ({ type, props });
 const exports = {};
 new Function('require', 'exports', code)(name => ({
   'react/jsx-runtime': { jsx, jsxs: jsx },
+  ...protocolStyleModules,
   'react-native': { Text: 'Text', View: 'View' },
 })[name], exports);
 const flatten = node => Array.isArray(node) ? node.flatMap(flatten) : node && typeof node === 'object' ? [node, ...flatten(node.props?.children)] : [node];

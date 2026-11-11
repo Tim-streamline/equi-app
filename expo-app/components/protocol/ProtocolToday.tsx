@@ -9,6 +9,7 @@ import { administrationKey, todayGroups, PHASE_COLORS } from '@/lib/protocol-tod
 import { selectionHaptic } from '@/lib/haptics';
 import { buildupState, dailyDoseChanges } from '@/lib/protocol-buildup';
 import { DoseBuildupSchedule } from './DoseBuildupSchedule';
+import { PROTOCOL_SCALE as S, PROTOCOL_TEXT as T } from './styles';
 
 type SheetProps = { visible: boolean; title: string; subtitle?: string; children: ReactNode; onClose: () => void; footer?: ReactNode };
 
@@ -44,13 +45,13 @@ export function ProtocolToday({ protocol, date, horseId, onPhase, SheetComponent
   };
   return <>
     <View className="mb-4 flex-row flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
-      <Text accessibilityRole="header" className="font-semi text-[20px] leading-[26px] text-teal-900">{protocol.weekLabel ?? `Week ${protocol.currentWeek} van ${protocol.totalWeeks}`}</Text>
-      <Text className="font-sans text-[13px] leading-[20px] text-ink-70">{protocol.dateLabel ?? new Date(`${date}T12:00:00`).toLocaleDateString('nl-NL', { weekday: 'long', day: 'numeric', month: 'long' })}</Text>
+      <Text accessibilityRole="header" className={T.title}>{protocol.weekLabel ?? `Week ${protocol.currentWeek} van ${protocol.totalWeeks}`}</Text>
+      <Text className={T.meta}>{protocol.dateLabel ?? new Date(`${date}T12:00:00`).toLocaleDateString('nl-NL', { weekday: 'long', day: 'numeric', month: 'long' })}</Text>
     </View>
     {rows.length > 0 && <View className="mb-5 gap-2">
         <View className="flex-row items-center justify-between gap-3">
-          <Text className="font-sans text-[13px] leading-[20px] text-ink">Vandaag afvinken · {done} van {rows.length} gedaan</Text>
-          <Text className="font-semi text-[13px] leading-[20px] text-teal-700">{percent}%</Text>
+          <Text className="font-sans text-[14px] leading-[20px] text-ink">Vandaag afvinken · {done} van {rows.length} gedaan</Text>
+          <Text className={`${S.label} text-teal-700`}>{percent}%</Text>
         </View>
         <View accessibilityRole="progressbar" accessibilityLabel="Dagelijkse voortgang" accessibilityValue={{ min: 0, max: rows.length, now: done, text: `${done} van ${rows.length} gedaan` }} className="h-2 overflow-hidden rounded-full bg-ink-8">
           <View className="h-full rounded-full bg-mint-500" style={{ width: `${percent}%` }} />
@@ -62,25 +63,25 @@ export function ProtocolToday({ protocol, date, horseId, onPhase, SheetComponent
         return <Pressable key={phase.id} accessibilityRole="button" accessibilityLabel={`Bekijk ${phase.title}`}
           onPress={() => onPhase(phase)} className={`min-h-[56px] flex-row items-center gap-3 px-4 py-4 ${index > 0 ? 'border-t border-mint-100' : ''}`}>
           <View className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: PHASE_COLORS[number % PHASE_COLORS.length] }} />
-          <Text className="flex-1 font-semi text-[15px] leading-[22px] text-teal-700">Fase {number + 1} · {phase.title}</Text>
-          <View className="flex-row items-center gap-1"><Text className="font-semi text-[13px] text-teal-600">Uitleg</Text><ChevronRight size={17} color="#106E6D" /></View>
+          <Text className={`flex-1 ${S.section} text-teal-700`}>Fase {number + 1} · {phase.title}</Text>
+          <View className="flex-row items-center gap-1"><Text className={T.link}>Uitleg</Text><ChevronRight size={17} color="#106E6D" /></View>
         </Pressable>;
       })}
     </View>}
-    {doseChanges.length > 0 && <View className="mb-5 gap-3 rounded-[20px] border-l-[3px] border-mint-500 bg-mint-50 p-4">
-      <Text className="font-semi text-[16px] text-teal-700">Vandaag een nieuwe opbouwdag</Text>
-      <Text className="font-sans text-[14px] leading-[21px] text-ink-70">Controleer de hoeveelheid voordat je de producten geeft.</Text>
+    {doseChanges.length > 0 && <View className="mb-5 gap-2 rounded-[22px] border-l-[3px] border-mint-500 bg-mint-50 p-4">
+      <Text className={`${S.section} text-teal-700`}>Vandaag een nieuwe opbouwdag</Text>
+      <Text className={T.secondary}>Controleer de hoeveelheid voordat je de producten geeft.</Text>
     </View>}
     {rows.length > 0 && <>
       <View className="mb-4 flex-row items-center gap-2">
         <Soup size={20} color="#106E6D" />
-        <Text className="flex-1 font-semi text-[14px] leading-[21px] text-teal-600">Meng alles door de geweekte bijvoeding</Text>
+        <Text className={`flex-1 ${S.rowTitle} text-teal-700`}>Meng alles door de geweekte bijvoeding</Text>
       </View>
     </>}
     {groups.map(group => <View key={group.label} className="mb-4">
       <View className="mb-1 flex-row items-center justify-between gap-3">
-        <Text accessibilityRole="header" className="font-semi text-[16px] leading-[22px] text-ink">{group.label}</Text>
-        <Text className="font-sans text-[13px] leading-[20px] text-ink-70">{group.done} van {group.items.length}</Text>
+        <Text accessibilityRole="header" className={T.section}>{group.label}</Text>
+        <Text className={T.meta}>{group.done} van {group.items.length}</Text>
       </View>
       {group.items.map(item => {
         const number = phaseIndex(item);
@@ -97,23 +98,23 @@ export function ProtocolToday({ protocol, date, horseId, onPhase, SheetComponent
             <View className="flex-1 gap-1.5">
               <Text className={`font-sans text-[16px] leading-[23px] ${item.done ? 'text-ink-70' : 'text-ink'}`}><Text className="font-semi">{item.name}</Text>{'  '}<Text className="font-sans text-ink-70">{item.dosage ?? 'Dosering niet ingesteld'}</Text></Text>
               {buildup && (buildup.building || buildup.changed) && <View className="items-start gap-1">
-                <View className="rounded-full bg-mint-50 px-2 py-0.5"><Text className="font-semi text-[11px] text-teal-700">Opbouwdosering</Text></View>
-                {!!buildup.next && <Text className="font-sans text-[12px] leading-[18px] text-ink-70">{buildup.next.afterRecordedDays === 1 ? `Volgende toedieningsdag: ${buildup.next.dosage}.` : `Volgende stap: ${buildup.next.dosage} na ${buildup.next.afterRecordedDays} geregistreerde dagen.`}</Text>}
+                <View className="rounded-full bg-mint-50 px-2 py-0.5"><Text className="font-semi text-[12px] text-teal-700">Opbouwdosering</Text></View>
+                {!!buildup.next && <Text className={T.meta}>{buildup.next.afterRecordedDays === 1 ? `Volgende toedieningsdag: ${buildup.next.dosage}.` : `Volgende stap: ${buildup.next.dosage} na ${buildup.next.afterRecordedDays} geregistreerde dagen.`}</Text>}
               </View>}
               {active.length > 1 && number >= 0 && <View className="flex-row items-center gap-2">
                 <View className="h-2 w-2 rounded-full" style={{ backgroundColor: PHASE_COLORS[number % PHASE_COLORS.length] }} />
-                <Text className="text-[12px] text-ink-70">Fase {number + 1}</Text>
+                <Text className={T.meta}>Fase {number + 1}</Text>
               </View>}
             </View>
             <Pressable accessibilityRole="button" accessibilityLabel={`Uitleg over ${item.name}, ${group.label}`}
               onPress={() => setDetailKey(`${date}:${administrationKey(item)}`)} className="min-h-[44px] flex-row items-center gap-1 px-1">
-              <Text className="font-semi text-[13px] text-teal-600">Uitleg</Text><ChevronRight size={17} color="#106E6D" />
+              <Text className={T.link}>Uitleg</Text><ChevronRight size={17} color="#106E6D" />
             </Pressable>
           </View>
         </View>;
       })}
     </View>)}
-    {rows.length === 0 && <Text className="py-5 text-[15px] text-ink-70">Vandaag staat er niets gepland.</Text>}
+    {rows.length === 0 && <Text className={`py-5 ${T.body}`}>Vandaag staat er niets gepland.</Text>}
     <Sheet visible={!!selected} title={selected?.name ?? ''}
       subtitle={selected ? `${selected.dosage ?? 'Dosering niet ingesteld'} · ${selected.frequencyLabel ?? `${selected.administrationsPerDay ?? 1}× per dag`}` : ''}
       onClose={() => setDetailKey(null)} footer={selected ? <View className="gap-2">
@@ -122,9 +123,9 @@ export function ProtocolToday({ protocol, date, horseId, onPhase, SheetComponent
         <Button title="Vraag Shelby" variant="text" onPress={() => { setDetailKey(null); router.push({ pathname: '/nova-chat', params: { horseId, protocolId: protocol.id } }); }} />
       </View> : undefined}>
       {selected && <DoseBuildupSchedule item={selected} date={date} />}
-      {!!selected?.instructions && <View className="mb-6 gap-3"><Text className="font-semi text-[16px] leading-[22px] text-ink">Instructies</Text><Text className="font-sans text-[15px] leading-[24px] text-ink-70">{selected.instructions}</Text></View>}
-      {!!selected?.description && <View className="gap-3"><Text className="font-semi text-[16px] leading-[22px] text-ink">Over dit product</Text><Text className="font-sans text-[15px] leading-[24px] text-ink-70">{selected.description}</Text></View>}
-      {!selected?.instructions && !selected?.description && <Text className="text-[15px] leading-[24px] text-ink-70">Er is voor dit product nog geen toelichting toegevoegd.</Text>}
+      {!!selected?.instructions && <View className="mb-6 gap-2"><Text accessibilityRole="header" className={T.section}>Instructies</Text><Text className={T.body}>{selected.instructions}</Text></View>}
+      {!!selected?.description && <View className="gap-2"><Text accessibilityRole="header" className={T.section}>Over dit product</Text><Text className={T.body}>{selected.description}</Text></View>}
+      {!selected?.instructions && !selected?.description && <Text className={T.body}>Er is voor dit product nog geen toelichting toegevoegd.</Text>}
     </Sheet>
   </>;
 }
