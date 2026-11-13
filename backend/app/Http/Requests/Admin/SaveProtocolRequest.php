@@ -2,11 +2,14 @@
 
 namespace App\Http\Requests\Admin;
 
+use App\Models\BewegingAdvies;
+use App\Models\ManagementAdvies;
 use App\Models\Protocol;
 use App\Models\ProtocolPhaseSupplement;
 use App\Models\ProtocolTemplatePhase;
 use App\Models\Supplement;
 use App\Models\Therapist;
+use App\Models\VoedingAdvies;
 use App\Rules\ShortProtocolText;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Support\Str;
@@ -14,6 +17,8 @@ use Illuminate\Validation\Validator;
 
 class SaveProtocolRequest extends FormRequest
 {
+    public const ADVICE_UNAVAILABLE = 'Een gekozen advies is niet meer beschikbaar. Vink het uit en sla opnieuw op.';
+
     public function authorize(): bool
     {
         return true;
@@ -116,11 +121,11 @@ class SaveProtocolRequest extends FormRequest
             'advice.*.body' => ['required', 'string', 'max:10000'],
 
             'voeding_advies_ids' => ['present', 'array', 'max:100'],
-            'voeding_advies_ids.*' => ['required', 'uuid', 'distinct', 'exists:voeding_adviezen,id'],
+            'voeding_advies_ids.*' => ['required', 'uuid', 'distinct', VoedingAdvies::selectionRule($this->heldAdviceIds('voedingAdviezen', 'voeding_advies_id'))],
             'management_advies_ids' => ['present', 'array', 'max:100'],
-            'management_advies_ids.*' => ['required', 'uuid', 'distinct', 'exists:management_adviezen,id'],
+            'management_advies_ids.*' => ['required', 'uuid', 'distinct', ManagementAdvies::selectionRule($this->heldAdviceIds('managementAdviezen', 'management_advies_id'))],
             'beweging_advies_ids' => ['present', 'array', 'max:100'],
-            'beweging_advies_ids.*' => ['required', 'uuid', 'distinct', 'exists:beweging_adviezen,id'],
+            'beweging_advies_ids.*' => ['required', 'uuid', 'distinct', BewegingAdvies::selectionRule($this->heldAdviceIds('bewegingAdviezen', 'beweging_advies_id'))],
 
             'phases' => ['present', 'array'],
             'phases.*.id' => ['nullable', 'uuid'],
@@ -154,7 +159,21 @@ class SaveProtocolRequest extends FormRequest
             'analysis.focus_points.*.body.max' => 'Gebruik maximaal twee korte doelzinnen van samen maximaal 320 tekens.',
             'analysis.observations.max' => 'Gebruik maximaal 4 observatiepunten.',
             'analysis.observations.*.max' => 'Gebruik maximaal twee korte observatiezinnen van samen maximaal 320 tekens.',
+            ...array_fill_keys(
+                ['voeding_advies_ids.*.exists', 'management_advies_ids.*.exists', 'beweging_advies_ids.*.exists'],
+                self::ADVICE_UNAVAILABLE,
+            ),
         ];
+    }
+
+    /**
+     * Library ids of the advice the stored protocol already holds; archived advice stays selectable for it.
+     *
+     * @return array<int, string>
+     */
+    private function heldAdviceIds(string $relation, string $foreignKey): array
+    {
+        return $this->route('protocol')?->{$relation}()->pluck($foreignKey)->all() ?? [];
     }
 
     /**

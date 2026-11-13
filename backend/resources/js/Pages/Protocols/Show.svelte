@@ -4,6 +4,7 @@
     import { Link, router } from '@inertiajs/svelte';
     import { Card, CardHeader, CardTitle, CardContent, Button, Badge } from '$lib/components/ui';
     import { statusVariant } from '$lib/badges.js';
+    import { snapshotInstruction } from '$lib/protocolAdvice.js';
     import { ArrowLeft, Check, Dumbbell, Leaf, Pencil, Settings2 } from '@lucide/svelte';
 
     let { protocol } = $props();
@@ -91,12 +92,13 @@
                     {#if category.items.length > 0}
                         <ul class="space-y-4">
                             {#each category.items as advice (advice.id)}
+                                {@const instruction = snapshotInstruction(protocol.customer_settings, category.id, advice)}
                                 <li class="grid grid-cols-[1rem_1fr] gap-2.5">
                                     <Check class="mt-0.5 size-4 text-primary" aria-hidden="true" />
                                     <div class="min-w-0">
                                         <p class="text-sm font-medium leading-5">{advice.title}</p>
-                                        {#if advice.description}
-                                            <p class="mt-1 whitespace-pre-wrap text-sm leading-5 text-muted-foreground">{advice.description}</p>
+                                        {#if instruction}
+                                            <p class="mt-1 whitespace-pre-wrap text-sm leading-5 text-muted-foreground">{instruction}</p>
                                         {/if}
                                     </div>
                                 </li>

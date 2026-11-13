@@ -3,11 +3,14 @@
 namespace Tests\Feature;
 
 use App\Http\Middleware\AuthenticatePowerSyncJwt;
+use App\Http\Requests\Admin\SaveProtocolRequest;
 use App\Models\AdminUser;
 use App\Models\Horse;
+use App\Models\IntakeBooking;
 use App\Models\LibraryItem;
 use App\Models\ManagementAdvies;
 use App\Models\Protocol;
+use App\Models\ProtocolTemplate;
 use App\Models\User;
 use App\Support\CreditLedger;
 use App\Support\HorseDeletion;
@@ -40,6 +43,38 @@ class LibraryLockOrderTest extends TestCase
 
     use HasSubscription;
 
+    public function test_advice_archived_after_validation_is_not_snapshotted(): void
+    {
+        $admin = AdminUser::create(['name' => 'Admin', 'email' => 'archive-race@example.test', 'password' => 'password', 'role' => 'admin', 'active' => true]);
+        $user = User::factory()->create();
+        $horse = Horse::create(['owner_id' => $user->id, 'name' => 'Archive race test', 'status' => 'active']);
+        IntakeBooking::create(['horse_id' => $horse->id, 'user_id' => $user->id, 'submitted_at' => now()]);
+        $template = ProtocolTemplate::create(['name' => 'Archive race template']);
+        $advice = ManagementAdvies::create(['title' => 'Archived meanwhile', 'description' => 'Test']);
+        $payload = ['horse_id' => $horse->id, 'protocol_template_id' => $template->id, 'title' => 'Archive race', 'status' => 'paused', 'published' => false,
+            'voeding_advies_ids' => [], 'management_advies_ids' => [$advice->id], 'beweging_advies_ids' => [], 'advice' => [], 'phases' => []];
+
+        config(['database.connections.archive_probe' => config('database.connections.'.config('database.default'))]);
+        $probe = DB::connection('archive_probe');
+        $archived = false;
+        // Another admin's archive commits after this request passed validation, while it waits for the library lock.
+        DB::connection()->beforeExecuting(function (string $sql) use ($probe, $advice, &$archived): void {
+            if (! $archived && str_contains($sql, 'pg_advisory_xact_lock')) {
+                $archived = true;
+                $probe->table('management_adviezen')->where('id', $advice->id)->update(['archived_at' => now()]);
+            }
+        });
+
+        try {
+            $this->actingAs($admin, 'admin')->post('/admin/protocols', $payload)
+                ->assertSessionHasErrors(['management_advies_ids.0' => SaveProtocolRequest::ADVICE_UNAVAILABLE]);
+            $this->assertTrue($archived);
+            $this->assertDatabaseMissing('protocol_management_adviezen', ['management_advies_id' => $advice->id]);
+        } finally {
+            DB::purge('archive_probe');
+        }
+    }
+
     public function test_the_override_cleanup_migration_locks_settings_before_rewriting_them(): void
     {
         $user = User::factory()->create();
@@ -50,6 +85,7 @@ class LibraryLockOrderTest extends TestCase
         $protocol = Protocol::create(['horse_id' => $horse->id, 'title' => 'Lock test', 'status' => 'draft',
             'customer_settings' => ['weight_kg' => 525, 'management' => [['id' => strtoupper($advice->id)], $remaining]]]);
         $advice->delete();
+        $unrelated = Protocol::create(['horse_id' => $horse->id, 'title' => 'No overrides', 'status' => 'draft', 'customer_settings' => ['weight_kg' => 600]]);
 
         config(['database.connections.advice_lock_probe' => config('database.connections.'.config('database.default'))]);
         $probe = DB::connection('advice_lock_probe');
@@ -57,7 +93,7 @@ class LibraryLockOrderTest extends TestCase
         $checkedLockOrder = false;
         $checkedRowLock = false;
         $checking = true;
-        DB::connection()->beforeExecuting(function (string $sql) use ($probe, $protocol, &$checking, &$checkedLockOrder, &$checkedRowLock): void {
+        DB::connection()->beforeExecuting(function (string $sql) use ($probe, $protocol, $unrelated, &$checking, &$checkedLockOrder, &$checkedRowLock): void {
             if (! $checking) {
                 return;
             }
@@ -66,6 +102,8 @@ class LibraryLockOrderTest extends TestCase
                 $checkedLockOrder = true;
             }
             if (str_starts_with($sql, 'update "protocols"')) {
+                // Protocols without an override group cannot change and stay available to other writers.
+                $this->assertNotNull($probe->selectOne('SELECT id FROM protocols WHERE id = ? FOR UPDATE NOWAIT', [$unrelated->id]));
                 // A second writer must be blocked before cleanup writes its previously read JSON.
                 try {
                     $probe->select('SELECT id FROM protocols WHERE id = ? FOR UPDATE NOWAIT', [$protocol->id]);

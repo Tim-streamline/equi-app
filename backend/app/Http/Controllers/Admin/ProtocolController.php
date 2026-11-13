@@ -612,11 +612,15 @@ class ProtocolController extends Controller
         $snapshots = $protocol->{$relation}()->get()->keyBy($sourceForeignKey);
         $snapshotIds = [];
 
-        foreach ($sourceIds as $sourceId) {
+        foreach ($sourceIds as $index => $sourceId) {
             $snapshot = $snapshots->get($sourceId);
 
             if (! $snapshot) {
-                $source = $sourceModel::query()->findOrFail($sourceId);
+                // Validation ran before this transaction: an archive committed since then must not be snapshotted.
+                $source = $sourceModel::query()->whereNull('archived_at')->sharedLock()->find($sourceId);
+                if (! $source) {
+                    throw ValidationException::withMessages(["{$sourceForeignKey}s.{$index}" => SaveProtocolRequest::ADVICE_UNAVAILABLE]);
+                }
                 $snapshot = $protocol->{$relation}()->create([
                     $sourceForeignKey => $source->id,
                     'title' => $source->title,

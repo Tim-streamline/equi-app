@@ -1,6 +1,8 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { adviceSetting, updatedAdviceSettings } from '../../resources/js/lib/protocolAdvice.js';
+import {
+    adviceErrorTarget, adviceSetting, adviceSettingErrors, snapshotInstruction, unofferedAdvice, updatedAdviceSettings,
+} from '../../resources/js/lib/protocolAdvice.js';
 
 // Mirrors the editor: each edit replaces the section's rows in the form's customer settings.
 function editor(customerSettings) {
@@ -60,4 +62,62 @@ test('a cleared instruction shows the library text the customer sees, while an i
     update('beweging', movement, 'note', 'Alleen de toelichting');
     assert.equal(form.customer_settings.movement[0].instruction, null);
     assert.equal(form.customer_settings.movement[0].note, 'Alleen de toelichting');
+});
+
+test('an edit keeps its row in place, so validation errors keep pointing at the advice they were reported for', () => {
+    const { form, update } = editor({
+        nutrition_advice: [],
+        movement: [{ id: 'a', action: 'do', url: 'www.example.com' }, { id: 'b', action: 'do', url: '' }],
+        management: [],
+    });
+    const errors = { 'customer_settings.movement.0.url': 'Ongeldige link.', 'customer_settings.movement.0': 'Ongeldige rij.' };
+    const [a, b, c] = ['a', 'b', 'c'].map((id) => ({ id, description: '' }));
+    update('beweging', a, 'note', 'Bewerkt na een mislukte opslag');
+    update('beweging', c, 'note', 'Nieuw');
+
+    assert.deepEqual(form.customer_settings.movement.map((row) => row.id), ['a', 'b', 'c']);
+    assert.deepEqual(adviceSettingErrors(errors, form.customer_settings, 'beweging', a), { url: 'Ongeldige link.', row: 'Ongeldige rij.' });
+    assert.deepEqual(adviceSettingErrors(errors, form.customer_settings, 'beweging', b), {});
+    assert.deepEqual(adviceSettingErrors(errors, form.customer_settings, 'voeding', a), {});
+});
+
+test('advice that is no longer offered stays reachable while it is selected or its kept row has errors', () => {
+    const settings = {
+        nutrition_advice: [],
+        management: [],
+        movement: [{ id: 'offered', url: 'x' }, { id: 'archived-invalid', url: 'x' }, { id: 'archived-valid', url: '' }],
+    };
+    const errors = { 'customer_settings.movement.0.url': 'Ongeldig.', 'customer_settings.movement.1.url': 'Ongeldig.' };
+    const items = [{ id: 'offered', title: 'Aangeboden' }];
+    const known = [{ id: 'archived-invalid', title: 'Stappen', description: 'Tekst' }];
+
+    assert.deepEqual(unofferedAdvice(errors, settings, 'beweging', items, ['offered', 'archived-selected'], known), [
+        { title: 'Niet meer beschikbaar advies', description: '', id: 'archived-selected', unoffered: true },
+        { title: 'Stappen', description: 'Tekst', id: 'archived-invalid', unoffered: true },
+    ]);
+    assert.deepEqual(unofferedAdvice({}, settings, 'beweging', items, ['offered']), []);
+});
+
+test('an error path resolves to its section and advice', () => {
+    const settings = { nutrition_advice: [{ id: 'n' }], management: [], movement: [{ id: 'a' }, { id: 'b' }] };
+    assert.deepEqual(adviceErrorTarget('customer_settings.movement.1.url', settings), { section: 'beweging', id: 'b' });
+    assert.deepEqual(adviceErrorTarget('customer_settings.nutrition_advice.0', settings), { section: 'voeding', id: 'n' });
+    assert.deepEqual(adviceErrorTarget('customer_settings.management', settings), { section: 'management', id: null });
+    assert.equal(adviceErrorTarget('customer_settings.weight_kg', settings), null);
+    assert.equal(adviceErrorTarget('movement.1.url', settings), null);
+});
+
+test('the protocol page shows the instruction the customer gets', () => {
+    const settings = {
+        nutrition_advice: [{ id: 'source-n', instruction: 'Eigen voeding' }],
+        management: [{ id: 'source-m', instruction: null }],
+        movement: [{ id: 'source-b', instruction: '' }],
+    };
+    const snapshot = (section, source) => ({ id: `snapshot-${source}`, [`${section}_advies_id`]: source, description: 'Kopie' });
+    assert.equal(snapshotInstruction(settings, 'voeding', snapshot('voeding', 'source-n')), 'Eigen voeding');
+    assert.equal(snapshotInstruction(settings, 'management', snapshot('management', 'source-m')), 'Kopie');
+    // An empty instruction is what the customer dashboard shows too.
+    assert.equal(snapshotInstruction(settings, 'beweging', snapshot('beweging', 'source-b')), '');
+    assert.equal(snapshotInstruction(settings, 'beweging', snapshot('beweging', 'other')), 'Kopie');
+    assert.equal(snapshotInstruction(null, 'voeding', snapshot('voeding', 'source-n')), 'Kopie');
 });

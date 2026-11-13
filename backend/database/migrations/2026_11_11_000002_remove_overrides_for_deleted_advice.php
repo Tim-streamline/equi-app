@@ -23,7 +23,14 @@ return new class extends Migration
             DB::select('SELECT pg_advisory_xact_lock(724119301)');
             $existing = array_map(fn (string $table): array => DB::table($table)->pluck('id', 'id')->all(), self::GROUPS);
 
-            foreach (DB::table('protocols')->whereNotNull('customer_settings')->orderBy('id')->lockForUpdate()->get(['id', 'customer_settings']) as $protocol) {
+            // Only protocols with an override group can change; leave the other rows unlocked.
+            $protocols = DB::table('protocols')
+                ->where(fn ($query) => $query->whereNotNull('customer_settings->nutrition_advice')
+                    ->orWhereNotNull('customer_settings->management')
+                    ->orWhereNotNull('customer_settings->movement'))
+                ->orderBy('id')->lockForUpdate()->get(['id', 'customer_settings']);
+
+            foreach ($protocols as $protocol) {
                 $settings = json_decode($protocol->customer_settings, true);
                 if (! is_array($settings)) {
                     continue;
