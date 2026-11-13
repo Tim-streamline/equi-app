@@ -123,7 +123,8 @@ class AdminProtocolManagementTest extends TestCase
 
     public function test_editing_a_plan_freezes_unopened_past_days_before_supplements_are_removed(): void
     {
-        $this->travelTo(now()->setDate(2026, 9, 24)->setTime(12, 0));
+        // Day 16 must fall inside the 7-day window in which a past day can still be corrected.
+        $this->travelTo(now()->setDate(2026, 9, 22)->setTime(12, 0));
         $payload = [...$this->payload(), 'published' => true, 'started_at' => '2026-09-15'];
         $this->actingAs($this->admin, 'admin')->post('/admin/protocols', $payload)->assertSessionHasNoErrors();
         $protocol = Protocol::firstOrFail();

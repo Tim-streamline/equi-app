@@ -26,31 +26,73 @@ class ProtocolAdviceCatalogSeederTest extends TestCase
         $advice = ManagementAdvies::where('title', 'Wateropname controleren')->sole();
         $advice->update(['title' => ' WATEROPNAME CONTROLEREN ', 'description' => 'Eigen bibliotheektekst']);
         $before = [VoedingAdvies::count(), ManagementAdvies::count(), BewegingAdvies::count()];
-        $this->seed(\Database\Seeders\EquiBoostStandardAdviceSeeder::class);
-        $this->seed(\Database\Seeders\EquiBoostStandardAdviceSeeder::class);
+        $migration = require database_path('migrations/2026_11_11_000001_add_equiboost_standard_advice.php');
+        $migration->up();
+        $migration->up();
         $this->assertSame($before, [VoedingAdvies::count(), ManagementAdvies::count(), BewegingAdvies::count()]);
         $this->assertSame('Eigen bibliotheektekst', $advice->fresh()->description);
-        $this->assertCount(8, \App\Support\EquiBoostStandardAdvice::ITEMS['management_adviezen']);
         $this->assertDatabaseHas('voeding_adviezen', ['title' => 'Langdurige ruwvoerpauzes voorkomen']);
         $this->assertDatabaseHas('beweging_adviezen', ['title' => 'Natuurlijke beweging via terreininrichting stimuleren']);
     }
 
     public function test_the_design_advice_catalogs_are_seeded_idempotently(): void
     {
-        $this->seed([
-            VoedingAdviesSeeder::class,
-            ManagementAdviesSeeder::class,
-            BewegingAdviesSeeder::class,
-        ]);
-        $this->seed([
-            VoedingAdviesSeeder::class,
-            ManagementAdviesSeeder::class,
-            BewegingAdviesSeeder::class,
-        ]);
+        $seeders = [VoedingAdviesSeeder::class, ManagementAdviesSeeder::class, BewegingAdviesSeeder::class];
+        $counts = fn (): array => [VoedingAdvies::count(), ManagementAdvies::count(), BewegingAdvies::count()];
 
-        $this->assertDatabaseCount('voeding_adviezen', 15);
-        $this->assertDatabaseCount('management_adviezen', 17);
-        $this->assertDatabaseCount('beweging_adviezen', 7);
+        $expectedTitles = [
+            VoedingAdvies::class => [
+                'Ruwvoer als basis',
+                'Graszaadhooi beperken',
+                'Stoppen met voordroog',
+                'Waterkwaliteit controleren',
+                'Zuivere balancer geven',
+                'Geef enkel zuivere bijvoeding',
+                'Stoppen met huidige bijvoeding',
+                'Bij gewichtsverlies of gebitsproblemen',
+                'Geen fruit, wortels of snoepjes',
+                'Vers groen ter vrije selectie',
+                'Slowfeeders met kleine mazen',
+                'Voerwissels geleidelijk doorvoeren',
+                'Geen gehakseld ruwvoer (fibermix)',
+                'Zoutsteen ter vrije beschikking',
+            ],
+            ManagementAdvies::class => [
+                'Weidebeleid',
+                'Geen weidegang tijdens protocol',
+                'Voerplekken',
+                'Hoefverzorging',
+                'Gebitscontrole',
+                'Fysieke behandelingen',
+                'Mestonderzoek',
+                'Bloedonderzoek bij vermoeden IR',
+                'Urineonderzoek bij vermoeden KPU',
+            ],
+            BewegingAdvies::class => [
+                'Dagelijkse vrije beweging',
+                'Regelmatige arbeid',
+                'Bewegen zonder trainingsdoel',
+                'Extra aandacht bij bewegingsproblemen',
+                'Vrij spel en hersenwerk',
+                'Longeren en volte beperken',
+            ],
+        ];
+        $existingTitles = [];
+        foreach ($expectedTitles as $model => $titles) {
+            $existingTitles[$model] = $model::pluck('title')->all();
+        }
+        $this->seed($seeders);
+        foreach ($expectedTitles as $model => $titles) {
+            $this->assertEqualsCanonicalizing(
+                array_values(array_unique([...$existingTitles[$model], ...$titles])),
+                $model::pluck('title')->all(),
+                'First seed must install the complete catalog without duplicates.',
+            );
+        }
+        $seeded = $counts();
+        $this->seed($seeders);
+
+        $this->assertSame($seeded, $counts());
 
         $this->assertDatabaseHas('voeding_adviezen', [
             'title' => 'Ruwvoer als basis',
@@ -103,8 +145,5 @@ class ProtocolAdviceCatalogSeederTest extends TestCase
         $this->assertCount(VoedingAdvies::query()->count(), $protocol->voedingAdviezen);
         $this->assertCount(ManagementAdvies::query()->count(), $protocol->managementAdviezen);
         $this->assertCount(BewegingAdvies::query()->count(), $protocol->bewegingAdviezen);
-        $this->assertSame(15, $protocol->voedingAdviezen->count());
-        $this->assertSame(17, $protocol->managementAdviezen->count());
-        $this->assertSame(7, $protocol->bewegingAdviezen->count());
     }
 }

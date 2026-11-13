@@ -11,6 +11,7 @@ use App\Support\AuditLogger;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
@@ -76,21 +77,32 @@ class ProtocolAdviceSettingsController extends Controller
         return back()->with('success', 'Advies bijgewerkt.');
     }
 
-    public function destroy(string $category, string $advice): RedirectResponse
+    public function archive(string $category, string $advice): RedirectResponse
     {
-        $model = $this->findAdvice($category, $advice);
+        return $this->setArchived($category, $advice, true);
+    }
 
-        if ($model->protocolAdviezen()->exists()) {
-            return back()->with('error', 'Dit advies wordt gebruikt in een protocol en kan niet worden verwijderd.');
-        }
+    public function restore(string $category, string $advice): RedirectResponse
+    {
+        return $this->setArchived($category, $advice, false);
+    }
 
-        AuditLogger::deleted($model);
-        if ($model->icon) {
-            Storage::disk('public')->delete($model->icon);
-        }
-        $model->delete();
+    /** Archived advice keeps its row and icon: protocols that use it, or hold an override for it, still refer to it. */
+    private function setArchived(string $category, string $advice, bool $archive): RedirectResponse
+    {
+        DB::transaction(function () use ($category, $advice, $archive) {
+            $model = $this->modelClass($category)::query()->lockForUpdate()->findOrFail($advice);
+            if (($model->archived_at !== null) === $archive) {
+                return;
+            }
+            $before = $model->only('archived_at');
+            $model->forceFill(['archived_at' => $archive ? now() : null])->save();
+            AuditLogger::log($archive ? 'archived' : 'restored', $model, before: $before, after: $model->only('archived_at'));
+        });
 
-        return back()->with('success', 'Advies verwijderd.');
+        return back()->with('success', $archive
+            ? 'Advies gearchiveerd. Protocollen die het al gebruiken behouden het.'
+            : 'Advies hersteld.');
     }
 
     /** @return array{title: string, description: string, layout: string, icon?: mixed, remove_icon: bool} */

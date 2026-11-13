@@ -1,40 +1,63 @@
 import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
-import { runInNewContext } from 'node:vm';
 import test from 'node:test';
+import { adviceSetting, updatedAdviceSettings } from '../../resources/js/lib/protocolAdvice.js';
 
-const source = readFileSync(new URL('../../resources/js/Pages/Protocols/Edit.svelte', import.meta.url), 'utf8');
-const functions = source.slice(source.indexOf('    function adviceSetting('), source.indexOf('    let workingTemplate'));
+// Mirrors the editor: each edit replaces the section's rows in the form's customer settings.
+function editor(customerSettings) {
+    const form = { customer_settings: customerSettings };
+    return {
+        form,
+        setting: (section, advice) => adviceSetting(form.customer_settings, section, advice),
+        update: (section, advice, key, value) => {
+            form.customer_settings = { ...form.customer_settings, ...updatedAdviceSettings(form.customer_settings, section, advice, key, value) };
+        },
+    };
+}
 
-test('movement edits retain all fields and stay separate from management, including after switching tabs', () => {
-    const context = { activeSection: 'beweging', $form: { customer_settings: { movement: [], management: [] } } };
-    runInNewContext(functions + '; this.setting = adviceSetting; this.update = updateAdvice;', context);
+test('movement edits retain all fields and stay separate from management', () => {
+    const { form, setting, update } = editor({ nutrition_advice: [], movement: [], management: [] });
     const advice = { id: 'movement', title: 'Stappen', description: 'Basisinstructie' };
-    context.update(advice, 'note', 'Rustig opbouwen');
-    context.update(advice, 'frequency', 'Dagelijks');
-    context.update(advice, 'url', 'https://example.com/stappen');
-    assert.equal(context.setting(advice).instruction, 'Basisinstructie');
-    assert.equal(context.setting(advice).note, 'Rustig opbouwen');
-    assert.equal(context.setting(advice).frequency, 'Dagelijks');
-    assert.equal(context.$form.customer_settings.management.length, 0);
-    context.activeSection = 'management';
-    context.update({ id: 'management', title: 'Gebitscontrole', description: 'Controleer' }, 'note', 'Eigen toelichting');
-    assert.equal(context.$form.customer_settings.management[0].category, 'care');
-    context.activeSection = 'beweging';
-    assert.equal(context.setting(advice).note, 'Rustig opbouwen');
-    assert.equal(context.$form.customer_settings.movement.length, 1);
-    assert.equal(context.setting(advice).url, 'https://example.com/stappen');
+    update('beweging', advice, 'note', 'Rustig opbouwen');
+    update('beweging', advice, 'frequency', 'Dagelijks');
+    update('beweging', advice, 'url', 'https://example.com/stappen');
+    assert.equal(setting('beweging', advice).instruction, 'Basisinstructie');
+    // Editing other fields must not pin the library text as a custom instruction.
+    assert.equal(form.customer_settings.movement[0].instruction, null);
+    assert.equal(form.customer_settings.management.length, 0);
+    update('management', { id: 'management', title: 'Gebitscontrole', description: 'Controleer' }, 'note', 'Eigen toelichting');
+    assert.equal(form.customer_settings.management[0].category, 'care');
+    assert.equal(form.customer_settings.movement.length, 1);
+    assert.deepEqual(
+        (({ note, frequency, url }) => ({ note, frequency, url }))(setting('beweging', advice)),
+        { note: 'Rustig opbouwen', frequency: 'Dagelijks', url: 'https://example.com/stappen' },
+    );
 });
 
-
 test('nutrition instructions can be customized without changing movement or management', () => {
-    const context = { activeSection: 'voeding', $form: { customer_settings: { nutrition_advice: [], movement: [], management: [] } } };
-    runInNewContext(functions + '; this.setting = adviceSetting; this.update = updateAdvice;', context);
+    const { form, setting, update } = editor({ nutrition_advice: [], movement: [], management: [] });
     const advice = { id: 'nutrition', description: 'Standaardtekst' };
-    assert.equal(context.setting(advice).instruction, 'Standaardtekst');
-    context.update(advice, 'instruction', 'Eigen instructie voor dit paard.');
-    assert.equal(context.setting(advice).instruction, 'Eigen instructie voor dit paard.');
+    assert.deepEqual(setting('voeding', advice), { id: 'nutrition', instruction: 'Standaardtekst' });
+    update('voeding', advice, 'instruction', 'Eigen instructie voor dit paard.');
+    assert.equal(setting('voeding', advice).instruction, 'Eigen instructie voor dit paard.');
     assert.equal(advice.description, 'Standaardtekst');
-    assert.equal(context.$form.customer_settings.movement.length, 0);
-    assert.equal(context.$form.customer_settings.management.length, 0);
+    assert.equal(form.customer_settings.movement.length, 0);
+    assert.equal(form.customer_settings.management.length, 0);
+});
+
+test('a cleared instruction shows the library text the customer sees, while an in-progress empty one stays empty', () => {
+    const { form, setting, update } = editor({
+        nutrition_advice: [{ id: 'nutrition', instruction: null }],
+        movement: [{ id: 'movement', action: 'avoid', instruction: null }],
+        management: [],
+    });
+    const nutrition = { id: 'nutrition', description: 'Standaardtekst' };
+    const movement = { id: 'movement', description: 'Bewegingstekst' };
+    assert.equal(setting('voeding', nutrition).instruction, 'Standaardtekst');
+    update('voeding', nutrition, 'instruction', '');
+    assert.equal(setting('voeding', nutrition).instruction, '');
+    assert.equal(setting('beweging', movement).instruction, 'Bewegingstekst');
+    assert.equal(setting('beweging', movement).action, 'avoid');
+    update('beweging', movement, 'note', 'Alleen de toelichting');
+    assert.equal(form.customer_settings.movement[0].instruction, null);
+    assert.equal(form.customer_settings.movement[0].note, 'Alleen de toelichting');
 });

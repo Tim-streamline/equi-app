@@ -20,6 +20,32 @@ class SaveProtocolRequest extends FormRequest
     }
 
     /**
+     * Postgres matches uuids in any case, but snapshots and overrides are looked up by exact string.
+     * Store advice ids the way the database returns them.
+     */
+    protected function prepareForValidation(): void
+    {
+        $lower = fn (mixed $id): mixed => is_string($id) ? strtolower($id) : $id;
+        $input = [];
+        foreach (['voeding_advies_ids', 'management_advies_ids', 'beweging_advies_ids'] as $key) {
+            if (is_array($this->input($key))) {
+                $input[$key] = array_map($lower, $this->input($key));
+            }
+        }
+        $settings = $this->input('customer_settings');
+        foreach (['nutrition_advice', 'management', 'movement'] as $group) {
+            if (is_array($settings) && is_array($settings[$group] ?? null)) {
+                $settings[$group] = array_map(
+                    fn (mixed $row): mixed => is_array($row) && isset($row['id']) ? array_replace($row, ['id' => $lower($row['id'])]) : $row,
+                    $settings[$group],
+                );
+                $input['customer_settings'] = $settings;
+            }
+        }
+        $this->merge($input);
+    }
+
+    /**
      * @return array<string, array<int, string|ShortProtocolText>>
      */
     public function rules(): array

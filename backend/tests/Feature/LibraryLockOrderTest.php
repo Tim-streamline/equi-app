@@ -6,11 +6,14 @@ use App\Http\Middleware\AuthenticatePowerSyncJwt;
 use App\Models\AdminUser;
 use App\Models\Horse;
 use App\Models\LibraryItem;
+use App\Models\ManagementAdvies;
 use App\Models\Protocol;
 use App\Models\User;
 use App\Support\CreditLedger;
 use App\Support\HorseDeletion;
+use Illuminate\Database\QueryException;
 use Illuminate\Foundation\Testing\DatabaseMigrations;
+use Illuminate\Foundation\Testing\RefreshDatabaseState;
 use Illuminate\Support\Facades\DB;
 use PHPUnit\Framework\Attributes\TestWith;
 use Symfony\Component\Process\Process;
@@ -32,9 +35,59 @@ class LibraryLockOrderTest extends TestCase
         $this->beforeRefreshingDatabase();
         $this->refreshTestDatabase();
         $this->afterRefreshingDatabase();
-        $this->beforeApplicationDestroyed(fn () => \Illuminate\Foundation\Testing\RefreshDatabaseState::$migrated = false);
+        $this->beforeApplicationDestroyed(fn () => RefreshDatabaseState::$migrated = false);
     }
+
     use HasSubscription;
+
+    public function test_the_override_cleanup_migration_locks_settings_before_rewriting_them(): void
+    {
+        $user = User::factory()->create();
+        $horse = Horse::create(['owner_id' => $user->id, 'name' => 'Advice lock test', 'status' => 'active']);
+        $advice = ManagementAdvies::create(['title' => 'To remove', 'description' => 'Test']);
+        $kept = ManagementAdvies::create(['title' => 'To keep', 'description' => 'Test']);
+        $remaining = ['id' => $kept->id, 'category' => 'care', 'action' => 'do', 'note' => 'Keep this edit'];
+        $protocol = Protocol::create(['horse_id' => $horse->id, 'title' => 'Lock test', 'status' => 'draft',
+            'customer_settings' => ['weight_kg' => 525, 'management' => [['id' => strtoupper($advice->id)], $remaining]]]);
+        $advice->delete();
+
+        config(['database.connections.advice_lock_probe' => config('database.connections.'.config('database.default'))]);
+        $probe = DB::connection('advice_lock_probe');
+        $this->assertTrue($probe->selectOne('SELECT pg_try_advisory_xact_lock(724119301) AS acquired')->acquired);
+        $checkedLockOrder = false;
+        $checkedRowLock = false;
+        $checking = true;
+        DB::connection()->beforeExecuting(function (string $sql) use ($probe, $protocol, &$checking, &$checkedLockOrder, &$checkedRowLock): void {
+            if (! $checking) {
+                return;
+            }
+            if (preg_match('/from "protocols".*for update/is', $sql)) {
+                $this->assertFalse($probe->selectOne('SELECT pg_try_advisory_xact_lock(724119301) AS acquired')->acquired);
+                $checkedLockOrder = true;
+            }
+            if (str_starts_with($sql, 'update "protocols"')) {
+                // A second writer must be blocked before cleanup writes its previously read JSON.
+                try {
+                    $probe->select('SELECT id FROM protocols WHERE id = ? FOR UPDATE NOWAIT', [$protocol->id]);
+                    $this->fail('Cleanup read the settings without retaining their row lock.');
+                } catch (QueryException $exception) {
+                    $this->assertSame('55P03', $exception->errorInfo[0]);
+                    $checkedRowLock = true;
+                }
+            }
+        });
+
+        try {
+            (require database_path('migrations/2026_11_11_000002_remove_overrides_for_deleted_advice.php'))->up();
+            $this->assertTrue($checkedLockOrder);
+            $this->assertTrue($checkedRowLock);
+            $this->assertSame(['weight_kg' => 525, 'management' => [$remaining]], $protocol->fresh()->customer_settings);
+            $this->assertTrue($probe->selectOne('SELECT pg_try_advisory_xact_lock(724119301) AS acquired')->acquired);
+        } finally {
+            $checking = false;
+            DB::purge('advice_lock_probe');
+        }
+    }
 
     #[TestWith(['draft', true])]
     #[TestWith(['paused', false])]

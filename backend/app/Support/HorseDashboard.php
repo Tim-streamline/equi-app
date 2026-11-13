@@ -10,6 +10,7 @@ use App\Models\Protocol;
 use App\Models\SeasonalTip;
 use App\Models\User;
 use Carbon\CarbonImmutable;
+use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 
@@ -268,25 +269,18 @@ class HorseDashboard
     {
         $overrides = collect($protocol->customer_settings['nutrition_advice'] ?? [])->keyBy('id');
 
-        return $protocol->voedingAdviezen->map(fn ($advice) => [
-            'id' => $advice->id, 'title' => $advice->title,
-            'description' => $overrides->get($advice->voeding_advies_id)['instruction'] ?? $advice->description,
-        ])->values()->all();
+        return $protocol->voedingAdviezen->map(fn ($advice) => Arr::only(
+            $this->adviceItem($advice, $overrides->get($advice->voeding_advies_id, [])),
+            ['id', 'title', 'description'],
+        ))->values()->all();
     }
 
     private function movement(Protocol $protocol): array
     {
         $overrides = collect($protocol->customer_settings['movement'] ?? [])->keyBy('id');
 
-        return $protocol->bewegingAdviezen->map(function ($advice) use ($overrides) {
-            $settings = $overrides->get($advice->beweging_advies_id, []);
-
-            return ['id' => $advice->id, 'title' => $advice->title,
-                'description' => $settings['instruction'] ?? $advice->description,
-                'action' => $settings['action'] ?? 'do', 'note' => $settings['note'] ?? null,
-                'frequency' => $settings['frequency'] ?? null, 'url' => $settings['url'] ?? null,
-                'ctaLabel' => $settings['cta_label'] ?? null];
-        })->all();
+        return $protocol->bewegingAdviezen
+            ->map(fn ($advice) => $this->adviceItem($advice, $overrides->get($advice->beweging_advies_id, [])))->all();
     }
 
     private function management(Protocol $protocol): array
@@ -296,13 +290,19 @@ class HorseDashboard
             $settings = $overrides->get($a->management_advies_id, []);
             $category = $settings['category'] ?? (preg_match('/mestonderzoek|bloed|urine|onderzoek|monitor/iu', $a->title) ? 'monitoring' : (preg_match('/hoef|gebit|tand|behandel|verzorg/iu', $a->title) ? 'care' : 'environment'));
 
-            return ['id' => $a->id, 'title' => $a->title, 'description' => $settings['instruction'] ?? $a->description,
-                'category' => $category, 'action' => $settings['action'] ?? 'do', 'note' => $settings['note'] ?? null,
-                'frequency' => $settings['frequency'] ?? null, 'url' => $settings['url'] ?? null, 'ctaLabel' => $settings['cta_label'] ?? null];
+            return $this->adviceItem($a, $settings) + ['category' => $category];
         });
 
         return collect(['environment' => 'Weide & leefomgeving', 'care' => 'Verzorging & lichamelijke ondersteuning', 'monitoring' => 'Onderzoek & monitoring'])
             ->map(fn ($title, $key) => ['id' => $key, 'title' => $title, 'items' => $items->where('category', $key)->values()->all()])
             ->filter(fn ($group) => count($group['items']) > 0)->values()->all();
+    }
+
+    /** @param  array<string, mixed>  $settings  The protocol's customer override for this advice. */
+    private function adviceItem($advice, array $settings): array
+    {
+        return ['id' => $advice->id, 'title' => $advice->title, 'description' => $settings['instruction'] ?? $advice->description,
+            'action' => $settings['action'] ?? 'do', 'note' => $settings['note'] ?? null,
+            'frequency' => $settings['frequency'] ?? null, 'url' => $settings['url'] ?? null, 'ctaLabel' => $settings['cta_label'] ?? null];
     }
 }

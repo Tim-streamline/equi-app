@@ -1,8 +1,4 @@
-import type { DashboardAdvice, DashboardProtocol } from './horse-dashboard';
-
-export type CareAdvice = Omit<DashboardAdvice, 'action'> & {
-  action?: DashboardAdvice['action'];
-};
+import type { CareAdvice, DashboardProtocol } from './horse-dashboard';
 
 export type CareSection = {
   id: 'environment' | 'movement' | 'care' | 'monitoring';

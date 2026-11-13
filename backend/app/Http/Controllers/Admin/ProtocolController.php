@@ -251,9 +251,10 @@ class ProtocolController extends Controller
             'therapists' => Therapist::availableFor($currentTherapistId)
                 ->orderBy('name')
                 ->get(['id', 'name', 'title', 'archived_at']),
-            'voedingAdviezen' => VoedingAdvies::query()->orderBy('title')->get(),
-            'managementAdviezen' => ManagementAdvies::query()->orderBy('title')->get(),
-            'bewegingAdviezen' => BewegingAdvies::query()->orderBy('title')->get(),
+            // Archived advice stays listed only for a protocol that already uses it.
+            'voedingAdviezen' => VoedingAdvies::availableFor($protocol?->voedingAdviezen->pluck('voeding_advies_id')->all() ?? [])->orderBy('title')->get(),
+            'managementAdviezen' => ManagementAdvies::availableFor($protocol?->managementAdviezen->pluck('management_advies_id')->all() ?? [])->orderBy('title')->get(),
+            'bewegingAdviezen' => BewegingAdvies::availableFor($protocol?->bewegingAdviezen->pluck('beweging_advies_id')->all() ?? [])->orderBy('title')->get(),
             'doseBuildups' => \App\Models\DoseBuildup::orderBy('name')->get(),
             'protocolTemplates' => ProtocolTemplate::query()
                 ->with([
