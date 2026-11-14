@@ -668,7 +668,8 @@
         return category.items.filter((advice) => isProtocolAdviceSelected(category, advice.id));
     }
 
-    function save(published = false) {
+    // A plain save keeps the publication state: only "Publiceren" and "Depubliceren" change it.
+    function save(published = $form.published) {
         if (pendingSave || $form.processing) return;
         pendingSave = true;
         saveError = '';
