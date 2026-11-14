@@ -94,6 +94,10 @@ export type DashboardAdvice = {
   url?: string;
   ctaLabel?: string;
 };
+// `action` is optional: backends from before movement advice became editable omit it.
+export type CareAdvice = Omit<DashboardAdvice, "action"> & {
+  action?: DashboardAdvice["action"];
+};
 export type DashboardProtocol = {
   preparing?: boolean;
   startedAt?: string | null;
@@ -153,7 +157,7 @@ export type DashboardProtocol = {
     water: { types: string[]; needsAnalysis: boolean; advice?: string };
   };
   management: { id: string; title: string; items: DashboardAdvice[] }[];
-  movement: { id: string; title: string; description?: string }[];
+  movement: CareAdvice[];
   analysis: {
     summary: string;
     priorities: { id: string; title: string; body: string }[];

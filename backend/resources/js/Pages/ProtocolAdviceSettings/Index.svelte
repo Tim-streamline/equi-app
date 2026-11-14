@@ -5,17 +5,17 @@
     import Field from '$lib/components/Field.svelte';
     import { router, useForm } from '@inertiajs/svelte';
     import { Badge, Button, Input, Select, Textarea } from '$lib/components/ui';
-    import { Dumbbell, Image as ImageIcon, Leaf, Pencil, Plus, Settings2, Trash2, X } from '@lucide/svelte';
+    import { Archive, ArchiveRestore, Dumbbell, Image as ImageIcon, Leaf, Pencil, Plus, Settings2, X } from '@lucide/svelte';
     import { fade } from 'svelte/transition';
 
     let { voedingAdviezen, managementAdviezen, bewegingAdviezen, layoutOptions } = $props();
 
     let activeTab = $state('voeding');
     let formOpen = $state(false);
-    let deleteOpen = $state(false);
+    let archiveOpen = $state(false);
     let editing = $state(null);
-    let pendingDeletion = $state(null);
-    let deletionProcessing = $state(false);
+    let pendingArchive = $state(null);
+    let archiveProcessing = $state(false);
     let iconPreview = $state(null);
     let iconInputKey = $state(0);
 
@@ -46,6 +46,8 @@
         },
     ]);
     const activeConfig = $derived(tabs.find((tab) => tab.key === activeTab) ?? tabs[0]);
+    const activeItems = $derived(activeConfig.items.filter((advice) => !advice.archived_at));
+    const archivedItems = $derived(activeConfig.items.filter((advice) => advice.archived_at));
 
     const form = useForm({ title: '', description: '', layout: 'normal', icon: null, remove_icon: false });
 
@@ -105,23 +107,27 @@
         }
     }
 
-    function askToDelete(advice) {
-        pendingDeletion = advice;
-        deleteOpen = true;
+    function askToArchive(advice) {
+        pendingArchive = advice;
+        archiveOpen = true;
     }
 
-    function removeAdvice() {
-        if (!pendingDeletion) return;
+    function archiveAdvice() {
+        if (!pendingArchive) return;
 
-        deletionProcessing = true;
-        router.delete(`/admin/protocol-settings/advice/${activeTab}/${pendingDeletion.id}`, {
+        archiveProcessing = true;
+        router.post(`/admin/protocol-settings/advice/${activeTab}/${pendingArchive.id}/archive`, {}, {
             preserveScroll: true,
-            onFinish: () => (deletionProcessing = false),
+            onFinish: () => (archiveProcessing = false),
             onSuccess: () => {
-                deleteOpen = false;
-                pendingDeletion = null;
+                archiveOpen = false;
+                pendingArchive = null;
             },
         });
+    }
+
+    function restoreAdvice(advice) {
+        router.post(`/admin/protocol-settings/advice/${activeTab}/${advice.id}/restore`, {}, { preserveScroll: true });
     }
 </script>
 
@@ -156,7 +162,7 @@
                             <Dumbbell class="size-4" />
                         {/if}
                         {tab.label}
-                        <Badge variant={activeTab === tab.key ? 'default' : 'muted'}>{tab.items.length}</Badge>
+                        <Badge variant={activeTab === tab.key ? 'default' : 'muted'}>{tab.items.filter((advice) => !advice.archived_at).length}</Badge>
                         {#if activeTab === tab.key}
                             <span class="absolute inset-x-3 bottom-0 h-0.5 rounded-full bg-primary" transition:fade></span>
                         {/if}
@@ -175,33 +181,43 @@
                 <Button variant="outline" size="sm" onclick={createAdvice}><Plus class="size-4" /> Toevoegen</Button>
             </div>
 
-            {#if activeConfig.items.length}
+            {#snippet adviceRow(advice)}
+                <article class="group flex items-start gap-4 border-b px-5 py-5 last:border-b-0 sm:px-6">
+                    <div class="flex size-11 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-primary/10 text-primary">
+                        {#if advice.icon_url}
+                            <img src={advice.icon_url} alt="" class="size-full object-cover" />
+                        {:else}
+                            <ImageIcon class="size-5" aria-hidden="true" />
+                        {/if}
+                    </div>
+                    <div class="min-w-0 flex-1">
+                        <div class="flex flex-wrap items-center gap-2">
+                            <h4 class="font-semibold text-foreground">{advice.title}</h4>
+                            <Badge variant="muted">{layoutLabel(advice.layout)}</Badge>
+                        </div>
+                        <p class="mt-1 max-w-3xl whitespace-pre-line text-sm leading-6 text-muted-foreground">{advice.description}</p>
+                    </div>
+                    <div class="flex shrink-0 items-center gap-1 opacity-70 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100">
+                        {#if advice.archived_at}
+                            <Button variant="ghost" size="icon" onclick={() => restoreAdvice(advice)} aria-label={`${advice.title} herstellen`} title="Herstellen">
+                                <ArchiveRestore class="size-4" />
+                            </Button>
+                        {:else}
+                            <Button variant="ghost" size="icon" onclick={() => editAdvice(advice)} aria-label={`${advice.title} bewerken`} title="Bewerken">
+                                <Pencil class="size-4" />
+                            </Button>
+                            <Button variant="ghost" size="icon" onclick={() => askToArchive(advice)} aria-label={`${advice.title} archiveren`} title="Archiveren">
+                                <Archive class="size-4" />
+                            </Button>
+                        {/if}
+                    </div>
+                </article>
+            {/snippet}
+
+            {#if activeItems.length}
                 <div in:fade={{ duration: 140 }}>
-                    {#each activeConfig.items as advice (advice.id)}
-                        <article class="group flex items-start gap-4 border-b px-5 py-5 last:border-b-0 sm:px-6">
-                            <div class="flex size-11 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-primary/10 text-primary">
-                                {#if advice.icon_url}
-                                    <img src={advice.icon_url} alt="" class="size-full object-cover" />
-                                {:else}
-                                    <ImageIcon class="size-5" aria-hidden="true" />
-                                {/if}
-                            </div>
-                            <div class="min-w-0 flex-1">
-                                <div class="flex flex-wrap items-center gap-2">
-                                    <h4 class="font-semibold text-foreground">{advice.title}</h4>
-                                    <Badge variant="muted">{layoutLabel(advice.layout)}</Badge>
-                                </div>
-                                <p class="mt-1 max-w-3xl whitespace-pre-line text-sm leading-6 text-muted-foreground">{advice.description}</p>
-                            </div>
-                            <div class="flex shrink-0 items-center gap-1 opacity-70 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100">
-                                <Button variant="ghost" size="icon" onclick={() => editAdvice(advice)} aria-label={`${advice.title} bewerken`} title="Bewerken">
-                                    <Pencil class="size-4" />
-                                </Button>
-                                <Button variant="ghost" size="icon" onclick={() => askToDelete(advice)} aria-label={`${advice.title} verwijderen`} title="Verwijderen">
-                                    <Trash2 class="size-4 text-destructive" />
-                                </Button>
-                            </div>
-                        </article>
+                    {#each activeItems as advice (advice.id)}
+                        {@render adviceRow(advice)}
                     {/each}
                 </div>
             {:else}
@@ -213,6 +229,17 @@
                     <p class="mt-1 max-w-sm text-sm text-muted-foreground">Voeg het eerste advies toe met een herkenbare titel en duidelijke beschrijving.</p>
                     <Button class="mt-4" variant="outline" onclick={createAdvice}>Eerste advies toevoegen</Button>
                 </div>
+            {/if}
+
+            {#if archivedItems.length}
+                <details class="border-t">
+                    <summary class="cursor-pointer px-5 py-4 text-sm font-medium text-muted-foreground sm:px-6">Gearchiveerd ({archivedItems.length})</summary>
+                    <div class="opacity-70">
+                        {#each archivedItems as advice (advice.id)}
+                            {@render adviceRow(advice)}
+                        {/each}
+                    </div>
+                </details>
             {/if}
         </section>
     </div>
@@ -262,13 +289,14 @@
         {/snippet}
     </Modal>
 
-    <Modal bind:open={deleteOpen} title="Advies verwijderen" description="Deze actie kan niet ongedaan worden gemaakt." size="sm">
+    <Modal bind:open={archiveOpen} title="Advies archiveren" description="Je kunt het advies later herstellen." size="sm">
         <p class="text-sm text-muted-foreground">
-            Weet je zeker dat je <strong class="text-foreground">{pendingDeletion?.title}</strong> wilt verwijderen?
+            <strong class="text-foreground">{pendingArchive?.title}</strong> is daarna niet meer te kiezen in een protocol.
+            Protocollen die het al gebruiken behouden het.
         </p>
         {#snippet footer()}
-            <Button variant="outline" onclick={() => (deleteOpen = false)}>Annuleren</Button>
-            <Button variant="destructive" disabled={deletionProcessing} onclick={removeAdvice}>Verwijderen</Button>
+            <Button variant="outline" onclick={() => (archiveOpen = false)}>Annuleren</Button>
+            <Button disabled={archiveProcessing} onclick={archiveAdvice}>Archiveren</Button>
         {/snippet}
     </Modal>
 </AdminLayout>

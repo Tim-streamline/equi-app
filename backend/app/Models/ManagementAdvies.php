@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\ArchivesProtocolAdvice;
 use App\Models\Concerns\HasProtocolAdvicePresentation;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
@@ -11,7 +12,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 #[Fillable(['title', 'description', 'layout', 'icon'])]
 class ManagementAdvies extends Model
 {
-    use HasProtocolAdvicePresentation, HasUuids;
+    use ArchivesProtocolAdvice, HasProtocolAdvicePresentation, HasUuids;
 
     protected $table = 'management_adviezen';
 

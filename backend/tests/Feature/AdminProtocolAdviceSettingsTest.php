@@ -3,6 +3,9 @@
 namespace Tests\Feature;
 
 use App\Models\AdminUser;
+use App\Models\BewegingAdvies;
+use App\Models\ManagementAdvies;
+use App\Models\VoedingAdvies;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
@@ -31,14 +34,40 @@ class AdminProtocolAdviceSettingsTest extends TestCase
 
     public function test_admin_can_open_protocol_settings_with_the_three_advice_tabs(): void
     {
+        foreach ([VoedingAdvies::class, ManagementAdvies::class, BewegingAdvies::class] as $model) {
+            foreach (['Zzz test', 'Aaa test'] as $title) {
+                $model::create(['title' => $title, 'description' => 'Test advice']);
+            }
+        }
         $this->actingAs($this->admin, 'admin')
             ->get('/admin/protocol-settings/advice')
             ->assertOk()
             ->assertInertia(fn (Assert $page) => $page
                 ->component('ProtocolAdviceSettings/Index')
-                ->has('voedingAdviezen', 0)
-                ->has('managementAdviezen', 0)
-                ->has('bewegingAdviezen', 0));
+                ->where('voedingAdviezen', fn ($rows) => collect($rows)->pluck('id')->all() === VoedingAdvies::orderBy('title')->pluck('id')->all())
+                ->where('managementAdviezen', fn ($rows) => collect($rows)->pluck('id')->all() === ManagementAdvies::orderBy('title')->pluck('id')->all())
+                ->where('bewegingAdviezen', fn ($rows) => collect($rows)->pluck('id')->all() === BewegingAdvies::orderBy('title')->pluck('id')->all()));
+    }
+
+    public function test_advice_is_archived_and_restored_instead_of_deleted(): void
+    {
+        Storage::fake('public');
+        Storage::disk('public')->put('advice.svg', 'icon');
+        $advice = ManagementAdvies::create(['title' => 'Archiveren', 'description' => 'Test', 'icon' => 'advice.svg']);
+        $url = '/admin/protocol-settings/advice/management/'.$advice->id;
+
+        $this->actingAs($this->admin, 'admin')->post($url.'/archive')->assertSessionHas('success');
+        $this->assertNotNull($advice->fresh()->archived_at);
+        // The row and icon stay: protocols that use the advice still show them.
+        Storage::disk('public')->assertExists('advice.svg');
+        $this->assertDatabaseHas('audit_logs', ['target_id' => $advice->id, 'action' => 'archived']);
+        $this->get('/admin/protocol-settings/advice')->assertInertia(fn (Assert $page) => $page
+            ->where('managementAdviezen', fn ($rows) => collect($rows)->firstWhere('id', $advice->id)['archived_at'] !== null));
+
+        $this->post($url.'/restore')->assertSessionHas('success');
+        $this->assertNull($advice->fresh()->archived_at);
+        $this->assertDatabaseHas('audit_logs', ['target_id' => $advice->id, 'action' => 'restored']);
+        $this->delete($url)->assertStatus(405);
     }
 
     public function test_admin_can_manage_each_protocol_advice_entity(): void
@@ -63,7 +92,7 @@ class AdminProtocolAdviceSettingsTest extends TestCase
             ]);
         }
 
-        $managementId = (string) DB::table('management_adviezen')->value('id');
+        $managementId = (string) DB::table('management_adviezen')->where('title', 'Management advies')->value('id');
 
         $this->actingAs($this->admin, 'admin')
             ->put("/admin/protocol-settings/advice/management/{$managementId}", [
@@ -79,10 +108,10 @@ class AdminProtocolAdviceSettingsTest extends TestCase
         ]);
 
         $this->actingAs($this->admin, 'admin')
-            ->delete("/admin/protocol-settings/advice/management/{$managementId}")
+            ->post("/admin/protocol-settings/advice/management/{$managementId}/archive")
             ->assertSessionHasNoErrors();
 
-        $this->assertDatabaseMissing('management_adviezen', ['id' => $managementId]);
+        $this->assertNotNull(ManagementAdvies::findOrFail($managementId)->archived_at);
     }
 
     public function test_title_and_description_are_required(): void

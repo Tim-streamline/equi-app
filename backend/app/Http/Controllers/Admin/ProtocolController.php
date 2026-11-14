@@ -251,9 +251,10 @@ class ProtocolController extends Controller
             'therapists' => Therapist::availableFor($currentTherapistId)
                 ->orderBy('name')
                 ->get(['id', 'name', 'title', 'archived_at']),
-            'voedingAdviezen' => VoedingAdvies::query()->orderBy('title')->get(),
-            'managementAdviezen' => ManagementAdvies::query()->orderBy('title')->get(),
-            'bewegingAdviezen' => BewegingAdvies::query()->orderBy('title')->get(),
+            // Archived advice stays listed only for a protocol that already uses it.
+            'voedingAdviezen' => VoedingAdvies::availableFor($protocol?->voedingAdviezen->pluck('voeding_advies_id')->all() ?? [])->orderBy('title')->get(),
+            'managementAdviezen' => ManagementAdvies::availableFor($protocol?->managementAdviezen->pluck('management_advies_id')->all() ?? [])->orderBy('title')->get(),
+            'bewegingAdviezen' => BewegingAdvies::availableFor($protocol?->bewegingAdviezen->pluck('beweging_advies_id')->all() ?? [])->orderBy('title')->get(),
             'doseBuildups' => \App\Models\DoseBuildup::orderBy('name')->get(),
             'protocolTemplates' => ProtocolTemplate::query()
                 ->with([
@@ -611,11 +612,15 @@ class ProtocolController extends Controller
         $snapshots = $protocol->{$relation}()->get()->keyBy($sourceForeignKey);
         $snapshotIds = [];
 
-        foreach ($sourceIds as $sourceId) {
+        foreach ($sourceIds as $index => $sourceId) {
             $snapshot = $snapshots->get($sourceId);
 
             if (! $snapshot) {
-                $source = $sourceModel::query()->findOrFail($sourceId);
+                // Validation ran before this transaction: an archive committed since then must not be snapshotted.
+                $source = $sourceModel::query()->whereNull('archived_at')->sharedLock()->find($sourceId);
+                if (! $source) {
+                    throw ValidationException::withMessages(["{$sourceForeignKey}s.{$index}" => SaveProtocolRequest::ADVICE_UNAVAILABLE]);
+                }
                 $snapshot = $protocol->{$relation}()->create([
                     $sourceForeignKey => $source->id,
                     'title' => $source->title,

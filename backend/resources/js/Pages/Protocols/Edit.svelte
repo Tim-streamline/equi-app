@@ -9,6 +9,7 @@
         recalculateProtocolDosages,
     } from '$lib/protocolDosage.js';
     import { protocolPhaseRanges, totalProtocolWeeks } from '$lib/protocolPhasePlanning.js';
+    import { adviceErrorTarget, adviceSetting, adviceSettingErrors, unofferedAdvice, updatedAdviceSettings } from '$lib/protocolAdvice.js';
     import { Link, router, useForm } from '@inertiajs/svelte';
     import { onMount, tick, untrack } from 'svelte';
     import { Button, Input, Select, Textarea } from '$lib/components/ui';
@@ -212,6 +213,14 @@
         });
     }
 
+    // The catalog as first loaded: a failed save reloads it without advice that was archived in the meantime.
+    const openingAdvice = untrack(() => ({ voeding: voedingAdviezen, management: managementAdviezen, beweging: bewegingAdviezen }));
+
+    function adviceItems(section, catalog, snapshots) {
+        const items = adviceCatalogWithSnapshots(catalog, snapshots, `${section}_advies_id`);
+        return [...items, ...unofferedAdvice($form.errors, $form.customer_settings, section, items, $form[`${section}_advies_ids`], openingAdvice[section])];
+    }
+
     const form = useForm({
         horse_id: initialProtocol?.horse_id ?? initialSelectedHorseId ?? '',
         protocol_template_id: initialProtocolTemplateId,
@@ -232,6 +241,8 @@
             weekly_update_day: initialProtocol?.customer_settings?.weekly_update_day ?? 7,
             feed_overrides: initialProtocol?.customer_settings?.feed_overrides ?? [],
             management: initialProtocol?.customer_settings?.management ?? [],
+            movement: initialProtocol?.customer_settings?.movement ?? [],
+            nutrition_advice: initialProtocol?.customer_settings?.nutrition_advice ?? [],
         },
         analysis: {
             cause: initialProtocol?.analysis?.cause ?? '',
@@ -259,16 +270,8 @@
         const current = rows.find((row) => row.id === feed.id) ?? { id: feed.id, status: feed.status, note: '' };
         $form.customer_settings.feed_overrides = [...rows.filter((row) => row.id !== feed.id), { ...current, [key]: value }];
     }
-    function managementSetting(advice) {
-        return $form.customer_settings.management.find((row) => row.id === advice.id) ?? {
-            id: advice.id,
-            category: /mestonderzoek|bloed|urine|onderzoek|monitor/i.test(advice.title) ? 'monitoring' : /hoef|gebit|tand|behandel|verzorg/i.test(advice.title) ? 'care' : 'environment',
-            action: 'do', instruction: advice.description, note: '', frequency: '', url: '', cta_label: '',
-        };
-    }
-    function updateManagement(advice, key, value) {
-        const rows = $form.customer_settings.management;
-        $form.customer_settings.management = [...rows.filter((row) => row.id !== advice.id), { ...managementSetting(advice), [key]: value }];
+    function updateAdvice(advice, key, value) {
+        $form.customer_settings = { ...$form.customer_settings, ...updatedAdviceSettings($form.customer_settings, activeSection, advice, key, value) };
     }
 
     let workingTemplate = $state(initialTemplate);
@@ -336,7 +339,7 @@
             formKey: 'voeding_advies_ids',
             step: 3,
             description: 'Selecteer de voedingsadviezen die bij dit protocol horen.',
-            items: adviceCatalogWithSnapshots(voedingAdviezen, initialProtocol?.voeding_adviezen, 'voeding_advies_id'),
+            items: adviceItems('voeding', voedingAdviezen, initialProtocol?.voeding_adviezen),
             next: 'management',
             nextLabel: 'Management',
         },
@@ -347,7 +350,7 @@
             formKey: 'management_advies_ids',
             step: 4,
             description: 'Selecteer adviezen over huisvesting, routine en herstel.',
-            items: adviceCatalogWithSnapshots(managementAdviezen, initialProtocol?.management_adviezen, 'management_advies_id'),
+            items: adviceItems('management', managementAdviezen, initialProtocol?.management_adviezen),
             next: 'beweging',
             nextLabel: 'Beweging',
         },
@@ -358,7 +361,7 @@
             formKey: 'beweging_advies_ids',
             step: 5,
             description: 'Selecteer adviezen over training, opbouw en bewegingsvrijheid.',
-            items: adviceCatalogWithSnapshots(bewegingAdviezen, initialProtocol?.beweging_adviezen, 'beweging_advies_id'),
+            items: adviceItems('beweging', bewegingAdviezen, initialProtocol?.beweging_adviezen),
             next: 'content',
             nextLabel: 'Analyse',
         },
@@ -665,7 +668,8 @@
         return category.items.filter((advice) => isProtocolAdviceSelected(category, advice.id));
     }
 
-    function save(published = false) {
+    // A plain save keeps the publication state: only "Publiceren" and "Depubliceren" change it.
+    function save(published = $form.published) {
         if (pendingSave || $form.processing) return;
         pendingSave = true;
         saveError = '';
@@ -694,6 +698,13 @@
 
     function errorLocation(path) {
         const [section, index, part, selectionIndex] = path.split('.');
+        // Advice errors name the advice: its fields may be on another tab, or belong to an advice that is not selected.
+        const adviceTarget = adviceErrorTarget(path, $form.customer_settings)
+            ?? (section.endsWith('_advies_ids') ? { section: section.split('_')[0], id: $form[section][Number(index)] } : null);
+        if (adviceTarget) {
+            const category = adviceCategories.find((candidate) => candidate.id === adviceTarget.section);
+            return [category.label, category.items.find((advice) => advice.id === adviceTarget.id)?.title].filter(Boolean).join(' · ');
+        }
         if (section === 'phases') {
             const phase = $form.phases[Number(index)];
             const supplement = part === 'supplements' ? phase?.supplements[Number(selectionIndex)] : null;
@@ -703,7 +714,6 @@
             horse_id: 'Paard', protocol_template_id: 'Protocoltemplate', title: 'Protocolnaam',
             therapist_id: 'Behandelaar', start_on: 'Startdatum', status: 'Levenscyclus',
             analysis: 'Analyse', advice: 'Adviezen', customer_settings: 'Klantweergave',
-            voeding_advies_ids: 'Voeding', management_advies_ids: 'Management', beweging_advies_ids: 'Beweging',
         })[section] || '';
     }
 
@@ -1115,10 +1125,12 @@
                             <div class="divide-y divide-[#1B2A2A]/10">
                                 {#each activeAdviceCategory.items as advice (advice.id)}
                                     {@const selected = isProtocolAdviceSelected(activeAdviceCategory, advice.id)}
+                                    {@const settingErrors = adviceSettingErrors($form.errors, $form.customer_settings, activeSection, advice)}
                                     <label class={`flex cursor-pointer items-start gap-4 px-5 py-5 transition-colors md:px-7 ${selected ? 'bg-[#EAFBF9]/55' : 'hover:bg-[#FBF8F3]'}`}>
                                         <input
                                             type="checkbox"
                                             checked={selected}
+                                            disabled={advice.unoffered && !selected}
                                             onchange={() => toggleProtocolAdvice(activeAdviceCategory, advice.id)}
                                             aria-label={`${advice.title} selecteren`}
                                             class="mt-1 size-4 shrink-0 accent-[#18BAB0]"
@@ -1129,6 +1141,11 @@
                                                 {#if advice.snapshot}
                                                     <span class="rounded-full bg-white px-2 py-0.5 text-[9px] font-bold uppercase tracking-wide text-[#0E6F69]">Protocolkopie</span>
                                                 {/if}
+                                                {#if advice.unoffered}
+                                                    <span class="rounded-full bg-white px-2 py-0.5 text-[9px] font-bold uppercase tracking-wide text-destructive" title="Dit advies is gearchiveerd en kan niet meer worden gekozen.">Niet meer beschikbaar</span>
+                                                {:else if advice.archived_at}
+                                                    <span class="rounded-full bg-white px-2 py-0.5 text-[9px] font-bold uppercase tracking-wide text-[#1B2A2A]/55" title="Niet meer te kiezen nadat je het uitvinkt en opslaat.">Gearchiveerd</span>
+                                                {/if}
                                             </span>
                                             <span class="mt-1 block whitespace-pre-line text-sm leading-6 text-[#1B2A2A]/55">{advice.description}</span>
                                         </span>
@@ -1136,15 +1153,30 @@
                                             <Check class="size-3.5" />
                                         </span>
                                     </label>
-                                    {#if selected && activeSection === 'management'}
-                                        <div class="grid gap-3 bg-[#FBF8F3] px-7 py-4 md:grid-cols-2">
-                                            <Field label="Categorie"><select class="w-full rounded border p-2" value={managementSetting(advice).category} onchange={(e) => updateManagement(advice, 'category', e.currentTarget.value)}><option value="environment">Leefomgeving & weide</option><option value="care">Lichamelijke zorg</option><option value="monitoring">Onderzoek</option></select></Field>
-                                            <Field label="Actie"><select class="w-full rounded border p-2" value={managementSetting(advice).action} onchange={(e) => updateManagement(advice, 'action', e.currentTarget.value)}><option value="do">Aanbevolen</option><option value="avoid">Vermijden / stoppen</option></select></Field>
-                                            <Field label="Instructie"><Textarea value={managementSetting(advice).instruction} oninput={(e) => updateManagement(advice, 'instruction', e.currentTarget.value)} /></Field>
-                                            <Field label="Persoonlijke toelichting"><Textarea value={managementSetting(advice).note} oninput={(e) => updateManagement(advice, 'note', e.currentTarget.value)} /></Field>
-                                            <Field label="Frequentie"><Input value={managementSetting(advice).frequency} oninput={(e) => updateManagement(advice, 'frequency', e.currentTarget.value)} /></Field>
-                                            <Field label="Link (https://)"><Input value={managementSetting(advice).url} oninput={(e) => updateManagement(advice, 'url', e.currentTarget.value)} /></Field>
-                                            <Field label="Tekst bij link"><Input value={managementSetting(advice).cta_label} oninput={(e) => updateManagement(advice, 'cta_label', e.currentTarget.value)} /></Field>
+                                    {#if selected || Object.keys(settingErrors).length > 0}
+                                        {@const setting = adviceSetting($form.customer_settings, activeSection, advice)}
+                                        <div class="space-y-3 bg-[#FBF8F3] px-7 py-4">
+                                            {#if !selected}
+                                                <p class="text-xs text-destructive">Dit advies is niet geselecteerd, maar de instellingen blijven bewaard. Corrigeer de gemarkeerde velden om te kunnen opslaan.</p>
+                                            {/if}
+                                            {#if settingErrors.row || settingErrors.id}<p class="text-xs text-destructive">{settingErrors.row ?? settingErrors.id}</p>{/if}
+                                            {#if activeSection === 'voeding'}
+                                                <Field label="Instructie" error={settingErrors.instruction}><Textarea value={setting.instruction} oninput={(e) => updateAdvice(advice, 'instruction', e.currentTarget.value)} /></Field>
+                                            {:else}
+                                                <div class="grid gap-3 md:grid-cols-2">
+                                                    {#if activeSection === 'management'}
+                                                        <Field label="Categorie" error={settingErrors.category}><select class="w-full rounded border p-2" value={setting.category} onchange={(e) => updateAdvice(advice, 'category', e.currentTarget.value)}><option value="environment">Leefomgeving & weide</option><option value="care">Lichamelijke zorg</option><option value="monitoring">Onderzoek</option></select></Field>
+                                                    {:else}
+                                                        <Field label="Categorie"><Input value="Beweging & belasting" readonly /></Field>
+                                                    {/if}
+                                                    <Field label="Actie" error={settingErrors.action}><select class="w-full rounded border p-2" value={setting.action} onchange={(e) => updateAdvice(advice, 'action', e.currentTarget.value)}><option value="do">Aanbevolen</option><option value="avoid">Vermijden / stoppen</option></select></Field>
+                                                    <Field label="Instructie" error={settingErrors.instruction}><Textarea value={setting.instruction} oninput={(e) => updateAdvice(advice, 'instruction', e.currentTarget.value)} /></Field>
+                                                    <Field label="Persoonlijke toelichting" error={settingErrors.note}><Textarea value={setting.note} oninput={(e) => updateAdvice(advice, 'note', e.currentTarget.value)} /></Field>
+                                                    <Field label="Frequentie" error={settingErrors.frequency}><Input value={setting.frequency} oninput={(e) => updateAdvice(advice, 'frequency', e.currentTarget.value)} /></Field>
+                                                    <Field label="Link (https://)" error={settingErrors.url}><Input value={setting.url} oninput={(e) => updateAdvice(advice, 'url', e.currentTarget.value)} /></Field>
+                                                    <Field label="Tekst bij link" error={settingErrors.cta_label}><Input value={setting.cta_label} oninput={(e) => updateAdvice(advice, 'cta_label', e.currentTarget.value)} /></Field>
+                                                </div>
+                                            {/if}
                                         </div>
                                     {/if}
                                 {:else}

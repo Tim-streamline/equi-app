@@ -2,11 +2,14 @@
 
 namespace App\Http\Requests\Admin;
 
+use App\Models\BewegingAdvies;
+use App\Models\ManagementAdvies;
 use App\Models\Protocol;
 use App\Models\ProtocolPhaseSupplement;
 use App\Models\ProtocolTemplatePhase;
 use App\Models\Supplement;
 use App\Models\Therapist;
+use App\Models\VoedingAdvies;
 use App\Rules\ShortProtocolText;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Support\Str;
@@ -14,9 +17,37 @@ use Illuminate\Validation\Validator;
 
 class SaveProtocolRequest extends FormRequest
 {
+    public const ADVICE_UNAVAILABLE = 'Een gekozen advies is niet meer beschikbaar. Vink het uit en sla opnieuw op.';
+
     public function authorize(): bool
     {
         return true;
+    }
+
+    /**
+     * Postgres matches uuids in any case, but snapshots and overrides are looked up by exact string.
+     * Store advice ids the way the database returns them.
+     */
+    protected function prepareForValidation(): void
+    {
+        $lower = fn (mixed $id): mixed => is_string($id) ? strtolower($id) : $id;
+        $input = [];
+        foreach (['voeding_advies_ids', 'management_advies_ids', 'beweging_advies_ids'] as $key) {
+            if (is_array($this->input($key))) {
+                $input[$key] = array_map($lower, $this->input($key));
+            }
+        }
+        $settings = $this->input('customer_settings');
+        foreach (['nutrition_advice', 'management', 'movement'] as $group) {
+            if (is_array($settings) && is_array($settings[$group] ?? null)) {
+                $settings[$group] = array_map(
+                    fn (mixed $row): mixed => is_array($row) && isset($row['id']) ? array_replace($row, ['id' => $lower($row['id'])]) : $row,
+                    $settings[$group],
+                );
+                $input['customer_settings'] = $settings;
+            }
+        }
+        $this->merge($input);
     }
 
     /**
@@ -35,7 +66,7 @@ class SaveProtocolRequest extends FormRequest
             'status' => ['required', $this->route('protocol')?->status === 'archived' ? 'in:archived' : 'in:draft,active,paused,completed'],
             'published' => ['required', 'boolean'],
 
-            'customer_settings' => ['sometimes', 'array:weight_kg,use_target_weight,target_weight_kg,sugar,protein,weekly_update_day,feed_overrides,management,hay_library_item_id,water_library_item_id'],
+            'customer_settings' => ['sometimes', 'array:weight_kg,use_target_weight,target_weight_kg,sugar,protein,weekly_update_day,feed_overrides,management,movement,nutrition_advice,hay_library_item_id,water_library_item_id'],
             'customer_settings.hay_library_item_id' => ['nullable', 'uuid', 'exists:library_items,id'],
             'customer_settings.water_library_item_id' => ['nullable', 'uuid', 'exists:library_items,id'],
             'customer_settings.weight_kg' => ['nullable', 'numeric', 'gt:0', 'max:2000'],
@@ -59,6 +90,19 @@ class SaveProtocolRequest extends FormRequest
             'customer_settings.management.*.frequency' => ['nullable', 'string', 'max:255'],
             'customer_settings.management.*.url' => ['nullable', 'url:http,https', 'max:2000'],
             'customer_settings.management.*.cta_label' => ['nullable', 'string', 'max:255'],
+            'customer_settings.nutrition_advice' => ['sometimes', 'array', 'max:100'],
+            'customer_settings.nutrition_advice.*' => ['array:id,instruction'],
+            'customer_settings.nutrition_advice.*.id' => ['required', 'uuid', 'distinct', 'exists:voeding_adviezen,id'],
+            'customer_settings.nutrition_advice.*.instruction' => ['nullable', 'string', 'max:10000'],
+            'customer_settings.movement' => ['sometimes', 'array', 'max:100'],
+            'customer_settings.movement.*' => ['array:id,action,instruction,note,frequency,url,cta_label'],
+            'customer_settings.movement.*.id' => ['required', 'uuid', 'distinct', 'exists:beweging_adviezen,id'],
+            'customer_settings.movement.*.action' => ['required', 'in:do,avoid'],
+            'customer_settings.movement.*.instruction' => ['nullable', 'string', 'max:10000'],
+            'customer_settings.movement.*.note' => ['nullable', 'string', 'max:5000'],
+            'customer_settings.movement.*.frequency' => ['nullable', 'string', 'max:255'],
+            'customer_settings.movement.*.url' => ['nullable', 'url:http,https', 'max:2000'],
+            'customer_settings.movement.*.cta_label' => ['nullable', 'string', 'max:255'],
 
             'analysis' => ['nullable', 'array'],
             'analysis.cause' => ['nullable', 'string', 'max:10000'],
@@ -77,11 +121,11 @@ class SaveProtocolRequest extends FormRequest
             'advice.*.body' => ['required', 'string', 'max:10000'],
 
             'voeding_advies_ids' => ['present', 'array', 'max:100'],
-            'voeding_advies_ids.*' => ['required', 'uuid', 'distinct', 'exists:voeding_adviezen,id'],
+            'voeding_advies_ids.*' => ['required', 'uuid', 'distinct', VoedingAdvies::selectionRule($this->heldAdviceIds('voedingAdviezen', 'voeding_advies_id'))],
             'management_advies_ids' => ['present', 'array', 'max:100'],
-            'management_advies_ids.*' => ['required', 'uuid', 'distinct', 'exists:management_adviezen,id'],
+            'management_advies_ids.*' => ['required', 'uuid', 'distinct', ManagementAdvies::selectionRule($this->heldAdviceIds('managementAdviezen', 'management_advies_id'))],
             'beweging_advies_ids' => ['present', 'array', 'max:100'],
-            'beweging_advies_ids.*' => ['required', 'uuid', 'distinct', 'exists:beweging_adviezen,id'],
+            'beweging_advies_ids.*' => ['required', 'uuid', 'distinct', BewegingAdvies::selectionRule($this->heldAdviceIds('bewegingAdviezen', 'beweging_advies_id'))],
 
             'phases' => ['present', 'array'],
             'phases.*.id' => ['nullable', 'uuid'],
@@ -115,7 +159,21 @@ class SaveProtocolRequest extends FormRequest
             'analysis.focus_points.*.body.max' => 'Gebruik maximaal twee korte doelzinnen van samen maximaal 320 tekens.',
             'analysis.observations.max' => 'Gebruik maximaal 4 observatiepunten.',
             'analysis.observations.*.max' => 'Gebruik maximaal twee korte observatiezinnen van samen maximaal 320 tekens.',
+            ...array_fill_keys(
+                ['voeding_advies_ids.*.exists', 'management_advies_ids.*.exists', 'beweging_advies_ids.*.exists'],
+                self::ADVICE_UNAVAILABLE,
+            ),
         ];
+    }
+
+    /**
+     * Library ids of the advice the stored protocol already holds; archived advice stays selectable for it.
+     *
+     * @return array<int, string>
+     */
+    private function heldAdviceIds(string $relation, string $foreignKey): array
+    {
+        return $this->route('protocol')?->{$relation}()->pluck($foreignKey)->all() ?? [];
     }
 
     /**

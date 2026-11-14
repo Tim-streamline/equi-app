@@ -259,8 +259,9 @@ Route::middleware('auth:admin')->group(function () {
         Route::controller(ProtocolAdviceSettingsController::class)->prefix('protocol-settings/advice')->as('protocol-advice-settings.')->group(function () {
             Route::get('/', 'index')->name('index');
             Route::post('{category}', 'store')->whereIn('category', ['voeding', 'management', 'beweging'])->name('store');
-            Route::put('{category}/{advice}', 'update')->whereIn('category', ['voeding', 'management', 'beweging'])->name('update');
-            Route::delete('{category}/{advice}', 'destroy')->whereIn('category', ['voeding', 'management', 'beweging'])->name('destroy');
+            Route::put('{category}/{advice}', 'update')->whereIn('category', ['voeding', 'management', 'beweging'])->whereUuid('advice')->name('update');
+            Route::post('{category}/{advice}/archive', 'archive')->whereIn('category', ['voeding', 'management', 'beweging'])->whereUuid('advice')->name('archive');
+            Route::post('{category}/{advice}/restore', 'restore')->whereIn('category', ['voeding', 'management', 'beweging'])->whereUuid('advice')->name('restore');
         });
 
         Route::controller(SettingsController::class)->prefix('settings')->as('settings.')->group(function () {

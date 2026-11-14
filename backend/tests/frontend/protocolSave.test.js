@@ -25,12 +25,24 @@ test('successful save reloads database identity; validation failure preserves us
     assert.equal(page.requests[0].options?.preserveState, 'errors');
 });
 
-test('save of a published protocol submits current changes as a draft', () => {
+test('save of a published protocol keeps it published', () => {
     const page = editor({ isNew: false, published: true });
     page.save();
     assert.equal(page.requests[0].method, 'put');
-    assert.equal(page.requests[0].payload?.published, false);
+    assert.equal(page.requests[0].payload?.published, true);
     assert.equal(page.requests[0].payload?.title, 'Actuele wijzigingen');
+});
+
+test('save of a draft keeps it a draft', () => {
+    const page = editor({ isNew: false });
+    page.save();
+    assert.equal(page.requests[0].payload?.published, false);
+});
+
+test('only unpublishing turns a published protocol into a draft', () => {
+    const page = editor({ isNew: false, published: true });
+    page.save(false);
+    assert.equal(page.requests[0].payload?.published, false);
 });
 
 test('publish sends current content without claiming publication before success', () => {

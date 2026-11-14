@@ -2,16 +2,20 @@
 
 namespace Tests\Feature;
 
+use App\Http\Requests\Admin\SaveProtocolRequest;
 use App\Models\AdminUser;
 use App\Models\BewegingAdvies;
 use App\Models\Horse;
+use App\Models\IntakeBooking;
 use App\Models\ManagementAdvies;
 use App\Models\Protocol;
 use App\Models\ProtocolTemplate;
 use App\Models\ProtocolTemplatePhase;
 use App\Models\User;
 use App\Models\VoedingAdvies;
+use App\Support\HorseDashboard;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Str;
 use Inertia\Testing\AssertableInertia as Assert;
 use Tests\TestCase;
 
@@ -52,7 +56,7 @@ class AdminProtocolAdviceSelectionTest extends TestCase
             'name' => 'Boaz',
             'status' => 'active',
         ]);
-        \App\Models\IntakeBooking::create(['horse_id' => $this->horse->id, 'user_id' => $owner->id, 'submitted_at' => now()]);
+        IntakeBooking::create(['horse_id' => $this->horse->id, 'user_id' => $owner->id, 'submitted_at' => now()]);
         $this->protocolTemplate = ProtocolTemplate::query()->create(['name' => 'Herstel']);
         $this->phaseDefinition = $this->protocolTemplate->phases()->create([
             'order' => 1,
@@ -89,12 +93,9 @@ class AdminProtocolAdviceSelectionTest extends TestCase
             ->assertOk()
             ->assertInertia(fn (Assert $page) => $page
                 ->component('Protocols/Edit')
-                ->has('voedingAdviezen', 2)
-                ->where('voedingAdviezen.0.title', 'Onbeperkt ruwvoer')
-                ->has('managementAdviezen', 1)
-                ->where('managementAdviezen.0.title', 'Vaste routine')
-                ->has('bewegingAdviezen', 1)
-                ->where('bewegingAdviezen.0.title', 'Dagelijks stappen'));
+                ->where('voedingAdviezen', fn ($rows) => collect($rows)->pluck('id')->all() === VoedingAdvies::orderBy('title')->pluck('id')->all())
+                ->where('managementAdviezen', fn ($rows) => collect($rows)->pluck('id')->all() === ManagementAdvies::orderBy('title')->pluck('id')->all())
+                ->where('bewegingAdviezen', fn ($rows) => collect($rows)->pluck('id')->all() === BewegingAdvies::orderBy('title')->pluck('id')->all()));
     }
 
     public function test_selected_advice_is_snapshotted_and_can_be_toggled_on_and_off(): void
@@ -201,6 +202,89 @@ class AdminProtocolAdviceSelectionTest extends TestCase
         $this->assertSame($payload['customer_settings'], $protocol->fresh()->customer_settings);
     }
 
+    public function test_overrides_survive_deselection_and_archiving_of_their_library_advice(): void
+    {
+        $selected = ['id' => $this->voedingAdvies->id, 'instruction' => 'Geselecteerd.'];
+        $deselected = ['id' => $this->extraVoedingAdvies->id, 'instruction' => 'Niet geselecteerd, blijft bewaard.'];
+        $movement = ['id' => $this->bewegingAdvies->id, 'action' => 'avoid', 'instruction' => 'Niet geselecteerd.'];
+        $payload = $this->payload();
+        $payload['beweging_advies_ids'] = [];
+        $payload['customer_settings'] = ['nutrition_advice' => [$selected, $deselected], 'movement' => [$movement]];
+
+        $this->actingAs($this->admin, 'admin')->post('/admin/protocols', $payload)->assertSessionHasNoErrors();
+        $protocol = Protocol::where('horse_id', $this->horse->id)->sole();
+
+        foreach (['voeding' => $this->extraVoedingAdvies, 'beweging' => $this->bewegingAdvies] as $category => $advice) {
+            $this->post("/admin/protocol-settings/advice/{$category}/{$advice->id}/archive")->assertSessionHas('success');
+        }
+
+        $this->put('/admin/protocols/'.$protocol->id, ['beweging_advies_ids' => [], 'customer_settings' => $payload['customer_settings']] + $this->payload($protocol))
+            ->assertSessionHasNoErrors();
+        $this->assertSame($payload['customer_settings'], $protocol->fresh()->customer_settings);
+    }
+
+    public function test_archived_advice_is_only_offered_to_a_protocol_that_already_uses_it(): void
+    {
+        $this->actingAs($this->admin, 'admin')->post('/admin/protocols', $this->payload())->assertSessionHasNoErrors();
+        $protocol = Protocol::where('horse_id', $this->horse->id)->sole();
+        foreach (['voeding' => [$this->voedingAdvies, $this->extraVoedingAdvies], 'beweging' => [$this->bewegingAdvies]] as $category => $advices) {
+            foreach ($advices as $advice) {
+                $this->post("/admin/protocol-settings/advice/{$category}/{$advice->id}/archive")->assertSessionHas('success');
+            }
+        }
+
+        $this->get('/admin/protocols/'.$protocol->id.'/edit')->assertInertia(fn (Assert $page) => $page
+            ->where('voedingAdviezen', fn ($rows) => collect($rows)->contains('id', $this->voedingAdvies->id)
+                && ! collect($rows)->contains('id', $this->extraVoedingAdvies->id))
+            ->where('bewegingAdviezen', fn ($rows) => collect($rows)->contains('id', $this->bewegingAdvies->id)));
+
+        // The customer keeps seeing advice their protocol already uses, and it can still be saved.
+        $this->put('/admin/protocols/'.$protocol->id, $this->payload($protocol))->assertSessionHasNoErrors();
+        $this->assertDatabaseHas('protocol_beweging_adviezen', ['protocol_id' => $protocol->id, 'beweging_advies_id' => $this->bewegingAdvies->id]);
+    }
+
+    public function test_advice_ids_are_stored_in_lowercase(): void
+    {
+        $payload = $this->payload();
+        $payload['beweging_advies_ids'] = [strtoupper($this->bewegingAdvies->id)];
+        $payload['customer_settings'] = ['movement' => [['id' => strtoupper($this->bewegingAdvies->id), 'action' => 'avoid', 'instruction' => 'Alleen stappen.']]];
+
+        $this->actingAs($this->admin, 'admin')->post('/admin/protocols', $payload)->assertSessionHasNoErrors();
+        $protocol = Protocol::where('horse_id', $this->horse->id)->sole();
+        $this->assertSame($this->bewegingAdvies->id, $protocol->customer_settings['movement'][0]['id']);
+        // Saving the same selection again in another case must not create a second snapshot.
+        $this->put('/admin/protocols/'.$protocol->id, ['beweging_advies_ids' => $payload['beweging_advies_ids'], 'customer_settings' => $payload['customer_settings']] + $this->payload($protocol))
+            ->assertSessionHasNoErrors();
+        $this->assertSame(1, $protocol->bewegingAdviezen()->count());
+
+        $movement = app(HorseDashboard::class)->protocol($protocol->fresh(), now()->toImmutable())['movement'];
+        $this->assertSame(['Alleen stappen.', 'avoid'], [$movement[0]['description'], $movement[0]['action']]);
+    }
+
+    public function test_an_override_for_unknown_or_other_category_advice_is_rejected(): void
+    {
+        $payload = $this->payload();
+        $payload['customer_settings'] = [
+            'management' => [['id' => $this->bewegingAdvies->id, 'category' => 'care', 'action' => 'do']],
+            'movement' => [['id' => (string) Str::uuid(), 'action' => 'do']],
+        ];
+
+        $this->actingAs($this->admin, 'admin')->post('/admin/protocols', $payload)
+            ->assertSessionHasErrors(['customer_settings.management.0.id', 'customer_settings.movement.0.id']);
+    }
+
+    public function test_the_cleanup_migration_removes_overrides_left_by_earlier_deletions(): void
+    {
+        $kept = ['id' => strtoupper($this->managementAdvies->id), 'category' => 'care', 'action' => 'do'];
+        $orphan = ['id' => (string) Str::uuid(), 'category' => 'care', 'action' => 'do'];
+        $protocol = $this->horse->protocols()->sole();
+        $protocol->update(['customer_settings' => ['weight_kg' => 500, 'management' => [$orphan, $kept]]]);
+
+        (require database_path('migrations/2026_11_11_000002_remove_overrides_for_deleted_advice.php'))->up();
+
+        $this->assertSame(['weight_kg' => 500, 'management' => [['id' => $this->managementAdvies->id] + $kept]], $protocol->fresh()->customer_settings);
+    }
+
     public function test_invalid_customer_settings_cannot_be_published(): void
     {
         $payload = $this->payload();
@@ -208,6 +292,84 @@ class AdminProtocolAdviceSelectionTest extends TestCase
             'management' => [['id' => $this->managementAdvies->id, 'category' => 'care', 'action' => 'do', 'url' => 'javascript:alert(1)']]];
         $this->actingAs($this->admin, 'admin')->post('/admin/protocols', $payload)
             ->assertSessionHasErrors(['customer_settings.target_weight_kg', 'customer_settings.weekly_update_day', 'customer_settings.management.0.url']);
+    }
+
+    public function test_archived_advice_cannot_be_newly_selected_but_stays_with_a_protocol_that_holds_it(): void
+    {
+        $this->actingAs($this->admin, 'admin');
+        $models = ['voeding' => $this->voedingAdvies, 'management' => $this->managementAdvies, 'beweging' => $this->bewegingAdvies];
+        // A stale editor still offers advice that was archived after the page loaded.
+        foreach ($models as $category => $advice) {
+            $advice->forceFill(['archived_at' => now()])->save();
+            $this->post('/admin/protocols', $this->payload())->assertSessionHasErrors(["{$category}_advies_ids.0" => SaveProtocolRequest::ADVICE_UNAVAILABLE]);
+            $this->postJson('/admin/protocols/preview', $this->payload())->assertJsonValidationErrors("{$category}_advies_ids.0");
+            $advice->forceFill(['archived_at' => null])->save();
+        }
+
+        $this->post('/admin/protocols', $this->payload())->assertSessionHasNoErrors();
+        $protocol = Protocol::where('horse_id', $this->horse->id)->sole();
+        foreach ([...$models, $this->extraVoedingAdvies] as $advice) {
+            $advice->forceFill(['archived_at' => now()])->save();
+        }
+        $payload = $this->payload($protocol);
+        $this->put('/admin/protocols/'.$protocol->id, $payload)->assertSessionHasNoErrors();
+        $this->postJson('/admin/protocols/'.$protocol->id.'/preview', $payload)->assertOk();
+
+        $payload['voeding_advies_ids'][] = $this->extraVoedingAdvies->id;
+        $this->put('/admin/protocols/'.$protocol->id, $payload)->assertSessionHasErrors('voeding_advies_ids.1');
+        $this->postJson('/admin/protocols/'.$protocol->id.'/preview', $payload)->assertJsonValidationErrors('voeding_advies_ids.1');
+        $this->assertSame(1, $protocol->voedingAdviezen()->count());
+    }
+
+    public function test_an_invalid_override_of_deselected_advice_is_reported_at_its_submitted_position(): void
+    {
+        // The editor shows the fields of the row an error points at, so rows must not be reordered or dropped.
+        $payload = $this->payload();
+        $payload['beweging_advies_ids'] = [];
+        $payload['customer_settings'] = [
+            'nutrition_advice' => [['id' => $this->voedingAdvies->id, 'instruction' => 'Geldig.'], ['id' => $this->extraVoedingAdvies->id, 'instruction' => str_repeat('x', 10001)]],
+            'movement' => [['id' => $this->bewegingAdvies->id, 'action' => 'do', 'url' => 'www.example.com']],
+        ];
+
+        $this->actingAs($this->admin, 'admin')->post('/admin/protocols', $payload)
+            ->assertSessionHasErrors(['customer_settings.nutrition_advice.1.instruction', 'customer_settings.movement.0.url'])
+            ->assertSessionDoesntHaveErrors(['customer_settings.nutrition_advice.0.instruction']);
+
+        $payload['customer_settings']['nutrition_advice'][1]['instruction'] = 'Ingekort.';
+        $payload['customer_settings']['movement'][0]['url'] = 'https://www.example.com';
+        $this->post('/admin/protocols', $payload)->assertSessionHasNoErrors();
+        $this->assertSame($payload['customer_settings'], Protocol::where('horse_id', $this->horse->id)->sole()->customer_settings);
+    }
+
+    public function test_the_protocol_page_receives_what_it_needs_to_show_customer_instructions(): void
+    {
+        $payload = $this->payload();
+        $payload['customer_settings'] = ['nutrition_advice' => [['id' => $this->voedingAdvies->id, 'instruction' => 'Eigen instructie.']]];
+        $this->actingAs($this->admin, 'admin')->post('/admin/protocols', $payload)->assertSessionHasNoErrors();
+        $protocol = Protocol::where('horse_id', $this->horse->id)->sole();
+
+        $this->get('/admin/protocols/'.$protocol->id)->assertInertia(fn (Assert $page) => $page
+            ->where('protocol.voeding_adviezen.0.voeding_advies_id', $this->voedingAdvies->id)
+            ->where('protocol.management_adviezen.0.management_advies_id', $this->managementAdvies->id)
+            ->where('protocol.beweging_adviezen.0.beweging_advies_id', $this->bewegingAdvies->id)
+            ->where('protocol.customer_settings.nutrition_advice.0.instruction', 'Eigen instructie.'));
+    }
+
+    public function test_advice_settings_routes_only_match_uuids(): void
+    {
+        $this->actingAs($this->admin, 'admin');
+        foreach (['voeding', 'management', 'beweging'] as $category) {
+            foreach (['not-a-uuid', (string) Str::uuid()] as $id) {
+                $url = "/admin/protocol-settings/advice/{$category}/{$id}";
+                $this->put($url, ['title' => 'Titel', 'description' => 'Tekst', 'layout' => 'normal'])->assertNotFound();
+                $this->post($url.'/archive')->assertNotFound();
+                $this->post($url.'/restore')->assertNotFound();
+            }
+        }
+
+        $url = '/admin/protocol-settings/advice/management/'.strtoupper($this->managementAdvies->id);
+        $this->post($url.'/archive')->assertSessionHas('success');
+        $this->post($url.'/restore')->assertSessionHas('success');
     }
 
     /** @return array<string, mixed> */

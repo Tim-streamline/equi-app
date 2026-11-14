@@ -305,6 +305,9 @@ class ProtocolEditorIntakeTest extends TestCase
         $movement = BewegingAdvies::create(['title' => 'Stappen', 'description' => 'Rustig opbouwen.']);
         $payload['management_advies_ids'] = [$management->id];
         $payload['beweging_advies_ids'] = [$movement->id];
+        $nutritionId = $payload['voeding_advies_ids'][0];
+        $payload['customer_settings']['nutrition_advice'] = [['id' => $nutritionId, 'instruction' => 'Ruwvoeradvies voor dit paard.']];
+        $payload['customer_settings']['movement'] = [['id' => $movement->id, 'action' => 'do', 'instruction' => 'Tien minuten rustig stappen.', 'note' => 'Opbouwen na de evaluatie.', 'frequency' => 'Tweemaal per dag', 'url' => 'https://example.com/stappen', 'cta_label' => 'Bekijk de oefening']];
         $payload['customer_settings']['management'] = [['id' => $management->id, 'category' => 'environment', 'action' => 'avoid', 'instruction' => 'Persoonlijke instructie', 'note' => 'Therapeutnotitie']];
         $preview = $this->postJson('/admin/protocols/preview', $payload + ['preview_week' => 3])->assertOk()
             ->assertJsonPath('protocol.phases.1.weekStart', 2)->assertJsonPath('protocol.phases.1.weekEnd', 3)
@@ -323,6 +326,16 @@ class ProtocolEditorIntakeTest extends TestCase
         $protocol = $protocol->fresh();
         $this->assertSame('2026-09-01', $protocol->started_at->toDateString());
         $customer = app(HorseDashboard::class)->protocol($protocol, $weekThree, answers: app(ProtocolNutrition::class)->answers($this->intake->protocol));
+        $this->assertSame('Ruwvoeradvies voor dit paard.', $preview->json('protocol.nutrition.advice.0.description'));
+        $this->assertSame('Ruwvoeradvies voor dit paard.', $customer['nutrition']['advice'][0]['description']);
+        $this->assertSame('Verdeel over kleine porties.', VoedingAdvies::findOrFail($nutritionId)->description);
+        foreach ([$preview->json('protocol.movement.0'), $customer['movement'][0]] as $advice) {
+            $this->assertSame('Tien minuten rustig stappen.', $advice['description']);
+            $this->assertSame('Opbouwen na de evaluatie.', $advice['note']);
+            $this->assertSame('Tweemaal per dag', $advice['frequency']);
+            $this->assertSame('https://example.com/stappen', $advice['url']);
+            $this->assertSame('Bekijk de oefening', $advice['ctaLabel']);
+        }
         $this->assertSame(3, $customer['currentWeek']);
         $previewNutrition = $preview->json('protocol.nutrition');
         $customerNutrition = $customer['nutrition'] + ['hayLibraryItem' => null, 'waterLibraryItem' => null];
