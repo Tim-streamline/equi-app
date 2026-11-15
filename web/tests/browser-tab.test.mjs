@@ -18,6 +18,9 @@ const settle = async () => { for (let i = 0; i < 40; i++) await Promise.resolve(
 const storage = (values = new Map()) => ({
   values, getItem: key => values.get(key) ?? null, setItem: (key, value) => values.set(key, String(value)),
 });
+/** What a signed-in tab passes: its account, the tabs with photos waiting, and whether the account is open elsewhere. */
+const recovery = (waiting, options = {}) => ({ account: 'owner', idle: async () => true,
+  waiting: typeof waiting === 'function' ? waiting : async () => waiting, ...options });
 const attachments = (indexedDB, identity) => load('../../expo-app/lib/intake/attachments/storage.web.ts', {
   '../../browser-tab': identity, './events': { attachmentsChanged() {} },
   './storage-writes': load('../../expo-app/lib/intake/attachments/storage-writes.ts'),
@@ -128,7 +131,7 @@ test('without Web Locks or with an old registry entry a new tab starts with a ne
   const unsupported = browser({ locks: false }), first = unsupported.open();
   const id = await first.claimBrowserTab();
   first.close();
-  assert.notEqual(await unsupported.open().claimBrowserTab(() => [id]), id, 'ownership cannot be proven without Web Locks');
+  assert.notEqual(await unsupported.open().claimBrowserTab(recovery([id])), id, 'ownership cannot be proven without Web Locks');
   assert.equal(await unsupported.open(first.session).claimBrowserTab(), id, 'a reload still keeps its identity, as before');
 
   const profile = browser(), stale = '11111111-1111-4111-8111-111111111111';
@@ -149,25 +152,54 @@ test('workspaces with photos still waiting for upload are taken over first; an u
   const unregistered = ['aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb'];
   // The older registered workspace still has photos waiting: that is known unsynchronised work.
   const first = profile.open();
-  assert.equal(await first.claimBrowserTab(() => [...unregistered, olderId]), olderId);
+  assert.equal(await first.claimBrowserTab(recovery([...unregistered, olderId])), olderId);
   // Then one workspace that an earlier version left without a registry entry, the newest first.
   const second = profile.open();
-  assert.equal(await second.claimBrowserTab(() => unregistered), unregistered[0]);
+  assert.equal(await second.claimBrowserTab(recovery(unregistered)), unregistered[0]);
   // The other old queues are not replayed in turn: they would put older answers over newer ones.
   const third = profile.open();
-  assert.equal(await third.claimBrowserTab(() => unregistered), newerId);
+  assert.equal(await third.claimBrowserTab(recovery(unregistered)), newerId);
   first.close(); second.close(); third.close();
-  assert.ok(!unregistered.slice(1).includes(await profile.open().claimBrowserTab(() => unregistered.slice(1))));
+  assert.ok(!unregistered.slice(1).includes(await profile.open().claimBrowserTab(recovery(unregistered.slice(1)))));
   // A discovery that finds nothing to recover is final too: this version registers every workspace.
   const clean = browser(), started = clean.open();
-  await started.claimBrowserTab(() => []); started.close();
-  assert.equal(await clean.open().claimBrowserTab(() => unregistered), started.browserTabId());
+  await started.claimBrowserTab(recovery([])); started.close();
+  assert.equal(await clean.open().claimBrowserTab(recovery(unregistered)), started.browserTabId());
   // A failing discovery never stops the app, and is not counted as a finished recovery.
   const other = browser(), failing = other.open();
-  assert.match(await failing.claimBrowserTab(async () => { throw new Error('IndexedDB unavailable'); }), /^[0-9a-f-]{36}$/);
+  assert.match(await failing.claimBrowserTab(recovery(async () => { throw new Error('IndexedDB unavailable'); })), /^[0-9a-f-]{36}$/);
   failing.close();
-  assert.equal(await other.open().claimBrowserTab(() => ['cccccccc-cccc-4ccc-8ccc-cccccccccccc', failing.browserTabId()]), failing.browserTabId());
-  assert.equal(await other.open().claimBrowserTab(() => ['cccccccc-cccc-4ccc-8ccc-cccccccccccc']), 'cccccccc-cccc-4ccc-8ccc-cccccccccccc');
+  assert.equal(await other.open().claimBrowserTab(recovery(['cccccccc-cccc-4ccc-8ccc-cccccccccccc', failing.browserTabId()])), failing.browserTabId());
+  assert.equal(await other.open().claimBrowserTab(recovery(['cccccccc-cccc-4ccc-8ccc-cccccccccccc'])), 'cccccccc-cccc-4ccc-8ccc-cccccccccccc');
+});
+
+test('an old workspace is not taken over while another tab has the account open, and recovery is settled per account', async () => {
+  const stranded = 'dddddddd-dddd-4ddd-8ddd-dddddddddddd', others = 'eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee';
+  // A tab of the old version holds no identity lock: a free lock does not show that it is closed.
+  const profile = browser(), busy = profile.open();
+  const fresh = await busy.claimBrowserTab(recovery([stranded], { idle: async () => false }));
+  assert.notEqual(fresh, stranded, 'the old tab may still have this database open');
+  busy.close();
+  // Not recovering yet is not the same as having nothing to recover: the next start tries again.
+  const later = profile.open();
+  assert.equal(await later.claimBrowserTab(recovery([stranded])), stranded);
+  later.close();
+  // A check that fails is treated as "in use"; a signed-out start does not look at all.
+  const unsure = browser();
+  assert.notEqual(await unsure.open().claimBrowserTab(recovery([stranded], { idle: async () => { throw new Error('locks unavailable'); } })), stranded);
+  const signedOut = unsure.open(), anonymous = await signedOut.claimBrowserTab();
+  assert.notEqual(anonymous, stranded); signedOut.close();
+
+  // Account A has nothing waiting. That must not use up the recovery of account B on this device.
+  const shared = browser(), a = shared.open();
+  const aId = await a.claimBrowserTab(recovery([], { account: 'account-a' })); a.close();
+  const b = shared.open();
+  assert.equal(await b.claimBrowserTab(recovery([others], { account: 'account-b' })), others);
+  b.close();
+  // Each account still recovers only once.
+  const again = shared.open();
+  assert.equal(await again.claimBrowserTab(recovery(['ffffffff-ffff-4fff-8fff-ffffffffffff'], { account: 'account-b' })), others);
+  assert.notEqual(aId, others);
 });
 
 test('a photo that was not uploaded yet is still there after the app is closed and started again', async () => {
@@ -205,8 +237,8 @@ test('photos stranded by a version without a registry are found again after the 
   }
   const updated = profile.open(), store = attachments(indexedDB, updated);
   assert.deepEqual(await store.waitingAttachmentTabs('owner'), [tabs.latest, tabs.first], 'newest waiting photo first; uploaded, refused and other accounts left out');
-  assert.deepEqual(await store.waitingAttachmentTabs(null), [tabs.other, tabs.latest, tabs.first]);
-  assert.equal(await updated.claimBrowserTab(() => store.waitingAttachmentTabs('owner')), tabs.latest);
+  assert.deepEqual(await store.waitingAttachmentTabs('someone-else'), [tabs.other]);
+  assert.equal(await updated.claimBrowserTab(recovery(() => store.waitingAttachmentTabs('owner'))), tabs.latest);
   const record = await attachments(indexedDB, updated).attachmentStorage.get('owner', ids.latest);
   assert.equal(await record.blob.text(), 'latest bytes');
 });

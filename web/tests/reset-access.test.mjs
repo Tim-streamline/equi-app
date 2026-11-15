@@ -52,3 +52,20 @@ test('new tabs wait until reset finishes; another account is unaffected', async 
   assert.equal(entered, true);
   await Promise.all([first.leave(), next.leave(), other.leave()]);
 });
+
+test('an account counts as in use while any tab has its data open, also a tab of an older version', async () => {
+  const Access = setup(), old = new Access(), updated = new Access();
+  assert.equal(await updated.idle('owner'), true);
+  // Older versions hold this same shared lock while signed in, but no lock on their tab identity.
+  await old.enter('owner');
+  assert.equal(await updated.idle('owner'), false);
+  assert.equal(await updated.idle('someone-else'), true);
+  await old.leave();
+  assert.equal(await updated.idle('owner'), true);
+  // Checking leaves nothing behind: the tab can enter and reset as before.
+  await updated.enter('owner');
+  let reset = false;
+  await updated.exclusive('owner', async () => { reset = true; });
+  assert.equal(reset, true);
+  await updated.leave();
+});

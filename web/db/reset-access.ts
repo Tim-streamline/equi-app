@@ -10,6 +10,16 @@ export class SyncResetAccess {
     this.held = undefined;
   }
 
+  /**
+   * Whether no open tab has this account's local data open. Every version that stores
+   * photos per tab holds the shared lock below while signed in, also versions that did
+   * not yet hold a lock on their own tab identity.
+   */
+  async idle(userId: string): Promise<boolean> {
+    if (!navigator.locks) return false;
+    return navigator.locks.request(`equinova:local-data:${userId}`, { ifAvailable: true }, async lock => !!lock);
+  }
+
   async enter(userId: string | null) {
     await this.leave();
     if (!userId || !navigator.locks) return;

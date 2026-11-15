@@ -89,8 +89,11 @@ tab that is no longer open (Web Locks, at most 30 days old), so answers and
 photos that were not uploaded yet are not left behind. Tabs whose stored photos
 still wait for upload come first, then the most recently used one. A tab closed
 by a version from before this registry is found through the photos it left; one
-such workspace is taken over, once, because replaying several old queues in turn
-would put older answers over newer ones. A reloaded or restored tab keeps its
+such workspace is taken over, once per account, because replaying several old
+queues in turn would put older answers over newer ones. Those versions held no
+lock on their tab, so this only happens while no other tab has the account open
+(the shared `equinova:local-data:<account>` lock that they do hold); otherwise
+it is tried again on a later start. A reloaded or restored tab keeps its
 identity unless another open tab took that workspace over meanwhile; it then
 continues under another identity, so two tabs never share one database.
 

@@ -104,13 +104,13 @@ async function all<T>(kind: Kind): Promise<T[]> {
  * A tab that was closed before its identity was remembered can only be found again
  * through the files it left here.
  */
-export async function waitingAttachmentTabs(userId?: string | null): Promise<string[]> {
+export async function waitingAttachmentTabs(userId: string): Promise<string[]> {
   type Row = LocalAttachment & { tabId: string };
   const key = (row: { userId: string; tabId: string; id: string }) => JSON.stringify([row.userId, row.tabId, row.id]);
   const statuses = new Map((await all<Status & { userId: string; tabId: string; id: string }>('status')).map(row => [key(row), row]));
   const tabs = new Map<string, { newest: number; files: number }>();
   for (const file of await all<Row>('files')) {
-    if (userId && file.userId !== userId) continue;
+    if (file.userId !== userId) continue;
     const status = statuses.get(key(file)) ?? file;
     if (status.uploaded || status.rejected) continue;
     const tab = tabs.get(file.tabId) ?? { newest: 0, files: 0 };

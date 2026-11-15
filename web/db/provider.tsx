@@ -150,7 +150,10 @@ export function DbProvider({ children }: { children: ReactNode }) {
         const restored = await getSession().catch(cause => { if (isLocallySignedOut()) return null; throw cause; });
         const session = isLocallySignedOut() ? null : restored;
         // Before anything opens a database: a restarted app continues with the one it left behind.
-        await claimBrowserTab(() => waitingAttachmentTabs(session ? String(session.user.id) : null));
+        const account = session ? String(session.user.id) : null;
+        await claimBrowserTab(account ? {
+          account, waiting: () => waitingAttachmentTabs(account), idle: () => resetAccess.current.idle(account),
+        } : undefined);
         await open(session);
       }
       catch (cause) {
