@@ -10,6 +10,7 @@ use App\Models\LibraryItem;
 use App\Models\ManagementAdvies;
 use App\Models\Protocol;
 use App\Models\ProtocolAdvice;
+use App\Models\ProtocolManualAdvies;
 use App\Models\ProtocolAnalysis;
 use App\Models\ProtocolPhase;
 use App\Models\ProtocolPhaseSupplement;
@@ -127,6 +128,7 @@ class ProtocolController extends Controller
         try {
             $protocol = DB::transaction(function () use ($data, $protocolTemplate) {
                 \App\Support\LibrarySyncLock::acquire();
+                $this->assertOverridesAvailable($data);
                 Horse::whereKey($data['horse_id'])->lockForUpdate()->firstOrFail();
                 $drafts = Protocol::where('horse_id', $data['horse_id'])->where('status', 'draft')->whereNull('protocol_template_id')->lockForUpdate()->get();
                 if ($drafts->count() > 1) {
@@ -173,6 +175,7 @@ class ProtocolController extends Controller
         try {
             DB::transaction(function () use ($data, $protocol) {
                 \App\Support\LibrarySyncLock::acquire();
+                $this->assertOverridesAvailable($data);
                 $protocol = Protocol::query()->lockForUpdate()->findOrFail($protocol->id);
                 if ($protocol->status === 'archived') {
                     $data['status'] = 'archived';
@@ -213,6 +216,7 @@ class ProtocolController extends Controller
             'voedingAdviezen',
             'managementAdviezen',
             'bewegingAdviezen',
+            'manualAdviezen.phases:id,title,order',
         ]);
 
         return Inertia::render('Protocols/Show', ['protocol' => $protocol]);
@@ -252,9 +256,9 @@ class ProtocolController extends Controller
                 ->orderBy('name')
                 ->get(['id', 'name', 'title', 'archived_at']),
             // Archived advice stays listed only for a protocol that already uses it.
-            'voedingAdviezen' => VoedingAdvies::availableFor($protocol?->voedingAdviezen->pluck('voeding_advies_id')->all() ?? [])->orderBy('title')->get(),
-            'managementAdviezen' => ManagementAdvies::availableFor($protocol?->managementAdviezen->pluck('management_advies_id')->all() ?? [])->orderBy('title')->get(),
-            'bewegingAdviezen' => BewegingAdvies::availableFor($protocol?->bewegingAdviezen->pluck('beweging_advies_id')->all() ?? [])->orderBy('title')->get(),
+            'voedingAdviezen' => VoedingAdvies::availableFor($protocol?->voedingAdviezen->pluck('voeding_advies_id')->all() ?? [])->ordered()->get(),
+            'managementAdviezen' => ManagementAdvies::availableFor($protocol?->managementAdviezen->pluck('management_advies_id')->all() ?? [])->ordered()->get(),
+            'bewegingAdviezen' => BewegingAdvies::availableFor($protocol?->bewegingAdviezen->pluck('beweging_advies_id')->all() ?? [])->ordered()->get(),
             'doseBuildups' => \App\Models\DoseBuildup::orderBy('name')->get(),
             'protocolTemplates' => ProtocolTemplate::query()
                 ->with([
@@ -282,6 +286,7 @@ class ProtocolController extends Controller
             'voedingAdviezen',
             'managementAdviezen',
             'bewegingAdviezen',
+            'manualAdviezen.phases:id',
         ]);
     }
 
@@ -339,10 +344,86 @@ class ProtocolController extends Controller
         return $attributes;
     }
 
+    /**
+     * Manual advice is replaced by the submitted list: rows keep their id, new rows are created and rows
+     * left out are removed. An id this protocol no longer holds (removed in another tab) is rejected,
+     * never recreated. Runs inside the save transaction, after the protocol row is locked; syncStructure()
+     * audits the change.
+     *
+     * @param  array<int, array<string, mixed>>  $rows
+     * @param  array<string, string>  $phaseIdsByKey  Saved phase id per submitted phase client_key.
+     */
+    private function syncManualAdvice(Protocol $protocol, array $rows, array $phaseIdsByKey): void
+    {
+        $existing = $protocol->manualAdviezen()->lockForUpdate()->get()
+            ->keyBy(fn (ProtocolManualAdvies $advice) => strtolower($advice->id));
+        $kept = [];
+        $positions = [];
+
+        foreach (array_values($rows) as $index => $row) {
+            $id = isset($row['id']) ? strtolower($row['id']) : null;
+            if ($id !== null && ! $existing->has($id)) {
+                throw ValidationException::withMessages(["manual_advice.{$index}.id" => 'Dit handmatige advies bestaat niet meer. Vernieuw de pagina en voeg het opnieuw toe.']);
+            }
+            $phaseIds = [];
+            if ($row['applies_to'] === 'phases') {
+                foreach ($row['phase_keys'] as $key) {
+                    $phaseIds[] = $phaseIdsByKey[$key] ?? throw ValidationException::withMessages(["manual_advice.{$index}.phase_keys" => 'Een gekozen fase bestaat niet meer in dit protocol. Kies de fases opnieuw.']);
+                }
+            }
+
+            $category = $row['category'];
+            $advice = $id !== null ? $existing->get($id) : new ProtocolManualAdvies(['protocol_id' => $protocol->id]);
+            $advice->fill([
+                'category' => $category,
+                'title' => $row['title'],
+                'description' => $row['description'],
+                'management_category' => $category === 'management' ? $row['management_category'] : null,
+                'action' => $category === 'voeding' ? 'do' : ($row['action'] ?? 'do'),
+                'applies_to' => $row['applies_to'],
+                'sort_order' => $positions[$category] = ($positions[$category] ?? 0) + 1,
+            ])->save();
+            $advice->phases()->sync($phaseIds);
+            $kept[] = $advice->id;
+        }
+
+        $protocol->manualAdviezen()->whereNotIn('id', $kept)->delete();
+    }
+
+    /**
+     * @param  \Illuminate\Support\Collection<int, ProtocolManualAdvies>  $rows
+     * @return array<int, array<string, mixed>>
+     */
+    private function manualAdviceState($rows): array
+    {
+        return $rows->sortBy(fn (ProtocolManualAdvies $advice) => $advice->category.'|'.str_pad((string) $advice->sort_order, 6, '0', STR_PAD_LEFT))
+            ->map(fn (ProtocolManualAdvies $advice): array => [
+                ...$advice->only(['id', 'category', 'title', 'description', 'management_category', 'action', 'applies_to']),
+                'phase_ids' => $advice->phases->pluck('id')->sort()->values()->all(),
+            ])->values()->all();
+    }
+
+    /**
+     * Overrides were validated before the save transaction; a measure deleted or moved since then would leave
+     * an override pointing nowhere. The measure library takes the same lock, so this check is final.
+     *
+     * @param  array<string, mixed>  $data
+     */
+    private function assertOverridesAvailable(array $data): void
+    {
+        $missing = \App\Support\ProtocolMeasures::missingOverrideKeys($data['customer_settings'] ?? null);
+        if ($missing !== []) {
+            throw ValidationException::withMessages(array_fill_keys($missing, SaveProtocolRequest::ADVICE_UNAVAILABLE));
+        }
+    }
+
     /** @param array<string, mixed> $data */
     private function syncStructure(Protocol $protocol, array $data): void
     {
         $phaseIds = [];
+        $phaseIdsByKey = [];
+        // Before phases are removed: their links to manual advice go with them.
+        $manualBefore = $this->manualAdviceState($protocol->manualAdviezen()->with('phases')->get());
         $phases = collect($data['phases'])->values();
 
         foreach ($phases as $order => $phaseData) {
@@ -379,6 +460,7 @@ class ProtocolController extends Controller
             $phase->fill($attributes)->save();
 
             $phaseIds[] = $phase->id;
+            $phaseIdsByKey[$phaseData['client_key']] = $phase->id;
             $this->syncPhaseWeeks($phase, (int) $phaseData['week_count']);
             $this->syncPhaseSupplements($phase, $phaseData['supplements']);
         }
@@ -388,6 +470,13 @@ class ProtocolController extends Controller
         $this->syncAdviceSelections($protocol, $data['voeding_advies_ids'], 'voedingAdviezen', VoedingAdvies::class, 'voeding_advies_id');
         $this->syncAdviceSelections($protocol, $data['management_advies_ids'], 'managementAdviezen', ManagementAdvies::class, 'management_advies_id');
         $this->syncAdviceSelections($protocol, $data['beweging_advies_ids'], 'bewegingAdviezen', BewegingAdvies::class, 'beweging_advies_id');
+        if (array_key_exists('manual_advice', $data)) {
+            $this->syncManualAdvice($protocol, $data['manual_advice'], $phaseIdsByKey);
+        }
+        $manualAfter = $this->manualAdviceState($protocol->manualAdviezen()->with('phases')->get());
+        if ($manualBefore !== $manualAfter) {
+            AuditLogger::log('updated', $protocol, ['manual_advice' => $manualBefore], ['manual_advice' => $manualAfter], 'Handmatige adviezen');
+        }
         app(\App\Support\ProtocolTiming::class)->synchronize($protocol);
     }
 

@@ -10,6 +10,20 @@
     } from '$lib/protocolDosage.js';
     import { protocolPhaseRanges, totalProtocolWeeks } from '$lib/protocolPhasePlanning.js';
     import { adviceErrorTarget, adviceSetting, adviceSettingErrors, unofferedAdvice, updatedAdviceSettings } from '$lib/protocolAdvice.js';
+    import {
+        actionOptions,
+        emptyManualAdvice,
+        keepPlannedPhases,
+        managementCategoryOptions,
+        manualAdviceDraftErrors,
+        manualAdviceErrors,
+        manualAdviceForCategory,
+        manualAdviceFromProtocol,
+        needsPhaseChoice,
+        phaseSummary,
+        removeManualAdvice,
+        saveManualAdvice,
+    } from '$lib/protocolManualAdvice.js';
     import { Link, router, useForm } from '@inertiajs/svelte';
     import { onMount, tick, untrack } from 'svelte';
     import { Button, Input, Select, Textarea } from '$lib/components/ui';
@@ -25,6 +39,8 @@
         Dumbbell,
         Leaf,
         Lock,
+        PenLine,
+        Pencil,
         Plus,
         Save,
         Send,
@@ -259,6 +275,7 @@
         voeding_advies_ids: (initialProtocol?.voeding_adviezen ?? []).map((row) => row.voeding_advies_id),
         management_advies_ids: (initialProtocol?.management_adviezen ?? []).map((row) => row.management_advies_id),
         beweging_advies_ids: (initialProtocol?.beweging_adviezen ?? []).map((row) => row.beweging_advies_id),
+        manual_advice: manualAdviceFromProtocol(initialProtocol?.manual_adviezen ?? []),
         phases: initialPhases,
     });
 
@@ -370,7 +387,36 @@
     const selectedProtocolAdviceCount = $derived(adviceCategories.reduce(
         (total, category) => total + $form[category.formKey].length,
         0,
-    ));
+    ) + $form.manual_advice.length);
+
+    // Manual advice: written in a dialog, kept in the form and saved with the protocol.
+    let manualDraft = $state(null);
+    let manualDraftErrors = $state({});
+    let manualAdviceToRemove = $state(null);
+    const activeManualAdvice = $derived(activeAdviceCategory ? manualAdviceForCategory($form.manual_advice, activeAdviceCategory.id) : []);
+
+    function openManualAdvice(category, row = null) {
+        manualDraft = row ? { ...row, phase_keys: [...row.phase_keys] } : emptyManualAdvice(category);
+        manualDraftErrors = {};
+    }
+
+    function toggleDraftPhase(clientKey) {
+        manualDraft.phase_keys = manualDraft.phase_keys.includes(clientKey)
+            ? manualDraft.phase_keys.filter((key) => key !== clientKey)
+            : [...manualDraft.phase_keys, clientKey];
+    }
+
+    function confirmManualDraft() {
+        manualDraftErrors = manualAdviceDraftErrors(manualDraft);
+        if (Object.keys(manualDraftErrors).length) return;
+        $form.manual_advice = saveManualAdvice($form.manual_advice, manualDraft);
+        manualDraft = null;
+    }
+
+    function removeConfirmedManualAdvice() {
+        $form.manual_advice = removeManualAdvice($form.manual_advice, manualAdviceToRemove.client_key);
+        manualAdviceToRemove = null;
+    }
 
     onMount(() => {
         const warnBeforeUnload = (event) => {
@@ -460,6 +506,7 @@
         $form.phases = (workingTemplate?.phases ?? [])
             .filter((phase) => phase.required)
             .map((phase) => phaseFromDefinition(phase, actualWeight));
+        $form.manual_advice = keepPlannedPhases($form.manual_advice, $form.phases);
         $form.title = [workingTemplate?.name, selectedHorse?.name].filter(Boolean).join(' · ');
         activePhaseKey = $form.phases[0]?.client_key ?? null;
         phaseToAddId = '';
@@ -541,6 +588,7 @@
         const removedIndex = activePhaseIndex;
         const remaining = $form.phases.filter((phase) => phase.client_key !== activePhase.client_key);
         $form.phases = remaining;
+        $form.manual_advice = keepPlannedPhases($form.manual_advice, remaining);
         activePhaseKey = remaining[Math.min(removedIndex, remaining.length - 1)]?.client_key ?? null;
     }
 
@@ -704,6 +752,11 @@
         if (adviceTarget) {
             const category = adviceCategories.find((candidate) => candidate.id === adviceTarget.section);
             return [category.label, category.items.find((advice) => advice.id === adviceTarget.id)?.title].filter(Boolean).join(' · ');
+        }
+        if (section === 'manual_advice') {
+            const row = $form.manual_advice[Number(index)];
+            const category = adviceCategories.find((candidate) => candidate.id === row?.category);
+            return ['Handmatig advies', category?.label, row?.title].filter(Boolean).join(' · ');
         }
         if (section === 'phases') {
             const phase = $form.phases[Number(index)];
@@ -1090,7 +1143,7 @@
                                     <p class="mt-1 text-sm text-[#1B2A2A]/50">{activeAdviceCategory.description}</p>
                                 </div>
                                 <div class="rounded-full bg-[#EAFBF9] px-3 py-1.5 text-xs font-bold text-[#0E6F69]">
-                                    {$form[activeAdviceCategory.formKey].length} geselecteerd
+                                    {$form[activeAdviceCategory.formKey].length + activeManualAdvice.length} geselecteerd
                                 </div>
                             </div>
 
@@ -1181,11 +1234,65 @@
                                     {/if}
                                 {:else}
                                     <div class="px-6 py-12 text-center">
-                                        <p class="font-bold">Geen {activeAdviceCategory.label.toLowerCase()}adviezen beschikbaar</p>
-                                        <p class="mt-1 text-sm text-[#1B2A2A]/45">Voeg adviezen toe via Protocol Settings.</p>
-                                        <Button type="button" href="/admin/protocol-settings/advice" variant="outline" class="mt-4 rounded-full">Naar Protocol Settings</Button>
+                                        <p class="font-bold">Geen {activeAdviceCategory.label.toLowerCase()}adviezen in de bibliotheek</p>
+                                        <p class="mt-1 text-sm text-[#1B2A2A]/45">Voeg maatregelen toe via Content → Protocolmaatregelen.</p>
+                                        <Button type="button" href="/admin/protocol-measures" variant="outline" class="mt-4 rounded-full">Naar Protocolmaatregelen</Button>
                                     </div>
                                 {/each}
+                            </div>
+
+                            <div class="border-t border-[#1B2A2A]/10 px-5 py-6 md:px-7" aria-labelledby="manual-advice-title">
+                                <div class="flex flex-wrap items-start justify-between gap-3">
+                                    <div>
+                                        <h3 id="manual-advice-title" class="font-bold">Handmatige adviezen</h3>
+                                        <p class="mt-1 text-sm text-[#1B2A2A]/50">Alleen voor dit protocol. Koppel ze aan het hele protocol of aan specifieke fases.</p>
+                                    </div>
+                                    <Button type="button" variant="outline" class="rounded-full bg-white" onclick={() => openManualAdvice(activeAdviceCategory.id)}>
+                                        <Plus class="size-4" /> Handmatig advies toevoegen
+                                    </Button>
+                                </div>
+                                {#if activeManualAdvice.length}
+                                    <div class="mt-4 space-y-3">
+                                        {#each activeManualAdvice as row (row.client_key)}
+                                            {@const rowErrors = manualAdviceErrors($form.errors, $form.manual_advice, row.client_key)}
+                                            <article class={`rounded-2xl border bg-[#EAFBF9]/40 p-4 ${needsPhaseChoice(row) || Object.keys(rowErrors).length ? 'border-destructive/40' : 'border-[#18BAB0]/25'}`}>
+                                                <div class="flex items-start gap-3">
+                                                    <PenLine class="mt-0.5 size-4 shrink-0 text-[#108A82]" aria-hidden="true" />
+                                                    <div class="min-w-0 flex-1">
+                                                        <div class="flex flex-wrap items-center gap-2">
+                                                            <span class="font-bold">{row.title}</span>
+                                                            <span class="rounded-full bg-white px-2 py-0.5 text-[9px] font-bold uppercase tracking-wide text-[#0E6F69]">Handmatig</span>
+                                                            {#if row.action === 'avoid' && row.category !== 'voeding'}
+                                                                <span class="rounded-full bg-white px-2 py-0.5 text-[9px] font-bold uppercase tracking-wide text-[#A06A1B]">Vermijden</span>
+                                                            {/if}
+                                                            {#if row.category === 'management'}
+                                                                <span class="text-xs text-[#1B2A2A]/50">{managementCategoryOptions.find((option) => option.value === row.management_category)?.label}</span>
+                                                            {/if}
+                                                        </div>
+                                                        <p class="mt-1 whitespace-pre-line text-sm leading-6 text-[#1B2A2A]/55">{row.description}</p>
+                                                        <p class="mt-2 inline-flex items-center gap-1.5 rounded-full bg-white px-2.5 py-1 text-xs font-semibold text-[#0E6F69]">
+                                                            <CalendarDays class="size-3.5" aria-hidden="true" /> {phaseSummary(row, $form.phases)}
+                                                        </p>
+                                                        {#if needsPhaseChoice(row)}
+                                                            <p class="mt-2 text-xs text-destructive">De gekoppelde fase is uit de planning gehaald. Kies een fase of laat het advies voor het hele protocol gelden.</p>
+                                                        {/if}
+                                                        {#each Object.values(rowErrors) as message}
+                                                            <p class="mt-1 text-xs text-destructive">{message}</p>
+                                                        {/each}
+                                                    </div>
+                                                    <div class="flex shrink-0 gap-1">
+                                                        <Button type="button" variant="ghost" size="icon" onclick={() => openManualAdvice(row.category, row)} aria-label={`${row.title} bewerken`} title="Bewerken">
+                                                            <Pencil class="size-4" />
+                                                        </Button>
+                                                        <Button type="button" variant="ghost" size="icon" onclick={() => (manualAdviceToRemove = row)} aria-label={`${row.title} verwijderen`} title="Verwijderen">
+                                                            <Trash2 class="size-4" />
+                                                        </Button>
+                                                    </div>
+                                                </div>
+                                            </article>
+                                        {/each}
+                                    </div>
+                                {/if}
                             </div>
 
                             <div class="flex justify-end border-t border-[#1B2A2A]/10 bg-[#FBF8F3] px-5 py-4 md:px-7">
@@ -1315,6 +1422,72 @@
                 <div class="relative w-full max-w-md rounded-[22px] bg-white p-6 shadow-2xl" role="dialog" aria-modal="true" aria-label="Protocol template wijzigen">
                     <div class="flex items-start gap-3"><CircleAlert class="mt-0.5 size-5 shrink-0 text-[#A06A1B]" /><div><h2 class="text-lg font-bold">Protocol template wijzigen?</h2><p class="mt-1 text-sm leading-6 text-[#1B2A2A]/55">De huidige conceptplanning en taken worden vervangen door de verplichte fases en standaardsupplementen van de nieuwe template.</p></div></div>
                     <div class="mt-6 flex justify-end gap-2"><Button type="button" variant="outline" onclick={cancelProtocolTemplateChange}>Behouden</Button><Button type="button" class="bg-[#18BAB0] hover:bg-[#108A82]" onclick={applyProtocolTemplateChange}>Planning vervangen</Button></div>
+                </div>
+            </div>
+        {/if}
+
+        {#if manualDraft}
+            <div class="fixed inset-0 z-50 grid place-items-center overflow-y-auto bg-[#0B4A49]/45 p-4">
+                <button type="button" class="absolute inset-0 cursor-default" aria-label="Dialoog sluiten" onclick={() => (manualDraft = null)}></button>
+                <div class="relative w-full max-w-lg rounded-[22px] bg-white p-6 shadow-2xl" role="dialog" aria-modal="true" aria-labelledby="manual-advice-dialog-title">
+                    <h2 id="manual-advice-dialog-title" class="text-lg font-bold">{manualDraft.id || $form.manual_advice.some((row) => row.client_key === manualDraft.client_key) ? 'Handmatig advies bewerken' : 'Handmatig advies toevoegen'}</h2>
+                    <p class="mt-1 text-sm text-[#1B2A2A]/55">{adviceCategories.find((category) => category.id === manualDraft.category)?.label} · alleen voor dit protocol. Wordt bewaard wanneer je het protocol opslaat.</p>
+                    <div class="mt-5 space-y-4">
+                        <Field label="Titel" error={manualDraftErrors.title}>
+                            <Input bind:value={manualDraft.title} aria-label="Titel" maxlength="255" placeholder="Bijvoorbeeld: Hooi weken voor het voeren" />
+                        </Field>
+                        <Field label="Omschrijving" error={manualDraftErrors.description}>
+                            <Textarea bind:value={manualDraft.description} aria-label="Omschrijving" rows="5" maxlength="10000" placeholder="Beschrijf het advies concreet en toepasbaar." />
+                        </Field>
+                        {#if manualDraft.category !== 'voeding'}
+                            <div class="grid gap-3 md:grid-cols-2">
+                                {#if manualDraft.category === 'management'}
+                                    <Field label="Onderdeel" error={manualDraftErrors.management_category}>
+                                        <Select bind:value={manualDraft.management_category} options={managementCategoryOptions} aria-label="Onderdeel" />
+                                    </Field>
+                                {/if}
+                                <Field label="Actie">
+                                    <Select bind:value={manualDraft.action} options={actionOptions} aria-label="Actie" />
+                                </Field>
+                            </div>
+                        {/if}
+                        <fieldset class="space-y-2">
+                            <legend class="text-sm font-medium">Geldt voor</legend>
+                            <label class="flex items-center gap-2 text-sm"><input type="radio" name="manual-applies-to" value="protocol" bind:group={manualDraft.applies_to} class="accent-[#18BAB0]" /> Hele protocol</label>
+                            <label class="flex items-center gap-2 text-sm"><input type="radio" name="manual-applies-to" value="phases" bind:group={manualDraft.applies_to} class="accent-[#18BAB0]" disabled={!$form.phases.length} /> Specifieke fases</label>
+                            {#if manualDraft.applies_to === 'phases'}
+                                <div class="ml-6 space-y-1.5 rounded-xl border border-[#1B2A2A]/10 p-3">
+                                    {#each $form.phases as phase, index (phase.client_key)}
+                                        <label class="flex items-center gap-2 text-sm">
+                                            <input type="checkbox" checked={manualDraft.phase_keys.includes(phase.client_key)} onchange={() => toggleDraftPhase(phase.client_key)} class="accent-[#18BAB0]" />
+                                            <span>{phase.title}</span>
+                                            <span class="text-xs text-[#1B2A2A]/45">{phaseRange(index).start ? `week ${phaseRange(index).start}${phaseRange(index).end > phaseRange(index).start ? `–${phaseRange(index).end}` : ''}` : 'geen weken'}</span>
+                                        </label>
+                                    {/each}
+                                </div>
+                                <p class="text-xs text-[#1B2A2A]/50">De klant ziet dit advies zodra een van deze fases beschikbaar is (een week voor de start).</p>
+                            {/if}
+                            {#if manualDraftErrors.phase_keys}<p class="text-xs text-destructive">{manualDraftErrors.phase_keys}</p>{/if}
+                        </fieldset>
+                    </div>
+                    <div class="mt-6 flex justify-end gap-2">
+                        <Button type="button" variant="outline" onclick={() => (manualDraft = null)}>Annuleren</Button>
+                        <Button type="button" class="bg-[#18BAB0] hover:bg-[#108A82]" onclick={confirmManualDraft}>Advies bewaren</Button>
+                    </div>
+                </div>
+            </div>
+        {/if}
+
+        {#if manualAdviceToRemove}
+            <div class="fixed inset-0 z-50 grid place-items-center bg-[#0B4A49]/45 p-4">
+                <button type="button" class="absolute inset-0 cursor-default" aria-label="Dialoog sluiten" onclick={() => (manualAdviceToRemove = null)}></button>
+                <div class="relative w-full max-w-md rounded-[22px] bg-white p-6 shadow-2xl" role="dialog" aria-modal="true" aria-label="Handmatig advies verwijderen">
+                    <h2 class="text-lg font-bold">Handmatig advies verwijderen?</h2>
+                    <p class="mt-1 text-sm leading-6 text-[#1B2A2A]/55"><strong class="text-[#1B2A2A]">{manualAdviceToRemove.title}</strong> verdwijnt uit dit protocol zodra je het protocol opslaat.</p>
+                    <div class="mt-6 flex justify-end gap-2">
+                        <Button type="button" variant="outline" onclick={() => (manualAdviceToRemove = null)}>Behouden</Button>
+                        <Button type="button" variant="destructive" onclick={removeConfirmedManualAdvice}>Verwijderen</Button>
+                    </div>
                 </div>
             </div>
         {/if}

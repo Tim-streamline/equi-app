@@ -5,6 +5,7 @@ namespace App\Http\Requests\Admin;
 use App\Models\BewegingAdvies;
 use App\Models\ManagementAdvies;
 use App\Models\Protocol;
+use App\Models\ProtocolManualAdvies;
 use App\Models\ProtocolPhaseSupplement;
 use App\Models\ProtocolTemplatePhase;
 use App\Models\Supplement;
@@ -13,6 +14,7 @@ use App\Models\VoedingAdvies;
 use App\Rules\ShortProtocolText;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Support\Str;
+use Illuminate\Validation\Rule;
 use Illuminate\Validation\Validator;
 
 class SaveProtocolRequest extends FormRequest
@@ -36,6 +38,21 @@ class SaveProtocolRequest extends FormRequest
             if (is_array($this->input($key))) {
                 $input[$key] = array_map($lower, $this->input($key));
             }
+        }
+        if (is_array($this->input('manual_advice'))) {
+            $input['manual_advice'] = array_map(function (mixed $row) use ($lower): mixed {
+                if (! is_array($row)) {
+                    return $row;
+                }
+                if (isset($row['id'])) {
+                    $row['id'] = $lower($row['id']);
+                }
+                if (is_array($row['phase_keys'] ?? null)) {
+                    $row['phase_keys'] = array_values(array_unique($row['phase_keys'], SORT_REGULAR));
+                }
+
+                return $row;
+            }, $this->input('manual_advice'));
         }
         $settings = $this->input('customer_settings');
         foreach (['nutrition_advice', 'management', 'movement'] as $group) {
@@ -127,6 +144,21 @@ class SaveProtocolRequest extends FormRequest
             'beweging_advies_ids' => ['present', 'array', 'max:100'],
             'beweging_advies_ids.*' => ['required', 'uuid', 'distinct', BewegingAdvies::selectionRule($this->heldAdviceIds('bewegingAdviezen', 'beweging_advies_id'))],
 
+            // Omitted leaves a protocol's manual advice untouched (an editor opened before this field existed); [] removes it all.
+            'manual_advice' => ['sometimes', 'array', 'max:100'],
+            'manual_advice.*' => ['array:id,client_key,category,title,description,management_category,action,applies_to,phase_keys'],
+            'manual_advice.*.id' => ['nullable', 'uuid', 'distinct:ignore_case'],
+            'manual_advice.*.client_key' => ['required', 'string', 'max:100', 'distinct'],
+            'manual_advice.*.category' => ['required', Rule::in(ProtocolManualAdvies::CATEGORIES)],
+            'manual_advice.*.title' => ['required', 'string', 'max:255'],
+            'manual_advice.*.description' => ['required', 'string', 'max:10000'],
+            'manual_advice.*.management_category' => ['nullable', 'required_if:manual_advice.*.category,management', Rule::in(ProtocolManualAdvies::MANAGEMENT_CATEGORIES)],
+            'manual_advice.*.action' => ['nullable', 'in:do,avoid'],
+            'manual_advice.*.applies_to' => ['required', 'in:protocol,phases'],
+            'manual_advice.*.phase_keys' => ['present', 'array', 'max:104', 'required_if:manual_advice.*.applies_to,phases'],
+            // Duplicates within a row are dropped in prepareForValidation(); several rows may share a phase.
+            'manual_advice.*.phase_keys.*' => ['required', 'string', Rule::in($this->submittedPhaseKeys())],
+
             'phases' => ['present', 'array'],
             'phases.*.id' => ['nullable', 'uuid'],
             'phases.*.client_key' => ['required', 'string', 'max:100', 'distinct'],
@@ -159,11 +191,30 @@ class SaveProtocolRequest extends FormRequest
             'analysis.focus_points.*.body.max' => 'Gebruik maximaal twee korte doelzinnen van samen maximaal 320 tekens.',
             'analysis.observations.max' => 'Gebruik maximaal 4 observatiepunten.',
             'analysis.observations.*.max' => 'Gebruik maximaal twee korte observatiezinnen van samen maximaal 320 tekens.',
+            'manual_advice.*.phase_keys.required_if' => 'Kies minimaal één fase of laat het advies voor het hele protocol gelden.',
+            'manual_advice.*.phase_keys.*.in' => 'Een gekozen fase bestaat niet meer in dit protocol. Kies de fases opnieuw.',
+            'manual_advice.*.management_category.required_if' => 'Kies onder welk managementonderdeel dit advies valt.',
+            'manual_advice.*.title.required' => 'Geef het handmatige advies een titel.',
+            'manual_advice.*.description.required' => 'Geef het handmatige advies een omschrijving.',
             ...array_fill_keys(
                 ['voeding_advies_ids.*.exists', 'management_advies_ids.*.exists', 'beweging_advies_ids.*.exists'],
                 self::ADVICE_UNAVAILABLE,
             ),
         ];
+    }
+
+    /**
+     * Client keys of the phases in this request; manual advice refers to phases by these keys.
+     *
+     * @return array<int, string>
+     */
+    private function submittedPhaseKeys(): array
+    {
+        $phases = $this->input('phases');
+
+        return is_array($phases)
+            ? collect($phases)->map(fn (mixed $phase) => is_array($phase) ? ($phase['client_key'] ?? null) : null)->filter(fn ($key) => is_string($key))->values()->all()
+            : [];
     }
 
     /**

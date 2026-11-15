@@ -23,7 +23,7 @@ import {
     Settings,
     SlidersHorizontal,
     ListChecks,
-    Settings2,
+    ListTodo,
 } from '@lucide/svelte';
 
 /**
@@ -48,13 +48,14 @@ export const navSections = [
     },
     {
         title: 'Content',
-        roles: ['content_editor'],
+        roles: ['content_editor', 'admin'],
         items: [
             { label: 'Protocol kopen', href: '/admin/plus-page', icon: BookOpen, roles: ['content_editor'] },
-            { label: 'Library', href: '/admin/library', icon: BookOpen },
-            { label: 'Bibliotheekfilters', href: '/admin/library-categories', icon: FolderTree },
-            { label: 'Seasonal tips', href: '/admin/seasonal-tips', icon: CalendarHeart },
-            { label: 'Shelby chat', href: '/admin/nova', icon: Bot },
+            { label: 'Protocolmaatregelen', href: '/admin/protocol-measures', icon: ListTodo, roles: ['content_editor', 'admin'] },
+            { label: 'Library', href: '/admin/library', icon: BookOpen, roles: ['content_editor'] },
+            { label: 'Bibliotheekfilters', href: '/admin/library-categories', icon: FolderTree, roles: ['content_editor'] },
+            { label: 'Seasonal tips', href: '/admin/seasonal-tips', icon: CalendarHeart, roles: ['content_editor'] },
+            { label: 'Shelby chat', href: '/admin/nova', icon: Bot, roles: ['content_editor'] },
         ],
     },
     {
@@ -95,7 +96,6 @@ export const navSections = [
             { label: 'Audit log', href: '/admin/audit-log', icon: ScrollText, roles: ['admin'] },
             { label: 'Intakevragen', href: '/admin/intake-questionnaire', icon: ListChecks, roles: ['admin'] },
             { label: 'Protocol Templates', href: '/admin/protocol-settings', match: '/admin/protocol-settings', icon: SlidersHorizontal, roles: ['admin'] },
-            { label: 'Protocol Settings', href: '/admin/protocol-settings/advice', icon: Settings2, roles: ['admin'] },
             { label: 'Settings', href: '/admin/settings', icon: Settings, roles: ['admin'] },
         ],
     },

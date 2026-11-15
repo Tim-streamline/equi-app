@@ -140,7 +140,7 @@ class HorseDashboard
     public function protocol(Protocol $protocol, CarbonImmutable $now, ?string $month = null, ?array $answers = null, bool $preview = false): array
     {
         $answers ??= $this->nutrition->answers($protocol);
-        $protocol->loadMissing(['phases.weeks', 'phases.supplements.weeks', 'phases.supplements.intakes', 'phases.supplements.supplement', 'analysis.advice', 'voedingAdviezen', 'managementAdviezen', 'bewegingAdviezen']);
+        $protocol->loadMissing(['phases.weeks', 'phases.supplements.weeks', 'phases.supplements.intakes', 'phases.supplements.supplement', 'analysis.advice', 'voedingAdviezen', 'managementAdviezen', 'bewegingAdviezen', 'manualAdviezen.phases']);
         ['start' => $start, 'day' => $day, 'week' => $week, 'totalWeeks' => $totalWeeks, 'running' => $running, 'progressPercent' => $progressPercent, 'statusLabel' => $statusLabel] = $this->progress($protocol, $now);
         $buildup = app(ProtocolDoseBuildup::class);
         $selections = $protocol->phases->flatMap->supplements->keyBy('id');
@@ -222,6 +222,8 @@ class HorseDashboard
             $cells[] = null;
         }
 
+        $manual = $this->manualAdvice($protocol, $phases, $preview);
+
         return [
             'id' => $protocol->id, 'title' => $protocol->title, 'currentDay' => $day, 'currentWeek' => $week,
             'preparing' => ! $start, 'startedAt' => $start?->toDateString(),
@@ -235,9 +237,9 @@ class HorseDashboard
             'orderItems' => app(ProtocolOrderList::class)->forProtocol($protocol),
             'orderDiscount' => ProtocolOrderList::DISCOUNT,
             'calendar' => ['month' => $monthDate->format('Y-m'), 'label' => $monthDate->locale('nl')->translatedFormat('F Y'), 'previousMonth' => $monthDate->subMonth()->format('Y-m'), 'nextMonth' => $monthDate->addMonth()->format('Y-m'), 'cells' => $cells],
-            'nutrition' => $this->nutrition->forProtocol($protocol, $answers) + ['advice' => $this->nutritionAdvice($protocol)],
-            'management' => $this->management($protocol),
-            'movement' => $this->movement($protocol),
+            'nutrition' => $this->nutrition->forProtocol($protocol, $answers) + ['advice' => $this->nutritionAdvice($protocol, $manual)],
+            'management' => $this->management($protocol, $manual),
+            'movement' => $this->movement($protocol, $manual),
             'analysis' => filled($protocol->analysis?->summary) ? [
                 'summary' => $protocol->analysis->summary,
                 'priorities' => collect($protocol->analysis->focus_points ?? [])->take(4)
@@ -265,25 +267,63 @@ class HorseDashboard
         return $links;
     }
 
-    private function nutritionAdvice(Protocol $protocol): array
+    /**
+     * Manual advice per category, in the editor's order. Advice limited to phases shows once one of
+     * those phases is accessible, like the phase's own content; the admin preview shows everything.
+     *
+     * @param  array<int, array<string, mixed>>  $phases  Dashboard phases, with their availability.
+     * @return array<string, array<int, array<string, mixed>>>
+     */
+    private function manualAdvice(Protocol $protocol, array $phases, bool $preview): array
+    {
+        $accessible = collect($phases)->filter(fn (array $phase) => $phase['accessible'])->pluck('id')->flip();
+        $items = [];
+        foreach ($protocol->manualAdviezen as $advice) {
+            $linked = $advice->applies_to === 'phases' ? $advice->phases : collect();
+            if ($advice->applies_to === 'phases' && ! $preview && ! $linked->contains(fn ($phase) => $accessible->has($phase->id))) {
+                continue;
+            }
+            $items[$advice->category][] = [
+                'id' => $advice->id, 'title' => $advice->title, 'description' => $advice->description,
+                'action' => $advice->action ?? 'do', 'note' => null, 'frequency' => null, 'url' => null, 'ctaLabel' => null,
+                'category' => $advice->management_category,
+                'manual' => true,
+                'phaseIds' => $linked->pluck('id')->values()->all(),
+                'phaseLabel' => $linked->isEmpty() ? null : 'Fase: '.$linked->pluck('title')->implode(' · '),
+            ];
+        }
+
+        return $items;
+    }
+
+    /** @param  array<string, array<int, array<string, mixed>>>  $manual */
+    private function nutritionAdvice(Protocol $protocol, array $manual = []): array
     {
         $overrides = collect($protocol->customer_settings['nutrition_advice'] ?? [])->keyBy('id');
 
         return $protocol->voedingAdviezen->map(fn ($advice) => Arr::only(
             $this->adviceItem($advice, $overrides->get($advice->voeding_advies_id, [])),
             ['id', 'title', 'description'],
-        ))->values()->all();
+        ))->values()->concat(array_map(
+            fn (array $item) => Arr::only($item, ['id', 'title', 'description', 'manual', 'phaseIds', 'phaseLabel']),
+            $manual['voeding'] ?? [],
+        ))->all();
     }
 
-    private function movement(Protocol $protocol): array
+    /** @param  array<string, array<int, array<string, mixed>>>  $manual */
+    private function movement(Protocol $protocol, array $manual = []): array
     {
         $overrides = collect($protocol->customer_settings['movement'] ?? [])->keyBy('id');
 
         return $protocol->bewegingAdviezen
-            ->map(fn ($advice) => $this->adviceItem($advice, $overrides->get($advice->beweging_advies_id, [])))->all();
+            ->map(fn ($advice) => $this->adviceItem($advice, $overrides->get($advice->beweging_advies_id, [])))
+            ->values()
+            ->concat(array_map(fn (array $item) => Arr::except($item, ['category']), $manual['beweging'] ?? []))
+            ->all();
     }
 
-    private function management(Protocol $protocol): array
+    /** @param  array<string, array<int, array<string, mixed>>>  $manual */
+    private function management(Protocol $protocol, array $manual = []): array
     {
         $overrides = collect($protocol->customer_settings['management'] ?? [])->keyBy('id');
         $items = $protocol->managementAdviezen->map(function ($a) use ($overrides) {
@@ -291,7 +331,7 @@ class HorseDashboard
             $category = $settings['category'] ?? (preg_match('/mestonderzoek|bloed|urine|onderzoek|monitor/iu', $a->title) ? 'monitoring' : (preg_match('/hoef|gebit|tand|behandel|verzorg/iu', $a->title) ? 'care' : 'environment'));
 
             return $this->adviceItem($a, $settings) + ['category' => $category];
-        });
+        })->values()->concat($manual['management'] ?? []);
 
         return collect(['environment' => 'Weide & leefomgeving', 'care' => 'Verzorging & lichamelijke ondersteuning', 'monitoring' => 'Onderzoek & monitoring'])
             ->map(fn ($title, $key) => ['id' => $key, 'title' => $title, 'items' => $items->where('category', $key)->values()->all()])

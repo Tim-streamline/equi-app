@@ -9,7 +9,7 @@ use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
-#[Fillable(['title', 'description', 'layout', 'icon'])]
+#[Fillable(['title', 'description', 'layout', 'icon', 'sort_order'])]
 class ManagementAdvies extends Model
 {
     use ArchivesProtocolAdvice, HasProtocolAdvicePresentation, HasUuids;

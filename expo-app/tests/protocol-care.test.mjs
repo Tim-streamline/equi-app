@@ -40,6 +40,13 @@ test('uses the managed category even when the advice title suggests another sect
   ]);
 });
 
+test('keeps manual advice and its phase label in the right section', () => {
+  const manual = { id: 'manual', title: 'Paddock afrasteren', description: 'Eigen advies.', action: 'do', manual: true, phaseIds: ['phase-2'], phaseLabel: 'Fase: Opbouw' };
+  const sections = careSections({ management: [{ id: 'environment', items: [manual] }], movement: [] });
+  assert.deepEqual(sections, [{ id: 'environment', title: 'Leefomgeving & weide', items: [manual] }]);
+  assert.equal(sections[0].items[0].phaseLabel, 'Fase: Opbouw');
+});
+
 test('offers exactly five tabs and preserves incoming links to the two merged tabs', () => {
   assert.deepEqual(PROTOCOL_TABS.map(({ label }) => label), ['Vandaag', 'Kalender', 'Voeding', 'Zorg', 'Analyse']);
   for (const { key } of PROTOCOL_TABS) assert.equal(protocolTab(key), key);

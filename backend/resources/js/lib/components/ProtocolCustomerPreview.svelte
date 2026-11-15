@@ -160,6 +160,7 @@
 {#snippet adviceCard(advice)}
     <article class="rounded-2xl border border-[#1B2A2A]/10 bg-white p-5">
         <h4 class="text-base font-semibold">{advice.title}</h4>
+        {#if advice.phaseLabel}<p class="mt-1 text-xs text-[#1B2A2A]/55">{advice.phaseLabel}</p>{/if}
         {#if advice.action}<p class="mt-1 text-xs font-semibold text-[#108A82]">{advice.action === 'avoid' ? 'Vermijden' : 'Doen'}</p>{/if}
         {#if advice.description}
             <section class="mt-4 space-y-2">

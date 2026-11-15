@@ -85,7 +85,7 @@ Local requirements: Docker, Python 3, Bash, Git, rsync, tar, sha256sum and worki
 
 ```bash
 ./deploy-staging --build-only            # Save a release without connecting to staging
-./deploy-staging --seed-catalog          # Also seed intake, advice catalogs and protocol templates
+./deploy-staging --seed-catalog          # Also seed intake questions and protocol templates (protocol measures are managed in the admin)
 ./deploy-staging --with-library          # Also transfer and import deploy/lib-assets
 ./deploy-staging --with-library --seed-catalog
 ./deploy-staging --artifact deploy/builds/RELEASE_ID.tar.gz  # Deploy an existing verified build

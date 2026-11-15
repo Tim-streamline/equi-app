@@ -6,6 +6,7 @@ use App\Models\Horse;
 use App\Models\LibraryItem;
 use App\Models\Protocol;
 use App\Models\ProtocolAnalysis;
+use App\Models\ProtocolManualAdvies;
 use App\Models\ProtocolPhase;
 use App\Models\ProtocolPhaseSupplement;
 use App\Models\ProtocolPhaseSupplementWeek;
@@ -32,6 +33,7 @@ class ProtocolPreview
         $answers = $nutrition->answers($source);
         $weight = $nutrition->actualWeight($protocol, $answers);
         $phases = new Collection;
+        $phasesByKey = [];
         $previousStart = null;
         $previousEnd = null;
         $latestEnd = 0;
@@ -75,6 +77,7 @@ class ProtocolPreview
             }
             $phase->setRelation('supplements', $supplements);
             $phases->push($phase);
+            $phasesByKey[$row['client_key']] = $phase;
         }
         $protocol->setRelation('phases', $phases);
         $protocol->total_weeks = $latestEnd;
@@ -97,6 +100,7 @@ class ProtocolPreview
             }
             $protocol->setRelation($relation, $items);
         }
+        $protocol->setRelation('manualAdviezen', $this->manualAdvice($data, $stored, $phases, $phasesByKey));
         $start = $protocol->started_at ? CarbonImmutable::parse($protocol->started_at->toDateString(), 'Europe/Amsterdam') : CarbonImmutable::today('Europe/Amsterdam');
         $protocol->started_at = $start;
         $now = $start->addWeeks(max(0, min(max(1, $latestEnd), $week) - 1));
@@ -109,5 +113,46 @@ class ProtocolPreview
         ]);
 
         return ['horse' => ['id' => $horse->id, 'name' => $horse->name], 'protocol' => $presentation];
+    }
+
+    /**
+     * Manual advice as the form holds it; phases are resolved by the same client keys the save uses.
+     * Without manual advice in the form, the stored advice is shown against the preview's phases.
+     *
+     * @param  array<string, ProtocolPhase>  $phasesByKey
+     */
+    private function manualAdvice(array $data, ?Protocol $stored, Collection $phases, array $phasesByKey): Collection
+    {
+        if (! array_key_exists('manual_advice', $data)) {
+            $stored?->load('manualAdviezen.phases');
+
+            return new Collection(($stored?->manualAdviezen ?? new Collection)->map(function (ProtocolManualAdvies $advice) use ($phases) {
+                $item = new ProtocolManualAdvies($advice->only(['category', 'title', 'description', 'management_category', 'action', 'applies_to', 'sort_order']));
+                $item->id = $advice->id;
+
+                return $item->setRelation('phases', $phases->whereIn('id', $advice->phases->pluck('id'))->values());
+            })->all());
+        }
+
+        $positions = [];
+
+        return new Collection(collect($data['manual_advice'])->values()->map(function (array $row, int $index) use ($phasesByKey, &$positions) {
+            $category = $row['category'];
+            $item = new ProtocolManualAdvies([
+                'category' => $category,
+                'title' => $row['title'],
+                'description' => $row['description'],
+                'management_category' => $category === 'management' ? $row['management_category'] : null,
+                'action' => $category === 'voeding' ? 'do' : ($row['action'] ?? 'do'),
+                'applies_to' => $row['applies_to'],
+                'sort_order' => $positions[$category] = ($positions[$category] ?? 0) + 1,
+            ]);
+            $item->id = $row['id'] ?? (string) Str::uuid();
+            $linked = $row['applies_to'] === 'phases'
+                ? collect($row['phase_keys'])->map(fn (string $key) => $phasesByKey[$key] ?? null)->filter()->values()
+                : collect();
+
+            return $item->setRelation('phases', new Collection($linked->all()));
+        })->all());
     }
 }
