@@ -17,6 +17,9 @@ class SyncAccessPolicy
         'community_categories',
         'community_tags',
         'data_exports',
+        // Sharing grants another account access to a horse and replicates that
+        // account's profile, so it needs consent and is never a device write.
+        'horse_shares',
         'horse_stats',
         'ingredients',
         'library_article_sections',
@@ -56,12 +59,25 @@ class SyncAccessPolicy
             $this->deny($table);
         }
 
+        // The persisted row must already belong to the user, and the row the write
+        // leaves behind must too: a payload cannot claim ownership of someone
+        // else's row by naming itself as owner. A DELETE removes the persisted row,
+        // so only that row counts and its payload is ignored.
         $existing = $this->row($table, $id);
-        $allowed = match ($table) {
+        if ($existing && ! $this->allows($table, $userId, $id, $op, $existing, [])) {
+            $this->deny($table);
+        }
+        if (($op !== 'DELETE' || ! $existing) && ! $this->allows($table, $userId, $id, $op, $existing, $data)) {
+            $this->deny($table);
+        }
+    }
+
+    private function allows(string $table, string $userId, string $id, string $op, ?object $existing, array $data): bool
+    {
+        return match ($table) {
             'user_home_preferences' => $this->ownsSelfRow($userId, $id, $op),
             'users' => $this->ownsSelfRow($userId, $id, $op),
             'horses' => $this->ownsHorseRow($userId, $existing, $data),
-            'horse_shares' => $this->ownsHorseByRowHorseId($userId, $existing, $data),
             'protocol_supplement_intakes' => $this->ownsSupplementIntake($userId, $existing, $data),
             'observations' => $this->ownsObservation($userId, $existing, $data),
             'observation_photos' => $this->ownsObservationPhoto($userId, $existing, $data),
@@ -74,10 +90,6 @@ class SyncAccessPolicy
             'intake_answers' => $this->ownsIntakeAnswer($userId, $existing, $data),
             default => false,
         };
-
-        if (! $allowed) {
-            $this->deny($table);
-        }
     }
 
     private function ownsSelfRow(string $userId, string $id, string $op): bool
@@ -90,13 +102,6 @@ class SyncAccessPolicy
         $ownerId = $this->value('owner_id', $existing, $data);
 
         return $ownerId === $userId;
-    }
-
-    private function ownsHorseByRowHorseId(string $userId, ?object $existing, array $data): bool
-    {
-        $horseId = $this->value('horse_id', $existing, $data);
-
-        return is_string($horseId) && $this->ownsHorse($userId, $horseId);
     }
 
     private function ownsSupplementIntake(string $userId, ?object $existing, array $data): bool

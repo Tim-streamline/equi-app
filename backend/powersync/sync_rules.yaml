@@ -6,6 +6,8 @@
 # Community posts, replies, reactions and private attachments use HTTP only.
 # User, horse, protocol, scan, billing, settings, chat, and intake rows are
 # scoped to the current user or to horses visible through ownership/sharing.
+# User rows are explicit projections: the own account (incl. email) syncs as
+# `users`, share counterparts only as display fields in `shared_users`.
 
 config:
     edition: 3
@@ -56,11 +58,19 @@ streams:
         auto_subscribe: true
         queries:
             - SELECT * FROM library_item_access WHERE auth.parameter('subscribed') = 1 AND ( user_id = auth.user_id())
-            # Current user plus user rows needed to render visible horse shares.
+            # Current user's own account row. Explicit projection: never replicate
+            # credentials (password, remember_token) or admin-only columns.
             - |
-                SELECT * FROM users
+                SELECT id, email, name, avatar_initial, avatar_url, locale, units_system,
+                       notifications_on, onboarded_at, created_at, updated_at
+                FROM users
                 WHERE id = auth.user_id()
-                   OR (auth.parameter('subscribed') = 1 AND (id IN (
+            # Display fields of the other party of a visible horse share. A separate
+            # output table, so a self-share can never replace the self projection above.
+            - |
+                SELECT id, name, avatar_initial, avatar_url, created_at, updated_at
+                FROM users AS shared_users
+                WHERE auth.parameter('subscribed') = 1 AND (id IN (
                         SELECT hs.grantee_user_id
                         FROM horse_shares hs
                         JOIN horses h ON h.id = hs.horse_id
@@ -72,7 +82,7 @@ streams:
                         FROM horses h
                         JOIN horse_shares hs ON hs.horse_id = h.id
                         WHERE hs.grantee_user_id = auth.user_id()
-                   )))
+                   ))
 
             # User-owned engagement/account rows.
             - SELECT * FROM library_bookmarks WHERE auth.parameter('subscribed') = 1 AND ( user_id = auth.user_id())

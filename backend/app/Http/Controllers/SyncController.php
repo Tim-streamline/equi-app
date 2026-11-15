@@ -156,15 +156,32 @@ class SyncController extends Controller
                     app(ProtocolAccess::class)->authorizeBooking($userId, $op['data']['horse_id'] ?? $booking?->horse_id, $op['id']);
                 } elseif ($op['type'] === 'intake_answers') {
                     $answer = Models\IntakeAnswer::find($op['id']);
-                    $booking = Models\IntakeBooking::findOrFail($op['data']['response_id'] ?? $answer?->response_id);
-                    app(ProtocolAccess::class)->authorizeBooking($userId, $booking->horse_id, $booking->id);
+                    // An existing answer stays governed by the intake it is stored in;
+                    // a payload response_id cannot route a write around that intake's
+                    // state. A DELETE only concerns the stored answer.
+                    $persisted = $answer ? Models\IntakeBooking::findOrFail($answer->response_id) : null;
+                    $booking = $persisted && $op['op'] === 'DELETE' ? $persisted
+                        : Models\IntakeBooking::findOrFail($op['data']['response_id'] ?? $answer?->response_id);
+                    foreach (collect([$persisted, $booking])->filter()->unique('id') as $target) {
+                        app(ProtocolAccess::class)->authorizeBooking($userId, $target->horse_id, $target->id);
+                    }
                 }
                 if (in_array($op['type'], ['intake_bookings', 'intake_answers'], true)) {
                     $locked = Models\IntakeBooking::lockForUpdate()->findOrFail($booking->id);
-                    if ($locked->completed_at || $locked->submitted_at) {
+                    $intakes = $op['type'] === 'intake_answers' && isset($persisted) && $persisted->id !== $locked->id
+                        ? [Models\IntakeBooking::lockForUpdate()->findOrFail($persisted->id), $locked] : [$locked];
+                    if (collect($intakes)->contains(fn ($intake) => $intake->completed_at || $intake->submitted_at)) {
                         // Acknowledge stale offline writes without applying them, so one
                         // completed intake cannot block the device's entire sync queue.
                         $skipped[] = $op['type'].':completed';
+
+                        continue;
+                    }
+                    if (collect($intakes)->contains('status', 'cancelled')) {
+                        // A cancelled intake stays as it was: a device can neither reopen it
+                        // nor change its answers. Queued writes are acknowledged, not applied,
+                        // so later work can still sync.
+                        $skipped[] = $op['type'].':cancelled';
 
                         continue;
                     }
@@ -174,7 +191,6 @@ class SyncController extends Controller
                 $recoverAnswer = $op['type'] === 'intake_answers' && $op['op'] === 'PATCH' && ! Models\IntakeAnswer::whereKey($op['id'])->exists();
                 if ($recoverAnswer) {
                     $this->validateAnswerRecovery($op);
-                    abort_if($locked->status === 'cancelled', 403, 'Deze intake is geannuleerd.');
                     $cleanup = app(\App\Support\IntakeObsoleteAnswers::class);
                     $field = $cleanup->fieldFor($op['data']['section_id'], $op['data']['field_id']);
                     $value = json_decode($op['data']['value'] ?? 'null', true);
@@ -211,7 +227,14 @@ class SyncController extends Controller
                 if ($op['type'] === 'user_home_preferences') {
                     $op['data'] = $this->homePreferenceData($op['data'] ?? []);
                 }
-                if ($op['op'] !== 'DELETE' && in_array($op['type'], ['intake_bookings', 'horse_shares'], true)
+                if ($op['type'] === 'users' && $op['op'] !== 'DELETE') {
+                    // A device only records onboarding on its own account. Credentials,
+                    // email and administrative fields have their own verified flows;
+                    // anything else a queued write carries is ignored, not rejected.
+                    $op['data'] = array_intersect_key($op['data'] ?? [], array_flip(['onboarded_at']));
+                    validator($op['data'], ['onboarded_at' => ['sometimes', 'nullable', 'date']])->validate();
+                }
+                if ($op['op'] !== 'DELETE' && $op['type'] === 'intake_bookings'
                     && array_key_exists('therapist_id', $op['data'] ?? [])) {
                     $currentTherapist = $modelClass::find($op['id'])?->therapist_id;
                     validator($op['data'], ['therapist_id' => ['nullable', Models\Therapist::assignmentRule($currentTherapist)]], [

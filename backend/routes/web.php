@@ -75,14 +75,14 @@ Route::middleware(AuthenticatePowerSyncJwt::class)->group(function () {
     Route::post('/api/subscription/renew', [SubscriptionController::class, 'renew']);
     Route::get('/api/protocol-purchases/access', [PlusUpgradeController::class, 'state']);
     Route::post('/api/protocol-purchases/open', [PlusUpgradeController::class, 'start']);
-    Route::post('/api/protocol-purchases/create', [PlusUpgradeController::class, 'create'])->middleware('throttle:30,1');
+    Route::post('/api/protocol-purchases/create', [PlusUpgradeController::class, 'create'])->middleware('throttle:protocol-purchase-create');
     Route::get('/api/plus/access', [PlusUpgradeController::class, 'state']);
     Route::post('/api/plus/start', [PlusUpgradeController::class, 'start']);
     Route::post('/api/intakes/{id}/submit', [IntakeSubmissionController::class, 'store'])->whereUuid('id');
-    Route::post('/api/intakes/{id}/attachments', [IntakeAttachmentController::class, 'store'])->whereUuid('id')->middleware('throttle:60,1');
+    Route::post('/api/intakes/{id}/attachments', [IntakeAttachmentController::class, 'store'])->whereUuid('id')->middleware('throttle:intake-attachment');
     Route::get('/api/intake-media/{attachment}', [IntakeAttachmentController::class, 'show'])->whereUuid('attachment');
     Route::get('/api/notifications/web-push', [WebPushController::class, 'config']);
-    Route::post('/api/notifications/web-push', [WebPushController::class, 'store'])->middleware('throttle:30,1');
+    Route::post('/api/notifications/web-push', [WebPushController::class, 'store'])->middleware('throttle:web-push-subscribe');
     Route::post('/api/notifications/web-push/remove', [WebPushController::class, 'remove']);
     Route::post('/api/notifications/push-token', [PushTokenController::class, 'store']);
     Route::get('/api/horses/{horse}/dashboard', [HorseDashboardController::class, 'show']);
@@ -116,7 +116,7 @@ Route::middleware(AuthenticatePowerSyncJwt::class)->prefix('api/library')->contr
     Route::get('/bookmarks', 'bookmarks');
     Route::get('/selections/{selection}', 'selection')->where('selection', '[a-z-]+');
     Route::get('/{library}', 'show')->whereUuid('library');
-    Route::post('/{library}/unlock', 'unlock')->whereUuid('library')->middleware('throttle:60,1');
+    Route::post('/{library}/unlock', 'unlock')->whereUuid('library')->middleware('throttle:library-unlock');
     Route::get('/{library}/related', 'related')->whereUuid('library');
     Route::post('/{library}/attachments/{attachment}/open', [LibraryAttachmentController::class, 'open'])->whereUuid(['library', 'attachment']);
     Route::match(['get', 'put', 'delete'], '/{library}/bookmark', 'bookmark')->whereUuid('library');
@@ -138,8 +138,8 @@ Route::prefix('web-session')->controller(WebSessionController::class)->group(fun
 
 Route::middleware(AuthenticatePowerSyncJwt::class)->prefix('api/library/credits')->controller(CreditController::class)->group(function () {
     Route::get('/', 'index');
-    Route::post('/purchase', 'purchase')->middleware('throttle:15,1');
-    Route::post('/temporary-top-up', 'temporaryTopUp')->middleware('throttle:15,1');
+    Route::post('/purchase', 'purchase')->middleware('throttle:credit-purchase');
+    Route::post('/temporary-top-up', 'temporaryTopUp')->middleware('throttle:credit-temporary-top-up');
     Route::get('/orders/{order}', 'order')->whereUuid('order');
     Route::post('/cancel-basic', 'cancel');
 });

@@ -24,6 +24,15 @@ const users = new Table({
   updated_at: column.text,
 });
 
+// Display fields of the other party of a horse share. Never credentials or email.
+const shared_users = new Table({
+  name: column.text,
+  avatar_initial: column.text,
+  avatar_url: column.text,
+  created_at: column.text,
+  updated_at: column.text,
+});
+
 const therapists = new Table({
   name: column.text,
   title: column.text,
@@ -607,6 +616,7 @@ const intake_answers = new Table({
 
 export const AppSchema = new Schema({
   users,
+  shared_users,
   therapists,
   horses,
   horse_shares,

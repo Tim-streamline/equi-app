@@ -55,6 +55,8 @@ class IntakeAttachmentController extends Controller
                 return response()->json(['value' => 'attachment:'.$existing->id.':'.rawurlencode($existing->name)]);
             }
             abort_if($booking->completed_at || $booking->submitted_at, 409, 'Deze intake is al ingestuurd en kan niet meer worden aangepast.');
+            // 409 tells a device to stop retrying this photo, so its later answers still sync.
+            abort_if($booking->status === 'cancelled', 409, 'Deze intake is geannuleerd en kan niet meer worden aangepast.');
             $file = $request->file('file');
             $path = $file->store('intake/'.$booking->id, 'local');
             try {

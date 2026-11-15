@@ -91,6 +91,73 @@ class IntakeCompletionTest extends TestCase
         $this->postJson('/api/sync/upload', ['operations' => [['op' => 'PATCH', 'type' => 'intake_bookings', 'id' => $foreign->id, 'data' => ['completed_at' => $stamp]]]])->assertForbidden();
     }
 
+    public function test_cancelled_intake_refuses_new_uploads_but_still_acknowledges_a_lost_response(): void
+    {
+        Storage::fake('local');
+        $b = $this->fixture();
+        $upload = ['attachment_id' => (string) Str::uuid(), 'horse_id' => $b->horse_id, 'section' => 'paard', 'field' => 'foto', 'file' => UploadedFile::fake()->image('foto.jpg')];
+        $value = $this->postJson('/api/intakes/'.$b->id.'/attachments', $upload)->assertCreated()->json('value');
+        $b->update(['status' => 'cancelled']);
+        $this->postJson('/api/intakes/'.$b->id.'/attachments', $upload)->assertOk()->assertJsonPath('value', $value);
+        $upload['attachment_id'] = (string) Str::uuid();
+        $this->postJson('/api/intakes/'.$b->id.'/attachments', $upload)->assertStatus(409);
+        $this->assertDatabaseMissing('intake_attachments', ['id' => $upload['attachment_id']]);
+        $this->assertCount(1, Storage::disk('local')->allFiles('intake/'.$b->id));
+    }
+
+    public function test_cancelled_intake_answers_are_acknowledged_and_cannot_be_routed_through_another_intake(): void
+    {
+        $cancelled = $this->fixture();
+        $active = IntakeBooking::create(['user_id' => $cancelled->user_id, 'horse_id' => $cancelled->horse_id]);
+        $answer = $cancelled->answers()->create(['section_id' => 'paard', 'field_id' => 'naam', 'value' => '"Nova"']);
+        $cancelled->update(['status' => 'cancelled']);
+        $newId = (string) Str::uuid();
+        $validId = (string) Str::uuid();
+        $data = ['response_id' => $active->id, 'section_id' => 'paard', 'field_id' => 'naam', 'value' => '"Changed"'];
+
+        $this->postJson('/api/sync/upload', ['operations' => [
+            ['op' => 'PATCH', 'type' => 'intake_answers', 'id' => $answer->id, 'data' => $data],
+            ['op' => 'PUT', 'type' => 'intake_answers', 'id' => $answer->id, 'data' => $data],
+            ['op' => 'DELETE', 'type' => 'intake_answers', 'id' => $answer->id, 'data' => ['response_id' => $active->id]],
+            ['op' => 'PUT', 'type' => 'intake_answers', 'id' => $newId, 'data' => ['response_id' => $cancelled->id] + $data],
+            ['op' => 'PUT', 'type' => 'intake_answers', 'id' => $validId, 'data' => $data],
+        ]])->assertOk()->assertJsonPath('applied', 1)->assertJsonPath('skipped', 4);
+
+        $this->assertDatabaseHas('intake_answers', ['id' => $answer->id, 'response_id' => $cancelled->id, 'value' => '"Nova"']);
+        $this->assertDatabaseMissing('intake_answers', ['id' => $newId]);
+        $this->assertDatabaseHas('intake_answers', ['id' => $validId, 'response_id' => $active->id, 'value' => '"Changed"']);
+    }
+
+    public function test_cancelled_intake_cannot_be_reopened_from_a_device_before_answers_change(): void
+    {
+        $b = $this->fixture();
+        $answer = $b->answers()->create(['section_id' => 'paard', 'field_id' => 'naam', 'value' => '"Nova"']);
+        $b->update(['status' => 'cancelled']);
+
+        $this->postJson('/api/sync/upload', ['operations' => [
+            ['op' => 'PATCH', 'type' => 'intake_bookings', 'id' => $b->id, 'data' => ['status' => 'pending']],
+            ['op' => 'PATCH', 'type' => 'intake_answers', 'id' => $answer->id, 'data' => ['value' => '"Changed"']],
+            ['op' => 'DELETE', 'type' => 'intake_bookings', 'id' => $b->id, 'data' => null],
+        ]])->assertOk()->assertJsonPath('applied', 0)->assertJsonPath('skipped', 3);
+
+        $this->assertDatabaseHas('intake_bookings', ['id' => $b->id, 'status' => 'cancelled']);
+        $this->assertDatabaseHas('intake_answers', ['id' => $answer->id, 'value' => '"Nova"']);
+    }
+
+    public function test_submitted_intake_answers_cannot_be_rerouted_into_an_open_intake(): void
+    {
+        $submitted = $this->fixture();
+        $open = IntakeBooking::create(['user_id' => $submitted->user_id, 'horse_id' => $submitted->horse_id]);
+        $answer = $submitted->answers()->create(['section_id' => 'paard', 'field_id' => 'naam', 'value' => '"Nova"']);
+        $submitted->forceFill(['submitted_at' => now(), 'completed_at' => now()])->save();
+
+        $this->postJson('/api/sync/upload', ['operations' => [
+            ['op' => 'PATCH', 'type' => 'intake_answers', 'id' => $answer->id, 'data' => ['response_id' => $open->id, 'value' => '"Changed"']],
+        ]])->assertOk()->assertJsonPath('applied', 0)->assertJsonPath('skipped', 1);
+
+        $this->assertDatabaseHas('intake_answers', ['id' => $answer->id, 'response_id' => $submitted->id, 'value' => '"Nova"']);
+    }
+
     public function test_legacy_sync_submission_uses_server_validation_and_time(): void
     {
         $b = $this->fixture();

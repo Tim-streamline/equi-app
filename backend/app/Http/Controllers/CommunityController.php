@@ -10,7 +10,10 @@ use App\Models\ModerationReport;
 use App\Models\Therapist;
 use App\Models\User;
 use App\Support\CommunityAccess;
+use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Collection as EloquentCollection;
 use Illuminate\Http\Request;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
@@ -31,8 +34,12 @@ class CommunityController extends Controller
             ->orderByRaw("CASE WHEN moderation_status = 'pinned' THEN 0 ELSE 1 END")
             ->orderByDesc('created_at')->orderByDesc('id');
 
+        $posts = $this->withPresentation($query, $user)->paginate(20);
+        $context = $this->postContext($posts->getCollection(), $user);
+        $context['parents'] = $this->parents($context['experts']->values(), $user);
+
         return response()->json([
-            'posts' => $query->paginate(20)->through(fn ($post) => $this->presentPost($post, $user)),
+            'posts' => $posts->through(fn ($post) => $this->presentPost($post, $user, $context)),
             'categories' => CommunityCategory::whereNotIn('slug', ['alles', 'mijn-focus'])->orderBy('order')->get(['id', 'slug', 'label']),
             'tags' => CommunityTag::orderBy('label')->get(['id', 'label']),
             'canParticipate' => $this->access->canParticipate($user), 'currentUserId' => $user->id,
@@ -43,12 +50,16 @@ class CommunityController extends Controller
     {
         $user = $this->access->user($request);
         $request->validate(['page' => ['nullable', 'integer', 'min:1']]);
-        $model = $this->access->post($user, $post);
+        $model = $this->access->post($user, $post)->load(['category', 'tags' => fn ($q) => $q->select('community_tags.id', 'label')])
+            ->loadCount($this->likes())->loadExists($this->liked($user));
+        $replies = $this->withReactions($this->access->visible(CommunityReply::where('post_id', $post), $user, true), $user)
+            ->orderBy('created_at')->orderBy('id')->paginate(50);
+        $context = $this->postContext(new EloquentCollection([$model]), $user);
+        $context['parents'] = $this->parents($replies->getCollection()->concat($context['experts']->values()), $user);
 
         return response()->json([
-            'post' => $this->presentPost($model, $user),
-            'replies' => $this->access->visible(CommunityReply::where('post_id', $post), $user, true)
-                ->orderBy('created_at')->orderBy('id')->paginate(50)->through(fn ($r) => $this->presentReply($r, $user)),
+            'post' => $this->presentPost($model, $user, $context),
+            'replies' => $replies->through(fn ($r) => $this->presentReply($r, $user, $context['parents'])),
             'canParticipate' => $this->access->canParticipate($user), 'currentUserId' => $user->id,
         ])->header('Cache-Control', 'private, no-store');
     }
@@ -296,26 +307,87 @@ class CommunityController extends Controller
         ]);
     }
 
-    private function presentPost(CommunityPost $post, User $user): array
+    /** Like totals and the viewer's own like, counted from reactions rather than stored counters. */
+    private function likes(): array
     {
-        $replies = $this->access->visible(CommunityReply::where('post_id', $post->id), $user, true);
-        $expert = (clone $replies)->where('author_is_expert', true)->orderByDesc('created_at')->first();
+        return ['reactions as presented_likes' => fn ($q) => $q->where('kind', 'like')];
+    }
+
+    private function liked(User $user): array
+    {
+        return ['reactions as presented_liked' => fn ($q) => $q->where('kind', 'like')->where('user_id', $user->id)];
+    }
+
+    private function withReactions(Builder $query, User $user): Builder
+    {
+        return $query->withCount($this->likes())->withExists($this->liked($user));
+    }
+
+    private function withPresentation(Builder $query, User $user): Builder
+    {
+        return $this->withReactions($query, $user)->with(['category', 'tags' => fn ($q) => $q->select('community_tags.id', 'label')]);
+    }
+
+    /**
+     * Everything presentPost needs for a page of posts, in a fixed number of queries.
+     *
+     * @param  EloquentCollection<int, CommunityPost>  $posts
+     */
+    private function postContext(EloquentCollection $posts, User $user): array
+    {
+        $ids = $posts->modelKeys();
+        $replies = fn () => $this->access->visible(CommunityReply::whereIn('post_id', $ids), $user, true);
+        // Visibility applies before ranking, so a hidden or muted newer answer never displaces the preview.
+        $ranked = $replies()->where('author_is_expert', true)->toBase()->select('id')
+            ->selectRaw('ROW_NUMBER() OVER (PARTITION BY post_id ORDER BY created_at DESC, id DESC) AS expert_rank');
+        $latest = DB::query()->fromSub($ranked, 'ranked_experts')->select('id')->where('expert_rank', 1);
+
+        return [
+            'bookmarks' => DB::table('community_bookmarks')->where('user_id', $user->id)->whereIn('post_id', $ids)->pluck('post_id')->flip(),
+            'media' => DB::table('community_media')->whereIn('post_id', $ids)->orderBy('order')->orderBy('id')->get()->groupBy('post_id'),
+            'replyCounts' => $replies()->toBase()->selectRaw('post_id, count(*) AS aggregate')->groupBy('post_id')
+                ->get()->mapWithKeys(fn ($row) => [$row->post_id => (int) $row->aggregate]),
+            'experts' => $this->withReactions(CommunityReply::whereIn('id', $latest), $user)
+                ->get()->keyBy('post_id'),
+        ];
+    }
+
+    /**
+     * Visible parents of these replies, by ID. presentReply still requires the same post.
+     *
+     * @param  Collection<int, CommunityReply>  $replies
+     */
+    private function parents(Collection $replies, User $user): Collection
+    {
+        $ids = $replies->pluck('parent_reply_id')->filter()->unique()->values()->all();
+        if (! $ids) {
+            return collect();
+        }
+
+        return $this->access->visible(CommunityReply::query(), $user, true)->whereKey($ids)
+            ->get(['id', 'post_id', 'author_name', 'body'])->keyBy('id');
+    }
+
+    private function presentPost(CommunityPost $post, User $user, array $context): array
+    {
+        $expert = $context['experts']->get($post->id);
 
         return $this->presentContent($post, $user) + [
-            'category' => $post->category?->only(['id', 'label', 'slug']), 'tags' => $post->tags()->get(['community_tags.id', 'label']),
-            'bookmarked' => DB::table('community_bookmarks')->where(['user_id' => $user->id, 'post_id' => $post->id])->exists(),
-            'repliesCount' => (clone $replies)->count(), 'expertReply' => $expert ? $this->presentReply($expert, $user) : null,
+            'category' => $post->category?->only(['id', 'label', 'slug']), 'tags' => $post->tags,
+            'bookmarked' => $context['bookmarks']->has($post->id),
+            'repliesCount' => $context['replyCounts']->get($post->id, 0), 'expertReply' => $expert ? $this->presentReply($expert, $user, $context['parents']) : null,
             'locked' => $post->moderation_status === 'locked', 'pinned' => $post->moderation_status === 'pinned',
-            'media' => DB::table('community_media')->where('post_id', $post->id)->orderBy('order')->get()->map(fn ($m) => [
+            'media' => $context['media']->get($post->id, collect())->values()->map(fn ($m) => [
                 'id' => $m->id, 'type' => str_starts_with($m->mime_type, 'video/') ? 'video' : 'image',
                 'path' => '/api/community/media/'.$m->id, 'mimeType' => $m->mime_type,
             ]),
         ];
     }
 
-    private function presentReply(CommunityReply $reply, User $user): array
+    private function presentReply(CommunityReply $reply, User $user, Collection $parents): array
     {
-        $parent = $reply->parent_reply_id ? $this->access->visible(CommunityReply::query(), $user, true)->where('post_id', $reply->post_id)->whereKey($reply->parent_reply_id)->first() : null;
+        $parent = $reply->parent_reply_id ? $parents->get($reply->parent_reply_id) : null;
+        $parent = $parent?->post_id === $reply->post_id ? $parent : null;
 
         return $this->presentContent($reply, $user) + [
             'parentReplyId' => $reply->parent_reply_id,
@@ -330,8 +402,8 @@ class CommunityController extends Controller
             'authorTherapistId' => $item->author_therapist_id, 'authorName' => $item->author_name ?? 'Verwijderde gebruiker',
             'authorInitial' => $item->author_initial ?: '?', 'authorIsExpert' => (bool) $item->author_is_expert,
             'createdAt' => $item->created_at?->toISOString(), 'editedAt' => $item->edited_at?->toISOString(),
-            'likesCount' => $item->reactions()->where('kind', 'like')->count(),
-            'liked' => $item->reactions()->where('kind', 'like')->where('user_id', $user->id)->exists(),
+            'likesCount' => (int) $item->presented_likes,
+            'liked' => (bool) $item->presented_liked,
             'owned' => $item->author_user_id === $user->id,
         ];
     }

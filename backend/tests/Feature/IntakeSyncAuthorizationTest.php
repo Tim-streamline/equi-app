@@ -125,7 +125,8 @@ class IntakeSyncAuthorizationTest extends TestCase
     {
         [$owner, $booking, $field, $op] = $this->cleanedAnswer();
         $booking->update(['status' => 'cancelled']);
-        $this->postSyncAs($owner, [$op])->assertForbidden();
+        // Acknowledged without being applied, so the device's queue keeps moving.
+        $this->postSyncAs($owner, [$op])->assertOk()->assertJsonPath('applied', 0)->assertJsonPath('skipped', 1);
         $this->assertDatabaseCount('intake_answers', 0);
     }
 

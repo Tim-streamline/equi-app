@@ -127,7 +127,7 @@ export function useHorseShares(horseId?: string) {
   const placeholdersU = userIds.length ? userIds.map(() => '?').join(',') : 'NULL';
   const placeholdersT = therapistIds.length ? therapistIds.map(() => '?').join(',') : 'NULL';
   const users = useCamelQuery(
-    `SELECT * FROM users WHERE id IN (${placeholdersU})`,
+    `SELECT * FROM shared_users WHERE id IN (${placeholdersU})`,
     userIds,
   );
   const therapists = useCamelQuery(
