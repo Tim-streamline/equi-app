@@ -2,7 +2,7 @@ export type LocalAttachment = {
   id: string; userId: string; bookingId: string; horseId: string;
   section: string; field: string; name: string; mime: string;
   uri?: string; blob?: Blob; uploaded: boolean; error?: string;
-  /** Times the server refused this file for good; `rejected` once it is no longer sent. */
+  /** Attempts that could never succeed (refused by the server, unreadable here); `rejected` once it is no longer sent. */
   rejections?: number; rejected?: boolean;
 };
 export type AttachmentAsset = { uri: string; file?: File; name: string; mime: string };

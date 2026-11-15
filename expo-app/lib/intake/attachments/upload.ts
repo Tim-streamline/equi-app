@@ -21,11 +21,17 @@ export function attachmentIds(operations: readonly AttachmentOperation[]): strin
 // the question or intake is gone, the intake is closed, or the file itself is refused.
 const REFUSED = new Set([404, 409, 413, 422]);
 const GIVE_UP_AFTER = 3;
+/** Sending again cannot help: the server refuses the file, or this device cannot read it. */
+function unrecoverable(error: unknown) {
+  if (!error || typeof error !== 'object') return false;
+  if ('kind' in error && error.kind === 'storage') return true;
+  return 'status' in error && typeof error.status === 'number' && REFUSED.has(error.status);
+}
 
 /**
  * Upload bytes before acknowledging answers or a later submission in the CRUD queue.
- * A file the server keeps refusing is given up on, so it cannot hold back every later
- * answer forever. Its answer then syncs without the file; the server does not accept a
+ * A file the server keeps refusing, or that this device cannot read, is given up on, so
+ * it cannot hold back every later answer forever. Its answer then syncs without the file; the server does not accept a
  * submission that references a file it never received.
  */
 export async function flushAttachmentUploads(operations: readonly AttachmentOperation[], userId: string,
@@ -43,8 +49,7 @@ export async function flushAttachmentUploads(operations: readonly AttachmentOper
       await storage.put({ ...record, uploaded: true, error: undefined, rejections: undefined, rejected: undefined });
     } catch (error) {
       checkSession();
-      const status = error && typeof error === 'object' && 'status' in error ? error.status : undefined;
-      const refused = typeof status === 'number' && REFUSED.has(status);
+      const refused = unrecoverable(error);
       const rejections = (record.rejections ?? 0) + (refused ? 1 : 0);
       const rejected = refused && rejections >= GIVE_UP_AFTER;
       await storage.put({ ...record, error: error instanceof Error ? error.message : 'Uploaden mislukt.', rejections, rejected });

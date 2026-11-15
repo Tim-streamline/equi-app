@@ -1,19 +1,23 @@
 import { getApiBaseUrl } from '@/db/auth';
 import { attachmentStorage } from './storage';
 import { flushAttachmentUploads, type AttachmentOperation } from './upload';
-import { syncRequest, syncHttpError } from '@/lib/sync-request';
+import { syncRequest, syncHttpError, SyncRequestError } from '@/lib/sync-request';
 import { reportSyncFailure } from '@/lib/sync-errors';
 
 /**
  * Safari sends an empty request body when a File restored from IndexedDB is the
  * upload: https://bugs.webkit.org/show_bug.cgi?id=319985. The page can still read
  * the bytes, so upload a copy that is held in memory instead.
+ *
+ * Bytes that cannot be read are a `storage` failure: sending the file again cannot
+ * help, so the upload queue gives up on it like on a file the server refuses.
  */
 async function uploadableBlob(blob: Blob, mime: string): Promise<Blob> {
+  const unreadable = () => new SyncRequestError('De foto kon niet van dit apparaat worden gelezen. Voeg de foto opnieuw toe.', 'storage');
   let copy: Blob;
   try { copy = new Blob([await blob.arrayBuffer()], { type: blob.type || mime }); }
-  catch { throw new Error('De foto kon niet van dit apparaat worden gelezen. Voeg de foto opnieuw toe.'); }
-  if (copy.size !== blob.size) throw new Error('De foto kon niet van dit apparaat worden gelezen. Voeg de foto opnieuw toe.');
+  catch { throw unreadable(); }
+  if (copy.size !== blob.size) throw unreadable();
   return copy;
 }
 

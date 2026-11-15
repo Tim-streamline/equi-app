@@ -14,35 +14,60 @@ function load(file, modules = {}, globals = {}) {
   }, exports, ...Object.values(globals));
   return exports;
 }
+const settle = async () => { for (let i = 0; i < 40; i++) await Promise.resolve(); };
 const storage = (values = new Map()) => ({
   values, getItem: key => values.get(key) ?? null, setItem: (key, value) => values.set(key, String(value)),
 });
+const attachments = (indexedDB, identity) => load('../../expo-app/lib/intake/attachments/storage.web.ts', {
+  '../../browser-tab': identity, './events': { attachmentsChanged() {} },
+  './storage-writes': load('../../expo-app/lib/intake/attachments/storage-writes.ts'),
+}, { indexedDB });
 
 /** One browser profile: localStorage and Web Locks are shared by its tabs, sessionStorage is not. */
 function browser({ locks = true } = {}) {
-  const local = storage(), held = new Map();
+  const local = storage(), held = new Map(), queue = [], timers = new Set();
+  const release = (name, owner) => {
+    if (held.get(name) !== owner) return;
+    held.delete(name);
+    const next = queue.findIndex(waiter => waiter.name === name);
+    if (next >= 0) queue.splice(next, 1)[0].grant();
+  };
   // Each load is a separate tab runtime. Closing it releases its locks, as the browser does.
   function open(session = storage()) {
     const owner = {}, hidden = [];
-    const manager = { async request(name, options, callback = options) {
-      if (held.has(name)) {
-        if (options.ifAvailable) return callback(null);
-        return new Promise(() => {}); // Queued behind the tab that holds it.
-      }
-      held.set(name, owner);
-      try { return await callback({ name }); } finally { held.delete(name); }
+    const manager = { request(name, options, callback = options) {
+      if (typeof options === 'function') options = {};
+      return new Promise((resolve, reject) => {
+        const grant = () => {
+          held.set(name, owner);
+          Promise.resolve().then(() => callback({ name })).then(resolve, reject).finally(() => release(name, owner));
+        };
+        if (!held.has(name)) return grant();
+        if (options.ifAvailable) return Promise.resolve(callback(null)).then(resolve, reject);
+        const waiter = { name, owner, grant };
+        queue.push(waiter);
+        options.signal?.addEventListener('abort', () => {
+          const index = queue.indexOf(waiter);
+          if (index >= 0) { queue.splice(index, 1); reject(new DOMException('The request was aborted.', 'AbortError')); }
+        });
+      });
     } };
     const identity = load('../../expo-app/lib/browser-tab.ts', {}, {
       sessionStorage: session, localStorage: local, navigator: locks ? { locks: manager } : {},
       addEventListener: (type, listener) => { if (type === 'pagehide') hidden.push(listener); },
+      setTimeout: (run, ms) => { const timer = { run, ms }; timers.add(timer); return timer; },
+      clearTimeout: timer => timers.delete(timer),
     });
     const close = () => {
       hidden.forEach(listener => listener());
-      for (const [name, tab] of held) if (tab === owner) held.delete(name);
+      for (let i = queue.length - 1; i >= 0; i--) if (queue[i].owner === owner) queue.splice(i, 1);
+      for (const [name, tab] of held) if (tab === owner) release(name, owner);
     };
     return { ...identity, session, close };
   }
-  return { open, local };
+  /** Let every waiting period that was started run out. */
+  const wait = async () => { await settle(); for (const timer of [...timers]) { timers.delete(timer); timer.run(); } await settle(); };
+  return { open, local, wait };
 }
 
 test('a restarted app continues with the identity it left behind', async () => {
@@ -68,19 +93,43 @@ test('an identity held by an open tab is never shared with a new tab', async () 
   assert.ok(fresh !== id && fresh !== other);
 });
 
-test('a reloaded tab keeps its own identity, also while another tab uses the app', async () => {
+test('a reloaded tab keeps its own identity, also when the previous page lets go a moment later', async () => {
   const profile = browser(), first = profile.open();
   const id = await first.claimBrowserTab();
   const second = profile.open(); await second.claimBrowserTab(); second.close();
   first.close();
-  assert.equal(await profile.open(first.session).claimBrowserTab(), id);
+  const reloaded = profile.open(first.session);
+  assert.equal(await reloaded.claimBrowserTab(), id);
+  // The page being replaced still holds the lock while its successor already asks for it.
+  const again = profile.open(first.session), claiming = again.claimBrowserTab();
+  await settle(); reloaded.close();
+  assert.equal(await claiming, id);
+});
+
+test('a restored or duplicated tab does not share a workspace that another open tab holds', async () => {
+  const profile = browser(), original = profile.open();
+  const id = await original.claimBrowserTab();
+  original.close(); // The browser discarded the tab, but keeps its sessionStorage to restore it.
+  const adopter = profile.open();
+  assert.equal(await adopter.claimBrowserTab(), id, 'a new tab took the workspace over');
+  const restored = profile.open(original.session), restoring = restored.claimBrowserTab();
+  await profile.wait();
+  const moved = await restoring;
+  assert.notEqual(moved, id, 'the restored tab must not open the same database');
+  assert.equal(restored.browserTabId(), moved);
+  assert.equal(adopter.browserTabId(), id);
+  // A duplicated tab starts with a copy of the sessionStorage of the tab it was made from.
+  const duplicate = profile.open(storage(new Map(adopter.session.values))), duplicating = duplicate.claimBrowserTab();
+  await profile.wait();
+  assert.ok(![id, moved].includes(await duplicating));
 });
 
 test('without Web Locks or with an old registry entry a new tab starts with a new identity', async () => {
   const unsupported = browser({ locks: false }), first = unsupported.open();
   const id = await first.claimBrowserTab();
   first.close();
-  assert.notEqual(await unsupported.open().claimBrowserTab(), id, 'ownership cannot be proven without Web Locks');
+  assert.notEqual(await unsupported.open().claimBrowserTab(() => [id]), id, 'ownership cannot be proven without Web Locks');
+  assert.equal(await unsupported.open(first.session).claimBrowserTab(), id, 'a reload still keeps its identity, as before');
 
   const profile = browser(), stale = '11111111-1111-4111-8111-111111111111';
   profile.local.setItem('equinova:tabs', JSON.stringify([{ id: stale, at: Date.now() - 31 * 24 * 60 * 60 * 1000 }]));
@@ -91,21 +140,73 @@ test('without Web Locks or with an old registry entry a new tab starts with a ne
   assert.match(await profile.open().claimBrowserTab(), /^[0-9a-f-]{36}$/, 'blocked storage must not stop the app');
 });
 
+test('workspaces with photos still waiting for upload are taken over first; an unregistered one only once', async () => {
+  const profile = browser();
+  const older = profile.open(), olderId = await older.claimBrowserTab();
+  const newer = profile.open(), newerId = await newer.claimBrowserTab();
+  assert.notEqual(newerId, olderId);
+  older.close(); newer.close();
+  const unregistered = ['aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb'];
+  // The older registered workspace still has photos waiting: that is known unsynchronised work.
+  const first = profile.open();
+  assert.equal(await first.claimBrowserTab(() => [...unregistered, olderId]), olderId);
+  // Then one workspace that an earlier version left without a registry entry, the newest first.
+  const second = profile.open();
+  assert.equal(await second.claimBrowserTab(() => unregistered), unregistered[0]);
+  // The other old queues are not replayed in turn: they would put older answers over newer ones.
+  const third = profile.open();
+  assert.equal(await third.claimBrowserTab(() => unregistered), newerId);
+  first.close(); second.close(); third.close();
+  assert.ok(!unregistered.slice(1).includes(await profile.open().claimBrowserTab(() => unregistered.slice(1))));
+  // A discovery that finds nothing to recover is final too: this version registers every workspace.
+  const clean = browser(), started = clean.open();
+  await started.claimBrowserTab(() => []); started.close();
+  assert.equal(await clean.open().claimBrowserTab(() => unregistered), started.browserTabId());
+  // A failing discovery never stops the app, and is not counted as a finished recovery.
+  const other = browser(), failing = other.open();
+  assert.match(await failing.claimBrowserTab(async () => { throw new Error('IndexedDB unavailable'); }), /^[0-9a-f-]{36}$/);
+  failing.close();
+  assert.equal(await other.open().claimBrowserTab(() => ['cccccccc-cccc-4ccc-8ccc-cccccccccccc', failing.browserTabId()]), failing.browserTabId());
+  assert.equal(await other.open().claimBrowserTab(() => ['cccccccc-cccc-4ccc-8ccc-cccccccccccc']), 'cccccccc-cccc-4ccc-8ccc-cccccccccccc');
+});
+
 test('a photo that was not uploaded yet is still there after the app is closed and started again', async () => {
   const profile = browser(), indexedDB = new IDBFactory();
-  const attachments = identity => load('../../expo-app/lib/intake/attachments/storage.web.ts', {
-    '../../browser-tab': identity, './events': { attachmentsChanged() {} },
-    './storage-writes': load('../../expo-app/lib/intake/attachments/storage-writes.ts'),
-  }, { indexedDB });
   const id = '22222222-2222-4222-8222-222222222222';
   const first = profile.open();
   await first.claimBrowserTab();
-  await attachments(first).saveAttachment({ id, userId: 'owner', bookingId: 'intake', horseId: 'horse', section: 'photos',
+  await attachments(indexedDB, first).saveAttachment({ id, userId: 'owner', bookingId: 'intake', horseId: 'horse', section: 'photos',
     field: 'right-hind', name: 'hoof.jpg', mime: 'image/jpeg', uploaded: false }, { file: new Blob(['hoof photo']) });
   first.close();
   const restarted = profile.open();
   await restarted.claimBrowserTab();
-  const record = await attachments(restarted).attachmentStorage.get('owner', id);
+  const record = await attachments(indexedDB, restarted).attachmentStorage.get('owner', id);
   assert.equal(record.uploaded, false);
   assert.equal(await record.blob.text(), 'hoof photo');
+});
+
+test('photos stranded by a version without a registry are found again after the update', async () => {
+  const profile = browser(), indexedDB = new IDBFactory();
+  const photo = (id, userId = 'owner') => ({ id, userId, bookingId: 'intake', horseId: 'horse', section: 'photos',
+    field: 'right-hind', name: 'hoof.jpg', mime: 'image/jpeg', uploaded: false });
+  const file = (bytes, lastModified) => new File([bytes], 'hoof.jpg', { type: 'image/jpeg', lastModified });
+  // The old version only knew browserTabId(): it kept no registry and held no lock.
+  const sessions = { uploaded: 1_000, first: 2_000, latest: 3_000, refused: 4_000, other: 5_000 };
+  const ids = Object.fromEntries(Object.keys(sessions).map((name, index) => [name, `3333333${index}-3333-4333-8333-333333333333`]));
+  const tabs = {};
+  for (const [name, taken] of Object.entries(sessions)) {
+    const old = profile.open(), store = attachments(indexedDB, old);
+    tabs[name] = old.browserTabId();
+    await store.saveAttachment(photo(ids[name], name === 'other' ? 'someone-else' : 'owner'), { file: file(`${name} bytes`, taken) });
+    const saved = await store.attachmentStorage.get(name === 'other' ? 'someone-else' : 'owner', ids[name]);
+    if (name === 'uploaded') await store.attachmentStorage.put({ ...saved, uploaded: true });
+    if (name === 'refused') await store.attachmentStorage.put({ ...saved, rejections: 3, rejected: true });
+    old.close();
+  }
+  const updated = profile.open(), store = attachments(indexedDB, updated);
+  assert.deepEqual(await store.waitingAttachmentTabs('owner'), [tabs.latest, tabs.first], 'newest waiting photo first; uploaded, refused and other accounts left out');
+  assert.deepEqual(await store.waitingAttachmentTabs(null), [tabs.other, tabs.latest, tabs.first]);
+  assert.equal(await updated.claimBrowserTab(() => store.waitingAttachmentTabs('owner')), tabs.latest);
+  const record = await attachments(indexedDB, updated).attachmentStorage.get('owner', ids.latest);
+  assert.equal(await record.blob.text(), 'latest bytes');
 });

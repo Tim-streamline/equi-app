@@ -89,6 +89,36 @@ export const attachmentStorage = {
     });
   },
 };
+async function all<T>(kind: Kind): Promise<T[]> {
+  const db = await open(kind);
+  try {
+    return await new Promise((resolve, reject) => {
+      const request = db.transaction(stores[kind].store, 'readonly').objectStore(stores[kind].store).getAll();
+      request.onsuccess = () => resolve(request.result);
+      request.onerror = () => reject(request.error);
+    });
+  } finally { db.close(); }
+}
+/**
+ * Tabs whose stored files still wait for upload, the tab with the newest file first.
+ * A tab that was closed before its identity was remembered can only be found again
+ * through the files it left here.
+ */
+export async function waitingAttachmentTabs(userId?: string | null): Promise<string[]> {
+  type Row = LocalAttachment & { tabId: string };
+  const key = (row: { userId: string; tabId: string; id: string }) => JSON.stringify([row.userId, row.tabId, row.id]);
+  const statuses = new Map((await all<Status & { userId: string; tabId: string; id: string }>('status')).map(row => [key(row), row]));
+  const tabs = new Map<string, { newest: number; files: number }>();
+  for (const file of await all<Row>('files')) {
+    if (userId && file.userId !== userId) continue;
+    const status = statuses.get(key(file)) ?? file;
+    if (status.uploaded || status.rejected) continue;
+    const tab = tabs.get(file.tabId) ?? { newest: 0, files: 0 };
+    const modified = (file.blob as Partial<File> | undefined)?.lastModified;
+    tabs.set(file.tabId, { newest: Math.max(tab.newest, typeof modified === 'number' ? modified : 0), files: tab.files + 1 });
+  }
+  return [...tabs].sort(([, a], [, b]) => b.newest - a.newest || b.files - a.files).map(([tabId]) => tabId);
+}
 export async function clearAttachments(userId: string) {
   const tabId = browserTabId();
   await resetAttachments(userId, async () => {

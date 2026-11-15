@@ -84,12 +84,19 @@ request body for a file it read from IndexedDB
 ([WebKit bug 319985](https://bugs.webkit.org/show_bug.cgi?id=319985)), which the
 backend logged as `422` with every form field missing. Upload status is stored
 apart from the photo bytes, so a failed attempt never rewrites the photo. A web
-app that is closed and started again takes over the database and photos of the
-most recently used tab that is no longer open (Web Locks, at most 30 days old),
-so answers and photos that were not uploaded yet are not left behind.
+app that is closed and started again takes over the database and photos of a
+tab that is no longer open (Web Locks, at most 30 days old), so answers and
+photos that were not uploaded yet are not left behind. Tabs whose stored photos
+still wait for upload come first, then the most recently used one. A tab closed
+by a version from before this registry is found through the photos it left; one
+such workspace is taken over, once, because replaying several old queues in turn
+would put older answers over newer ones. A reloaded or restored tab keeps its
+identity unless another open tab took that workspace over meanwhile; it then
+continues under another identity, so two tabs never share one database.
 
-A file the server refuses for good (`404`, `409`, `413` or `422`) is sent three
-times and then given up on, so it cannot hold back every answer queued behind it.
+A file the server refuses for good (`404`, `409`, `413` or `422`), or that the
+device can no longer read, is tried three times and then given up on, so it
+cannot hold back every answer queued behind it.
 Its answer syncs without the file, the photo shows that it has to be removed and
 chosen again, and the intake cannot be submitted until it is. Network errors,
 timeouts, `401`, `403`, `429` and `5xx` keep the queue waiting as before.

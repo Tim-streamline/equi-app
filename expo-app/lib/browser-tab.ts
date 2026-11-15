@@ -1,8 +1,11 @@
 const SESSION_KEY = 'equinova:tab';
 const REGISTRY_KEY = 'equinova:tabs';
+const RECOVERED_KEY = 'equinova:tabs:recovered';
 const REMEMBERED = 8;
 // An older upload queue is more likely to overwrite newer answers than to recover lost ones.
 const TAKE_OVER_WITHIN_MS = 30 * 24 * 60 * 60 * 1000;
+// A reload releases the previous page's lock just before this page asks for it.
+const RELOAD_GRACE_MS = 3000;
 type Entry = { id: string; at: number };
 
 /** Shared identity for a browser tab's database, reset marker and attachments. */
@@ -30,24 +33,54 @@ function remember(id: string) {
     localStorage.setItem(REGISTRY_KEY, JSON.stringify(entries.slice(0, REMEMBERED)));
   } catch { /* Without the registry a closed tab is simply not found again, as before. */ }
 }
+function flag(key: string, set?: true): boolean {
+  try {
+    if (set) localStorage.setItem(key, '1');
+    return localStorage.getItem(key) !== null;
+  } catch { return false; }
+}
 
 const lockManager = () => typeof navigator === 'undefined' ? undefined : navigator.locks;
-const lockName = (id: string) => `equinova:tab:${id}`;
-// A lock lasts until its callback settles: this one is only released when the tab goes away.
-const untilTabCloses = () => new Promise<never>(() => {});
-function hold(id: string) {
-  void lockManager()?.request(lockName(id), untilTabCloses).catch(() => {});
-}
-/** Take an identity only when no open tab holds it. Without Web Locks that cannot be proven. */
-function takeOver(id: string): Promise<boolean> {
+/**
+ * Hold an identity until this tab goes away. Resolves to false when another open tab
+ * holds it. `waitMs` is how long that tab may take to let go; 0 does not wait at all.
+ */
+function acquire(id: string, waitMs = 0): Promise<boolean> {
   const locks = lockManager();
   if (!locks) return Promise.resolve(false);
   return new Promise(resolve => {
-    locks.request(lockName(id), { ifAvailable: true }, lock => {
-      resolve(!!lock);
-      return lock ? untilTabCloses() : undefined;
-    }).catch(() => resolve(false));
+    const controller = waitMs ? new AbortController() : undefined;
+    const timer = controller && setTimeout(() => controller.abort(), waitMs);
+    const settle = (held: boolean) => { if (timer !== undefined) clearTimeout(timer); resolve(held); };
+    locks.request(`equinova:tab:${id}`, controller ? { signal: controller.signal } : { ifAvailable: true }, lock => {
+      settle(!!lock);
+      // A lock lasts until its callback settles: this one is released when the tab closes.
+      return lock ? new Promise<never>(() => {}) : undefined;
+    }).catch(() => settle(false));
   });
+}
+
+/** Take over a workspace that no open tab uses, so the work left in it is not stranded. */
+async function adopt(waiting: (() => Promise<string[]>) | undefined): Promise<string | null> {
+  const registry = remembered();
+  const recent = registry.filter(entry => Date.now() - entry.at <= TAKE_OVER_WITHIN_MS).map(entry => entry.id);
+  // Tabs whose stored photos still wait for upload: known unsynchronised work.
+  let stranded: string[] | undefined;
+  try { stranded = await waiting?.(); } catch { /* Discovery is retried on the next start. */ }
+  const pending = new Set(stranded);
+  for (const id of recent.filter(id => pending.has(id))) if (await acquire(id)) return id;
+  // A tab closed by a version that kept no registry is only known by the photos it left.
+  // Take one such workspace, once: replaying several old queues in turn would put older
+  // answers over newer ones. It cannot prove that no tab of that old version is still
+  // open; such a tab moves to another identity when it updates and reloads.
+  if (stranded && !flag(RECOVERED_KEY)) {
+    const known = new Set(registry.map(entry => entry.id));
+    const unknown = stranded.filter(id => !known.has(id));
+    for (const id of unknown) if (await acquire(id)) { flag(RECOVERED_KEY, true); return id; }
+    if (!unknown.length) flag(RECOVERED_KEY, true);
+  }
+  for (const id of recent.filter(id => !pending.has(id))) if (await acquire(id)) return id;
+  return null;
 }
 
 let claimed: Promise<string> | undefined;
@@ -56,24 +89,24 @@ let claimed: Promise<string> | undefined;
  *
  * Closing the app or a tab discards sessionStorage. Its unsynchronised answers and
  * photos then stayed behind under an identity nothing could find again. A tab that
- * starts without an identity therefore takes over the most recently used one that no
- * open tab holds, and continues with that database and its upload queue.
+ * starts without an identity therefore takes over a workspace that no open tab holds,
+ * and continues with that database and its upload queue. `waiting` lists the tabs
+ * whose stored photos still wait for upload; they are preferred.
  *
- * A reloaded or restored tab keeps the identity it already has, as before.
+ * A reloaded or restored tab keeps its identity, unless another tab took that
+ * workspace over while this one was gone: two tabs never share one database.
+ * Without Web Locks none of this can be proven and identities work as before.
  */
-export function claimBrowserTab(): Promise<string> {
-  claimed ??= claim().catch(() => browserTabId());
+export function claimBrowserTab(waiting?: () => Promise<string[]>): Promise<string> {
+  claimed ??= claim(waiting).catch(() => browserTabId());
   return claimed;
 }
-async function claim(): Promise<string> {
+async function claim(waiting?: () => Promise<string[]>): Promise<string> {
   let id = sessionStorage.getItem(SESSION_KEY);
-  if (id) hold(id);
-  else {
-    for (const entry of remembered()) {
-      if (Date.now() - entry.at > TAKE_OVER_WITHIN_MS) break;
-      if (await takeOver(entry.id)) { id = entry.id; break; }
-    }
-    if (!id) { id = crypto.randomUUID(); hold(id); }
+  if (id && lockManager() && !await acquire(id, RELOAD_GRACE_MS)) id = null;
+  if (!id) {
+    id = await adopt(waiting);
+    if (!id) { id = crypto.randomUUID(); void acquire(id); }
     sessionStorage.setItem(SESSION_KEY, id);
   }
   const tab = id;

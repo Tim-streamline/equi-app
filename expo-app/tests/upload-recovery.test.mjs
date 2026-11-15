@@ -443,6 +443,14 @@ test('a stored file is uploaded as an in-memory copy, and unreadable bytes are r
   await assert.rejects(attachmentSync.uploadIntakeAttachments(batches, 'owner', 'token', () => {}), /kon niet van dit apparaat worden gelezen/);
   assert.equal(requests, 1, 'an unreadable file is never sent as an empty upload');
   assert.match(record.error, /Voeg de foto opnieuw toe/); assert.equal(record.uploaded, false);
+  // Removing or replacing the photo is queued behind this answer, so the queue must not wait forever.
+  await assert.rejects(attachmentSync.uploadIntakeAttachments(batches, 'owner', 'token', () => {}), error => error.kind === 'storage');
+  assert.equal(record.rejected, false);
+  await attachmentSync.uploadIntakeAttachments(batches, 'owner', 'token', () => {});
+  assert.equal(record.rejected, true); assert.equal(record.uploaded, false);
+  assert.match(record.error, /kon niet van dit apparaat worden gelezen/);
+  assert.equal(requests, 1);
+  assert.deepEqual(app.events.map(event => event.tags.failure_kind), ['storage']);
 });
 
 test('a file the server keeps refusing is given up on, so the answers queued behind it still sync', async () => {

@@ -24,6 +24,7 @@ import { databaseName } from './database-name';
 import { browserTabId, claimBrowserTab } from '@/lib/browser-tab';
 import { loginDestination } from './login-destination';
 import { registerRefreshProtection } from '../../expo-app/lib/refresh-safety.web';
+import { waitingAttachmentTabs } from '../../expo-app/lib/intake/attachments/storage.web';
 
 type SyncStatus = 'idle' | 'connecting' | 'syncing' | 'connected' | 'error';
 type DbContextValue = {
@@ -146,10 +147,11 @@ export function DbProvider({ children }: { children: ReactNode }) {
     let changingSession = false;
     void accountSession.transition(async () => {
       try {
+        const restored = await getSession().catch(cause => { if (isLocallySignedOut()) return null; throw cause; });
+        const session = isLocallySignedOut() ? null : restored;
         // Before anything opens a database: a restarted app continues with the one it left behind.
-        await claimBrowserTab();
-        const session = await getSession().catch(cause => { if (isLocallySignedOut()) return null; throw cause; });
-        await open(isLocallySignedOut() ? null : session);
+        await claimBrowserTab(() => waitingAttachmentTabs(session ? String(session.user.id) : null));
+        await open(session);
       }
       catch (cause) {
         captureException(cause, { tags: { operation: 'database.boot' } });
