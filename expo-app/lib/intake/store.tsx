@@ -1,4 +1,5 @@
-import { waitForIntakeUploads } from './submission';
+import { assertIntakeFilesUploaded, waitForIntakeUploads } from './submission';
+import { attachmentStorage } from '@/lib/intake/attachments/storage';
 import { preserveIntakeForRefresh } from './refresh';
 import { registerRefreshProtection, refreshProtectionChanged } from '../refresh-safety';
 import { accountSession } from '@/lib/account-session';
@@ -220,6 +221,8 @@ function HorseIntakeProvider({ userId, horseId, selectedId, children }: { userId
       const id = await ensureBooking();
       // Only wait for existing autosaves/uploads; completion must not rewrite answers.
       await waitForIntakeUploads(powersync, checkSession);
+      checkSession();
+      if (userId) await assertIntakeFilesUploaded(liveAnswers.current, userId, attachmentStorage);
       checkSession();
       const result = await dashboardRequest(`/api/intakes/${id}/submit`, {});
       checkSession();

@@ -48,6 +48,7 @@ function horseSelectionScreen() {
     '@/db/hooks': dbHooks, '@/db/provider': {}, '@powersync/react': {}, 'expo-router': {}, 'react-native': {},
     '@/hooks/useHorseDashboard': {}, '@/lib/account-session': {},
     './persistence': {}, './submission': {}, './refresh': {}, '../refresh-safety': {},
+    '@/lib/intake/attachments/storage': { attachmentStorage: { get: async () => null } },
     './submission-blocks': {}, './schema-provider': {},
   });
   return {

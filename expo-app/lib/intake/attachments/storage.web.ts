@@ -3,68 +3,97 @@ import { attachmentsChanged } from './events';
 import { attachmentWriteCheck, resetAttachments, writeAttachment } from './storage-writes';
 import { browserTabId } from '../../browser-tab';
 
-function open(legacy = false): Promise<IDBDatabase> {
+const stores = {
+  // Keep the old store intact: a closed/restored tab may still reference its
+  // unscoped files. New writes cannot establish exclusive ownership of them.
+  legacy: { database: 'equi-intake-attachments', store: 'files', keyPath: ['userId', 'id'] },
+  files: { database: 'equi-intake-attachments-scoped', store: 'files', keyPath: ['userId', 'tabId', 'id'] },
+  // Upload status lives apart from the bytes: recording an attempt must never
+  // rewrite a photo. Safari can fail to store a file it read from IndexedDB.
+  status: { database: 'equi-intake-attachment-status', store: 'status', keyPath: ['userId', 'tabId', 'id'] },
+} as const;
+type Kind = keyof typeof stores;
+type Status = Pick<LocalAttachment, 'uploaded' | 'error' | 'rejections' | 'rejected'>;
+/** Bytes that came out of storage: they are already saved and are not written again. */
+const stored = new WeakSet<Blob>();
+
+function open(kind: Kind): Promise<IDBDatabase> {
+  const { database, store, keyPath } = stores[kind];
   return new Promise((resolve, reject) => {
-    // Keep the old store intact: a closed/restored tab may still reference its
-    // unscoped files. New writes cannot establish exclusive ownership of them.
-    const request = indexedDB.open(legacy ? 'equi-intake-attachments' : 'equi-intake-attachments-scoped', 1);
-    request.onupgradeneeded = () => request.result.createObjectStore('files', {
-      keyPath: legacy ? ['userId', 'id'] : ['userId', 'tabId', 'id'],
-    });
+    const request = indexedDB.open(database, 1);
+    request.onupgradeneeded = () => request.result.createObjectStore(store, { keyPath: [...keyPath] });
     request.onsuccess = () => resolve(request.result);
     request.onerror = () => reject(request.error);
   });
 }
-async function read(key: IDBValidKey, legacy = false): Promise<LocalAttachment | null> {
-  const db = await open(legacy);
+async function read<T>(kind: Kind, key: IDBValidKey): Promise<T | null> {
+  const db = await open(kind);
   try {
     return await new Promise((resolve, reject) => {
-      const request = db.transaction('files', 'readonly').objectStore('files').get(key);
+      const request = db.transaction(stores[kind].store, 'readonly').objectStore(stores[kind].store).get(key);
       request.onsuccess = () => resolve(request.result ?? null);
       request.onerror = () => reject(request.error);
     });
   } finally { db.close(); }
 }
+async function write(kind: Kind, failure: string, change: (store: IDBObjectStore) => void) {
+  const db = await open(kind);
+  try {
+    await new Promise<void>((resolve, reject) => {
+      const tx = db.transaction(stores[kind].store, 'readwrite');
+      // A failed request reaches the transaction before it aborts, while tx.error
+      // is still null. Never reject without an error: callers report and rethrow it.
+      const fail = (event: Event) => reject(tx.error
+        ?? (event.target as { error?: DOMException | null } | null)?.error ?? new Error(failure));
+      tx.oncomplete = () => resolve();
+      tx.onabort = fail;
+      tx.onerror = fail;
+      change(tx.objectStore(stores[kind].store));
+    });
+  } finally { db.close(); }
+}
+function removeTab(userId: string, tabId: string) {
+  return (store: IDBObjectStore) => {
+    const cursor = store.openCursor();
+    cursor.onsuccess = () => {
+      const row = cursor.result;
+      if (!row) return;
+      if (row.value.userId === userId && row.value.tabId === tabId) row.delete();
+      row.continue();
+    };
+  };
+}
 export const attachmentStorage = {
   async get(userId: string, id: string): Promise<LocalAttachment | null> {
-    return await read([userId, browserTabId(), id]) ?? await read([userId, id], true);
+    const tabId = browserTabId();
+    const file = await read<LocalAttachment>('files', [userId, tabId, id]) ?? await read<LocalAttachment>('legacy', [userId, id]);
+    if (!file) return null;
+    if (file.blob) stored.add(file.blob);
+    const status = await read<Status>('status', [userId, tabId, id]);
+    return status ? { ...file, uploaded: status.uploaded, error: status.error, rejections: status.rejections, rejected: status.rejected } : file;
   },
   async put(record: LocalAttachment) {
     const tabId = browserTabId();
     return writeAttachment(record.userId, async () => {
-      const db = await open();
-      try {
-        await new Promise<void>((resolve, reject) => {
-          const tx = db.transaction('files', 'readwrite');
-          tx.oncomplete = () => resolve();
-          tx.onabort = () => reject(tx.error ?? new Error('Foto kon niet op dit apparaat worden opgeslagen.'));
-          tx.onerror = () => reject(tx.error);
-          tx.objectStore('files').put({ ...record, tabId });
-        });
-        attachmentsChanged({ userId: record.userId, id: record.id });
-      } finally { db.close(); }
+      const key = [record.userId, tabId, record.id];
+      if (record.blob && stored.has(record.blob)) {
+        await write('status', 'De uploadstatus kon niet op dit apparaat worden opgeslagen.', store =>
+          store.put({ userId: record.userId, tabId, id: record.id, uploaded: record.uploaded, error: record.error,
+            rejections: record.rejections, rejected: record.rejected }));
+      } else {
+        // New bytes carry their own status; drop what described the bytes they replace.
+        await write('status', 'Foto kon niet op dit apparaat worden opgeslagen.', store => store.delete(key));
+        await write('files', 'Foto kon niet op dit apparaat worden opgeslagen.', store => store.put({ ...record, tabId }));
+      }
+      attachmentsChanged({ userId: record.userId, id: record.id });
     });
   },
 };
 export async function clearAttachments(userId: string) {
   const tabId = browserTabId();
   await resetAttachments(userId, async () => {
-    const db = await open();
-    try {
-      await new Promise<void>((resolve, reject) => {
-        const tx = db.transaction('files', 'readwrite');
-        tx.oncomplete = () => resolve();
-        tx.onabort = () => reject(tx.error ?? new Error('Lokale bestanden konden niet worden gewist.'));
-        tx.onerror = () => reject(tx.error);
-        const cursor = tx.objectStore('files').openCursor();
-        cursor.onsuccess = () => {
-          const row = cursor.result;
-          if (!row) return;
-          if (row.value.userId === userId && row.value.tabId === tabId) row.delete();
-          row.continue();
-        };
-      });
-    } finally { db.close(); }
+    await write('files', 'Lokale bestanden konden niet worden gewist.', removeTab(userId, tabId));
+    await write('status', 'Lokale bestanden konden niet worden gewist.', removeTab(userId, tabId));
   });
 }
 export async function saveAttachment(record: LocalAttachment, asset: AttachmentAsset) {

@@ -4,6 +4,19 @@ import { flushAttachmentUploads, type AttachmentOperation } from './upload';
 import { syncRequest, syncHttpError } from '@/lib/sync-request';
 import { reportSyncFailure } from '@/lib/sync-errors';
 
+/**
+ * Safari sends an empty request body when a File restored from IndexedDB is the
+ * upload: https://bugs.webkit.org/show_bug.cgi?id=319985. The page can still read
+ * the bytes, so upload a copy that is held in memory instead.
+ */
+async function uploadableBlob(blob: Blob, mime: string): Promise<Blob> {
+  let copy: Blob;
+  try { copy = new Blob([await blob.arrayBuffer()], { type: blob.type || mime }); }
+  catch { throw new Error('De foto kon niet van dit apparaat worden gelezen. Voeg de foto opnieuw toe.'); }
+  if (copy.size !== blob.size) throw new Error('De foto kon niet van dit apparaat worden gelezen. Voeg de foto opnieuw toe.');
+  return copy;
+}
+
 export async function uploadIntakeAttachments(operations: readonly AttachmentOperation[], userId: string, token: string, checkSession: () => void, signal?: AbortSignal) {
   let diagnostics: Record<string, unknown> = { account_id: userId };
   try {
@@ -19,7 +32,7 @@ export async function uploadIntakeAttachments(operations: readonly AttachmentOpe
       body.append('horse_id', record.horseId);
       body.append('section', record.section);
       body.append('field', record.field);
-      if (record.blob) body.append('file', record.blob, record.name);
+      if (record.blob) body.append('file', await uploadableBlob(record.blob, record.mime), record.name);
       else body.append('file', { uri: record.uri, name: record.name, type: record.mime } as unknown as Blob);
       await syncRequest(120_000, async (requestSignal, check) => {
         checkSession();

@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import ts from 'typescript';
+import { assertIntakeFilesUploaded } from '../lib/intake/submission.ts';
 
 function load(file, modules) {
  const exports = {};
@@ -21,7 +22,7 @@ const config = { recovery: {require: {}} };
 // Keep answers hydrated while local submittedAt is optionally still stale, as
 // happens on the render before the booking hydration effect runs.
 function context({ answers, episode, questionnaire = config, submitted_at = null, completed_at = null, localSubmittedAt = null,
- save = async () => {}, waitForUploads = async () => {}, request = async () => ({ completed_at: 'today' }), execute = async () => {}, session = { revision: 1 } }) {
+ save = async () => {}, waitForUploads = async () => {}, files = { get: async () => null }, request = async () => ({ completed_at: 'today' }), execute = async () => {}, session = { revision: 1 } }) {
  const writes = [];
  const recordWrite = (...args) => { writes.push(args); return Promise.resolve({completed_at:'today'}); };
  const db = { execute: async (...args) => { writes.push(args); return execute(...args); }, writeTransaction: recordWrite };
@@ -45,7 +46,8 @@ function context({ answers, episode, questionnaire = config, submitted_at = null
   './schema-provider': { useIntakeSchema: () => ({ schema, noneOptions: [] }) },
   './submission-blocks': rules,
   './persistence': { bookingQuery: 'SELECT * FROM intake_bookings', saveAnswer: async (...args) => { writes.push(args); return save(...args); } },
-  './submission': {waitForIntakeUploads:waitForUploads}, './refresh': {}, '../refresh-safety': {},
+  './submission': {waitForIntakeUploads:waitForUploads, assertIntakeFilesUploaded}, './refresh': {}, '../refresh-safety': {},
+  '@/lib/intake/attachments/storage': { attachmentStorage: files },
  };
  const { IntakeProvider } = load('../lib/intake/store.tsx', modules);
  let node = jsx(IntakeProvider, { children: null });
@@ -104,7 +106,7 @@ test('a synced reopening unlocks the form and removes obsolete answers while pre
   '@/hooks/useHorseDashboard':{dashboardRequest:()=>{}},'@/lib/account-session':{accountSession:{revision:1}},
   './schema-provider':{useIntakeSchema:()=>({schema,noneOptions:[]})},'./submission-blocks':rules,
   './persistence':{bookingQuery:'SELECT * FROM intake_bookings',saveAnswer:async(...args)=>writes.push(args)},
-  './submission':{},'./refresh':{},'../refresh-safety':{registerRefreshProtection:()=>()=>{},refreshProtectionChanged:()=>{}}};
+  './submission':{},'./refresh':{},'@/lib/intake/attachments/storage': { attachmentStorage: { get: async () => null } },'../refresh-safety':{registerRefreshProtection:()=>()=>{},refreshProtectionChanged:()=>{}}};
  const {IntakeProvider}=load('../lib/intake/store.tsx',modules);
  const render=()=>{let result;for(let pass=0;pass<3;pass++){cursor=0;effects=[];let node=jsx(IntakeProvider,{children:null});while(typeof node.type==='function')node=node.type(node.props);result=node.props.value;effects.forEach(fn=>fn());}return result};
  let store=render();
@@ -286,4 +288,18 @@ test('an explicit retry that fails again is reported again', async () => {
  store.retrySave();
  await new Promise(resolve => setImmediate(resolve));
  assert.equal(alerts(), 2);
+});
+
+test('an intake with a file the server refused is not sent for completion', async () => {
+ const id = '88888888-8888-4888-8888-888888888888';
+ const answers = { 'custom-safety': { condition: 'none' }, photos: { hoof: [`attachment:${id}:IMG_0001.jpeg`], other: ['attachment:99999999-9999-4999-8999-999999999999:server.jpg'] } };
+ const local = { uploaded: false, rejected: true };
+ const files = { get: async (user, attachment) => { assert.equal(user, 'owner'); return attachment === id ? local : null; } };
+ const store = context({ answers, files });
+ await assert.rejects(store.submit(), /niet geüpload\. Verwijder ze en kies ze opnieuw/);
+ assert.deepEqual(store.writes, [], 'the completion request is never made');
+ // Once the file was chosen again and uploaded, the same intake can be finished.
+ local.uploaded = true;
+ await store.submit();
+ assert.deepEqual(store.writes, [['/api/intakes/intake-a/submit', {}]]);
 });

@@ -79,5 +79,20 @@ background synchronization; **Geüpload** appears only after the file upload is
 confirmed and persisted locally. The existing same-tab **Bewaren en vernieuwen**
 flow preserves queued photos across a web update.
 
+The web app uploads an in-memory copy of each stored photo: Safari sends an empty
+request body for a file it read from IndexedDB
+([WebKit bug 319985](https://bugs.webkit.org/show_bug.cgi?id=319985)), which the
+backend logged as `422` with every form field missing. Upload status is stored
+apart from the photo bytes, so a failed attempt never rewrites the photo. A web
+app that is closed and started again takes over the database and photos of the
+most recently used tab that is no longer open (Web Locks, at most 30 days old),
+so answers and photos that were not uploaded yet are not left behind.
+
+A file the server refuses for good (`404`, `409`, `413` or `422`) is sent three
+times and then given up on, so it cannot hold back every answer queued behind it.
+Its answer syncs without the file, the photo shows that it has to be removed and
+chosen again, and the intake cannot be submitted until it is. Network errors,
+timeouts, `401`, `403`, `429` and `5xx` keep the queue waiting as before.
+
 The account's default data region is **United States** and retention is **90 days**.
 Changing region requires a plan upgrade in this account.

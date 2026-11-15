@@ -23,7 +23,7 @@ function fileName(reference: string) {
 }
 function useLocalAttachment(reference: string) {
   const { currentUserId } = useDb();
-  const [record, setRecord] = useState<Pick<LocalAttachment, 'uploaded' | 'error'> | null | undefined>(undefined);
+  const [record, setRecord] = useState<Pick<LocalAttachment, 'uploaded' | 'error' | 'rejected'> | null | undefined>(undefined);
   useEffect(() => {
     let active = true;
     let request = 0;
@@ -31,7 +31,7 @@ function useLocalAttachment(reference: string) {
     const refresh = () => {
       const version = ++request;
       if (currentUserId) void attachmentStorage.get(currentUserId, reference.split(':')[1])
-        .then(value => { if (active && version === request) setRecord(value ? { uploaded: value.uploaded, error: value.error } : null); })
+        .then(value => { if (active && version === request) setRecord(value ? { uploaded: value.uploaded, error: value.error, rejected: value.rejected } : null); })
         .catch(error => {
           reportSyncFailure(error, 'intake.attachment.storage');
           if (active && version === request) setRecord(null);
@@ -50,7 +50,7 @@ function UploadStatus({ reference }: { reference: string }) {
   const record = useLocalAttachment(reference);
   const { retryUploads, retryingUploads, syncStatus } = useDb();
   const [retryError, setRetryError] = useState('');
-  const pending = !!record && !record.uploaded;
+  const pending = !!record && !record.uploaded && !record.rejected;
   useEffect(() => {
     if (!pending) return;
     const timer = setTimeout(() => reportSyncFailure(new SyncRequestError('Upload remains pending', 'stalled'), 'intake.attachment.pending'), 180_000);
@@ -58,6 +58,10 @@ function UploadStatus({ reference }: { reference: string }) {
   }, [pending, reference]);
   if (!record) return null;
   if (record.uploaded) return <Text accessibilityLiveRegion="polite" className="text-xs text-teal-600">Geüpload</Text>;
+  // The server refused this file for good: sending it again cannot help, choosing it again can.
+  if (record.rejected) return <Text accessibilityRole="alert" className="text-xs text-red-700">
+    {`Niet geüpload${record.error ? ` · ${record.error}` : ''}\nDit bestand wordt niet opnieuw verstuurd. Verwijder het en kies het opnieuw.`}
+  </Text>;
   const retry = async () => {
     setRetryError('');
     try { await retryUploads(); }

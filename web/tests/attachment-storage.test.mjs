@@ -149,3 +149,68 @@ test('a picker read completed after reset cannot recreate the discarded file', a
   await rejected;
   assert.equal(await storage.attachmentStorage.get('owner', id), null);
 });
+
+function rows(indexedDB, name, store) {
+  return new Promise((resolve, reject) => {
+    const request = indexedDB.open(name, 1);
+    request.onupgradeneeded = () => reject(new Error(`${name} was never written`));
+    request.onerror = () => reject(request.error);
+    request.onsuccess = () => {
+      const all = request.result.transaction(store, 'readonly').objectStore(store).getAll();
+      all.onsuccess = () => { request.result.close(); resolve(all.result); };
+      all.onerror = () => reject(all.error);
+    };
+  });
+}
+
+test('recording an upload attempt stores only its status and never rewrites the photo', async () => {
+  const indexedDB = new IDBFactory(), a = tab(indexedDB);
+  await a.saveAttachment(photo(), { file: photo().blob });
+  // Safari can fail to store a file that it read from IndexedDB, so the bytes are written once.
+  const failed = await a.attachmentStorage.get('owner', id);
+  await a.attachmentStorage.put({ ...failed, error: 'Uploaden is niet gelukt.' });
+  assert.equal((await a.attachmentStorage.get('owner', id)).error, 'Uploaden is niet gelukt.');
+  const pending = await a.attachmentStorage.get('owner', id);
+  await a.attachmentStorage.put({ ...pending, uploaded: true, error: undefined });
+  const uploaded = await a.attachmentStorage.get('owner', id);
+  assert.equal(uploaded.uploaded, true); assert.equal(uploaded.error, undefined);
+  assert.equal(await uploaded.blob.text(), 'photo bytes');
+  const files = await rows(indexedDB, 'equi-intake-attachments-scoped', 'files');
+  assert.equal(files.length, 1);
+  assert.equal(files[0].uploaded, false, 'the stored photo row is untouched by status updates');
+  assert.equal((await rows(indexedDB, 'equi-intake-attachment-status', 'status')).length, 1);
+  // A refusal by the server is part of the status and survives closing the tab.
+  await a.attachmentStorage.put({ ...uploaded, uploaded: false, error: 'Geweigerd.', rejections: 3, rejected: true });
+  const refused = await tab(indexedDB, a.session).attachmentStorage.get('owner', id);
+  assert.deepEqual([refused.uploaded, refused.rejections, refused.rejected, refused.error], [false, 3, true, 'Geweigerd.']);
+  // Bytes chosen again replace the photo together with the status that described the old bytes.
+  await a.saveAttachment(photo('owner', 'chosen again'), { file: new Blob(['chosen again']) });
+  const replaced = await a.attachmentStorage.get('owner', id);
+  assert.equal(replaced.uploaded, false); assert.equal(await replaced.blob.text(), 'chosen again');
+  assert.equal(replaced.rejected, undefined);
+  await a.attachmentStorage.put({ ...replaced, uploaded: true });
+  await a.clearLocalSyncData('owner');
+  assert.equal(await a.attachmentStorage.get('owner', id), null);
+  assert.deepEqual(await rows(indexedDB, 'equi-intake-attachment-status', 'status'), []);
+});
+
+test('a failed storage request rejects with an error, never with null', async () => {
+  // A request error reaches the transaction before it aborts: tx.error is still null then.
+  const cause = { error: null };
+  const indexedDB = { open() {
+    const tx = { error: null, objectStore: () => ({
+      put: () => queueMicrotask(() => tx.onerror({ target: cause })),
+      delete: () => queueMicrotask(() => tx.oncomplete()),
+    }) };
+    const request = { result: { close() {}, transaction: () => tx } };
+    queueMicrotask(() => request.onsuccess());
+    return request;
+  } };
+  const storage = load(`${shared}intake/attachments/storage.web.ts`, {
+    '../../browser-tab': { browserTabId: () => 'tab' }, './events': { attachmentsChanged() {} },
+    './storage-writes': load(`${shared}intake/attachments/storage-writes.ts`),
+  }, { indexedDB });
+  await assert.rejects(storage.attachmentStorage.put(photo()), error => error instanceof Error && /kon niet op dit apparaat/.test(error.message));
+  cause.error = new DOMException('Error preparing Blob/File data to be stored in object store', 'UnknownError');
+  await assert.rejects(storage.attachmentStorage.put(photo()), error => error === cause.error);
+});

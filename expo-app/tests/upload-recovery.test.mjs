@@ -409,3 +409,124 @@ test('retry button remains available while pending and success appears only afte
   assert.equal(tree.props.children, 'Geüpload');
   dispose.forEach(fn => fn());
 });
+
+test('a stored file is uploaded as an in-memory copy, and unreadable bytes are reported instead of sent', async t => {
+  const app = setup();
+  const id = '55555555-5555-4555-8555-555555555555';
+  // Safari sends a request without any body for a File it read from IndexedDB (WebKit bug 319985).
+  const stored = new File(['stored photo bytes'], 'IMG_0001.jpeg', { type: 'image/jpeg' });
+  let record = { id, userId: 'owner', bookingId: 'booking', horseId: 'horse', section: 'photos', field: 'right',
+    name: 'IMG_0001.jpeg', mime: 'image/jpeg', blob: stored, uploaded: false };
+  const forms = [];
+  class RecordingFormData {
+    constructor() { this.parts = new Map(); forms.push(this); }
+    append(name, ...value) { this.parts.set(name, value); }
+  }
+  const attachmentSync = load('../lib/intake/attachments/sync.ts', {
+    ...app.common, '@/db/auth': { getApiBaseUrl: () => '' }, './upload': uploads,
+    './storage': { attachmentStorage: { get: async () => record, put: async value => { record = value; } } },
+  }, { FormData: RecordingFormData });
+  const batches = [{ table: 'intake_answers', opData: { value: JSON.stringify([`attachment:${id}:IMG_0001.jpeg`]) } }];
+  let requests = 0;
+  t.mock.method(globalThis, 'fetch', async () => { requests++; return Response.json({ value: `attachment:${id}:IMG_0001.jpeg` }); });
+  await attachmentSync.uploadIntakeAttachments(batches, 'owner', 'token', () => {});
+  const [file, name] = forms[0].parts.get('file');
+  assert.notEqual(file, stored);
+  assert.ok(file instanceof Blob && !(file instanceof File), 'the request must not reference the stored file');
+  assert.equal(await file.text(), 'stored photo bytes');
+  assert.equal(file.type, 'image/jpeg'); assert.equal(name, 'IMG_0001.jpeg');
+  assert.equal(record.uploaded, true); assert.equal(record.blob, stored, 'the stored original is kept as it was');
+
+  record = { ...record, uploaded: false, blob: Object.assign(new Blob(['gone']), {
+    arrayBuffer: async () => { throw new DOMException('The file could not be read.', 'NotReadableError'); },
+  }) };
+  await assert.rejects(attachmentSync.uploadIntakeAttachments(batches, 'owner', 'token', () => {}), /kon niet van dit apparaat worden gelezen/);
+  assert.equal(requests, 1, 'an unreadable file is never sent as an empty upload');
+  assert.match(record.error, /Voeg de foto opnieuw toe/); assert.equal(record.uploaded, false);
+});
+
+test('a file the server keeps refusing is given up on, so the answers queued behind it still sync', async () => {
+  const first = '66666666-6666-4666-8666-666666666661', second = '66666666-6666-4666-8666-666666666662';
+  const records = new Map([first, second].map(id => [id, { id, userId: 'owner', uploaded: false }]));
+  const storage = { get: async (_user, id) => records.get(id) ?? null, put: async value => { records.set(value.id, value); } };
+  const batch = [{ table: 'intake_answers', opData: { value: JSON.stringify([`attachment:${first}:a.jpg`, `attachment:${second}:b.jpg`]) } }];
+  const attempts = [];
+  const refuse = async record => {
+    attempts.push(record.id);
+    if (record.id === first) throw requests.syncHttpError(422);
+  };
+  const flush = () => uploads.flushAttachmentUploads(batch, 'owner', storage, refuse, () => {});
+  // The first refusals still hold the queue: one odd response must not drop a photo.
+  await assert.rejects(flush(), error => error.status === 422);
+  await assert.rejects(flush(), error => error.status === 422);
+  assert.equal(records.get(first).rejected, false); assert.equal(records.get(second).uploaded, false);
+  await flush();
+  assert.deepEqual(attempts, [first, first, first, second]);
+  assert.equal(records.get(first).rejected, true); assert.equal(records.get(first).uploaded, false);
+  assert.match(records.get(first).error, /niet geaccepteerd/);
+  assert.equal(records.get(second).uploaded, true);
+  // A refused file is not sent again by later queue entries that still reference it.
+  await flush(); assert.equal(attempts.length, 4);
+});
+
+test('temporary upload failures keep the queue waiting and never give up on a file', async () => {
+  const id = '77777777-7777-4777-8777-777777777777';
+  let record = { id, userId: 'owner', uploaded: false };
+  const storage = { get: async () => record, put: async value => { record = value; } };
+  const batch = [{ table: 'intake_answers', opData: { value: JSON.stringify([`attachment:${id}:a.jpg`]) } }];
+  const failures = [requests.syncHttpError(500), requests.syncHttpError(429), requests.syncHttpError(401), requests.syncHttpError(403),
+    new requests.SyncRequestError('timeout', 'timeout'), new TypeError('Load failed'), requests.syncHttpError(500), requests.syncHttpError(503)];
+  for (const failure of failures) {
+    await assert.rejects(uploads.flushAttachmentUploads(batch, 'owner', storage, async () => { throw failure; }, () => {}), error => error === failure);
+    assert.equal(record.rejected, false); assert.equal(record.rejections, 0);
+  }
+  // Refusals are counted across attempts, and a successful upload clears them.
+  for (const status of [413, 404]) {
+    await assert.rejects(uploads.flushAttachmentUploads(batch, 'owner', storage, async () => { throw requests.syncHttpError(status); }, () => {}));
+  }
+  assert.equal(record.rejections, 2); assert.equal(record.rejected, false);
+  await uploads.flushAttachmentUploads(batch, 'owner', storage, async () => {}, () => {});
+  assert.equal(record.uploaded, true); assert.equal(record.error, undefined);
+  assert.equal(record.rejections, undefined); assert.equal(record.rejected, undefined);
+});
+
+test('a refused file says it has to be chosen again and offers no pointless retry', async t => {
+  t.mock.timers.enable({ apis: ['setTimeout'] });
+  const app = setup();
+  const states = [], effects = [];
+  let cursor = 0;
+  const jsx = (type, props) => ({ type, props });
+  const { AttachmentField } = load('../components/intake/AttachmentField.tsx', {
+    ...app.common, 'react/jsx-runtime': { jsx, jsxs: jsx },
+    react: { useRef: value => ({ current: value }), useState: value => {
+      const index = cursor++; if (!(index in states)) states[index] = value;
+      return [states[index], value => { states[index] = value; }];
+    }, useEffect: callback => { effects.push(callback); } },
+    'react-native': Object.fromEntries(['View', 'Text', 'Pressable', 'ActivityIndicator'].map(key => [key, key])),
+    'lucide-react-native': {}, 'expo-document-picker': {},
+    '@/lib/intake/attachments/image-picker': {}, '@/lib/intake/attachments/photo-dimensions': {},
+    '@/lib/intake/attachments/storage': { attachmentStorage: { get: async () => ({ uploaded: false, rejected: true, rejections: 3, error: requests.syncHttpError(422).message }) } },
+    '@/lib/intake/attachments/events': { onAttachmentsChanged: () => () => {} },
+    '@/db/provider': { useDb: () => ({ currentUserId: 'owner', retryUploads: async () => assert.fail('a refused file is not retried'), retryingUploads: false, syncStatus: 'connected' }) },
+    '@/lib/intake/store': { useIntake: () => ({ state: {}, ensureBooking() {}, horseId: 'horse' }) },
+    '@/lib/refresh-safety': { registerRefreshProtection: () => () => {}, refreshProtectionChanged() {} },
+    './AttachmentPhoto': { Photo: 'Photo' },
+  });
+  const flatten = node => Array.isArray(node) ? node.flatMap(flatten) : node && typeof node === 'object' ? [node, ...flatten(node.props?.children)] : [];
+  const root = AttachmentField({ value: ['attachment:id:photo.jpg'], onChange() {}, section: 'photos', field: 'right', photo: true, max: 1 });
+  const status = flatten(root).find(node => typeof node.type === 'function' && node.type.name === 'UploadStatus');
+  states.length = 0; cursor = 0; effects.length = 0;
+  status.type(status.props);
+  const dispose = effects.map(effect => effect()).filter(value => typeof value === 'function');
+  await settle(); cursor = 0; effects.length = 0;
+  const tree = status.type(status.props);
+  assert.equal(tree.props.accessibilityRole, 'alert');
+  assert.match(tree.props.children, /Niet geüpload · Dit bestand of deze gegevens zijn niet geaccepteerd/);
+  assert.match(tree.props.children, /Verwijder het en kies het opnieuw/);
+  assert.equal(flatten(tree).filter(node => node.type === 'Pressable').length, 0);
+  // Nothing is still pending, so the three-minute "stalled upload" report is not armed.
+  dispose.push(...effects.map(effect => effect()).filter(value => typeof value === 'function'));
+  t.mock.timers.tick(180_000);
+  assert.deepEqual(app.events, []);
+  dispose.forEach(fn => fn());
+});

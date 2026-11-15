@@ -17,7 +17,17 @@ export function attachmentIds(operations: readonly AttachmentOperation[]): strin
   return [...ids];
 }
 
-/** Upload bytes before acknowledging answers or a later submission in the CRUD queue. */
+// Responses that say the server will not accept this file, however often it is sent:
+// the question or intake is gone, the intake is closed, or the file itself is refused.
+const REFUSED = new Set([404, 409, 413, 422]);
+const GIVE_UP_AFTER = 3;
+
+/**
+ * Upload bytes before acknowledging answers or a later submission in the CRUD queue.
+ * A file the server keeps refusing is given up on, so it cannot hold back every later
+ * answer forever. Its answer then syncs without the file; the server does not accept a
+ * submission that references a file it never received.
+ */
 export async function flushAttachmentUploads(operations: readonly AttachmentOperation[], userId: string,
   storage: AttachmentStorage, upload: (record: LocalAttachment) => Promise<void>, checkSession: () => void) {
   for (const id of attachmentIds(operations)) {
@@ -26,13 +36,19 @@ export async function flushAttachmentUploads(operations: readonly AttachmentOper
     checkSession();
     if (!record || record.uploaded) continue; // Existing server attachments have no local record.
     if (record.userId !== userId) throw new Error('Deze foto hoort bij een ander account.');
+    if (record.rejected) continue;
     try {
       await upload(record);
       checkSession();
-      await storage.put({ ...record, uploaded: true, error: undefined });
+      await storage.put({ ...record, uploaded: true, error: undefined, rejections: undefined, rejected: undefined });
     } catch (error) {
       checkSession();
-      await storage.put({ ...record, error: error instanceof Error ? error.message : 'Uploaden mislukt.' });
+      const status = error && typeof error === 'object' && 'status' in error ? error.status : undefined;
+      const refused = typeof status === 'number' && REFUSED.has(status);
+      const rejections = (record.rejections ?? 0) + (refused ? 1 : 0);
+      const rejected = refused && rejections >= GIVE_UP_AFTER;
+      await storage.put({ ...record, error: error instanceof Error ? error.message : 'Uploaden mislukt.', rejections, rejected });
+      if (rejected) continue; // The queue moves on; the file itself has to be chosen again.
       throw error; // PowerSync retains this transaction and retries after reconnect.
     }
   }

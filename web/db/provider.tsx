@@ -21,7 +21,7 @@ import { LOCAL_SIGNOUT_KEY, isLocallySignedOut, retryPendingLogout } from './aut
 import { LaravelConnector } from './connector';
 import { refreshSubscriptionConnection } from '@/db/refresh-subscription';
 import { databaseName } from './database-name';
-import { browserTabId } from '@/lib/browser-tab';
+import { browserTabId, claimBrowserTab } from '@/lib/browser-tab';
 import { loginDestination } from './login-destination';
 import { registerRefreshProtection } from '../../expo-app/lib/refresh-safety.web';
 
@@ -146,6 +146,8 @@ export function DbProvider({ children }: { children: ReactNode }) {
     let changingSession = false;
     void accountSession.transition(async () => {
       try {
+        // Before anything opens a database: a restarted app continues with the one it left behind.
+        await claimBrowserTab();
         const session = await getSession().catch(cause => { if (isLocallySignedOut()) return null; throw cause; });
         await open(isLocallySignedOut() ? null : session);
       }

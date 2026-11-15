@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import { readFile } from 'node:fs/promises';
 import ts from 'typescript';
-import { ConnectionManager } from '@powersync/common';
+import { ConnectionManager, SyncStatus } from '@powersync/common';
 import { createLibrarySubscriptions } from '../../expo-app/lib/library-sync.ts';
 
 const settle = () => new Promise(resolve => setImmediate(resolve));
@@ -61,4 +61,20 @@ test('cached library grants added during SDK startup all reach the connection wi
   manager.dispose();
   assert.deepEqual(wireSubscriptions, []);
   await database.connectionManager.close();
+});
+
+test('a sync error without a value does not break the status listener', () => {
+  // The SDK reads .name from every error except undefined; an IndexedDB failure rejected with null.
+  const failed = () => new SyncStatus({ dataFlow: { uploadError: null, downloadError: null } });
+  assert.throws(() => failed().toJSON(), TypeError, 'reproduce the SDK crash behind the failing retry button');
+  class BaseDatabase { currentStatus = new SyncStatus({}); }
+  const exports = {};
+  new Function('require', 'exports', compiled)(() => ({ PowerSyncDatabase: BaseDatabase }), exports);
+  const original = SyncStatus.prototype.serializeError;
+  try {
+    new exports.PowerSyncDatabase(); new exports.PowerSyncDatabase();
+    assert.deepEqual(failed().toJSON().dataFlow, { uploadError: undefined, downloadError: undefined });
+    const error = new Error('Uploaden is niet gelukt.');
+    assert.equal(new SyncStatus({ dataFlow: { uploadError: error } }).toJSON().dataFlow.uploadError.message, error.message);
+  } finally { SyncStatus.prototype.serializeError = original; }
 });
