@@ -6,11 +6,13 @@ function source(path) {
     return readFileSync(new URL(path, import.meta.url), 'utf8');
 }
 
-test('admin navigation distinguishes templates from advice settings', () => {
+test('admin navigation lists protocol measures under Content, apart from templates', () => {
     const navigation = source('../../resources/js/lib/nav.js');
+    const content = navigation.slice(navigation.indexOf("title: 'Content'"), navigation.indexOf("title: 'Voerscanner'"));
 
     assert.match(navigation, /label: 'Protocol Templates', href: '\/admin\/protocol-settings'/);
-    assert.match(navigation, /label: 'Protocol Settings', href: '\/admin\/protocol-settings\/advice'/);
+    assert.match(content, /label: 'Protocolmaatregelen', href: '\/admin\/protocol-measures'/);
+    assert.doesNotMatch(navigation, /protocol-settings\/advice/);
 });
 
 test('protocol configuration uses template terminology', () => {
@@ -40,5 +42,5 @@ test('protocol list and editor use protocol template labels', () => {
     assert.match(editor, /Field label="Protocol template"/);
     assert.match(editor, /Configureer ze in Protocol Templates\./);
     assert.doesNotMatch(list, /protocol type/i);
-    assert.match(editor, /href="\/admin\/protocol-settings\/advice"[^>]*>Naar Protocol Settings<\/Button>/);
+    assert.match(editor, /href="\/admin\/protocol-measures"[^>]*>Naar Protocolmaatregelen<\/Button>/);
 });

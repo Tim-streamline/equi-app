@@ -2,7 +2,7 @@
 
 namespace Database\Seeders;
 
-use App\Models\BewegingAdvies;
+use App\Support\ProtocolMeasures;
 use Illuminate\Database\Seeder;
 
 class BewegingAdviesSeeder extends Seeder
@@ -37,11 +37,7 @@ class BewegingAdviesSeeder extends Seeder
 
     public function run(): void
     {
-        foreach (self::ITEMS as $item) {
-            BewegingAdvies::query()->updateOrCreate(
-                ['title' => $item['title']],
-                [...$item, 'layout' => 'normal', 'icon' => null],
-            );
-        }
+        // Bootstrap only: the library is managed in the admin (Content → Protocolmaatregelen).
+        ProtocolMeasures::seedDefaults('beweging', self::ITEMS);
     }
 }

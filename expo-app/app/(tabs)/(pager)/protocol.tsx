@@ -525,6 +525,7 @@ function Nutrition({
       {(nutrition.advice ?? []).map((advice) => (
         <View key={advice.id} className={PLAIN_CARD}>
           <Text className={T.cardTitle}>{advice.title}</Text>
+          {!!advice.phaseLabel && <Text className={`mt-1 ${T.secondary}`}>{advice.phaseLabel}</Text>}
           {!!advice.description && <Text className={`mt-2 ${T.body}`}>{advice.description}</Text>}
         </View>
       ))}

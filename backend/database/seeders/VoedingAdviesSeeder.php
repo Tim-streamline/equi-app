@@ -2,7 +2,7 @@
 
 namespace Database\Seeders;
 
-use App\Models\VoedingAdvies;
+use App\Support\ProtocolMeasures;
 use Illuminate\Database\Seeder;
 
 class VoedingAdviesSeeder extends Seeder
@@ -69,11 +69,7 @@ class VoedingAdviesSeeder extends Seeder
 
     public function run(): void
     {
-        foreach (self::ITEMS as $item) {
-            VoedingAdvies::query()->updateOrCreate(
-                ['title' => $item['title']],
-                [...$item, 'layout' => 'normal', 'icon' => null],
-            );
-        }
+        // Bootstrap only: the library is managed in the admin (Content → Protocolmaatregelen).
+        ProtocolMeasures::seedDefaults('voeding', self::ITEMS);
     }
 }

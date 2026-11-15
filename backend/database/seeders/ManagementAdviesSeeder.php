@@ -2,7 +2,7 @@
 
 namespace Database\Seeders;
 
-use App\Models\ManagementAdvies;
+use App\Support\ProtocolMeasures;
 use Illuminate\Database\Seeder;
 
 class ManagementAdviesSeeder extends Seeder
@@ -49,11 +49,7 @@ class ManagementAdviesSeeder extends Seeder
 
     public function run(): void
     {
-        foreach (self::ITEMS as $item) {
-            ManagementAdvies::query()->updateOrCreate(
-                ['title' => $item['title']],
-                [...$item, 'layout' => 'normal', 'icon' => null],
-            );
-        }
+        // Bootstrap only: the library is managed in the admin (Content → Protocolmaatregelen).
+        ProtocolMeasures::seedDefaults('management', self::ITEMS);
     }
 }

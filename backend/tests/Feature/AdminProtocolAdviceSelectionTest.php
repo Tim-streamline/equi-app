@@ -14,7 +14,10 @@ use App\Models\ProtocolTemplatePhase;
 use App\Models\User;
 use App\Models\VoedingAdvies;
 use App\Support\HorseDashboard;
+use Illuminate\Database\Events\TransactionBeginning;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Str;
 use Inertia\Testing\AssertableInertia as Assert;
 use Tests\TestCase;
@@ -93,9 +96,9 @@ class AdminProtocolAdviceSelectionTest extends TestCase
             ->assertOk()
             ->assertInertia(fn (Assert $page) => $page
                 ->component('Protocols/Edit')
-                ->where('voedingAdviezen', fn ($rows) => collect($rows)->pluck('id')->all() === VoedingAdvies::orderBy('title')->pluck('id')->all())
-                ->where('managementAdviezen', fn ($rows) => collect($rows)->pluck('id')->all() === ManagementAdvies::orderBy('title')->pluck('id')->all())
-                ->where('bewegingAdviezen', fn ($rows) => collect($rows)->pluck('id')->all() === BewegingAdvies::orderBy('title')->pluck('id')->all()));
+                ->where('voedingAdviezen', fn ($rows) => collect($rows)->pluck('id')->all() === VoedingAdvies::ordered()->pluck('id')->all())
+                ->where('managementAdviezen', fn ($rows) => collect($rows)->pluck('id')->all() === ManagementAdvies::ordered()->pluck('id')->all())
+                ->where('bewegingAdviezen', fn ($rows) => collect($rows)->pluck('id')->all() === BewegingAdvies::ordered()->pluck('id')->all()));
     }
 
     public function test_selected_advice_is_snapshotted_and_can_be_toggled_on_and_off(): void
@@ -215,7 +218,7 @@ class AdminProtocolAdviceSelectionTest extends TestCase
         $protocol = Protocol::where('horse_id', $this->horse->id)->sole();
 
         foreach (['voeding' => $this->extraVoedingAdvies, 'beweging' => $this->bewegingAdvies] as $category => $advice) {
-            $this->post("/admin/protocol-settings/advice/{$category}/{$advice->id}/archive")->assertSessionHas('success');
+            $this->post("/admin/protocol-measures/{$category}/{$advice->id}/archive")->assertSessionHas('success');
         }
 
         $this->put('/admin/protocols/'.$protocol->id, ['beweging_advies_ids' => [], 'customer_settings' => $payload['customer_settings']] + $this->payload($protocol))
@@ -229,7 +232,7 @@ class AdminProtocolAdviceSelectionTest extends TestCase
         $protocol = Protocol::where('horse_id', $this->horse->id)->sole();
         foreach (['voeding' => [$this->voedingAdvies, $this->extraVoedingAdvies], 'beweging' => [$this->bewegingAdvies]] as $category => $advices) {
             foreach ($advices as $advice) {
-                $this->post("/admin/protocol-settings/advice/{$category}/{$advice->id}/archive")->assertSessionHas('success');
+                $this->post("/admin/protocol-measures/{$category}/{$advice->id}/archive")->assertSessionHas('success');
             }
         }
 
@@ -355,19 +358,41 @@ class AdminProtocolAdviceSelectionTest extends TestCase
             ->where('protocol.customer_settings.nutrition_advice.0.instruction', 'Eigen instructie.'));
     }
 
+    public function test_a_protocol_save_rejects_an_override_whose_measure_was_deleted_after_validation(): void
+    {
+        $payload = $this->payload();
+        $payload['beweging_advies_ids'] = [];
+        $payload['customer_settings'] = ['movement' => [['id' => $this->bewegingAdvies->id, 'action' => 'avoid', 'instruction' => 'x']]];
+        // The measure library deletes under the same lock; simulate a delete that committed between validation and the save.
+        $deleted = false;
+        Event::listen(TransactionBeginning::class, function () use (&$deleted) {
+            if (! $deleted) {
+                $deleted = true;
+                DB::table('beweging_adviezen')->where('id', $this->bewegingAdvies->id)->delete();
+            }
+        });
+
+        $this->actingAs($this->admin, 'admin')->post('/admin/protocols', $payload)
+            ->assertSessionHasErrors(['customer_settings.movement.0.id' => SaveProtocolRequest::ADVICE_UNAVAILABLE]);
+        $this->assertTrue($deleted);
+        $this->assertFalse(Protocol::where('horse_id', $this->horse->id)->whereNotNull('customer_settings')->exists());
+    }
+
     public function test_advice_settings_routes_only_match_uuids(): void
     {
         $this->actingAs($this->admin, 'admin');
         foreach (['voeding', 'management', 'beweging'] as $category) {
             foreach (['not-a-uuid', (string) Str::uuid()] as $id) {
-                $url = "/admin/protocol-settings/advice/{$category}/{$id}";
+                $url = "/admin/protocol-measures/{$category}/{$id}";
                 $this->put($url, ['title' => 'Titel', 'description' => 'Tekst', 'layout' => 'normal'])->assertNotFound();
                 $this->post($url.'/archive')->assertNotFound();
                 $this->post($url.'/restore')->assertNotFound();
+                $this->delete($url)->assertNotFound();
+                $this->patch($url.'/move', ['direction' => 'up'])->assertNotFound();
             }
         }
 
-        $url = '/admin/protocol-settings/advice/management/'.strtoupper($this->managementAdvies->id);
+        $url = '/admin/protocol-measures/management/'.strtoupper($this->managementAdvies->id);
         $this->post($url.'/archive')->assertSessionHas('success');
         $this->post($url.'/restore')->assertSessionHas('success');
     }

@@ -161,4 +161,10 @@ class Protocol extends Model
     {
         return $this->hasMany(ProtocolBewegingAdvies::class)->orderBy('title');
     }
+
+    /** Advice written for this protocol in the editor, per category in the editor's order. */
+    public function manualAdviezen(): HasMany
+    {
+        return $this->hasMany(ProtocolManualAdvies::class)->orderBy('category')->orderBy('sort_order');
+    }
 }

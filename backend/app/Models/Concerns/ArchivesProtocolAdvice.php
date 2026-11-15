@@ -6,12 +6,28 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\Rules\Exists;
 
-/** Library advice is archived, never deleted: protocols keep referring to it by id. */
+/** Library advice a protocol refers to is archived, never deleted: protocols keep referring to it by id. */
 trait ArchivesProtocolAdvice
 {
+    /** New measures join the end of their category unless a position is given. */
+    protected static function bootArchivesProtocolAdvice(): void
+    {
+        static::creating(function ($measure): void {
+            if (! $measure->sort_order) {
+                $measure->sort_order = ((int) static::query()->max('sort_order')) + 1;
+            }
+        });
+    }
+
     protected function initializeArchivesProtocolAdvice(): void
     {
-        $this->mergeCasts(['archived_at' => 'datetime']);
+        $this->mergeCasts(['archived_at' => 'datetime', 'sort_order' => 'integer']);
+    }
+
+    /** Library order as set by admins; title and id keep ties deterministic. */
+    public function scopeOrdered(Builder $query): Builder
+    {
+        return $query->orderBy('sort_order')->orderBy('title')->orderBy('id');
     }
 
     /**

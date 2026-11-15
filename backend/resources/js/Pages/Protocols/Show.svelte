@@ -5,7 +5,7 @@
     import { Card, CardHeader, CardTitle, CardContent, Button, Badge } from '$lib/components/ui';
     import { statusVariant } from '$lib/badges.js';
     import { snapshotInstruction } from '$lib/protocolAdvice.js';
-    import { ArrowLeft, Check, Dumbbell, Leaf, Pencil, Settings2 } from '@lucide/svelte';
+    import { ArrowLeft, Check, Dumbbell, Leaf, PenLine, Pencil, Settings2 } from '@lucide/svelte';
 
     let { protocol } = $props();
     const adviceCategories = $derived([
@@ -15,6 +15,7 @@
             description: 'Voedingskeuzes binnen dit protocol',
             icon: Leaf,
             items: protocol.voeding_adviezen ?? [],
+            manual: (protocol.manual_adviezen ?? []).filter((advice) => advice.category === 'voeding'),
         },
         {
             id: 'management',
@@ -22,6 +23,7 @@
             description: 'Dagelijkse verzorging en omgeving',
             icon: Settings2,
             items: protocol.management_adviezen ?? [],
+            manual: (protocol.manual_adviezen ?? []).filter((advice) => advice.category === 'management'),
         },
         {
             id: 'beweging',
@@ -29,9 +31,11 @@
             description: 'Opbouw van activiteit en herstel',
             icon: Dumbbell,
             items: protocol.beweging_adviezen ?? [],
+            manual: (protocol.manual_adviezen ?? []).filter((advice) => advice.category === 'beweging'),
         },
     ]);
-    const selectedAdviceCount = $derived(adviceCategories.reduce((total, category) => total + category.items.length, 0));
+    const selectedAdviceCount = $derived(adviceCategories.reduce((total, category) => total + category.items.length + category.manual.length, 0));
+    const phaseTitles = (advice) => advice.applies_to === 'phases' ? (advice.phases ?? []).map((phase) => phase.title).join(' · ') || 'Geen fase' : 'Hele protocol';
     function setStatus(status) { router.post(`/admin/protocols/${protocol.id}/status`, { status }); }
 </script>
 
@@ -83,13 +87,13 @@
                         <div class="min-w-0">
                             <div class="flex flex-wrap items-center gap-2">
                                 <h3 class="font-semibold">{category.title}</h3>
-                                <span class="text-xs tabular-nums text-muted-foreground">{category.items.length}</span>
+                                <span class="text-xs tabular-nums text-muted-foreground">{category.items.length + category.manual.length}</span>
                             </div>
                             <p class="text-xs text-muted-foreground">{category.description}</p>
                         </div>
                     </div>
 
-                    {#if category.items.length > 0}
+                    {#if category.items.length + category.manual.length > 0}
                         <ul class="space-y-4">
                             {#each category.items as advice (advice.id)}
                                 {@const instruction = snapshotInstruction(protocol.customer_settings, category.id, advice)}
@@ -100,6 +104,16 @@
                                         {#if instruction}
                                             <p class="mt-1 whitespace-pre-wrap text-sm leading-5 text-muted-foreground">{instruction}</p>
                                         {/if}
+                                    </div>
+                                </li>
+                            {/each}
+                            {#each category.manual as advice (advice.id)}
+                                <li class="grid grid-cols-[1rem_1fr] gap-2.5">
+                                    <PenLine class="mt-0.5 size-4 text-primary" aria-hidden="true" />
+                                    <div class="min-w-0">
+                                        <p class="flex flex-wrap items-center gap-2 text-sm font-medium leading-5">{advice.title} <Badge variant="muted">Handmatig</Badge></p>
+                                        <p class="mt-1 whitespace-pre-wrap text-sm leading-5 text-muted-foreground">{advice.description}</p>
+                                        <p class="mt-1 text-xs text-muted-foreground">{phaseTitles(advice)}</p>
                                     </div>
                                 </li>
                             {/each}

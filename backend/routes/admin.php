@@ -22,8 +22,8 @@ use App\Http\Controllers\Admin\PaymentController;
 use App\Http\Controllers\Admin\PlanController;
 use App\Http\Controllers\Admin\PlusPageController;
 use App\Http\Controllers\Admin\ProductController;
-use App\Http\Controllers\Admin\ProtocolAdviceSettingsController;
 use App\Http\Controllers\Admin\ProtocolController;
+use App\Http\Controllers\Admin\ProtocolMeasureController;
 use App\Http\Controllers\Admin\ProtocolSettingsController;
 use App\Http\Controllers\Admin\ScanResultController;
 use App\Http\Controllers\Admin\SeasonalTipController;
@@ -34,6 +34,7 @@ use App\Http\Controllers\Admin\TherapistController;
 use App\Http\Controllers\Admin\UserController;
 use App\Http\Controllers\IntakeAttachmentController;
 use App\Http\Controllers\LibraryAttachmentController;
+use App\Support\ProtocolMeasures;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -108,6 +109,21 @@ Route::middleware('auth:admin')->group(function () {
         Route::resource('seasonal-tips', SeasonalTipController::class)->only(['index', 'store', 'update', 'destroy']);
         Route::post('nova/test', [NovaController::class, 'test'])->middleware('throttle:30,1')->name('nova.test');
         Route::resource('nova', NovaController::class)->only(['index', 'store', 'update', 'destroy']);
+    });
+
+    // ---- Content: protocol measure library ----------------------------------
+    Route::middleware('admin.role:admin,content_editor')->group(function () {
+        Route::redirect('protocol-settings/advice', '/admin/protocol-measures')->name('protocol-advice-settings.index');
+        Route::controller(ProtocolMeasureController::class)->prefix('protocol-measures')->as('protocol-measures.')->group(function () {
+            $category = ProtocolMeasures::keys();
+            Route::get('/', 'index')->name('index');
+            Route::post('/', 'store')->name('store');
+            Route::put('{category}/{measure}', 'update')->whereIn('category', $category)->whereUuid('measure')->name('update');
+            Route::delete('{category}/{measure}', 'destroy')->whereIn('category', $category)->whereUuid('measure')->name('destroy');
+            Route::patch('{category}/{measure}/move', 'move')->whereIn('category', $category)->whereUuid('measure')->name('move');
+            Route::post('{category}/{measure}/archive', 'archive')->whereIn('category', $category)->whereUuid('measure')->name('archive');
+            Route::post('{category}/{measure}/restore', 'restore')->whereIn('category', $category)->whereUuid('measure')->name('restore');
+        });
     });
 
     // ---- Scanner: products, ingredients, results ------------------------
@@ -254,14 +270,6 @@ Route::middleware('auth:admin')->group(function () {
             Route::delete('supplements/{supplement}', 'destroySupplement')->name('supplements.destroy');
             Route::put('supplements/{supplement}/weeks/{protocolTemplatePhaseWeek}', 'storeSupplementWeek')->name('supplement-weeks.store');
             Route::delete('supplements/{supplement}/weeks/{protocolTemplatePhaseWeek}', 'destroySupplementWeek')->name('supplement-weeks.destroy');
-        });
-
-        Route::controller(ProtocolAdviceSettingsController::class)->prefix('protocol-settings/advice')->as('protocol-advice-settings.')->group(function () {
-            Route::get('/', 'index')->name('index');
-            Route::post('{category}', 'store')->whereIn('category', ['voeding', 'management', 'beweging'])->name('store');
-            Route::put('{category}/{advice}', 'update')->whereIn('category', ['voeding', 'management', 'beweging'])->whereUuid('advice')->name('update');
-            Route::post('{category}/{advice}/archive', 'archive')->whereIn('category', ['voeding', 'management', 'beweging'])->whereUuid('advice')->name('archive');
-            Route::post('{category}/{advice}/restore', 'restore')->whereIn('category', ['voeding', 'management', 'beweging'])->whereUuid('advice')->name('restore');
         });
 
         Route::controller(SettingsController::class)->prefix('settings')->as('settings.')->group(function () {

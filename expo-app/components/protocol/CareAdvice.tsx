@@ -36,6 +36,7 @@ export function CareAdvice({ protocol }: {
                     )}
                     <Text className={`flex-1 ${T.cardTitle}`}>{item.title}</Text>
                   </View>
+                  {!!item.phaseLabel && <Text className={`mt-1 ${T.secondary}`}>{item.phaseLabel}</Text>}
                   {!!item.description && (
                     <View className="mt-3 gap-1">
                       <Text accessibilityRole="header" className={`${S.label} text-teal-700`}>Instructies</Text>

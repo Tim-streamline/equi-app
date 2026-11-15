@@ -93,6 +93,11 @@ export type DashboardAdvice = {
   frequency?: string;
   url?: string;
   ctaLabel?: string;
+  /** Written by the therapist for this protocol only, outside the measure library. */
+  manual?: boolean;
+  /** Protocol phases this advice is limited to; absent or empty means the whole protocol. */
+  phaseIds?: string[];
+  phaseLabel?: string | null;
 };
 // `action` is optional: backends from before movement advice became editable omit it.
 export type CareAdvice = Omit<DashboardAdvice, "action"> & {
@@ -138,7 +143,7 @@ export type DashboardProtocol = {
     } | null)[];
   };
   nutrition: {
-    advice?: { id: string; title: string; description?: string }[];
+    advice?: { id: string; title: string; description?: string; manual?: boolean; phaseIds?: string[]; phaseLabel?: string | null }[];
     roughage: {
       rangeLabel: string | null;
       description: string;

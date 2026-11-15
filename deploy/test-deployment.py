@@ -224,6 +224,8 @@ if name == 'curl':
         self.assertIn("artisan deploy-library-items", self.calls())
         self.assertNotIn("--class=DatabaseSeeder", self.calls())
         self.assertNotIn("--class=AdminUserSeeder", self.calls())
+        # The protocol measure library is admin-managed; a catalog seed must not reinstall deleted measures.
+        self.assertNotIn("AdviesSeeder", self.calls())
 
     def test_invalid_release_identifier_is_rejected(self):
         self.assertNotEqual(self.run_deploy(identifier="../../shared").returncode, 0)

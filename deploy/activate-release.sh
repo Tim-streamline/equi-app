@@ -132,7 +132,8 @@ if [[ "$mode" == deploy ]]; then
         chmod 600 storage/app/private/powersync_private.pem
     fi
     if ((seed)); then
-        for seeder in IntakeQuestionnaireSeeder VoedingAdviesSeeder ManagementAdviesSeeder BewegingAdviesSeeder ProtocolTemplateSeeder; do
+        # The protocol measure library is managed in the admin; its seeders only bootstrap local databases.
+        for seeder in IntakeQuestionnaireSeeder ProtocolTemplateSeeder; do
             "$php" artisan db:seed --class="$seeder" --force --no-interaction
         done
     fi
