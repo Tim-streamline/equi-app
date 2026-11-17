@@ -222,6 +222,9 @@ Route::middleware('auth:admin')->group(function () {
         Route::post('/', 'store')->name('store');
         Route::post('bulk', 'bulk')->name('bulk')->middleware('admin.role:admin,therapist_admin');
         Route::post('preview', 'preview')->name('preview');
+        Route::get('copy-targets/users', 'copyTargetUsers')->name('copy-targets.users');
+        Route::get('copy-targets/users/{user}/horses', 'copyTargetHorses')->whereUuid('user')->name('copy-targets.horses');
+        Route::post('{protocol}/copy', 'copy')->whereUuid('protocol')->name('copy');
         Route::post('{protocol}/preview', 'preview')->name('preview-existing');
         Route::get('{protocol}/edit', 'edit')->name('edit');
         Route::put('{protocol}', 'update')->name('update');

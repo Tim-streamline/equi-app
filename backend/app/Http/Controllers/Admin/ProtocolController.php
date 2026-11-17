@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Admin\CopyProtocolRequest;
 use App\Http\Requests\Admin\SaveProtocolRequest;
 use App\Models\BewegingAdvies;
 use App\Models\Horse;
@@ -18,8 +19,10 @@ use App\Models\ProtocolTemplate;
 use App\Models\ProtocolTemplatePhase;
 use App\Models\Supplement;
 use App\Models\Therapist;
+use App\Models\User;
 use App\Models\VoedingAdvies;
 use App\Support\AuditLogger;
+use App\Support\ProtocolCopier;
 use App\Support\ProtocolDayHistory;
 use App\Support\ProtocolDosage;
 use App\Support\ProtocolNutrition;
@@ -237,6 +240,88 @@ class ProtocolController extends Controller
         });
 
         return back()->with('success', "Protocol gemarkeerd als {$status}.");
+    }
+
+    /** Copy dialog, step 1: find the owner of the target horse by name or email. */
+    public function copyTargetUsers(Request $request): JsonResponse
+    {
+        $q = trim($request->string('q')->toString());
+        if (mb_strlen($q) < 2) {
+            return response()->json(['users' => []]);
+        }
+        $like = '%'.addcslashes($q, '\\%_').'%';
+        $users = User::query()
+            ->where(fn ($query) => $query->where('name', 'ilike', $like)->orWhere('email', 'ilike', $like))
+            ->withCount(['horses' => fn ($horses) => $horses->where('status', 'active')])
+            ->orderBy('name')
+            ->limit(20)
+            ->get(['id', 'name', 'email', 'disabled_at']);
+
+        return response()->json(['users' => $users->map(fn (User $user): array => [
+            'id' => $user->id,
+            'name' => $user->name,
+            'email' => $user->email,
+            'disabled' => (bool) $user->disabled_at,
+            'active_horses_count' => $user->horses_count,
+        ])->values()]);
+    }
+
+    /** Copy dialog, step 2: the user's own horses, with the drafts a copy can fill. */
+    public function copyTargetHorses(User $user): JsonResponse
+    {
+        $horses = $user->horses()->orderBy('name')->get(['id', 'name', 'breed', 'status']);
+        $horseIds = $horses->pluck('id');
+        $active = Protocol::query()->whereIn('horse_id', $horseIds)->where('status', 'active')->pluck('horse_id')->flip();
+        // Same definition ProtocolCopier accepts for a reusable destination.
+        $drafts = Protocol::query()
+            ->whereIn('horse_id', $horseIds)
+            ->where('status', 'draft')
+            ->whereNull('protocol_template_id')
+            ->whereNull('published_at')
+            ->whereDoesntHave('phases')
+            ->whereHas('intake', fn ($intake) => $intake->where('user_id', $user->id)->where('status', '!=', 'cancelled'))
+            ->with('intake:id,protocol_id,intake_status,submitted_at')
+            ->oldest()
+            ->get(['id', 'horse_id', 'title', 'created_at'])
+            ->groupBy('horse_id');
+
+        return response()->json(['horses' => $horses->map(fn (Horse $horse): array => [
+            'id' => $horse->id,
+            'name' => $horse->name,
+            'breed' => $horse->breed,
+            'status' => $horse->status,
+            'has_active_protocol' => $active->has($horse->id),
+            'drafts' => ($drafts->get($horse->id) ?? collect())->map(fn (Protocol $draft): array => [
+                'id' => $draft->id,
+                'title' => $draft->title,
+                'created_at' => $draft->created_at,
+                'intake_submitted' => (bool) $draft->intake?->submitted_at,
+            ])->values(),
+        ])->values()]);
+    }
+
+    public function copy(CopyProtocolRequest $request, Protocol $protocol, ProtocolCopier $copier): RedirectResponse
+    {
+        $data = $request->validated();
+        $owner = User::query()->findOrFail($data['user_id']);
+        $horse = Horse::query()->findOrFail($data['horse_id']);
+
+        try {
+            $result = $copier->copy($protocol, $owner, $horse, $data['destination'] === 'draft' ? $data['draft_id'] : null, (bool) ($data['include_analysis'] ?? false));
+        } catch (ValidationException $exception) {
+            throw $exception;
+        } catch (Throwable $exception) {
+            report($exception);
+
+            return back()->withErrors(['copy' => 'Het protocol kon niet worden gekopieerd. Er is niets opgeslagen. Probeer opnieuw.']);
+        }
+
+        $message = "Protocol gekopieerd naar {$horse->name} ({$owner->name}) als ongepubliceerd concept.";
+        if ($result['missing_dosages'] > 0) {
+            $message .= " Let op: {$result['missing_dosages']} automatische dosering(en) konden niet worden berekend omdat het gewicht van het paard onbekend is. Controleer de doseringen.";
+        }
+
+        return to_route('admin.protocols.show', $result['protocol'])->with('success', $message);
     }
 
     /** @return array<string, mixed> */

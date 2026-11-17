@@ -76,7 +76,9 @@ class ProtocolDoseBuildup
 
     public function dose(ProtocolPhaseSupplement $item, int $priorDays): ?string
     {
-        if (! $this->enabled($item->dose_buildup)) {
+        // Without a structured full dose (e.g. a copied automatic dose awaiting the horse's weight) there is
+        // nothing to build up from; the editor requires one before the buildup can be saved again.
+        if (! $this->enabled($item->dose_buildup) || $item->full_dose_amount === null || ! $item->full_dose_unit) {
             return $item->dosage;
         }
         $amount = $item->full_dose_amount * $this->ratio($item->dose_buildup, $priorDays);

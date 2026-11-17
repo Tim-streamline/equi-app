@@ -1,6 +1,7 @@
 <script>
     import AdminLayout from '../../Layouts/AdminLayout.svelte';
     import PageHeader from '$lib/components/PageHeader.svelte';
+    import CopyProtocolDialog from '$lib/components/CopyProtocolDialog.svelte';
     import { Link, router } from '@inertiajs/svelte';
     import { Card, CardHeader, CardTitle, CardContent, Button, Badge } from '$lib/components/ui';
     import { statusVariant } from '$lib/badges.js';
@@ -49,6 +50,7 @@
             <Button variant="outline" onclick={() => setStatus('active')}>Resume</Button>
             <Button variant="outline" onclick={() => setStatus('paused')}>Pause</Button>
             <Button variant="outline" onclick={() => setStatus('completed')}>Complete</Button>
+            {#if protocol.protocol_template_id}<CopyProtocolDialog {protocol} />{/if}
         {/snippet}
     </PageHeader>
 
