@@ -34,6 +34,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
     'critical_if',
     'protocol_if',
     'signal_config',
+    'label_config',
     'repeater_sub',
     'active',
 ])]
@@ -62,6 +63,7 @@ class IntakeField extends Model
             'critical_if' => 'array',
             'protocol_if' => 'array',
             'signal_config' => 'array',
+            'label_config' => 'array',
             'repeater_sub' => 'array',
             'active' => 'boolean',
         ];

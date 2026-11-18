@@ -41,6 +41,12 @@ class IntakeQuestionnaireController extends Controller
             ->where('active', true)
             ->firstOrFail();
 
+        foreach ($questionnaire->sections as $section) {
+            foreach ($section->fields as $field) {
+                $field->label_config = app(\App\Support\IntakeLabels::class)->complete($field->toArray(), $section->key.'_'.$field->key, $field->label_config);
+            }
+        }
+
         return Inertia::render('IntakeQuestionnaire/Index', [
             'questionnaire' => $questionnaire,
             'fieldTypes' => self::FIELD_TYPES,
@@ -181,6 +187,14 @@ class IntakeQuestionnaireController extends Controller
                     ->ignore($field?->id),
             ],
             'label' => ['required', 'string', 'max:255'],
+            'label_config' => ['sometimes', 'array', 'max:500'],
+            'label_config.*' => ['array:key,label,answers'],
+            'label_config.*.key' => ['present', 'nullable', 'string', 'max:500', 'distinct'],
+            'label_config.*.label' => ['present', 'nullable', 'string', 'max:240'],
+            'label_config.*.answers' => ['present', 'array', 'max:500'],
+            'label_config.*.answers.*' => ['array:answer,label'],
+            'label_config.*.answers.*.answer' => ['required', 'string'],
+            'label_config.*.answers.*.label' => ['required', 'string', 'max:240'],
             'type' => ['required', Rule::in(self::FIELD_TYPES)],
             'hint' => ['nullable', 'string', 'max:10000'],
             'required' => ['required', 'boolean'],
@@ -346,6 +360,13 @@ class IntakeQuestionnaireController extends Controller
                 ->orWhere(fn ($q) => $q->whereNull('answer_section_key')->whereHas('section', fn ($q) => $q->where('key', $answerSection))))->exists()) {
             throw ValidationException::withMessages(['age_config_json' => 'Deze geboortedatum-sleutel is al gekoppeld aan een actieve vraag.']);
         }
+
+        $labels = app(\App\Support\IntakeLabels::class);
+        $config = $request->exists('label_config') ? $data['label_config'] : $field?->label_config;
+        // Laravel converts the root node's empty path to null.
+        $config = array_map(fn ($node) => array_replace($node, ['key' => $node['key'] ?? '']), $config ?? []);
+        $data['label_config'] = $labels->complete($data, $section->key.'_'.$data['key'], $config);
+        $labels->validate($data['label_config']);
 
         return $data;
     }
