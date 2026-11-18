@@ -25,7 +25,7 @@ import { BRAND_NAME } from "@/constants/brand";
 import { OfflineStrip } from "@/components/ui/OfflineStrip";
 import { ShelbyChatButton } from "@/components/shelby/ShelbyChatButton";
 import { Button, PRIMARY_INK } from "@/components/ui/Button";
-import { PLAIN_CARD } from "@/components/ui/styles";
+import { PLAIN_CARD, HOME_NOTICE_LABEL, HOME_NOTICE_BODY, HOME_NOTICE_LINK } from "@/components/ui/styles";
 
 export default function HomeScreen() {
   const { data, error, refresh, loading } = useHorseDashboard();
@@ -160,14 +160,14 @@ function ProtocolCard({ id, horseId, horseName, statusLabel, currentDay, current
       }}
       className={`mb-4 ${PLAIN_CARD}`}
     >
-      {!readyToStart && <Text className="text-[10px] uppercase tracking-[1.3px] text-ink-70">
-        {horseName ? `${horseName}'s protocol` : "Protocol"}
+      {!readyToStart && <Text className={HOME_NOTICE_LABEL}>
+        {horseName ? `${horseName}'s EquiBoost traject` : "EquiBoost traject"}
       </Text>}
       <Text className={`${readyToStart ? '' : 'mt-3'} font-bold text-[20px] leading-[26px] text-ink`}>
-        {readyToStart ? `Je herstelplan voor ${horseName || 'je paard'} staat klaar` : statusLabel}
+        {readyToStart ? `Het herstelplan voor ${horseName || 'je paard'} staat klaar!` : /gepauzeerd|afgerond|voltooid/i.test(statusLabel ?? '') ? statusLabel : `${horseName ? `${horseName}'s herstelplan` : 'Je herstelplan'} is in volle gang!`}
       </Text>
-      <Text className={readyToStart ? 'mt-3 text-[16px] leading-[24px] text-ink-70' : 'mt-1 text-[13px] text-ink-70'}>
-        {readyToStart ? 'Controleer wat je al in huis hebt en welke kruiden of andere producten je nog moet bestellen, zodat je zo snel mogelijk van start kan gaan.' : `Dag ${currentDay} · Week ${currentWeek}`}
+      <Text className={`${readyToStart ? 'mt-3' : 'mt-1'} ${HOME_NOTICE_BODY}`}>
+        {readyToStart ? `Controleer welke kruiden, supplementen en andere producten je nodig hebt. Bestel wat je nog niet in huis hebt, zodat je op tijd met ${horseName ? `${horseName}'s herstelplan` : 'het herstelplan van je paard'} kunt starten.` : `Dag ${currentDay} · Week ${currentWeek}`}
         {!readyToStart && phaseLabel ? ` · ${phaseLabel}` : ""}
       </Text>
       {!readyToStart && <View className="mt-4 h-1.5 overflow-hidden rounded-full bg-ink-8">
@@ -176,8 +176,8 @@ function ProtocolCard({ id, horseId, horseName, statusLabel, currentDay, current
           style={{ width: `${progressPercent}%` }}
         />
       </View>}
-      <Text className="mt-4 font-semi text-[14px] text-teal-600">
-        {readyToStart ? 'Bekijk hier je bestellijst →' : 'Ga verder met het protocol →'}
+      <Text className={`mt-4 ${HOME_NOTICE_LINK}`}>
+        {readyToStart ? 'Bekijk hier je bestellijst →' : 'Vink af wat je vandaag hebt gegeven →'}
       </Text>
     </Pressable>
   );

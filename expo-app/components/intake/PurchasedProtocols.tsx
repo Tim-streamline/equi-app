@@ -1,10 +1,10 @@
 import { formatIntakeDate } from '@/lib/intake/submission';
 import { useQuery } from '@powersync/react';
-import { Text, View } from 'react-native';
+import { Pressable, Text, View } from 'react-native';
 import { router } from 'expo-router';
 import { useCurrentHorseId, useCurrentUserId } from '@/db/hooks';
 import { useDb } from '@/db/provider';
-import { Button } from '@/components/ui/Button';
+import { PLAIN_CARD, HOME_NOTICE_LABEL, HOME_NOTICE_BODY, HOME_NOTICE_LINK } from '@/components/ui/styles';
 import { PROTOCOLS_FOR_ALL_HORSES, PROTOCOLS_FOR_HORSE, type PurchasedProtocolRow } from '@/lib/intake/protocol-queries';
 
 /**
@@ -29,18 +29,23 @@ export function PurchasedProtocols({ allHorses = false, excludeProtocolIds = [] 
       const body = protocol.status === 'completed' ? 'Afgerond'
         : ready ? (protocol.status === 'paused' ? 'Je herstelplan is gepauzeerd.' : 'Je herstelplan staat klaar.')
           : completedAt ? 'Je intake is verstuurd. Je behandelaar stelt je herstelplan op.'
-            : allHorses ? 'Vul dit intake voor de EquiBoost traject in' : 'Vul de intake voor dit herstelplan in.';
-      return <View key={protocol.id} className="gap-3 rounded-card bg-white p-5">
+            : `Vul de intake voor ${horseName}'s EquiBoost traject in`;
+      const canOpen = !!completedAt || protocol.status !== 'completed';
+      const action = completedAt ? 'Intake bekijken' : protocol.has_answers ? 'Ga verder met de intake' : 'Start de intake';
+      return <Pressable key={protocol.id} accessibilityRole={canOpen ? 'button' : undefined} accessibilityLabel={canOpen ? `${action} voor ${horseName}` : undefined} disabled={!canOpen}
+        onPress={() => {
+          selectHorse(protocol.horse_id);
+          router.push({ pathname: '/intake', params: { bookingId: protocol.booking_id } });
+        }} className={`gap-3 ${PLAIN_CARD}`}>
       {/* With several horses a custom title alone does not say which horse it is for. */}
       {allHorses && !generic && named && <Text className="-mb-2 font-semi text-[14px] text-ink-70">{horseName}</Text>}
-      <Text className="font-bold text-[18px] text-teal-700">{named ? (generic ? `Herstelplan van ${horseName}` : protocol.title) : `Het EquiBoost traject van ${horseName}`}</Text>
-      <Text>{body}</Text>
+      <Text className={named ? 'font-bold text-[20px] leading-[26px] text-ink' : HOME_NOTICE_LABEL}>{named ? (generic ? `Herstelplan van ${horseName}` : protocol.title) : `${horseName}'s intake`}</Text>
+      {!completedAt && !named && <Text className="font-bold text-[20px] leading-[26px] text-ink">Welkom bij je EquiBoost traject!</Text>}
+      <Text className={HOME_NOTICE_BODY}>{!completedAt && !named
+        ? `We gaan aan de slag met de gezondheid van ${horseName}. Vul de intake zo goed en volledig mogelijk in, zodat we een compleet beeld krijgen en gericht aan de slag kunnen.`
+        : body}</Text>
       {!!completedAt && <Text className="text-sm text-ink-70">Intake ingestuurd op {formatIntakeDate(completedAt)}</Text>}
-      {(!!completedAt || protocol.status !== 'completed') && <Button title={completedAt ? 'Intake bekijken' : 'Intake openen'} onPress={() => {
-        // The intake looks up its booking under the selected horse.
-        selectHorse(protocol.horse_id);
-        router.push({ pathname: '/intake', params: { bookingId: protocol.booking_id } });
-      }} />}
-    </View>; })}
+      {canOpen && <Text className={`mt-1 ${HOME_NOTICE_LINK}`}>{action} →</Text>}
+    </Pressable>; })}
   </View>;
 }

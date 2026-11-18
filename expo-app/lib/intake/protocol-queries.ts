@@ -2,6 +2,9 @@
 // and Protocol. Two separate queries so each WHERE can use its index.
 const SELECT = `
   SELECT p.id, p.title, p.status, p.horse_id, i.id AS booking_id, i.submitted_at, i.completed_at, h.name AS horse_name,
+    EXISTS (SELECT 1 FROM intake_answers a WHERE a.response_id = i.id
+      AND a.section_id != '__photos' AND a.field_id NOT LIKE 'na:%'
+      AND a.value IS NOT NULL AND trim(a.value) NOT IN ('', 'null', '""', '[]', '{}')) AS has_answers,
     -- Same rule as the dashboard: a future publication date is not published yet.
     CASE WHEN p.published_at IS NOT NULL AND datetime(p.published_at) <= datetime('now') THEN 1 ELSE 0 END AS published
   FROM protocols p JOIN intake_bookings i ON i.protocol_id = p.id LEFT JOIN horses h ON h.id = p.horse_id`;
@@ -22,4 +25,5 @@ export type PurchasedProtocolRow = {
   submitted_at: string | null; completed_at: string | null; horse_name: string | null;
   /** 1 once the therapist has published the plan (publication date reached). */
   published?: number | null;
+  has_answers?: number | null;
 };
