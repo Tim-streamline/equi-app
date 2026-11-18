@@ -99,6 +99,7 @@ export type CareAdvice = Omit<DashboardAdvice, "action"> & {
   action?: DashboardAdvice["action"];
 };
 export type DashboardProtocol = {
+  paused?: boolean;
   preparing?: boolean;
   startedAt?: string | null;
   id: string;
@@ -167,6 +168,7 @@ export type DashboardProtocol = {
 };
 /** A protocol card on Home: the server's summary of one horse's protocol in progress. */
 export type HorseProtocolSummary = {
+  evaluation?: { available: boolean; endsOn: string | null; daysRemaining: number | null; discountUntil: string | null; discountEligible: boolean };
   preparing?: boolean;
   startedAt?: string | null;
   horseId: string;

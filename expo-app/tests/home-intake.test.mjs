@@ -3,6 +3,7 @@ import { readFileSync } from 'node:fs';
 import test from 'node:test';
 import ts from 'typescript';
 import * as uiStyles from '../components/ui/styles.ts';
+import * as evaluationHelpers from '../lib/protocol-evaluation.ts';
 
 function load(path, modules) {
   const code = ts.transpileModule(readFileSync(new URL(path, import.meta.url), 'utf8'), {
@@ -27,7 +28,7 @@ function screen(homeUpsell) {
   intakes.submitted.state.submittedAt = '2026-09-29T12:00:00Z';
   intakes.partial.state.answers = { paard: { naam: 'Luna' } };
   let selected = 'purchased', ready = true, delivered = false;
-  const activeProtocols = [], preparingProtocols = [];
+  const activeProtocols = [], preparingProtocols = [], evaluatingProtocols = [];
   let oldCachedResponse = false;
   const routes = [];
   const purchases = { purchased: [{ id: 'p1', title: "purchased's intake", status: 'draft', booking_id: 'i1', submitted_at: null }], unpurchased: [], submitted: [{ id: 'p2', title: "submitted's intake", status: 'draft', booking_id: 'i2', submitted_at: '2026-10-01' }], partial: [{ id: 'p3', title: "partial's intake", status: 'draft', booking_id: 'i3', submitted_at: null }] };
@@ -56,12 +57,13 @@ function screen(homeUpsell) {
     } },
     '@/components/ui/Button': { Button: 'Button', PRIMARY_INK: '#083635' },
     '@/components/ui/styles': uiStyles,
+    '@/lib/protocol-evaluation': evaluationHelpers,
     '@/db/provider': { useDb: () => ({ selectHorse: id => { selected = id; } }) },
     '@/hooks/useHorseDashboard': { useHorseDashboard: () => ({
       data: ready ? { horse: { id: selected, name: selected }, greeting: selected ? 'Welkom, Tim' : 'Goedemorgen, Tim', hasPlus: !!selected && selected !== 'basic', showPlusUpsell: selected === 'unpurchased', homeUpsell, recommendations: selected ? [] : [1, 2, 3, 4].map(id => ({ id: `item-${id}`, title: `Item ${id}` })), protocol: activeProtocols.includes(selected) ? { id: `p-${selected}`, statusLabel: `Actief voor ${selected}`, currentDay: preparingProtocols.includes(selected) ? 0 : 3, currentWeek: preparingProtocols.includes(selected) ? 0 : 1, progressPercent: 10 } : null,
         // The server's per-horse summaries, sorted by name (older cached responses lack them).
         ...(oldCachedResponse ? {} : { horseProtocols: horses.filter(horse => activeProtocols.includes(horse.id)).sort((a, b) => a.name.localeCompare(b.name))
-          .map(horse => ({ horseId: horse.id, horseName: horse.name, id: `p-${horse.id}`, statusLabel: `Actief voor ${horse.id}`, currentDay: preparingProtocols.includes(horse.id) ? 0 : 10, currentWeek: preparingProtocols.includes(horse.id) ? 0 : 2, progressPercent: 36 })) }) } : null,
+          .map(horse => ({ horseId: horse.id, horseName: horse.name, id: `p-${horse.id}`, statusLabel: `Actief voor ${horse.id}`, currentDay: preparingProtocols.includes(horse.id) ? 0 : 10, currentWeek: preparingProtocols.includes(horse.id) ? 0 : 2, progressPercent: 36, evaluation: evaluatingProtocols.includes(horse.id) ? { available: true, daysRemaining: 14 } : undefined })) }) } : null,
       loading: !ready, refresh() {},
     }) },
     '@/hooks/useTabBarPadding': { useTabBarPadding: () => 76 },
@@ -84,10 +86,39 @@ function screen(homeUpsell) {
   const entry = () => render().find(node => node?.type === 'Pressable' && /^(Start de intake|Ga verder met de intake) voor /.test(node.props.accessibilityLabel || ''));
   // The selected horse is chosen elsewhere (Protocol); Home has no selector.
   const select = id => { selected = id; };
-  return { render, entry, select, routes, intakes, purchases, activeProtocols, preparingProtocols, selected: () => selected,
+  return { render, entry, select, routes, intakes, purchases, activeProtocols, preparingProtocols, evaluatingProtocols, selected: () => selected,
     set ready(value) { ready = value; }, set oldCachedResponse(value) { oldCachedResponse = value; }, set delivered(value) { delivered = value; }, clearHorse() { selected = ''; }, withoutHorse() { selected = ''; horses.length = 0; }, addHorse(id) { horses.push({ id, name: id, status: 'active' }); selected = id; },
   };
 }
+
+test('evaluation has top priority while the active protocol stays independently accessible', () => {
+  const app = screen();
+  app.addHorse('Moos');
+  app.activeProtocols.push('Moos');
+  app.evaluatingProtocols.push('Moos');
+  const tree = app.render();
+  const reminder = tree.find(n => n?.props?.accessibilityLabel === 'Evalueer de gezondheid van Moos');
+  const active = tree.find(n => n?.props?.accessibilityLabel === 'Protocol van Moos');
+  assert.ok(reminder && active);
+  assert.ok(tree.indexOf(reminder) < tree.findIndex(n => n?.props?.accessibilityLabel === 'Start de intake voor purchased'));
+  assert.ok(text(reminder).includes("Moos' huidige EquiBoost traject is bijna afgerond!"));
+  assert.ok(!text(reminder).includes("Moos's"));
+  reminder.props.onPress();
+  assert.equal(app.routes.at(-1).pathname, '/protocol-evaluation');
+  active.props.onPress();
+  assert.equal(app.routes.at(-1).pathname, '/(tabs)/(pager)/protocol');
+});
+
+test('partially completed intake has its own heading and continuation link', () => {
+  const app = screen();
+  app.purchases.partial[0].has_answers = 1;
+  const tree = app.render();
+  assert.ok(text(tree).includes("Je bent al begonnen met partial's intake!"));
+  const card = tree.find(n => n?.props?.accessibilityLabel === 'Ga verder met je intake voor partial');
+  assert.ok(card);
+  card.props.onPress();
+  assert.equal(app.routes.at(-1).params.bookingId, 'i3');
+});
 
 test('Home renders the admin promotion copy and keeps its purchase destination', () => {
   const copy = { title: 'Eigen kop', body: 'Eigen omschrijving', button: 'Bekijk mijn traject' };
@@ -124,14 +155,13 @@ test('Home shows every horse\'s intake as its own card, whichever horse is selec
     assert.equal(open().length, 2, 'Nova and the follow-up intake each have a card');
   }
   const tree = app.render();
-  for (const title of ["purchased's intake", "submitted's intake", "partial's intake"]) assert.ok(tree.includes(title));
+  for (const title of ["purchased's intake", "submitted's EquiBoost traject", "partial's intake"]) assert.ok(tree.includes(title));
   assert.ok(tree.includes("partial's intake"), 'the trajectory identifies its horse');
   open()[1].props.onPress();
   assert.deepEqual(app.routes, [{ pathname: '/intake', params: { bookingId: 'i3' } }]);
-  assert.ok(text(app.render()).includes('Je intake is verstuurd.'));
-  assert.ok(text(app.render()).includes('Intake ingestuurd op 1 oktober 2026'));
-  app.render().find(n => n?.type === 'Pressable' && n.props.accessibilityLabel?.startsWith('Intake bekijken voor ')).props.onPress();
-  assert.deepEqual(app.routes.at(-1), {pathname: '/intake', params: {bookingId: 'i2'}});
+  assert.ok(text(app.render()).includes("submitted's intake is verstuurd!"));
+  assert.ok(text(app.render()).includes('Binnen 5 werkdagen staat het herstelplan hier voor je klaar.'));
+  assert.ok(!app.render().some(n => n?.props?.accessibilityLabel === 'Intake bekijken voor submitted'));
 });
 test('finished protocols stay visible alongside a newly purchased intake', () => {
   const app = screen();
@@ -178,7 +208,7 @@ test('Home shows an active protocol card for every horse that has one, with one 
   app.activeProtocols.push('purchased', 'partial');
   app.select('purchased');
   const tree = app.render();
-  const cards = tree.filter(n => n?.type === 'Pressable' && text(n).includes("'s EquiBoost traject"));
+  const cards = tree.filter(n => n?.type === 'Pressable' && n.props.accessibilityLabel?.startsWith('Protocol van '));
   assert.deepEqual(cards.map(card => text(card).split("'s EquiBoost traject")[0]), ['partial', 'purchased'], 'one card per horse, in the server order');
   assert.ok(text(cards[0]).includes("partial's herstelplan is in volle gang!") && text(cards[0]).includes('Dag 10 · Week 2'), 'every card uses its server summary');
   cards[0].props.onPress();
@@ -206,12 +236,12 @@ test('a published plan without a protocol card says it is ready, while active dr
   assert.ok(!copy.includes('Je behandelaar stelt je herstelplan op.'));
   assert.ok(app.render().some(n => n?.type === 'Pressable' && n.props.accessibilityLabel?.startsWith('Intake bekijken voor ')));
   app.purchases.submitted[0] = { ...app.purchases.submitted[0], status: 'paused' };
-  assert.ok(text(app.render()).includes('Je herstelplan is gepauzeerd.'));
+  assert.ok(text(app.render()).includes("submitted's herstelplan is gepauzeerd"));
   // Unpublished (or not yet published) plans can be active drafts: keep the writing copy.
   for (const row of [{ status: 'active', published: 0 }, { status: 'draft', published: 1 }]) {
     app.purchases.submitted[0] = { ...app.purchases.submitted[0], ...row };
     copy = text(app.render());
-    assert.ok(copy.includes('Je intake is verstuurd. Je behandelaar stelt je herstelplan op.'));
+    assert.ok(copy.includes("submitted's intake is verstuurd!"));
     assert.ok(!copy.includes('Je herstelplan staat klaar.'));
   }
   // A dashboard card still replaces the fallback card for that exact protocol.

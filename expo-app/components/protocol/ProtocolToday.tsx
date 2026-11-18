@@ -30,7 +30,7 @@ export function ProtocolToday({ protocol, date, horseId, onPhase, SheetComponent
   const selected = rows.find(item => detailKey === `${date}:${administrationKey(item)}`);
   const active = protocol.phases.filter(phase => phase.state === 'active');
   const toggle = async (item: DashboardSupplement) => {
-    if (busy.current) return false;
+    if (busy.current || protocol.paused) return false;
     busy.current = true;
     setPending(true);
     selectionHaptic();
@@ -43,6 +43,7 @@ export function ProtocolToday({ protocol, date, horseId, onPhase, SheetComponent
     } finally { busy.current = false; setPending(false); }
   };
   return <>
+    {protocol.paused && <View className="mb-4 rounded-[22px] bg-mint-50 p-4"><Text className={T.body}>Je herstelplan is gepauzeerd. Je kunt de uitleg bekijken; afvinken kan zodra je plan is hervat.</Text></View>}
     <View className="mb-4 flex-row flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
       <Text accessibilityRole="header" className={T.cardTitle}>{protocol.weekLabel ?? `Week ${protocol.currentWeek} van ${protocol.totalWeeks}`}</Text>
       <Text className={T.meta}>{protocol.dateLabel ?? new Date(`${date}T12:00:00`).toLocaleDateString('nl-NL', { weekday: 'long', day: 'numeric', month: 'long' })}</Text>
@@ -71,7 +72,7 @@ export function ProtocolToday({ protocol, date, horseId, onPhase, SheetComponent
         const buildup = buildupState(item, date);
         return <View key={administrationKey(item)} className="flex-row items-center gap-2">
           <Pressable accessibilityRole="checkbox" accessibilityLabel={`${item.name}, ${group.label}, ${item.dosage ?? 'dosering niet ingesteld'}`}
-            accessibilityState={{ checked: !!item.done, disabled: pending }} disabled={pending} onPress={() => void toggle(item)}
+            accessibilityState={{ checked: !!item.done, disabled: pending || !!protocol.paused }} disabled={pending || protocol.paused} onPress={() => void toggle(item)}
             className="min-h-[48px] min-w-[44px] items-center justify-center">
             <View className={`h-7 w-7 items-center justify-center rounded-full border-2 ${item.done ? 'border-mint-500 bg-mint-500' : 'border-ink-30'}`}>
               {item.done && <Check size={17} color="white" />}
@@ -108,7 +109,7 @@ export function ProtocolToday({ protocol, date, horseId, onPhase, SheetComponent
     <Sheet visible={!!selected} title={selected?.name ?? ''}
       subtitle={selected ? `${selected.dosage ?? 'Dosering niet ingesteld'} · ${selected.frequencyLabel ?? `${selected.administrationsPerDay ?? 1}× per dag`}` : ''}
       onClose={() => setDetailKey(null)} footer={selected ? <View className="gap-2">
-        <Button title={selected.done ? 'Markeer als niet gegeven' : 'Markeer als gegeven'} disabled={pending}
+        <Button title={selected.done ? 'Markeer als niet gegeven' : 'Markeer als gegeven'} disabled={pending || protocol.paused}
           onPress={() => void toggle(selected).then(saved => { if (saved) setDetailKey(null); })} />
         <Button title="Vraag Shelby" variant="text" onPress={() => { setDetailKey(null); router.push({ pathname: '/nova-chat', params: { horseId, protocolId: protocol.id } }); }} />
       </View> : undefined}>

@@ -1,4 +1,5 @@
 <script>
+    import ProtocolEvaluationReview from '$lib/components/ProtocolEvaluationReview.svelte';
     import AdminLayout from '../../Layouts/AdminLayout.svelte';
     import HorseActions from '$lib/components/HorseActions.svelte';
     import PageHeader from '$lib/components/PageHeader.svelte';
@@ -8,7 +9,7 @@
     import { statusVariant } from '$lib/badges.js';
     import { ArrowLeft } from '@lucide/svelte';
 
-    let { horse } = $props();
+    let { horse, evaluations = [] } = $props();
 
 </script>
 
@@ -93,4 +94,16 @@
             </CardContent>
         </Card>
     </div>
+    <section class="mt-6" aria-label="Evaluaties van dit paard">
+        <h2 class="text-xl font-semibold">Evaluaties van {horse.name}</h2>
+        {#each evaluations as evaluation (evaluation.protocol_id)}
+            <div class="mt-4 flex flex-wrap items-center gap-4">
+                <Link href={`/admin/protocols/${evaluation.protocol_id}`} class="font-semibold text-primary">{evaluation.protocol_title}</Link>
+                <a href={`/admin/horses/${horse.id}/evaluations/${evaluation.protocol_id}.pdf`} target="_blank" rel="noopener noreferrer" class="rounded-full border px-4 py-2 text-sm font-semibold">Exporteer evaluatie als PDF</a>
+            </div>
+            <ProtocolEvaluationReview {evaluation}/>
+        {:else}
+            <p class="mt-3 text-sm text-muted-foreground">Er zijn nog geen evaluaties verstuurd voor dit paard.</p>
+        {/each}
+    </section>
 </AdminLayout>

@@ -20,8 +20,8 @@ class HorseDashboard
 
     public function build(User $user, ?Horse $horse, CarbonImmutable $now, ?string $month = null): array
     {
-        $protocol = $horse?->protocols()->where('status', 'active')->whereNotNull('published_at')
-            ->where('published_at', '<=', $now)->orderByDesc('published_at')->first();
+        $protocol = $horse?->protocols()->whereIn('status', ['active', 'paused', 'completed'])->whereNotNull('published_at')
+            ->where('published_at', '<=', $now)->orderByRaw("CASE WHEN status = 'active' THEN 0 WHEN status = 'paused' THEN 1 ELSE 2 END")->orderByDesc('published_at')->first();
         $answers = $this->nutrition->answers($protocol);
         $discovery = app(LibraryDiscovery::class);
         $access = $discovery->access($user);
@@ -92,12 +92,12 @@ class HorseDashboard
         $totalDays = $totalWeeks * 7;
         $elapsed = $start ? (int) $start->diffInDays($now->startOfDay(), false) + 1 : 0;
         $day = max(0, min($totalDays, $elapsed));
-        $running = $elapsed > 0 && $elapsed <= $totalDays;
+        $running = $protocol->status !== 'completed' && $elapsed > 0 && $elapsed <= $totalDays;
 
         return [
             'start' => $start, 'day' => $day, 'week' => $day > 0 ? (int) ceil($day / 7) : 0, 'totalWeeks' => $totalWeeks, 'running' => $running,
             'progressPercent' => $totalDays ? (int) round($day / $totalDays * 100) : 0,
-            'statusLabel' => ! $start ? 'Je protocol staat klaar' : ($elapsed > $totalDays ? 'Je protocol is afgerond' : ($running ? 'Je protocol is actief' : 'Je protocol start binnenkort')),
+            'statusLabel' => $protocol->status === 'completed' ? 'Je protocol is afgerond' : (! $start ? 'Je protocol staat klaar' : ($elapsed > $totalDays ? 'Je protocol is afgerond' : ($running ? 'Je protocol is actief' : 'Je protocol start binnenkort'))),
         ];
     }
 
@@ -113,6 +113,7 @@ class HorseDashboard
             'preparing' => ! $progress['start'], 'startedAt' => $progress['start']?->toDateString(),
             'totalWeeks' => $progress['totalWeeks'], 'progressPercent' => $progress['progressPercent'],
             'statusLabel' => $progress['statusLabel'], 'phaseLabel' => $active->pluck('title')->implode(' · '),
+            'evaluation' => app(ProtocolEvaluation::class)->timing($protocol, $now),
         ];
     }
 
@@ -127,9 +128,9 @@ class HorseDashboard
         if ($horse && ! $horses->contains('id', $horse->id)) {
             $horses->push($horse);
         }
-        $latest = Protocol::query()->whereIn('horse_id', $horses->pluck('id'))->where('status', 'active')
+        $latest = Protocol::query()->whereIn('horse_id', $horses->pluck('id'))->whereIn('status', ['active', 'completed'])
             ->whereNotNull('published_at')->where('published_at', '<=', $now)
-            ->orderByDesc('published_at')->with('phases.weeks')->get()->unique('horse_id')->keyBy('horse_id');
+            ->orderByRaw("CASE WHEN status = 'active' THEN 0 ELSE 1 END")->orderByDesc('published_at')->with('phases.weeks')->get()->unique('horse_id')->keyBy('horse_id');
 
         return $horses->filter(fn ($item) => $latest->has($item->id))
             ->sortBy(fn ($item) => Str::lower(Str::ascii((string) $item->name)))
@@ -224,7 +225,7 @@ class HorseDashboard
 
         return [
             'id' => $protocol->id, 'title' => $protocol->title, 'currentDay' => $day, 'currentWeek' => $week,
-            'preparing' => ! $start, 'startedAt' => $start?->toDateString(),
+            'preparing' => ! $start, 'paused' => $protocol->status === 'paused', 'startedAt' => $start?->toDateString(),
             'totalWeeks' => $totalWeeks, 'progressPercent' => $progressPercent, 'statusLabel' => $statusLabel,
             'todayLabel' => ! $start ? 'Je protocol staat klaar' : 'Week '.$week.' van '.$totalWeeks.' · '.$now->locale('nl')->translatedFormat('l j F'),
             'dateLabel' => $now->locale('nl')->translatedFormat('l j F'),

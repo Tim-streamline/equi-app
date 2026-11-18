@@ -63,7 +63,11 @@ class HorseController extends Controller
             'intakeBookings.therapist:id,name',
         ]);
 
-        return Inertia::render('Horses/Show', ['horse' => $horse]);
+        $evaluations = $horse->protocols->map(function ($protocol) {
+            $evaluation = app(\App\Support\ProtocolEvaluation::class)->admin($protocol);
+            return $evaluation ? $evaluation + ['protocol_title' => $protocol->title, 'horse_id' => $protocol->horse_id] : null;
+        })->filter()->values();
+        return Inertia::render('Horses/Show', ['horse' => $horse, 'evaluations' => $evaluations]);
     }
 
     public function update(Request $request, Horse $horse): RedirectResponse
