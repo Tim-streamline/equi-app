@@ -185,6 +185,7 @@ class ProtocolController extends Controller
         return Inertia::render('Protocols/Edit', [
             'protocol' => $protocol,
             'weeklyUpdates' => DB::table('protocol_weekly_updates')->where('protocol_id', $protocol->id)->orderByDesc('week_number')->get(),
+            'evaluation' => app(\App\Support\ProtocolEvaluation::class)->admin($protocol),
             ...$this->editorOptions($protocol->horse_id, $protocol->therapist_id, $protocol),
         ]);
     }
@@ -243,7 +244,7 @@ class ProtocolController extends Controller
             'manualAdviezen.phases:id,title,order',
         ]);
 
-        return Inertia::render('Protocols/Show', ['protocol' => $protocol]);
+        return Inertia::render('Protocols/Show', ['protocol' => $protocol, 'evaluation' => app(\App\Support\ProtocolEvaluation::class)->admin($protocol)]);
     }
 
     public function updateStatus(Request $request, Protocol $protocol): RedirectResponse

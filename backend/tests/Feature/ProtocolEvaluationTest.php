@@ -1,0 +1,131 @@
+<?php
+
+namespace Tests\Feature;
+
+use App\Http\Middleware\AuthenticatePowerSyncJwt;
+use App\Models\Horse;
+use App\Models\PlusPage;
+use App\Models\Protocol;
+use App\Models\User;
+use App\Support\ProtocolEvaluation;
+use Carbon\CarbonImmutable;
+use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\DB;
+use Tests\TestCase;
+
+class ProtocolEvaluationTest extends TestCase
+{
+    use RefreshDatabase;
+
+    private function plan(): Protocol
+    {
+        $this->travelTo(CarbonImmutable::parse('2026-11-18 12:00:00', 'Europe/Amsterdam'));
+        $owner = User::factory()->create();
+        $horse = Horse::create(['owner_id' => $owner->id, 'name' => 'Moos', 'status' => 'active']);
+        // Last day: December 2. Evaluation opens November 18; discount ends December 9.
+        return $horse->protocols()->create(['title' => 'Plan', 'status' => 'active',
+            'total_weeks' => 10, 'started_at' => '2026-09-24', 'published_at' => '2026-09-23 12:00:00']);
+    }
+
+    private function owner(string $id): void
+    {
+        $this->app->bind(AuthenticatePowerSyncJwt::class, fn () => new class($id) {
+            public function __construct(private string $id) {}
+            public function handle($request, $next) { $request->attributes->set('powersync_user_id', $this->id); return $next($request); }
+        });
+    }
+
+    public function test_exact_evaluation_and_discount_boundaries_use_the_business_timezone(): void
+    {
+        $protocol = $this->plan();
+        $service = app(ProtocolEvaluation::class);
+        $this->assertFalse($service->timing($protocol, CarbonImmutable::parse('2026-11-17 23:59:59', 'Europe/Amsterdam'))['available']);
+        $open = $service->timing($protocol, CarbonImmutable::parse('2026-11-18 00:00:00', 'Europe/Amsterdam'));
+        $this->assertTrue($open['available']);
+        $this->assertSame(14, $open['daysRemaining']);
+        $this->assertSame('2026-12-02', $open['endsOn']);
+        $this->assertTrue($service->timing($protocol, CarbonImmutable::parse('2026-12-09 23:59:59', 'Europe/Amsterdam'))['discountEligible']);
+        $this->assertFalse($service->timing($protocol, CarbonImmutable::parse('2026-12-10 00:00:00', 'Europe/Amsterdam'))['discountEligible']);
+        $protocol->started_at = null;
+        $this->assertFalse($service->timing($protocol, CarbonImmutable::now())['available']);
+    }
+
+    public function test_owner_can_resume_and_submit_but_other_users_cannot_read_evaluations(): void
+    {
+        $protocol = $this->plan();
+        $this->owner($protocol->horse->owner_id);
+        $url = '/api/protocols/'.$protocol->id.'/evaluation';
+        $version = app(ProtocolEvaluation::class)->payload($protocol, CarbonImmutable::now())['questionVersion'];
+        $this->postJson($url, ['answers' => ['c12e1000-0000-4000-8000-000000000001' => 'Verbeterd'], 'submit' => false, 'question_version' => $version])->assertOk()->assertJsonPath('submittedAt', null);
+        $this->assertNull(app(ProtocolEvaluation::class)->admin($protocol), 'Drafts are not submitted to the therapist');
+        $this->postJson($url, ['answers' => ['c12e1000-0000-4000-8000-000000000001' => 'Verbeterd'], 'submit' => true, 'question_version' => $version])->assertUnprocessable();
+        $answers = array_fill_keys(array_keys(ProtocolEvaluation::QUESTIONS), 'Mijn antwoord');
+        $this->postJson($url, ['answers' => $answers, 'submit' => true, 'question_version' => $version])->assertOk();
+        $this->assertNotNull(app(ProtocolEvaluation::class)->admin($protocol));
+        $this->postJson($url, ['answers' => ['c12e1000-0000-4000-8000-000000000001' => 'Privéconcept'], 'submit' => false, 'question_version' => $version])->assertUnprocessable();
+        $this->getJson($url)->assertOk()->assertJsonPath('answers.c12e1000-0000-4000-8000-000000000001', 'Mijn antwoord');
+        $this->assertDatabaseCount('protocol_evaluations', 1);
+        $this->owner(User::factory()->create()->id);
+        $this->getJson($url)->assertNotFound();
+        $this->postJson($url, ['answers' => $answers, 'submit' => true, 'question_version' => $version])->assertNotFound();
+    }
+
+    public function test_offer_uses_current_admin_price_and_never_creates_a_purchase_or_protocol(): void
+    {
+        $protocol = $this->plan();
+        PlusPage::create(['id' => PlusPage::PAGE_ID, 'content' => PlusPage::defaults(), 'protocol_price_cents' => 14700]);
+        $this->owner($protocol->horse->owner_id);
+        $this->getJson('/api/protocols/'.$protocol->id.'/evaluation')->assertOk()->assertJsonPath('priceCents', 13230)->assertJsonPath('discountPercent', 10);
+        $this->assertDatabaseCount('protocols', 1);
+        $this->assertSame(0, DB::table('protocol_purchases')->count());
+        $this->travelTo(CarbonImmutable::parse('2026-12-10 12:00:00', 'Europe/Amsterdam'));
+        $this->getJson('/api/protocols/'.$protocol->id.'/evaluation')->assertOk()->assertJsonPath('priceCents', 14700)->assertJsonPath('discountPercent', 0);
+    }
+
+    public function test_question_edits_cannot_silently_change_the_meaning_of_an_existing_evaluation(): void
+    {
+        $protocol = $this->plan();
+        $this->owner($protocol->horse->owner_id);
+        $url = '/api/protocols/'.$protocol->id.'/evaluation';
+        $offer = $this->getJson($url)->assertOk()->json();
+        DB::table('protocol_evaluation_questions')->where('id', 'c12e1000-0000-4000-8000-000000000001')->update(['label' => 'Gewijzigde vraag']);
+        $answers = array_fill_keys(array_keys($offer['questions']), 'Voorbeeldantwoord');
+        $this->postJson($url, ['answers' => $answers, 'submit' => true, 'question_version' => $offer['questionVersion']])->assertStatus(409);
+        $current = $this->getJson($url)->json();
+        $this->postJson($url, ['answers' => $answers, 'submit' => false, 'question_version' => $current['questionVersion']])->assertOk();
+        DB::table('protocol_evaluation_questions')->where('id', 'c12e1000-0000-4000-8000-000000000001')->update(['label' => 'Een latere vraag', 'active' => false]);
+        $this->getJson($url)->assertOk()->assertJsonPath('questions.c12e1000-0000-4000-8000-000000000001', 'Gewijzigde vraag');
+        $this->postJson($url, ['answers' => $answers, 'submit' => true, 'question_version' => $current['questionVersion']])->assertOk();
+        $this->assertSame('Gewijzigde vraag', app(ProtocolEvaluation::class)->admin($protocol)['questions']['c12e1000-0000-4000-8000-000000000001']);
+    }
+
+    public function test_admin_manages_questions_and_exports_only_the_evaluations_of_the_selected_horse(): void
+    {
+        $protocol = $this->plan();
+        $this->owner($protocol->horse->owner_id);
+        $offer = $this->getJson('/api/protocols/'.$protocol->id.'/evaluation')->json();
+        $this->postJson('/api/protocols/'.$protocol->id.'/evaluation', ['submit' => true,
+            'question_version' => $offer['questionVersion'], 'answers' => array_fill_keys(array_keys($offer['questions']), 'Mijn evaluatie')])->assertOk();
+        $admin = \App\Models\AdminUser::create(['name' => 'Admin', 'email' => 'evaluation-admin@example.com', 'password' => 'password', 'role' => 'admin', 'active' => true]);
+        $this->actingAs($admin, 'admin');
+        $this->get('/admin/evaluation-questions')->assertOk();
+        $seedId = array_key_first(ProtocolEvaluation::QUESTIONS);
+        $longLabel = str_repeat('Een uitgebreide evaluatievraag. ', 20);
+        $this->put('/admin/evaluation-questions/'.$seedId, ['label' => $longLabel, 'order' => 0, 'active' => true])->assertSessionHasNoErrors();
+        $this->assertDatabaseHas('audit_logs', ['target_id' => $seedId, 'action' => 'updated']);
+        $this->assertDatabaseHas('protocol_evaluation_questions', ['id' => $seedId, 'label' => $longLabel]);
+        $this->post('/admin/evaluation-questions', ['label' => 'Nieuwe vraag', 'order' => 8])->assertSessionHasNoErrors();
+        $question = \App\Models\ProtocolEvaluationQuestion::where('label', 'Nieuwe vraag')->sole();
+        $this->put('/admin/evaluation-questions/'.$question->id, ['label' => 'Bijgewerkte vraag', 'order' => 2, 'active' => true])->assertSessionHasNoErrors();
+        $this->delete('/admin/evaluation-questions/'.$question->id)->assertSessionHasNoErrors();
+        $this->assertFalse($question->fresh()->active);
+        $this->assertDatabaseCount('protocol_evaluations', 1);
+        $this->get('/admin/horses/'.$protocol->horse_id)->assertOk()->assertInertia(fn (\Inertia\Testing\AssertableInertia $page) => $page
+            ->component('Horses/Show')->where('evaluations.0.answers.c12e1000-0000-4000-8000-000000000001', 'Mijn evaluatie'));
+        $pdf = $this->get('/admin/horses/'.$protocol->horse_id.'/evaluations/'.$protocol->id.'.pdf')->assertOk()->assertHeader('Content-Type', 'application/pdf');
+        $this->assertStringStartsWith('%PDF-', $pdf->getContent());
+        $this->get('/admin/evaluation-questions/export.pdf')->assertNotFound();
+        $otherHorse = Horse::create(['owner_id' => $protocol->horse->owner_id, 'name' => 'Ander paard', 'status' => 'active']);
+        $this->get('/admin/horses/'.$otherHorse->id.'/evaluations/'.$protocol->id.'.pdf')->assertNotFound();
+    }
+}

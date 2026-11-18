@@ -95,6 +95,7 @@ export const navSections = [
             { label: 'Sync health', href: '/admin/sync-health', icon: RadioTower },
             { label: 'Audit log', href: '/admin/audit-log', icon: ScrollText, roles: ['admin'] },
             { label: 'Intakevragen', href: '/admin/intake-questionnaire', icon: ListChecks, roles: ['admin'] },
+            { label: 'Evaluatievragen', href: '/admin/evaluation-questions', icon: ListChecks, roles: ['admin'] },
             { label: 'Protocol Templates', href: '/admin/protocol-settings', match: '/admin/protocol-settings', icon: SlidersHorizontal, roles: ['admin'] },
             { label: 'Settings', href: '/admin/settings', icon: Settings, roles: ['admin'] },
         ],

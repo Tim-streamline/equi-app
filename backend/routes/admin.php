@@ -54,6 +54,13 @@ Route::middleware('auth:admin')->group(function () {
 
     Route::patch('bookings/{booking}/review', [IntakeBookingController::class, 'review'])->name('bookings.review');
     Route::get('intake-media/{attachment}', [IntakeAttachmentController::class, 'admin'])->whereUuid('attachment')->name('intake-media');
+    Route::get('horses/{horse}/evaluations/{protocol}.pdf', [\App\Http\Controllers\Admin\ProtocolEvaluationController::class, 'pdf'])->name('horses.evaluation-pdf');
+    Route::middleware('admin.role:admin')->prefix('evaluation-questions')->group(function () {
+        Route::get('/', [\App\Http\Controllers\Admin\ProtocolEvaluationController::class, 'index']);
+        Route::post('/', [\App\Http\Controllers\Admin\ProtocolEvaluationController::class, 'store']);
+        Route::put('{question}', [\App\Http\Controllers\Admin\ProtocolEvaluationController::class, 'update']);
+        Route::delete('{question}', [\App\Http\Controllers\Admin\ProtocolEvaluationController::class, 'destroy']);
+    });
 
     // ---- Support console: users, horses ---------------------------------
     Route::controller(UserController::class)->prefix('users')->as('users.')->group(function () {

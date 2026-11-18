@@ -1,4 +1,5 @@
 <script>
+    import ProtocolEvaluationReview from '$lib/components/ProtocolEvaluationReview.svelte';
     import ProtocolCustomerPreview from '$lib/components/ProtocolCustomerPreview.svelte';
     import CopyProtocolDialog from '$lib/components/CopyProtocolDialog.svelte';
     import AdminLayout from '../../Layouts/AdminLayout.svelte';
@@ -65,6 +66,7 @@
         intakeFeeds = {},
         intakeWeights = {},
         weeklyUpdates = [],
+        evaluation = null,
         libraryItems = [],
     } = $props();
 
@@ -1509,4 +1511,5 @@
             </div>
         {/if}
     </div>
+    <ProtocolEvaluationReview {evaluation} />
 </AdminLayout>
