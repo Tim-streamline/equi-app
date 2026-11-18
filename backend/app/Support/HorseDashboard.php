@@ -256,7 +256,10 @@ class HorseDashboard
         $topic = fn ($term) => $items->first(fn ($item) => str_contains(mb_strtolower($item->slug.' '.$item->title), $term));
         foreach (['hayLibraryItem' => 'hooianalyse', 'waterLibraryItem' => 'wateranalyse'] as $key => $term) {
             $configuredId = $protocol->customer_settings[$key === 'hayLibraryItem' ? 'hay_library_item_id' : 'water_library_item_id'] ?? null;
-            $item = $items->firstWhere('id', $configuredId) ?? $topic($term);
+            $waterArticle = $key === 'waterLibraryItem'
+                ? $items->first(fn ($item) => Str::slug($item->title) === 'drinkwater-onder-de-loep-wat-krijgt-je-paard-binnen')
+                : null;
+            $item = $waterArticle ?? $items->firstWhere('id', $configuredId) ?? $topic($term);
             if (! $item) {
                 $subject = $key === 'hayLibraryItem' ? 'hooi' : 'water';
                 $item = $items->first(fn ($item) => preg_match('/'.$subject.'.*analy|analy.*'.$subject.'/isu', $item->title.' '.$item->description) === 1);

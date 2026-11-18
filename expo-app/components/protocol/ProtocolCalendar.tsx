@@ -163,7 +163,7 @@ export function ProtocolCalendar({ protocol, today, horseId, onMonth, onPhase, o
         {!day && !busy && selected && <Button title="Opnieuw proberen" onPress={() => void openDay(selected)} />}
         {day?.items.length === 0 && <Text className={`py-4 ${T.body}`}>Op deze dag stond niets gepland.</Text>}
         {groups.map(group => <View key={group.label} className="mb-4">
-          <View className="mb-1 flex-row items-center justify-between"><Text accessibilityRole="header" className={`${EYEBROW} text-ink-70`}>{group.label}</Text><Text className={T.meta}>{group.done} van {group.items.length}</Text></View>
+          {groups.length > 1 && <View className="mb-1 flex-row items-center justify-between"><Text accessibilityRole="header" className={`${EYEBROW} text-ink-70`}>{group.label}</Text><Text className={T.meta}>{group.done} van {group.items.length}</Text></View>}
           {group.items.map(item => <View key={administrationKey(item)} className="flex-row items-center gap-2">
             <Pressable accessibilityRole="checkbox" accessibilityLabel={`${item.name}, ${group.label}, ${item.dosage ?? ''}`} accessibilityState={{ checked: !!item.done, disabled: busy || !day?.editable }} disabled={busy || !day?.editable} onPress={() => void toggle(item)} className="min-h-[48px] min-w-[44px] items-center justify-center">
               <View className={`h-7 w-7 items-center justify-center rounded-full border-2 ${item.done ? 'border-mint-500 bg-mint-500' : 'border-ink-30'}`}>{item.done && <Check size={17} color="white" />}</View>

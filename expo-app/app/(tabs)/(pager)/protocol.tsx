@@ -1,6 +1,7 @@
 import { PurchasedProtocols } from '@/components/intake/PurchasedProtocols';
 import { KeyboardTextInput as TextInput, KeyboardViewport as KeyboardAvoidingView, KeyboardScrollView } from '@/components/ui/KeyboardForm';
 import { LibraryThumbnail } from "@/components/library/LibraryThumbnail";
+import { Image } from 'expo-image';
 import { useEffect, useMemo, useRef, useState, type ReactNode, type ComponentProps } from "react";
 import {
   View,
@@ -402,6 +403,7 @@ function LibraryLink({
   search,
   selection,
   nested,
+  thumbnailSource,
 }: {
   title: string;
   description: string;
@@ -410,6 +412,7 @@ function LibraryLink({
   selection?: boolean;
   /** Inside a white card: outlined, since a white tile would have no visible edge. */
   nested?: boolean;
+  thumbnailSource?: number;
 }) {
   return (
     <Pressable
@@ -428,7 +431,11 @@ function LibraryLink({
       }
       className={`flex-row items-center gap-3 p-4 ${nested ? 'rounded-2xl border border-ink-8' : 'rounded-[22px] bg-white'}`}
     >
-      <LibraryThumbnail uri={item?.heroImageUrl} format={item?.format} style={{ width: 64 }} />
+      {thumbnailSource ? (
+        <Image source={thumbnailSource} contentFit="cover" style={{ width: 64, height: 48, borderRadius: 12 }} />
+      ) : (
+        <LibraryThumbnail uri={item?.heroImageUrl} format={item?.format} style={{ width: 64 }} />
+      )}
       <View className="flex-1">
         <Text className={T.section}>{title}</Text>
         <Text className={`mt-1 ${T.meta}`}>
@@ -532,27 +539,18 @@ function Nutrition({
       <View className={PLAIN_CARD}>
         <Text className={T.cardTitle}>Water</Text>
         <Text className={`mt-2 ${T.body}`}>
-          {nutrition.water.types.join(" · ") ||
-            "Nog geen drinkwater ingevuld in de intake."}
+          Weet jij hoe schoon het water is dat je paard dagelijks drinkt? Ook helder water kan ongewenste stoffen bevatten. De kwaliteit en samenstelling zijn niet altijd met het blote oog te beoordelen.
         </Text>
-        {nutrition.water.needsAnalysis && (
-          <>
-            <Text className={`mb-3 mt-3 ${T.body}`}>
-              {nutrition.water.advice}
-            </Text>
+        <View className="mt-3">
             <LibraryLink
-              title="Water laten analyseren"
-              description={
-                hasPlus
-                  ? "Bekijk de uitleg met je abonnement."
-                  : "Bekijk de uitleg in de bibliotheek."
-              }
+              title="Drinkwater onder de loep: wat krijgt je paard binnen?"
+              description="Gratis te lezen met EquiBoost."
               item={nutrition.waterLibraryItem}
-              search="Wateranalyse"
+              search="Drinkwater onder de loep"
+              thumbnailSource={require('@/assets/images/drinkwater-foto-4x3.png')}
               nested
             />
-          </>
-        )}
+        </View>
       </View>
     </View>
   );
