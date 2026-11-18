@@ -4,6 +4,7 @@
     import Modal from '$lib/components/Modal.svelte';
     import Field from '$lib/components/Field.svelte';
     import IntakeConditionEditor from '$lib/components/IntakeConditionEditor.svelte';
+    import { labelDefinitions, editIntakeLabel, submittedIntakeLabels } from '$lib/intakeLabels.js';
     import { router, useForm } from '@inertiajs/svelte';
     import { Card, CardContent, Button, Input, Textarea, Select, Badge, Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '$lib/components/ui';
     import { Plus, Pencil, Archive, Save, Settings2 } from '@lucide/svelte';
@@ -42,6 +43,13 @@
     ]);
     function parsedConditions() { try { return JSON.parse($fieldForm.show_if_json || 'null'); } catch { return null; } }
     function parsedOptions() { try { const options = JSON.parse($fieldForm.options_json || '[]'); return Array.isArray(options) ? options : []; } catch { return []; } }
+    function parsedSubfields() { try { return JSON.parse($fieldForm.repeater_sub_json || '[]'); } catch { return []; } }
+    const labelNodes = $derived(labelDefinitions({ label: $fieldForm.label, type: $fieldForm.type, options: parsedOptions(), sub: parsedSubfields() }));
+    function currentLabel(key, answer = null) {
+        const node = $fieldForm.label_config.find(item => item.key === key);
+        return answer === null ? node?.label ?? '' : node?.answers.find(item => item.answer === answer)?.label ?? '';
+    }
+    function changeLabel(key, answer, value) { $fieldForm.label_config = editIntakeLabel($fieldForm.label_config, key, answer, value); }
 
     function emptyField() {
         return {
@@ -60,6 +68,7 @@
             order: selectedSection?.fields?.length ?? 0,
             active: true,
             options_json: '',
+            label_config: [],
             answer_aliases_json: '',
             submission_blocks: [],
             show_if_json: '',
@@ -140,6 +149,7 @@
             order: field.order,
             active: field.active,
             options_json: json(field.options),
+            label_config: structuredClone(field.label_config ?? []),
             answer_aliases_json: json(field.answer_aliases),
             submission_blocks: structuredClone(field.submission_blocks ?? []),
             show_if_json: json(field.show_if),
@@ -160,6 +170,7 @@
 
     function submitField(event) {
         event.preventDefault();
+        $fieldForm.label_config = submittedIntakeLabels($fieldForm.label_config);
         try {
             const options = JSON.parse($fieldForm.options_json || 'null');
             if (Array.isArray(options) && options.every(option => typeof option === 'string')) $fieldForm.options_json = JSON.stringify(options.map(option => option.trim()).filter(Boolean));
@@ -238,6 +249,18 @@
                                 <TableCell>
                                     <div class="font-medium">{field.label}</div>
                                     <div class="font-mono text-[11px] text-muted-foreground">{field.key}</div>
+                                    {#if field.type !== 'sectionhead'}
+                                        <details class="mt-2 text-sm">
+                                            <summary class="cursor-pointer text-primary">Labels · <span class="font-mono text-xs">{field.label_config?.find(node => node.key === '')?.label ?? 'Nog niet ingesteld'}</span></summary>
+                                            <div class="mt-2 space-y-2 rounded-lg border bg-muted/20 p-3">
+                                                {#each field.label_config ?? [] as node}
+                                                    {#if node.key}<div class="font-mono text-xs">Subvraag: {node.key} · {node.label}</div>{/if}
+                                                    {#each node.answers as row}<div class="grid gap-1 md:grid-cols-2"><span>{row.answer}</span><span class="break-all font-mono text-xs text-muted-foreground">{row.label}</span></div>{/each}
+                                                {/each}
+                                                <Button type="button" size="sm" variant="outline" onclick={() => editField(field)}>Labels wijzigen</Button>
+                                            </div>
+                                        </details>
+                                    {/if}
                                 </TableCell>
                                 <TableCell><Badge variant="muted">{field.type}</Badge></TableCell>
                                 <TableCell>
@@ -290,6 +313,24 @@
                 <Field label="Volgorde" error={$fieldForm.errors.order}><Input type="number" min="0" bind:value={$fieldForm.order} /></Field>
             </div>
             <Field label="Vraag of tussenkop" error={$fieldForm.errors.label}><Textarea rows="2" bind:value={$fieldForm.label} /></Field>
+            {#if labelNodes.length}
+                <section class="space-y-4 rounded-xl border bg-muted/20 p-4">
+                    <h3 class="font-semibold">Vraag- en antwoordlabels</h3>
+                    <p class="text-sm text-muted-foreground">Bewerkbare herkenningslabels voor deze vraag en iedere antwoordoptie. Deze labels activeren geen adviezen en veranderen geen opgeslagen antwoorden. Nieuwe labels worden bij opslaan ingevuld. Gebruik kleine letters, cijfers en underscores.</p>
+                    {#each labelNodes as node (node.key)}
+                        <div class="space-y-3">
+                            <Field label={node.key ? `Vraaglabel: ${node.title}` : 'Vraaglabel'}>
+                                <Input value={currentLabel(node.key)} oninput={event => changeLabel(node.key, null, event.currentTarget.value)} placeholder="Wordt bij opslaan aangemaakt" />
+                            </Field>
+                            {#each node.options as answer}
+                                <Field label={answer}><Input value={currentLabel(node.key, answer)} oninput={event => changeLabel(node.key, answer, event.currentTarget.value)} placeholder="Wordt bij opslaan aangemaakt" /></Field>
+                            {/each}
+                            {#if !node.options.length}<p class="text-xs text-muted-foreground">Vrije invoer behoudt de ingevulde waarde bij het vraaglabel; geen automatische interpretatie.</p>{/if}
+                        </div>
+                    {/each}
+                    {#each Object.entries($fieldForm.errors).filter(([key]) => key.startsWith('label_config')) as [key, error]}<p class="text-sm text-destructive">{error}</p>{/each}
+                </section>
+            {/if}
             <Field label="Helptekst" error={$fieldForm.errors.hint}><Textarea rows="2" bind:value={$fieldForm.hint} /></Field>
             <div class="grid gap-4 md:grid-cols-4">
                 <Field label="Eenheid" error={$fieldForm.errors.unit}><Input bind:value={$fieldForm.unit} /></Field>
