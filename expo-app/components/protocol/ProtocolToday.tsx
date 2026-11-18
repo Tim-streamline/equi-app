@@ -9,7 +9,6 @@ import { administrationKey, todayGroups, PHASE_COLORS } from '@/lib/protocol-tod
 import { selectionHaptic } from '@/lib/haptics';
 import { buildupState, dailyDoseChanges } from '@/lib/protocol-buildup';
 import { DoseBuildupSchedule } from './DoseBuildupSchedule';
-import { EYEBROW } from '@/components/ui/styles';
 import { PROTOCOL_SCALE as S, PROTOCOL_TEXT as T } from './styles';
 
 type SheetProps = { visible: boolean; title: string; subtitle?: string; children: ReactNode; onClose: () => void; footer?: ReactNode };
@@ -30,7 +29,6 @@ export function ProtocolToday({ protocol, date, horseId, onPhase, SheetComponent
   const percent = rows.length ? Math.round(done / rows.length * 100) : 0;
   const selected = rows.find(item => detailKey === `${date}:${administrationKey(item)}`);
   const active = protocol.phases.filter(phase => phase.state === 'active');
-  const phaseIndex = (item: DashboardSupplement) => protocol.phases.findIndex(phase => item.phaseId ? phase.id === item.phaseId : phase.title === item.phaseTitle);
   const toggle = async (item: DashboardSupplement) => {
     if (busy.current) return false;
     busy.current = true;
@@ -58,17 +56,6 @@ export function ProtocolToday({ protocol, date, horseId, onPhase, SheetComponent
           <View className="h-full rounded-full bg-mint-500" style={{ width: `${percent}%` }} />
         </View>
     </View>}
-    {active.length > 0 && <View className="mb-5 overflow-hidden rounded-[22px] bg-mint-50">
-      {active.map((phase, index) => {
-        const number = protocol.phases.findIndex(item => item.id === phase.id);
-        return <Pressable key={phase.id} accessibilityRole="button" accessibilityLabel={`Bekijk ${phase.title}`}
-          onPress={() => onPhase(phase)} className={`min-h-[56px] flex-row items-center gap-3 px-4 py-4 ${index > 0 ? 'border-t border-mint-100' : ''}`}>
-          <View className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: PHASE_COLORS[number % PHASE_COLORS.length] }} />
-          <Text className={`flex-1 ${S.rowTitle} text-teal-700`}>Fase {number + 1} · {phase.title}</Text>
-          <View className="flex-row items-center gap-1"><Text className={T.link}>Uitleg</Text><ChevronRight size={17} color="#106E6D" /></View>
-        </Pressable>;
-      })}
-    </View>}
     {doseChanges.length > 0 && <View className="mb-5 gap-2 rounded-[22px] border-l-[3px] border-mint-500 bg-mint-50 p-4">
       <Text className={`${S.section} text-teal-700`}>Vandaag een nieuwe opbouwdag</Text>
       <Text className={T.secondary}>Controleer de hoeveelheid voordat je de producten geeft.</Text>
@@ -80,12 +67,7 @@ export function ProtocolToday({ protocol, date, horseId, onPhase, SheetComponent
       </View>
     </>}
     {groups.map(group => <View key={group.label} className="mb-4">
-      <View className="mb-1 flex-row items-center justify-between gap-3">
-        <Text accessibilityRole="header" className={`${EYEBROW} text-ink-70`}>{group.label}</Text>
-        <Text className={T.meta}>{group.done} van {group.items.length}</Text>
-      </View>
       {group.items.map(item => {
-        const number = phaseIndex(item);
         const buildup = buildupState(item, date);
         return <View key={administrationKey(item)} className="flex-row items-center gap-2">
           <Pressable accessibilityRole="checkbox" accessibilityLabel={`${item.name}, ${group.label}, ${item.dosage ?? 'dosering niet ingesteld'}`}
@@ -102,10 +84,6 @@ export function ProtocolToday({ protocol, date, horseId, onPhase, SheetComponent
                 <View className="rounded-full bg-mint-50 px-2 py-0.5"><Text className="font-semi text-[12px] text-teal-700">Opbouwdosering</Text></View>
                 {!!buildup.next && <Text className={T.meta}>{buildup.next.afterRecordedDays === 1 ? `Volgende toedieningsdag: ${buildup.next.dosage}.` : `Volgende stap: ${buildup.next.dosage} na ${buildup.next.afterRecordedDays} geregistreerde dagen.`}</Text>}
               </View>}
-              {active.length > 1 && number >= 0 && <View className="flex-row items-center gap-2">
-                <View className="h-2 w-2 rounded-full" style={{ backgroundColor: PHASE_COLORS[number % PHASE_COLORS.length] }} />
-                <Text className={T.meta}>Fase {number + 1}</Text>
-              </View>}
             </View>
             <Pressable accessibilityRole="button" accessibilityLabel={`Uitleg over ${item.name}, ${group.label}`}
               onPress={() => setDetailKey(`${date}:${administrationKey(item)}`)} className="min-h-[44px] flex-row items-center gap-1 px-1">
@@ -115,6 +93,17 @@ export function ProtocolToday({ protocol, date, horseId, onPhase, SheetComponent
         </View>;
       })}
     </View>)}
+    {active.length > 0 && <View className="mt-4 mb-5 overflow-hidden rounded-[22px] bg-mint-50">
+      {active.map((phase, index) => {
+        const number = protocol.phases.findIndex(item => item.id === phase.id);
+        return <Pressable key={phase.id} accessibilityRole="button" accessibilityLabel={`Bekijk ${phase.title}`}
+          onPress={() => onPhase(phase)} className={`min-h-[56px] flex-row items-center gap-3 px-4 py-4 ${index > 0 ? 'border-t border-mint-100' : ''}`}>
+          <View className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: PHASE_COLORS[number % PHASE_COLORS.length] }} />
+          <Text className={`flex-1 ${S.rowTitle} text-teal-700`}>Fase {number + 1} · {phase.title}</Text>
+          <View className="flex-row items-center gap-1"><Text className={T.link}>Uitleg</Text><ChevronRight size={17} color="#106E6D" /></View>
+        </Pressable>;
+      })}
+    </View>}
     {rows.length === 0 && <Text className={`py-5 ${T.body}`}>Vandaag staat er niets gepland.</Text>}
     <Sheet visible={!!selected} title={selected?.name ?? ''}
       subtitle={selected ? `${selected.dosage ?? 'Dosering niet ingesteld'} · ${selected.frequencyLabel ?? `${selected.administrationsPerDay ?? 1}× per dag`}` : ''}

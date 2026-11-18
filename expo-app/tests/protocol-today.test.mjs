@@ -75,6 +75,17 @@ test('all active phases are accessible and each row uses the actual name and dos
   assert.ok(!single.some(n => n?.props?.accessibilityLabel === 'Bekijk Phase B'));
 });
 
+test('product list precedes phase explanations and has no visible morning or evening headings', () => {
+  const app = screen();
+  const nodes = app.render();
+  assert.ok(!nodes.includes('Ochtend') && !nodes.includes('Avond'));
+  const products = nodes.map((node, index) => node?.props?.accessibilityRole === 'checkbox' ? index : -1);
+  const phase = nodes.findIndex(node => node?.props?.accessibilityLabel === 'Bekijk Phase A');
+  assert.ok(phase > Math.max(...products));
+  const progress = nodes.findIndex(node => node?.props?.accessibilityRole === 'progressbar');
+  assert.ok(progress < nodes.indexOf('Meng alles door de geweekte bijvoeding'));
+});
+
 test('Uitleg opens authored instructions without toggling, then marks the selected gift', async () => {
   const app = screen();
   app.render().find(n => n?.props?.accessibilityLabel === 'Uitleg over Actual A, Ochtend').props.onPress();
