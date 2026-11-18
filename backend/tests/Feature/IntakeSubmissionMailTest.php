@@ -354,6 +354,25 @@ class IntakeSubmissionMailTest extends TestCase
         $pdf->render($this->booking);
     }
 
+    public function test_failed_pdf_download_opens_authenticated_print_fallback(): void
+    {
+        $this->instance(IntakeAnswersPdf::class, new class extends IntakeAnswersPdf
+        {
+            public function render(IntakeBooking $booking): string
+            {
+                throw new RuntimeException('PDF renderer unavailable');
+            }
+        });
+        $this->actingAs(AdminUser::create(['name' => 'Admin', 'email' => 'pdf-fallback@example.test', 'password' => 'password', 'role' => 'owner', 'active' => true]), 'admin');
+        $this->get('/admin/bookings/'.$this->booking->id.'/answers.pdf')
+            ->assertRedirect(route('admin.bookings.show', [$this->booking, 'print' => 1, 'pdf_fallback' => 1]));
+        $this->get(route('admin.bookings.show', [$this->booking, 'print' => 1, 'pdf_fallback' => 1]))
+            ->assertOk()->assertInertia(fn (\Inertia\Testing\AssertableInertia $page) => $page
+                ->component('Bookings/Show')->where('printMode', true)->where('pdfFallback', true));
+        $this->actingAsGuest('admin');
+        $this->get('/admin/bookings/'.$this->booking->id.'/answers.pdf')->assertRedirect('/admin/login');
+    }
+
     public function test_pdf_download_uses_the_requested_filename_from_the_submission_and_intake_name(): void
     {
         $this->travelTo(Carbon::parse('2026-09-29T21:00:00Z'));

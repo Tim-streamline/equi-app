@@ -53,7 +53,7 @@ class IntakeBookingController extends Controller
     {
         $booking->load('user:id,name,email', 'horse:id,name,breed,status', 'therapist:id,name,title');
 
-        return Inertia::render('Bookings/Show', ['booking' => $booking, 'printMode' => $request->boolean('print'), 'review' => app(IntakeReview::class)->forBooking($booking),
+        return Inertia::render('Bookings/Show', ['booking' => $booking, 'printMode' => $request->boolean('print'), 'pdfFallback' => $request->boolean('pdf_fallback'), 'review' => app(IntakeReview::class)->forBooking($booking),
             // Several protocols can use one intake; on another horse only for a test user's copy.
             'protocols' => $booking->protocols()->with('horse:id,name')->oldest()->orderBy('id')->get(['id', 'horse_id', 'title', 'status', 'protocol_template_id', 'published_at'])
                 ->map(fn (Protocol $protocol): array => $protocol->only(['id', 'title', 'status']) + [
@@ -88,9 +88,17 @@ class IntakeBookingController extends Controller
         return to_route('admin.protocols.edit', $protocol)->with('success', 'Nieuw concept aangemaakt op de bestaande intake. Je kunt het hier opstellen.');
     }
 
-    public function answersPdf(IntakeBooking $booking, IntakeAnswersPdf $pdf): \Illuminate\Http\Response
+    public function answersPdf(IntakeBooking $booking, IntakeAnswersPdf $pdf): \Symfony\Component\HttpFoundation\Response
     {
-        return response($pdf->render($booking), 200, [
+        try {
+            $document = $pdf->render($booking);
+        } catch (Throwable $exception) {
+            report($exception);
+
+            return redirect()->route('admin.bookings.show', [$booking, 'print' => 1, 'pdf_fallback' => 1]);
+        }
+
+        return response($document, 200, [
             'Content-Type' => 'application/pdf',
             'Content-Disposition' => 'attachment; filename="'.$pdf->filename($booking).'"',
             'Cache-Control' => 'private, no-store',
