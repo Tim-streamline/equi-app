@@ -734,6 +734,28 @@ class HorseDashboardTest extends TestCase
         $this->assertDatabaseHas('protocol_weekly_updates', ['protocol_id' => $this->protocol->id, 'week_number' => 2, 'note' => 'Going well']);
     }
 
+    public function test_pause_hides_weekly_update_and_rejects_an_already_open_form_until_resumed(): void
+    {
+        $url = '/api/horses/'.$this->horse->id;
+        $this->getJson($url.'/dashboard')->assertOk()
+            ->assertJsonPath('protocol.notifications.0.type', 'weekly_update');
+        DB::table('protocol_weekly_updates')->insert([
+            'protocol_id' => $this->protocol->id, 'week_number' => 1, 'user_id' => $this->owner->id,
+            'note' => 'Earlier update', 'created_at' => now(), 'updated_at' => now(),
+        ]);
+        $this->protocol->update(['status' => 'paused']);
+        $notices = $this->getJson($url.'/dashboard')->assertOk()->assertJsonPath('protocol.paused', true)
+            ->json('protocol.notifications');
+        $this->assertFalse(collect($notices)->contains('type', 'weekly_update'));
+        $this->postJson($url.'/weekly-update', ['protocol_id' => $this->protocol->id, 'note' => 'Already open form'])
+            ->assertUnprocessable()->assertJsonPath('message', 'Je herstelplan is gepauzeerd. Je kunt weer een weekupdate versturen zodra je plan is hervat.');
+        $this->assertDatabaseHas('protocol_weekly_updates', ['protocol_id' => $this->protocol->id, 'week_number' => 1, 'note' => 'Earlier update']);
+        $this->assertDatabaseMissing('protocol_weekly_updates', ['protocol_id' => $this->protocol->id, 'week_number' => 2]);
+        $this->protocol->update(['status' => 'active']);
+        $this->getJson($url.'/dashboard')->assertOk()->assertJsonPath('protocol.notifications.0.type', 'weekly_update');
+        $this->postJson($url.'/weekly-update', ['protocol_id' => $this->protocol->id, 'note' => 'After resume'])->assertOk();
+    }
+
     public function test_future_and_finished_protocols_do_not_offer_daily_actions_or_reminders(): void
     {
         foreach (['2026-09-15' => 0, '2026-07-01' => 100] as $start => $progress) {

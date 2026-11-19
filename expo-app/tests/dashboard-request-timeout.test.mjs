@@ -127,6 +127,23 @@ test('the same deadline covers reading the unregister response body', async () =
   assert.equal(app.timers.size, 0);
 });
 
+test('a paused weekly update displays the server explanation and releases its deadline', async () => {
+  const message = 'Je herstelplan is gepauzeerd. Je kunt weer een weekupdate versturen zodra je plan is hervat.';
+  const app = harness(async (url) => url.endsWith('/api/auth/token')
+    ? { ok: true, json: async () => ({ token: 'token', expires_in: 3600 }) }
+    : { ok: false, status: 422, json: async () => ({ message }) });
+  await assert.rejects(app.dashboardRequest('/api/horses/horse/weekly-update', { note: 'My update' }), { message });
+  assert.equal(app.timers.size, 0);
+});
+
+test('an unreadable validation response retains the normal request error', async () => {
+  const app = harness(async (url) => url.endsWith('/api/auth/token')
+    ? { ok: true, json: async () => ({ token: 'token', expires_in: 3600 }) }
+    : { ok: false, status: 422, json: async () => { throw new Error('Invalid JSON'); } });
+  await assert.rejects(app.dashboardRequest('/api/horses/horse/weekly-update', { note: 'My update' }), /Gegevens konden niet worden bijgewerkt \(422\)/);
+  assert.equal(app.timers.size, 0);
+});
+
 test('successful unregistration authenticates and clears its deadline', async () => {
   const calls = [];
   const app = harness(async (url, options) => {
