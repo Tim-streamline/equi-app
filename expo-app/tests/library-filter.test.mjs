@@ -32,6 +32,33 @@ const itemCategories = [
   { itemId: 'lijnzaad', categoryId: 'aanbevolen' },
 ];
 
+test('featured items lead the overview and search while preserving configured order within each group', () => {
+  const catalog = [
+    { id: 'normal-a', title: 'Water A' },
+    { id: 'featured-a', title: 'Water B', isFeatured: 1 },
+    { id: 'normal-b', title: 'Water C', isFeatured: false },
+    { id: 'featured-b', title: 'Water D', isFeatured: true },
+  ];
+  const original = catalog.map(item => item.id);
+  for (const search of ['', 'water']) {
+    assert.deepEqual(filterLibraryItems(catalog, [], [], search).map(item => item.id),
+      ['featured-a', 'featured-b', 'normal-a', 'normal-b']);
+  }
+  assert.deepEqual(catalog.map(item => item.id), original);
+  catalog[1].isFeatured = 0;
+  assert.deepEqual(filterLibraryItems(catalog, [], [], '').map(item => item.id),
+    ['featured-b', 'normal-a', 'featured-a', 'normal-b']);
+});
+
+test('recently viewed retains chronological order even when an older item is featured', () => {
+  const catalog = [{id:'new',title:'New'}, {id:'old',title:'Old',isFeatured:true}];
+  assert.deepEqual(filterLibraryItems(catalog, [], [], '', {
+    personal:['recent'], now:Date.parse('2026-11-19'), viewed:[
+      {itemId:'new',lastViewedAt:'2026-11-18'}, {itemId:'old',lastViewedAt:'2026-11-17'},
+    ],
+  }).map(item => item.id), ['new', 'old']);
+});
+
 test('shows items belonging to at least one active category', () => {
   assert.deepEqual(
     filterLibraryItems(items, itemCategories, ['kruiden', 'hoeven'], '').map((item) => item.id),

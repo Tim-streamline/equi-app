@@ -2302,27 +2302,94 @@ export const INTAKE_SCHEMA: Section[] = [
       },
       {
         "id": "kpu-onderzoek-datum",
-        "label": "Wanneer is het urineonderzoek uitgevoerd?",
+        "label": "Wanneer is het onderzoek uitgevoerd?",
         "type": "month_year",
         "required": true,
-        "hint": "Vul de maand en het jaar in. Een schatting is goed.",        "showIf": {
-          "kpu-status": ["aangetoond uit urine onderzoek", "Aangetoond met urineonderzoek", "Ja, positieve uitslag bij urineonderzoek"]
+        "hint": "Vul de maand en het jaar in. Een schatting is goed.",
+        "dateConfig": {
+          "mode": "single",
+          "allow_future": false,
+          "allow_year_only": true,
+          "allow_unknown": true
         },
-
-        dateConfig: {
-  "mode": "single",
-  "allow_future": false,
-  "allow_year_only": true
-},
+        "showIf": {
+          "kpu-status": [
+            "Ja, aangetoond met urineonderzoek",
+            "aangetoond uit urine onderzoek",
+            "Aangetoond met urineonderzoek",
+            "Ja, positieve uitslag bij urineonderzoek"
+          ]
+        }
       },
       {
-        "id": "kpu-onderzoek-uitslag",
-        "label": "Wat was de uitslag van het urineonderzoek?",
+        "id": "kpu-indikan-waarde",
+        "label": "Wat was de Indikan waarde?",
         "type": "text",
         "required": true,
-        "placeholder": "Vul de gemeten waarde(n), eenheid en eventuele referentiewaarden in.",
+        "placeholder": "Vul de gemeten waarde en eenheid in. Weet je dit niet? Vul dan ‘Weet ik niet’ in.",
         "showIf": {
-          "kpu-status": ["aangetoond uit urine onderzoek", "Aangetoond met urineonderzoek", "Ja, positieve uitslag bij urineonderzoek"]
+          "kpu-status": [
+            "Ja, aangetoond met urineonderzoek",
+            "aangetoond uit urine onderzoek",
+            "Aangetoond met urineonderzoek",
+            "Ja, positieve uitslag bij urineonderzoek"
+          ]
+        }
+      },
+      {
+        "id": "kpu-kryptopyrrolurie-waarde",
+        "label": "Wat was de Kryptopyrrolurie waarde?",
+        "type": "text",
+        "required": true,
+        "placeholder": "Vul de gemeten waarde en eenheid in. Weet je dit niet? Vul dan ‘Weet ik niet’ in.",
+        "showIf": {
+          "kpu-status": [
+            "Ja, aangetoond met urineonderzoek",
+            "aangetoond uit urine onderzoek",
+            "Aangetoond met urineonderzoek",
+            "Ja, positieve uitslag bij urineonderzoek"
+          ]
+        }
+      },
+      {
+        "id": "kpu-hertest",
+        "label": "Is er daarna nog een hertest gedaan?",
+        "type": "radio",
+        "required": true,
+        "options": [
+          "Ja",
+          "Nee",
+          "Weet ik niet"
+        ],
+        "showIf": {
+          "kpu-status": [
+            "Ja, aangetoond met urineonderzoek",
+            "aangetoond uit urine onderzoek",
+            "Aangetoond met urineonderzoek",
+            "Ja, positieve uitslag bij urineonderzoek"
+          ]
+        }
+      },
+      {
+        "id": "kpu-hertest-datum",
+        "label": "Wanneer is de hertest uitgevoerd?",
+        "type": "month_year",
+        "required": true,
+        "hint": "Vul de maand en het jaar in. Een schatting is goed.",
+        "dateConfig": {
+          "mode": "single",
+          "allow_future": false,
+          "allow_year_only": true,
+          "allow_unknown": true
+        },
+        "showIf": {
+          "kpu-status": [
+            "Ja, aangetoond met urineonderzoek",
+            "aangetoond uit urine onderzoek",
+            "Aangetoond met urineonderzoek",
+            "Ja, positieve uitslag bij urineonderzoek"
+          ],
+          "kpu-hertest": "Ja"
         }
       },
       {
@@ -2332,7 +2399,7 @@ export const INTAKE_SCHEMA: Section[] = [
         "required": true,
         "options": ["Ja", "Nee"],
         "showIf": {
-          "kpu-status": ["aangetoond uit urine onderzoek", "Aangetoond met urineonderzoek", "Ja, positieve uitslag bij urineonderzoek"]
+          "kpu-status": ["Ja, aangetoond met urineonderzoek","aangetoond uit urine onderzoek","Aangetoond met urineonderzoek","Ja, positieve uitslag bij urineonderzoek"]
         }
       },
       {
@@ -2343,6 +2410,7 @@ export const INTAKE_SCHEMA: Section[] = [
         "hint": "Upload minimaal één PDF of afbeelding.",
         "showIf": {
           "kpu-status": [
+            "Ja, aangetoond met urineonderzoek",
             "aangetoond uit urine onderzoek",
             "Aangetoond met urineonderzoek",
             "Ja, positieve uitslag bij urineonderzoek"

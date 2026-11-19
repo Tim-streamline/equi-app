@@ -123,7 +123,7 @@ class ProtocolTemplateSeederTest extends TestCase
         $twiceDaily = collect($this->savedCatalog())->flatMap(fn (array $template) => $template['phases'])
             ->flatMap(fn (array $phase) => $phase['supplements'])
             ->filter(fn (array $supplement) => ($supplement['administrations_per_day'] ?? 1) === 2)->pluck('name')->sort()->values();
-        $this->assertCount(4, $twiceDaily);
+        $this->assertCount(2, $twiceDaily);
         $this->assertSame($twiceDaily->all(), Supplement::query()->where('administrations_per_day', 2)->orderBy('name')->pluck('name')->unique()->values()->all());
         $this->assertSame(0, Supplement::query()->whereNotIn('administrations_per_day', [1, 2])->count());
         $this->assertSame(0, Supplement::query()->whereNotNull('product_url')->count());

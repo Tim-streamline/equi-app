@@ -40,6 +40,8 @@ export function ProtocolCalendar({ protocol, today, horseId, onMonth, onPhase, o
   const request = useRef(0), saving = useRef(false);
   const local = useSupplementIntakesForDate(today);
   const mutations = useStoreMutations();
+  const readOnly = !!(protocol.paused || protocol.completed || protocol.preparing);
+  const canEditDay = !!day?.editable && !readOnly;
   useEffect(() => {
     // A day opened as Today must be fetched as history after the date changes.
     setSelected(undefined); setDay(null); setDetail(null); setDayError(null); setBusy(false);
@@ -57,7 +59,7 @@ export function ProtocolCalendar({ protocol, today, horseId, onMonth, onPhase, o
     finally { if (generation === request.current) setBusy(false); }
   };
   const toggle = async (item: DashboardSupplement) => {
-    if (!day?.editable || saving.current || busy) return;
+    if (!day || !canEditDay || saving.current || busy) return;
     saving.current = true;
     selectionHaptic();
     const generation = ++request.current;
@@ -86,7 +88,7 @@ export function ProtocolCalendar({ protocol, today, horseId, onMonth, onPhase, o
   const openToday = () => {
     request.current++; setDetail(null); setDayError(null); setBusy(false); setSelected(today);
     const until = new Date(today + 'T00:00:00Z'); until.setUTCDate(until.getUTCDate() + 7);
-    setDay({ date: today, label: shortDate(today, { weekday: 'long', day: 'numeric', month: 'long' }), editable: true,
+    setDay({ date: today, label: shortDate(today, { weekday: 'long', day: 'numeric', month: 'long' }), editable: !readOnly,
       weekNumber: protocol.currentWeek, editableUntil: until.toISOString().slice(0,10), items: todayItems, state: 'default' });
   };
   const calendar = protocol.calendar;
@@ -150,7 +152,7 @@ export function ProtocolCalendar({ protocol, today, horseId, onMonth, onPhase, o
       <View style={{ width: 4, alignSelf: 'stretch', borderRadius: 4, backgroundColor: PHASE_COLORS[index % PHASE_COLORS.length] }} /><View className="flex-1 gap-1"><Text className={T.rowTitle}>{phase.title}</Text><Text className={T.meta}>{phase.weekLabel} · {phase.state === 'active' ? 'Nu actief' : phase.statusLabel}</Text></View><Text className={T.link}>Uitleg</Text><ChevronRight size={17} color="#106E6D" />
     </Pressable>)}
     <Sheet visible={!!selected} title={selectedItem?.name ?? day?.label ?? (selected ? shortDate(selected, { weekday: 'long', day: 'numeric', month: 'long' }) : '')}
-      subtitle={selectedItem ? selectedItem.dosage ?? undefined : day ? [day.weekNumber ? `Week ${day.weekNumber}` : null, day.editable ? (day.editableUntil ? 'Af te vinken t/m ' + shortDate(day.editableUntil) : 'Je kunt deze dag tot 7 dagen terug aanpassen.') : 'Alleen te bekijken'].filter(Boolean).join(' · ') : undefined}
+      subtitle={selectedItem ? selectedItem.dosage ?? undefined : day ? [day.weekNumber ? `Week ${day.weekNumber}` : null, canEditDay ? (day.editableUntil ? 'Af te vinken t/m ' + shortDate(day.editableUntil) : 'Je kunt deze dag tot 7 dagen terug aanpassen.') : 'Alleen te bekijken'].filter(Boolean).join(' · ') : undefined}
       onClose={closeDay}>
       {selectedItem ? <View className="gap-5">
         <Button title="Terug naar daglijst" variant="text" onPress={() => setDetail(null)} />
@@ -165,7 +167,7 @@ export function ProtocolCalendar({ protocol, today, horseId, onMonth, onPhase, o
         {groups.map(group => <View key={group.label} className="mb-4">
           {groups.length > 1 && <View className="mb-1 flex-row items-center justify-between"><Text accessibilityRole="header" className={`${EYEBROW} text-ink-70`}>{group.label}</Text><Text className={T.meta}>{group.done} van {group.items.length}</Text></View>}
           {group.items.map(item => <View key={administrationKey(item)} className="flex-row items-center gap-2">
-            <Pressable accessibilityRole="checkbox" accessibilityLabel={`${item.name}, ${group.label}, ${item.dosage ?? ''}`} accessibilityState={{ checked: !!item.done, disabled: busy || !day?.editable }} disabled={busy || !day?.editable} onPress={() => void toggle(item)} className="min-h-[48px] min-w-[44px] items-center justify-center">
+            <Pressable accessibilityRole="checkbox" accessibilityLabel={`${item.name}, ${group.label}, ${item.dosage ?? ''}`} accessibilityState={{ checked: !!item.done, disabled: busy || !canEditDay }} disabled={busy || !canEditDay} onPress={() => void toggle(item)} className="min-h-[48px] min-w-[44px] items-center justify-center">
               <View className={`h-7 w-7 items-center justify-center rounded-full border-2 ${item.done ? 'border-mint-500 bg-mint-500' : 'border-ink-30'}`}>{item.done && <Check size={17} color="white" />}</View>
             </Pressable>
             <View className="flex-1 flex-row items-center gap-2 border-b border-ink-8 py-3"><Text className={`flex-1 ${S.row} text-ink`}><Text className={S.rowTitle}>{item.name}</Text>{'  '}<Text className="text-ink-70">{item.dosage}</Text></Text><Pressable accessibilityRole="button" accessibilityLabel={`Uitleg over ${item.name}, ${group.label}`} onPress={() => setDetail(administrationKey(item))} className="min-h-[44px] flex-row items-center gap-1"><Text className={T.link}>Uitleg</Text><ChevronRight size={17} color="#106E6D" /></Pressable></View>

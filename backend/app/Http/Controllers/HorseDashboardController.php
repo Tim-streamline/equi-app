@@ -83,7 +83,8 @@ class HorseDashboardController extends Controller
             'administration' => ['sometimes', 'integer', 'between:1,24'],
         ]);
         $now = CarbonImmutable::now($data['timezone'] ?? 'Europe/Amsterdam');
-        $protocol = $horse->protocols()->whereKey($data['protocol_id'])->where('status', 'active')
+        $protocol = $horse->protocols()->whereKey($data['protocol_id'])
+            ->whereIn('status', $request->isMethod('POST') ? ['active'] : ['active', 'paused', 'completed'])
             ->whereNotNull('published_at')->where('published_at', '<=', $now)->firstOrFail();
 
         if (! ClientCapabilities::protocolDoses($request)) {

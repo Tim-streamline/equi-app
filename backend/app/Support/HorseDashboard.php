@@ -227,7 +227,7 @@ class HorseDashboard
 
         return [
             'id' => $protocol->id, 'title' => $protocol->title, 'currentDay' => $day, 'currentWeek' => $week,
-            'preparing' => ! $start, 'paused' => $protocol->status === 'paused', 'startedAt' => $start?->toDateString(),
+            'preparing' => ! $start, 'paused' => $protocol->status === 'paused', 'completed' => $protocol->status === 'completed', 'startedAt' => $start?->toDateString(),
             'totalWeeks' => $totalWeeks, 'progressPercent' => $progressPercent, 'statusLabel' => $statusLabel,
             'todayLabel' => ! $start ? 'Je protocol staat klaar' : 'Week '.$week.' van '.$totalWeeks.' · '.$now->locale('nl')->translatedFormat('l j F'),
             'dateLabel' => $now->locale('nl')->translatedFormat('l j F'),

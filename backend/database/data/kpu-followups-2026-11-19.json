@@ -1,0 +1,10 @@
+{
+  "positive": ["Ja, aangetoond met urineonderzoek", "aangetoond uit urine onderzoek", "Aangetoond met urineonderzoek", "Ja, positieve uitslag bij urineonderzoek"],
+  "fields": [
+    {"id":"kpu-onderzoek-datum","label":"Wanneer is het onderzoek uitgevoerd?","type":"month_year","required":true,"hint":"Vul de maand en het jaar in. Een schatting is goed.","dateConfig":{"mode":"single","allow_future":false,"allow_year_only":true,"allow_unknown":true}},
+    {"id":"kpu-indikan-waarde","label":"Wat was de Indikan waarde?","type":"text","required":true,"placeholder":"Vul de gemeten waarde en eenheid in. Weet je dit niet? Vul dan ‘Weet ik niet’ in."},
+    {"id":"kpu-kryptopyrrolurie-waarde","label":"Wat was de Kryptopyrrolurie waarde?","type":"text","required":true,"placeholder":"Vul de gemeten waarde en eenheid in. Weet je dit niet? Vul dan ‘Weet ik niet’ in."},
+    {"id":"kpu-hertest","label":"Is er daarna nog een hertest gedaan?","type":"radio","required":true,"options":["Ja","Nee","Weet ik niet"]},
+    {"id":"kpu-hertest-datum","label":"Wanneer is de hertest uitgevoerd?","type":"month_year","required":true,"hint":"Vul de maand en het jaar in. Een schatting is goed.","dateConfig":{"mode":"single","allow_future":false,"allow_year_only":true,"allow_unknown":true},"showIf":{"kpu-hertest":"Ja"}}
+  ]
+}

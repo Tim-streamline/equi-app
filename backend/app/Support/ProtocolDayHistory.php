@@ -79,7 +79,7 @@ class ProtocolDayHistory
 
         return [
             'date' => $date, 'label' => CarbonImmutable::parse($date, $now->timezone)->locale('nl')->translatedFormat('l j F Y'),
-            'editable' => $date >= $now->subDays(7)->toDateString(),
+            'editable' => $protocol->status === 'active' && $date >= $now->subDays(7)->toDateString(),
             'editableUntil' => CarbonImmutable::parse($date, $now->timezone)->addDays(7)->toDateString(),
             'weekNumber' => $protocol->started_at ? (int) floor(CarbonImmutable::parse($protocol->started_at->toDateString(), $now->timezone)->diffInDays(CarbonImmutable::parse($date, $now->timezone)) / 7) + 1 : null,
             'items' => $items, 'state' => $this->state($items),
