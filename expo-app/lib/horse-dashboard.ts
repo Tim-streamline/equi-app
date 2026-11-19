@@ -100,6 +100,7 @@ export type CareAdvice = Omit<DashboardAdvice, "action"> & {
 };
 export type DashboardProtocol = {
   paused?: boolean;
+  completed?: boolean;
   preparing?: boolean;
   startedAt?: string | null;
   id: string;

@@ -127,6 +127,30 @@ test('readonly history cannot be checked and calendar navigation preserves month
 
 test('order reminder opens the grouped future phases without marking any day',()=>{const app=screen();app.render().find(n=>n?.props?.accessibilityLabel==='Bestellijst voor de volgende fases').props.onPress();assert.deepEqual(app.opened,[['b','c']]);assert.equal(app.calls.length,0);});
 
+for (const status of ['paused', 'completed']) {
+  test(`${status} calendar keeps Today and history read-only, including an already open day`, async () => {
+    const app = screen();
+    app.render().find(n => n?.props?.accessibilityLabel?.startsWith('dinsdag 3')).props.onPress();
+    app.props.protocol[status] = true;
+    let nodes = app.render();
+    let check = nodes.find(n => n?.props?.accessibilityLabel === 'Real herb, Avond, 15 g');
+    assert.equal(check.props.disabled, true);
+    assert.ok(nodes.find(n => n?.type === 'Sheet' && n.props.visible).props.subtitle.includes('Alleen te bekijken'));
+    await check.props.onPress();
+    assert.equal(app.render().find(n => n?.props?.accessibilityLabel === 'Real herb, Avond, 15 g').props.accessibilityState.checked, false);
+    assert.equal(app.calls.length, 0);
+    // Even a stale API response with editable=true must not enable a paused/completed plan.
+    await app.open();
+    check = app.render().find(n => n?.props?.accessibilityLabel === 'Real herb, Avond, 15 g');
+    assert.equal(check.props.disabled, true);
+    await check.props.onPress();
+    assert.equal(app.calls.length, 1);
+    app.render().find(n => n?.type === 'Sheet' && n.props.visible).props.onClose();
+    app.render().find(n => n?.props?.accessibilityLabel?.startsWith('dinsdag 3')).props.onPress();
+    assert.equal(app.render().find(n => n?.props?.accessibilityLabel === 'Real herb, Avond, 15 g').props.disabled, true);
+  });
+}
+
  test('order reminder starts exactly fourteen days before a phase',()=>{
    assert.deepEqual(logic.nextPhaseStart({phases:phases.slice(1)},'2026-10-31'),[]);
    assert.deepEqual(logic.nextPhaseStart({phases:phases.slice(1)},'2026-11-01').map(p=>p.id),['b','c']);

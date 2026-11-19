@@ -14,7 +14,7 @@ function load(file, modules = {}) {
 const schema = load('../lib/intake/schema.ts');
 const config = load('../lib/intake/config.ts');
 const logic = load('../lib/intake/logic.ts', { './schema': schema, './config': config });
-const ids = ['kpu-onderzoek-datum', 'kpu-onderzoek-uitslag', 'kpu-uitslag-beschikbaar', 'kpu-attest', 'kpu-vermoeden-toelichting'];
+const ids = ['kpu-onderzoek-datum', 'kpu-indikan-waarde', 'kpu-kryptopyrrolurie-waarde', 'kpu-hertest', 'kpu-hertest-datum', 'kpu-uitslag-beschikbaar', 'kpu-attest', 'kpu-vermoeden-toelichting'];
 
 function check(section) {
   const field = id => section.fields.find(item => item.id === id);
@@ -23,17 +23,27 @@ function check(section) {
   assert.equal(field('kpu-onderzoek-datum').type, 'month_year');
   assert.match(field('kpu-onderzoek-datum').hint, /maand en het jaar/);
   assert.ok(logic.isFieldAnswered(field('kpu-onderzoek-datum'), 'voorjaar 2025'));
-  assert.equal(field('kpu-onderzoek-uitslag').placeholder, 'Vul de gemeten waarde(n), eenheid en eventuele referentiewaarden in.');
+  assert.equal(field('kpu-onderzoek-uitslag'), undefined);
+  assert.deepEqual(field('kpu-hertest').options, ['Ja', 'Nee', 'Weet ik niet']);
+  assert.equal(field('kpu-hertest-datum').type, 'month_year');
+  assert.ok(logic.isFieldAnswered(field('kpu-hertest-datum'), {version:1,precision:'unknown'}));
   assert.notEqual(field('kpu-attest').optional, true);
   assert.equal(field('kpu-attest').hint, 'Upload minimaal één PDF of afbeelding.');
   assert.equal(field('kpu-vermoeden-toelichting').type, 'textarea');
   assert.equal(field('kpu-vermoeden-toelichting').lines, 2);
   assert.equal(field('kpu-vermoeden-toelichting').placeholder, 'Beschrijf kort welke klachten, kenmerken of eerdere onderzoeken aanleiding geven tot je vermoeden.');
   assert.equal(field('kpu-vermoeden-toelichting').signalConfig.condition, 'KPU');
-  for (const status of ['Aangetoond met urineonderzoek', 'Ja, positieve uitslag bij urineonderzoek']) {
+  for (const status of ['Ja, aangetoond met urineonderzoek', 'aangetoond uit urine onderzoek', 'Aangetoond met urineonderzoek', 'Ja, positieve uitslag bij urineonderzoek']) {
     const answers = { 'kpu-status': status };
-    assert.deepEqual(ids.filter(id => visible(answers).includes(id)), ids.slice(0, 3));
-    assert.deepEqual(ids.filter(id => missing(answers).includes(id)), ids.slice(0, 3));
+    const expected = [...ids.slice(0, 4), 'kpu-uitslag-beschikbaar'];
+    assert.deepEqual(ids.filter(id => visible(answers).includes(id)), expected);
+    assert.deepEqual(ids.filter(id => missing(answers).includes(id)), expected);
+    assert.ok(visible({...answers, 'kpu-hertest':'Ja'}).includes('kpu-hertest-datum'));
+    assert.ok(missing({...answers, 'kpu-hertest':'Ja'}).includes('kpu-hertest-datum'));
+    for (const retest of ['Nee', 'Weet ik niet']) {
+      assert.ok(!visible({...answers, 'kpu-hertest':retest}).includes('kpu-hertest-datum'));
+      assert.ok(!missing({...answers, 'kpu-hertest':retest}).includes('kpu-hertest-datum'));
+    }
     assert.ok(visible({ ...answers, 'kpu-uitslag-beschikbaar': 'Ja' }).includes('kpu-attest'));
     assert.ok(missing({ ...answers, 'kpu-uitslag-beschikbaar': 'Ja' }).includes('kpu-attest'));
     assert.ok(!visible({ ...answers, 'kpu-uitslag-beschikbaar': 'Nee' }).includes('kpu-attest'));
@@ -45,8 +55,10 @@ function check(section) {
     assert.deepEqual(ids.filter(id => missing(answers).includes(id)), ['kpu-vermoeden-toelichting']);
     assert.ok(!missing({ ...answers, 'kpu-vermoeden-toelichting': 'Op basis van de klachten' }).includes('kpu-vermoeden-toelichting'));
   }
-  for (const status of ['Voor zover ik weet niet', 'Weet ik niet']) {
-    assert.deepEqual(ids.filter(id => visible({ 'kpu-status': status, 'kpu-onderzoek-datum': 'voorjaar 2025' }).includes(id)), []);
+  for (const status of ['Voor zover ik weet niet', 'Nee, voor zover bekend niet', 'Weet ik niet', undefined]) {
+    const answers = { 'kpu-status': status, 'kpu-onderzoek-datum': 'voorjaar 2025', 'kpu-hertest': 'Ja' };
+    assert.deepEqual(ids.filter(id => visible(answers).includes(id)), []);
+    assert.deepEqual(ids.filter(id => missing(answers).includes(id)), []);
   }
 }
 

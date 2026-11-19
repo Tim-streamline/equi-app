@@ -144,6 +144,36 @@ class HorseDashboardTest extends TestCase
         $this->assertNull($this->protocol->fresh()->started_at);
     }
 
+    public function test_paused_and_completed_protocol_days_remain_readable_but_cannot_be_changed(): void
+    {
+        $item = $this->protocol->phases()->first()->supplements()->first();
+        foreach (['paused', 'completed'] as $status) {
+            $this->protocol->update(['status' => $status]);
+            $this->getJson($this->dayUrl('2026-08-27'))->assertOk()
+                ->assertJsonPath('editable', false)->assertJsonPath('items.0.id', $item->id)
+                ->assertJsonPath('items.0.done', false);
+            $this->postJson('/api/horses/'.$this->horse->id.'/protocol-day', [
+                'protocol_id' => $this->protocol->id, 'date' => '2026-08-27',
+                'item_id' => $item->id, 'done' => true, 'timezone' => 'Europe/Amsterdam',
+            ])->assertNotFound();
+            $this->getJson($this->dayUrl('2026-08-27'))->assertOk()->assertJsonPath('items.0.done', false);
+        }
+        $this->assertDatabaseCount('protocol_supplement_intakes', 0);
+        $this->protocol->update(['status' => 'active']);
+        $this->getJson($this->dayUrl('2026-08-27'))->assertOk()->assertJsonPath('editable', true);
+    }
+
+    public function test_reading_inactive_protocol_history_still_requires_publication_and_ownership(): void
+    {
+        $this->protocol->update(['status' => 'paused', 'published_at' => null]);
+        $this->getJson($this->dayUrl('2026-08-27'))->assertNotFound();
+        $this->protocol->update(['published_at' => now()->addDay()]);
+        $this->getJson($this->dayUrl('2026-08-27'))->assertNotFound();
+        $this->protocol->update(['published_at' => now()->subDay()]);
+        $this->horse->update(['owner_id' => User::factory()->create()->id]);
+        $this->getJson($this->dayUrl('2026-08-27'))->assertNotFound();
+    }
+
     public function test_twice_daily_gifts_have_separate_today_and_history_checkmarks(): void
     {
         $item = $this->protocol->phases()->first()->supplements()->first();

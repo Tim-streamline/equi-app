@@ -6,6 +6,7 @@ export type LibraryFilterItem = {
   format?: string;
   creditCost?: number;
   isPlus?: boolean | number;
+  isFeatured?: boolean | number;
   equiboostAccess?: 'only' | 'included' | null;
 };
 
@@ -110,5 +111,6 @@ export function filterLibraryItems<T extends LibraryFilterItem>(
       .includes(normalizedQuery);
   });
   return filters.personal?.includes('recent')
-    ? result.sort((a, b) => (viewed.get(b.id) || 0) - (viewed.get(a.id) || 0)) : result;
+    ? result.sort((a, b) => (viewed.get(b.id) || 0) - (viewed.get(a.id) || 0))
+    : result.sort((a, b) => Number(!!b.isFeatured) - Number(!!a.isFeatured));
 }
