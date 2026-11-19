@@ -35,12 +35,18 @@ class HorseDashboardController extends Controller
         $user = $this->owner($request, $horse);
         $data = $request->validate(['protocol_id' => ['required', 'uuid'], 'note' => ['required', 'string', 'max:10000'], 'mood' => ['nullable', 'integer', 'between:1,5'], 'timezone' => ['sometimes', 'timezone']]);
         $now = CarbonImmutable::now($data['timezone'] ?? config('app.timezone'));
-        $protocol = $horse->protocols()->whereKey($data['protocol_id'])->where('status', 'active')->whereNotNull('published_at')->where('published_at', '<=', $now)->firstOrFail();
-        $presentation = $dashboard->protocol($protocol, $now);
-        abort_unless(collect($presentation['notifications'])->contains('type', 'weekly_update'), 422, 'Er staat geen weekupdate open.');
-        DB::table('protocol_weekly_updates')->updateOrInsert(['protocol_id' => $protocol->id, 'week_number' => $presentation['currentWeek']], [
-            'user_id' => $user->id, 'note' => $data['note'], 'mood' => $data['mood'] ?? null, 'created_at' => now(), 'updated_at' => now(),
-        ]);
+        DB::transaction(function () use ($horse, $data, $now, $dashboard, $user) {
+            // Serialize saving with admin pause/resume, including forms opened before a pause.
+            \App\Support\LibrarySyncLock::acquire();
+            $protocol = $horse->protocols()->whereKey($data['protocol_id'])->whereIn('status', ['active', 'paused'])
+                ->whereNotNull('published_at')->where('published_at', '<=', $now)->lockForUpdate()->firstOrFail();
+            abort_if($protocol->status === 'paused', 422, 'Je herstelplan is gepauzeerd. Je kunt weer een weekupdate versturen zodra je plan is hervat.');
+            $presentation = $dashboard->protocol($protocol, $now);
+            abort_unless(collect($presentation['notifications'])->contains('type', 'weekly_update'), 422, 'Er staat geen weekupdate open.');
+            DB::table('protocol_weekly_updates')->updateOrInsert(['protocol_id' => $protocol->id, 'week_number' => $presentation['currentWeek']], [
+                'user_id' => $user->id, 'note' => $data['note'], 'mood' => $data['mood'] ?? null, 'created_at' => now(), 'updated_at' => now(),
+            ]);
+        });
 
         return response()->json(['saved' => true]);
     }

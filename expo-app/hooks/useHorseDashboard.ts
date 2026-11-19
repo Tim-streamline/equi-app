@@ -44,10 +44,17 @@ export async function dashboardRequest(path: string, body?: object) {
         ...(body ? { body: JSON.stringify(body) } : {}),
         signal: controller.signal,
       });
-      if (!response.ok)
+      if (!response.ok) {
+        if (response.status === 422) {
+          const problem = await response.json().catch(() => null);
+          checkSession();
+          if (typeof problem?.message === 'string' && problem.message.trim())
+            throw new Error(problem.message);
+        }
         throw new Error(
           `Gegevens konden niet worden bijgewerkt (${response.status}).`,
         );
+      }
       const result = await response.json();
       checkSession();
       return result;

@@ -187,7 +187,7 @@ class HorseDashboard
         $done = $today->where('done', true)->count();
         $notifications = [];
         $reminderDay = (int) ($protocol->customer_settings['weekly_update_day'] ?? 7);
-        $weeklyDue = ! $preview && $running && (($day - 1) % 7 + 1) >= $reminderDay
+        $weeklyDue = ! $preview && $protocol->status === 'active' && $running && (($day - 1) % 7 + 1) >= $reminderDay
             && ! DB::table('protocol_weekly_updates')->where('protocol_id', $protocol->id)->where('week_number', $week)->exists();
         if ($weeklyDue) {
             $notifications[] = ['id' => 'weekly-'.$week, 'type' => 'weekly_update', 'title' => 'Weekupdate invullen', 'body' => 'Hoe gaat het met '.$protocol->horse->name.' in week '.$week.'?', 'items' => []];
