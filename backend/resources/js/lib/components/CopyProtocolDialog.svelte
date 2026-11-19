@@ -4,7 +4,7 @@
     import { Button, Input, Badge } from '$lib/components/ui';
     import { Copy, Search } from '@lucide/svelte';
 
-    let { protocol } = $props();
+    let { protocol, showTrigger = true } = $props();
     const id = $props.id();
     let dialog;
 
@@ -44,7 +44,7 @@
         error = '';
         errors = {};
     }
-    function open() {
+    export function open() {
         reset();
         dialog.showModal();
     }
@@ -165,7 +165,7 @@
     });
 </script>
 
-<Button variant="outline" onclick={open}><Copy class="size-4" /> Kopiëren naar ander paard</Button>
+{#if showTrigger}<Button variant="outline" onclick={open}><Copy class="size-4" /> Kopiëren naar ander paard</Button>{/if}
 
 <dialog bind:this={dialog} aria-labelledby={`${id}-title`} oncancel={(event) => { event.preventDefault(); close(); }}
     class="m-auto max-h-[90vh] w-[calc(100%-2rem)] max-w-xl overflow-y-auto rounded-xl border bg-card p-0 text-card-foreground shadow-xl backdrop:bg-black/50">

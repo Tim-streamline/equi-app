@@ -1,5 +1,6 @@
 <script>
     import ProtocolCustomerPreview from '$lib/components/ProtocolCustomerPreview.svelte';
+    import CopyProtocolDialog from '$lib/components/CopyProtocolDialog.svelte';
     import AdminLayout from '../../Layouts/AdminLayout.svelte';
     import Field from '$lib/components/Field.svelte';
     import {
@@ -34,6 +35,7 @@
         ChevronRight,
         CircleAlert,
         Clock3,
+        Copy,
         Eye,
         FileText,
         Dumbbell,
@@ -75,6 +77,8 @@
     const initialHorses = untrack(() => horses);
     const initialSelectedHorseId = untrack(() => selectedHorseId);
     const isNew = !initialProtocol;
+    let copyDialog = $state();
+    const canCopy = $derived(Boolean(protocol?.id && protocol?.protocol_template_id));
     const canChooseTemplate = !initialProtocol?.protocol_template_id;
     let pendingSave = $state(false);
     let saveError = $state('');
@@ -815,6 +819,11 @@
                             Depubliceren
                         </Button>
                     {/if}
+                    {#if canCopy}
+                        <Button type="button" variant="outline" class="rounded-full" onclick={() => copyDialog?.open()} disabled={$form.processing || $form.isDirty} title={$form.isDirty ? 'Sla eerst je wijzigingen op; alleen de opgeslagen versie wordt gekopieerd.' : undefined}>
+                            <Copy class="size-4" /> Kopiëren naar ander paard
+                        </Button>
+                    {/if}
                 </div>
                 <nav class="flex gap-1 overflow-x-auto px-4 lg:px-8" aria-label="Protocolonderdelen">
                     {#each sections as section (section.id)}
@@ -1411,6 +1420,7 @@
             </div>
             </fieldset>
         </form>
+        {#if canCopy}<CopyProtocolDialog bind:this={copyDialog} {protocol} showTrigger={false} />{/if}
 
         {#if overviewOpen}
             <ProtocolCustomerPreview payload={$form.data()} protocolId={initialProtocol?.id ?? null} onclose={() => (overviewOpen = false)} />
