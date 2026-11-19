@@ -6,9 +6,12 @@ use App\Models\IntakeAttachment;
 use App\Models\IntakeBooking;
 use Dompdf\Dompdf;
 use Dompdf\Options;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use RuntimeException;
+use Symfony\Component\HttpKernel\Exception\HttpExceptionInterface;
+use Throwable;
 
 /** Answers-only document for the authenticated admin download. */
 class IntakeAnswersPdf
@@ -33,6 +36,7 @@ class IntakeAnswersPdf
             throw new RuntimeException('De intakevragen zijn niet beschikbaar voor de PDF.');
         }
         $images = [];
+        $previews = app(IntakePhotoPreview::class);
         $files = IntakeAttachment::where('booking_id', $booking->id)->get()->keyBy('id');
         foreach ($sections as $section) {
             foreach ($section['rows'] as $row) {
@@ -45,10 +49,28 @@ class IntakeAnswersPdf
                         if (! Storage::disk('local')->exists($file->path)) {
                             throw new RuntimeException('Een intakefoto ontbreekt. De PDF is niet verstuurd.');
                         }
+                        if (! empty($row['not_applicable'])) {
+                            // The PDF prints only "Niet van toepassing" for this row.
+                            continue;
+                        }
+                        // Dompdf keeps every embedded image in memory, so full-size originals
+                        // (up to 15 MB each) exhaust PHP memory on photo-heavy intakes. Embed
+                        // the cached downscaled copy; originals stay downloadable in the admin.
+                        try {
+                            $path = $previews->make($file->path);
+                        } catch (Throwable $error) {
+                            // One unreadable photo must not block the whole export; the PDF names it instead.
+                            // Filesystem warnings surface as ErrorException, not as the helper's HTTP aborts.
+                            Log::warning('Intake photo omitted from PDF', ['attachment_id' => $file->id,
+                                'reason' => $error instanceof HttpExceptionInterface ? $error->getStatusCode() : $error::class.': '.$error->getMessage()]);
+                            $images[$file->id] = null;
+
+                            continue;
+                        }
                         // Large base64 attributes can exceed parser limits, silently
                         // losing the image and everything that follows in the intake.
                         // Resolve only this booking's approved image references on the private disk.
-                        $images[$file->id] = 'file:///'.ltrim(str_replace('\\', '/', Storage::disk('local')->path($file->path)), '/');
+                        $images[$file->id] = 'file:///'.ltrim(str_replace('\\', '/', Storage::disk('local')->path($path)), '/');
                     }
                 }
             }

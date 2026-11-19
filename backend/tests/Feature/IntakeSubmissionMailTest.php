@@ -10,6 +10,7 @@ use App\Models\IntakeField;
 use App\Models\IntakeQuestionnaire;
 use App\Models\User;
 use App\Support\IntakeAnswersPdf;
+use App\Support\IntakePhotoPreview;
 use App\Support\IntakeSubmissionMail;
 use Carbon\Carbon;
 use Dompdf\Dompdf;
@@ -19,6 +20,7 @@ use Illuminate\Http\UploadedFile;
 use Illuminate\Mail\Events\MessageSending;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Event;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Storage;
 use Inertia\Testing\AssertableInertia as Assert;
@@ -261,6 +263,81 @@ class IntakeSubmissionMailTest extends TestCase
         $rendered = $pdf->render($this->booking->fresh());
         $this->assertStringStartsWith('%PDF-', $rendered);
         $this->assertStringContainsString('/Subtype /Image', $rendered);
+    }
+
+    public function test_pdf_embeds_downscaled_photos_and_names_a_photo_that_cannot_be_converted(): void
+    {
+        Storage::fake('local');
+        $disk = Storage::disk('local');
+        $big = UploadedFile::fake()->image('big.jpg', 3000, 2000);
+        $disk->put('intake/big.jpg', file_get_contents($big->getRealPath()));
+        $disk->put('intake/broken.jpg', 'not an image');
+        $references = [];
+        $ids = [];
+        // The unreadable photo comes first: the photos after it must still be embedded.
+        foreach (['broken.jpg', 'big.jpg'] as $name) {
+            $photo = IntakeAttachment::create(['booking_id' => $this->booking->id, 'section_key' => 'paard', 'field_key' => 'foto',
+                'name' => $name, 'path' => 'intake/'.$name, 'mime' => 'image/jpeg']);
+            $references[] = 'attachment:'.$photo->id.':'.$name;
+            $ids[$name] = $photo->id;
+        }
+        $this->booking->answers()->create(['section_id' => 'paard', 'field_id' => 'foto', 'value' => json_encode($references)]);
+        $pdf = app(IntakeAnswersPdf::class);
+        Log::spy();
+        // Rendering first exercises the export with no cached previews.
+        $rendered = $pdf->render($this->booking->fresh());
+        $this->assertStringStartsWith('%PDF-', $rendered);
+        $this->assertSame(1, substr_count($rendered, '/Subtype /Image'));
+        Log::shouldHaveReceived('warning')->once()->with('Intake photo omitted from PDF', ['attachment_id' => $ids['broken.jpg'], 'reason' => 415]);
+        $html = $pdf->html($this->booking->fresh());
+        // Full-size originals exhausted PHP memory on photo-heavy intakes.
+        $this->assertStringContainsString('intake/big.jpg.preview-v1.jpg"', $html);
+        $this->assertStringNotContainsString('intake/big.jpg"', $html);
+        $this->assertSame([960, 640], array_slice(getimagesize($disk->path(IntakePhotoPreview::path('intake/big.jpg'))), 0, 2));
+        $this->assertStringNotContainsString('broken.jpg"', $html);
+        $this->assertStringContainsString('broken.jpg', $html);
+        $this->assertSame(1, substr_count($html, 'kon niet in de PDF worden opgenomen'));
+    }
+
+    public function test_pdf_names_a_photo_whose_preview_cannot_be_written(): void
+    {
+        if (posix_geteuid() === 0) {
+            $this->markTestSkipped('Root ignores directory permissions.');
+        }
+        Storage::fake('local');
+        $disk = Storage::disk('local');
+        $photo = UploadedFile::fake()->image('locked.jpg', 1200, 800);
+        $disk->put('intake/locked/photo.jpg', file_get_contents($photo->getRealPath()));
+        $attachment = IntakeAttachment::create(['booking_id' => $this->booking->id, 'section_key' => 'paard', 'field_key' => 'foto',
+            'name' => 'locked.jpg', 'path' => 'intake/locked/photo.jpg', 'mime' => 'image/jpeg']);
+        $this->booking->answers()->create(['section_id' => 'paard', 'field_id' => 'foto', 'value' => json_encode(['attachment:'.$attachment->id.':locked.jpg'])]);
+        // A filesystem failure raises an ErrorException rather than one of the helper's HTTP aborts.
+        chmod($disk->path('intake/locked'), 0555);
+        try {
+            $rendered = app(IntakeAnswersPdf::class)->render($this->booking->fresh());
+            $html = app(IntakeAnswersPdf::class)->html($this->booking->fresh());
+        } finally {
+            chmod($disk->path('intake/locked'), 0755);
+        }
+        $this->assertStringStartsWith('%PDF-', $rendered);
+        $this->assertSame(1, substr_count($html, 'kon niet in de PDF worden opgenomen'));
+        $disk->assertMissing(IntakePhotoPreview::path('intake/locked/photo.jpg'));
+    }
+
+    public function test_pdf_does_not_convert_photos_of_a_group_marked_not_applicable(): void
+    {
+        Storage::fake('local');
+        $photo = UploadedFile::fake()->image('retained.jpg', 1200, 800);
+        Storage::disk('local')->put('intake/retained.jpg', file_get_contents($photo->getRealPath()));
+        $attachment = IntakeAttachment::create(['booking_id' => $this->booking->id, 'section_key' => 'paard', 'field_key' => 'foto',
+            'name' => 'retained.jpg', 'path' => 'intake/retained.jpg', 'mime' => 'image/jpeg']);
+        IntakeField::where('key', 'foto')->firstOrFail()->update(['photo_config' => ['allow_na' => true]]);
+        $this->booking->answers()->create(['section_id' => 'paard', 'field_id' => 'foto', 'value' => json_encode(['attachment:'.$attachment->id.':retained.jpg'])]);
+        $this->booking->answers()->create(['section_id' => '__photos', 'field_id' => 'na:paard:foto', 'value' => '"yes"']);
+        $html = app(IntakeAnswersPdf::class)->html($this->booking->fresh());
+        $this->assertStringContainsString('Niet van toepassing', $html);
+        $this->assertStringNotContainsString('<img', $html);
+        Storage::disk('local')->assertMissing(IntakePhotoPreview::path('intake/retained.jpg'));
     }
 
     public function test_pdf_rejects_a_document_that_was_truncated_during_html_parsing(): void

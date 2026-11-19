@@ -69,6 +69,14 @@ class IntakePhotoPreview
             unset($small);
             abort_unless(rename($temporary, $disk->path($preview)), 500);
             $temporary = null;
+            // Deleting a horse or protocol removes originals before previews and does not
+            // take this lock. If the original went while we were decoding, that cleanup has
+            // already passed this path; do not leave a private photo behind.
+            clearstatcache(true, $path);
+            if (! is_file($path)) {
+                @unlink($disk->path($preview));
+                abort(404);
+            }
 
             return $preview;
         } finally {

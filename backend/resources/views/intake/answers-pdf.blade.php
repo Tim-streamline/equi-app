@@ -54,7 +54,8 @@
 @elseif (in_array($row['type'], ['photo', 'file'], true))
 @foreach ($row['attachments'] as $file)
 <div class="photo{{ !empty($row['large_attachments']) ? ' overview' : '' }}">
-@if (isset($images[$file['id']]))<img src="{{ $images[$file['id']] }}" alt="{{ $file['name'] }}"><br>@endif
+@if (isset($images[$file['id']]))<img src="{{ $images[$file['id']] }}" alt="{{ $file['name'] }}"><br>
+@elseif (array_key_exists($file['id'], $images))<span class="empty">Deze foto kon niet in de PDF worden opgenomen. Bekijk het origineel in de intake.</span><br>@endif
 {{ $file['name'] }}
 @if(!empty($file['year']))<br>Jaartal: {{ $file['year'] }}@endif
 @if(!empty($file['slot']))<br>{{ $file['slot'] }}@endif
