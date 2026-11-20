@@ -12,7 +12,7 @@ use Tests\TestCase;
  */
 class UsersSyncPrivacyTest extends TestCase
 {
-    private const SENSITIVE = ['password', 'remember_token', 'admin_note', 'disabled_at', 'email_verified_at'];
+    private const SENSITIVE = ['password', 'remember_token', 'admin_note', 'disabled_at', 'email_verified_at', 'is_test_user'];
 
     public function test_user_rows_sync_only_through_explicit_allowlists(): void
     {

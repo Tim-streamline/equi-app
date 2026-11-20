@@ -26,6 +26,18 @@ class Horse extends Model
 {
     use HasUuids;
 
+    protected static function booted(): void
+    {
+        // The horse's own protocols and intakes cascade with it. Copies on other horses (of test users) that use
+        // one of its intakes do not, and the database keeps an intake as long as a protocol uses it. Also for a
+        // delete that arrives through the app's sync.
+        // No return value: a value would stop the other listeners of this event.
+        static::deleting(function (Horse $horse): void {
+            Protocol::query()->where('horse_id', '!=', $horse->id)
+                ->whereIn('intake_booking_id', IntakeBooking::where('horse_id', $horse->id)->select('id'))->delete();
+        });
+    }
+
     protected function casts(): array
     {
         return [

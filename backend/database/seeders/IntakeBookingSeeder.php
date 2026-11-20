@@ -21,7 +21,7 @@ class IntakeBookingSeeder extends Seeder
         // The anchor user's pending intake (matches the frontend mock).
         $anchorUser = User::where('email', UserSeeder::ANCHOR_EMAIL)->firstOrFail();
         $nova = Horse::where('owner_id', $anchorUser->id)->where('name', 'Nova')->first();
-        IntakeBooking::updateOrCreate(['id' => $nova->protocols()->first()?->intake?->id ?? (string) Str::uuid()], [
+        IntakeBooking::updateOrCreate(['id' => IntakeBooking::where('horse_id', $nova?->id)->where('user_id', $anchorUser->id)->value('id') ?? (string) Str::uuid()], [
             'user_id' => $anchorUser->id,
             'horse_id' => $nova?->id,
             'therapist_id' => $shelley->id,
@@ -38,7 +38,7 @@ class IntakeBookingSeeder extends Seeder
             }
             $when = fake()->dateTimeBetween('-2 months', '+3 weeks');
             $weekday = (int) $when->format('N') - 1;
-            IntakeBooking::updateOrCreate(['id' => $horse->protocols()->first()?->intake?->id ?? (string) Str::uuid()], [
+            IntakeBooking::updateOrCreate(['id' => IntakeBooking::where('horse_id', $horse->id)->where('user_id', $user->id)->value('id') ?? (string) Str::uuid()], [
                 'user_id' => $user->id,
                 'horse_id' => $horse?->id,
                 'therapist_id' => fake()->randomElement($therapistIds),

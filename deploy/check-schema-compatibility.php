@@ -12,6 +12,7 @@ try {
         '2026_10_14_000002_enforce_protocol_intake_invariants' => 'the required protocol/intake relationship',
         '2026_10_15_000003_unify_subscription_library_access' => 'the single subscription and separate protocol purchase model',
         '2026_10_15_000004_move_intake_photos_into_section' => 'the editable intake photo section and stable answer identifiers',
+        '2026_11_20_000002_let_protocols_share_an_intake' => 'protocols naming the intake they use',
     ] as $migration => $requirement) {
         if (Illuminate\Support\Facades\Schema::hasTable('migrations')
             && Illuminate\Support\Facades\DB::table('migrations')->where('migration', $migration)->exists()

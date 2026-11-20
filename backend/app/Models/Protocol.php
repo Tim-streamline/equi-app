@@ -55,13 +55,18 @@ class Protocol extends Model
             // published protocol (title edits, timing, repeated editor saves) must keep a reopened review.
             $publishing = $this->published_at !== null && ($new || $this->getRawOriginal('published_at') === null);
             $saved = parent::save($options);
-            if ($saved && $new && ! $this->creatingForIntake) {
-                $this->intake()->create(['horse_id' => $this->horse_id, 'user_id' => $this->horse->owner_id,
-                    'status' => 'pending', 'intake_status' => 'draft']);
+            // A new protocol gets its own intake, unless it was given the intake of another protocol to use
+            // (a copy, see ProtocolCopier) or an intake is creating it (IntakeBooking::save links the two).
+            if ($saved && $new && ! $this->creatingForIntake && ! $this->intake_booking_id) {
+                $intake = IntakeBooking::create(['protocol_id' => $this->id, 'horse_id' => $this->horse_id,
+                    'user_id' => $this->horse->owner_id, 'status' => 'pending', 'intake_status' => 'draft']);
+                $this->forceFill(['intake_booking_id' => $intake->id]);
+                parent::save();
             }
             if ($saved && $publishing) {
-                // Publishing finishes intake review, independently of the trajectory's status.
-                $this->intake()->whereNotNull('submitted_at')->whereIn('status', ['pending', 'confirmed'])
+                // Publishing finishes intake review, independently of the trajectory's status. Not for a copy on
+                // another horse (a test user's): that intake is a customer's, and its review is not about this copy.
+                $this->intake()->where('horse_id', $this->horse_id)->whereNotNull('submitted_at')->whereIn('status', ['pending', 'confirmed'])
                     ->update(['status' => 'done', 'updated_at' => now()]);
             }
 
@@ -82,7 +87,13 @@ class Protocol extends Model
         return DB::transaction(function () {
             \App\Support\LibrarySyncLock::acquire();
             static::whereKey($this->id)->lockForUpdate()->firstOrFail();
-            $paths = IntakeAttachment::whereIn('booking_id', $this->intake()->select('id'))->pluck('path')->all();
+            // Only the intake that was created for this protocol goes with it. A copy leaves the intake it uses alone,
+            // and an intake that other protocols use keeps its protocol until those are gone.
+            $own = IntakeBooking::where('protocol_id', $this->id)->value('id');
+            if ($own && static::where('intake_booking_id', $own)->whereKeyNot($this->id)->exists()) {
+                throw ValidationException::withMessages(['protocol' => self::intakeInUseMessage($this->title)]);
+            }
+            $paths = $own ? IntakeAttachment::where('booking_id', $own)->pluck('path')->all() : [];
             $paths = array_merge($paths, array_map(IntakePhotoPreview::path(...), $paths));
             $deleted = parent::delete();
             if ($deleted && $paths) {
@@ -101,9 +112,54 @@ class Protocol extends Model
         });
     }
 
-    public function intake(): HasOne
+    public static function intakeInUseMessage(string $title): string
     {
-        return $this->hasOne(IntakeBooking::class);
+        return "De intake van protocol “{$title}” wordt ook gebruikt door andere protocollen. Selecteer die ook, of kies “Protocol verwijderen”: dan blijft de intake bewaard.";
+    }
+
+    /**
+     * Deletes this protocol but keeps the intake that was created for it, with its answers and files. The intake
+     * moves to another protocol of the same horse that uses it (the oldest one that is still in use, else the
+     * oldest) or, when there is none, to a new empty draft like the one a purchase starts with: an intake always
+     * belongs to a protocol of its horse. A copy, which only uses another protocol's intake, is simply deleted.
+     *
+     * @return static|null The protocol the intake now belongs to; null when this protocol did not own its intake.
+     */
+    public function deleteKeepingIntake(): ?self
+    {
+        return DB::transaction(function () {
+            \App\Support\LibrarySyncLock::acquire();
+            static::whereKey($this->id)->lockForUpdate()->firstOrFail();
+            $own = IntakeBooking::where('protocol_id', $this->id)->lockForUpdate()->first();
+            $heir = null;
+            if ($own) {
+                // A protocol that is still in use before a completed or archived one: the customer's intake card
+                // follows the protocol the intake belongs to.
+                $heir = static::where('intake_booking_id', $own->id)->where('horse_id', $own->horse_id)->whereKeyNot($this->id)
+                    ->orderByRaw("status IN ('completed', 'archived')")->oldest()->orderBy('id')->lockForUpdate()->first();
+                if (! $heir) {
+                    // A cancelled intake is history: its placeholder must not look like an unfinished purchase.
+                    $heir = new static(['horse_id' => $own->horse_id, 'title' => 'Persoonlijk protocol']
+                        + ($own->status === 'cancelled' ? ['status' => 'archived', 'archived_previous_status' => 'draft'] : ['status' => 'draft']));
+                    $heir->forceFill(['intake_booking_id' => $own->id])->save();
+                }
+                // Not through the model, which never lets an intake change protocol in normal use.
+                IntakeBooking::whereKey($own->id)->update(['protocol_id' => $heir->id]);
+                // The purchase that paid for this intake stays with it.
+                if (! DB::table('protocol_purchases')->where('protocol_id', $heir->id)->exists()) {
+                    DB::table('protocol_purchases')->where('protocol_id', $this->id)->update(['protocol_id' => $heir->id]);
+                }
+            }
+            parent::delete();
+
+            return $heir;
+        });
+    }
+
+    /** The intake this protocol uses: its own, or for a copy the intake of the protocol it was copied from. */
+    public function intake(): BelongsTo
+    {
+        return $this->belongsTo(IntakeBooking::class, 'intake_booking_id');
     }
 
     protected function casts(): array

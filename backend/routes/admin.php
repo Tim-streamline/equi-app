@@ -65,6 +65,7 @@ Route::middleware('auth:admin')->group(function () {
         Route::post('{user}/restore', 'restore')->name('restore');
         Route::post('{user}/reset-password', 'resetPassword')->name('reset-password');
         Route::post('{user}/restrict', 'restrict')->name('restrict');
+        Route::post('{user}/test-user', 'setTestUser')->name('test-user')->middleware('admin.role:admin');
         Route::post('{user}/data-export', 'requestExport')->name('data-export');
     });
 
@@ -195,6 +196,7 @@ Route::middleware('auth:admin')->group(function () {
         Route::get('{booking}', 'show')->name('show');
         Route::get('{booking}/answers.pdf', 'answersPdf')->name('answers-pdf');
         Route::delete('{booking}', 'destroy')->name('destroy');
+        Route::post('{booking}/protocols', 'createProtocol')->whereUuid('booking')->name('protocols.store');
         Route::post('{booking}/status', 'updateStatus')->name('status');
         Route::put('{booking}', 'update')->name('update');
     });
@@ -222,8 +224,7 @@ Route::middleware('auth:admin')->group(function () {
         Route::post('/', 'store')->name('store');
         Route::post('bulk', 'bulk')->name('bulk')->middleware('admin.role:admin,therapist_admin');
         Route::post('preview', 'preview')->name('preview');
-        Route::get('copy-targets/users', 'copyTargetUsers')->name('copy-targets.users');
-        Route::get('copy-targets/users/{user}/horses', 'copyTargetHorses')->whereUuid('user')->name('copy-targets.horses');
+        Route::get('{protocol}/copy-targets', 'copyTargets')->whereUuid('protocol')->name('copy-targets');
         Route::post('{protocol}/copy', 'copy')->whereUuid('protocol')->name('copy');
         Route::post('{protocol}/preview', 'preview')->name('preview-existing');
         Route::get('{protocol}/edit', 'edit')->name('edit');

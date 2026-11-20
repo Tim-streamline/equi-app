@@ -2,51 +2,68 @@
     import { onMount } from 'svelte';
     import { router } from '@inertiajs/svelte';
     import { Button, Input, Badge } from '$lib/components/ui';
-    import { Copy, Search } from '@lucide/svelte';
+    import { Copy } from '@lucide/svelte';
 
-    let { protocol, showTrigger = true } = $props();
+    // mode "same": a copy for the protocol's own horse. mode "test": a copy for a horse of one of the test users.
+    let { protocol, mode = 'same', showTrigger = true } = $props();
     const id = $props.id();
     let dialog;
 
-    let query = $state('');
-    let users = $state([]);
-    let searching = $state(false);
-    let user = $state(null);
+    const toTest = $derived(mode === 'test');
+    const label = $derived(toTest ? 'Kopiëren naar testgebruiker' : 'Kopiëren');
+
     let horses = $state([]);
+    // The source intake as it is when the dialog opens: { submitted, user }.
+    let intake = $state(null);
     let loadingHorses = $state(false);
+    let loadFailed = $state(false);
     let horseId = $state('');
     let destination = $state('new');
     let includeAnalysis = $state(false);
+    let title = $state('');
     let pending = $state(false);
     let error = $state('');
     let errors = $state({});
-    let searchTimer;
-    let searchRequest;
     let horsesRequest;
 
     const horse = $derived(horses.find((item) => item.id === horseId) ?? null);
+    const user = $derived(horse?.owner ?? null);
     const drafts = $derived(horse?.drafts ?? []);
-    const canSubmit = $derived(Boolean(user && horse) && !pending && !loadingHorses);
+    const sameHorse = $derived(horse?.id === protocol.horse_id);
+    const chosenDraft = $derived(drafts.find((draft) => draft.id === destination) ?? null);
+    // The intake belongs to its own user, who stays the previous owner after a horse transfer.
+    const intakeUser = $derived(intake?.user ?? null);
+    const sourceSubmitted = $derived(Boolean(intake?.submitted));
+    // A cancelled intake cannot be used by a new copy; an existing draft has its own intake.
+    const sourceCancelled = $derived(Boolean(intake?.cancelled));
+    const otherOwner = $derived(Boolean(user && user.id !== intakeUser?.id));
+    // A new draft uses the same intake as this protocol; nothing is copied. An existing draft keeps its own intake.
+    // Intake answers such as the weight only count once the intake is submitted, and so does editing the copy.
+    const intakeSubmitted = $derived(chosenDraft ? Boolean(chosenDraft.intake_submitted) : sourceSubmitted);
+    // A reused draft gets the new title, so its own current title doesn't count as a clash.
+    const titleClash = $derived(Boolean(title.trim()) && (horse?.protocols ?? []).some((item) => item.id !== chosenDraft?.id
+        && item.title?.trim().toLocaleLowerCase('nl') === title.trim().toLocaleLowerCase('nl')));
+    const canSubmit = $derived(Boolean(horse && destination && title.trim()) && !(destination === 'new' && sourceCancelled) && !pending && !loadingHorses);
+    // The horse is a step of its own only when there is a choice.
+    const step = $derived(toTest ? 1 : 0);
 
     function reset() {
-        clearTimeout(searchTimer);
-        searchRequest?.abort();
         horsesRequest?.abort();
-        query = '';
-        users = [];
-        searching = false;
-        user = null;
         horses = [];
+        intake = null;
         loadingHorses = false;
+        loadFailed = false;
         horseId = '';
         destination = 'new';
         includeAnalysis = false;
+        title = protocol.title ?? '';
         error = '';
         errors = {};
     }
     export function open() {
         reset();
         dialog.showModal();
+        loadHorses();
     }
     function close() {
         if (pending) return;
@@ -54,77 +71,52 @@
         dialog?.close();
     }
 
-    async function fetchJson(url, request) {
-        const response = await fetch(url, { headers: { Accept: 'application/json' }, signal: request.signal });
-        if (!response.ok) throw new Error(`Request failed: ${response.status}`);
-        return response.json();
-    }
-
-    function search() {
-        clearTimeout(searchTimer);
-        searchRequest?.abort();
-        error = '';
-        const term = query.trim();
-        if (term.length < 2) {
-            users = [];
-            searching = false;
-            return;
-        }
-        searching = true;
-        searchTimer = setTimeout(async () => {
-            const request = new AbortController();
-            searchRequest = request;
-            try {
-                const data = await fetchJson(`/admin/protocols/copy-targets/users?q=${encodeURIComponent(term)}`, request);
-                if (!request.signal.aborted) users = data.users ?? [];
-            } catch (exception) {
-                if (!request.signal.aborted && exception.name !== 'AbortError') error = 'Gebruikers konden niet worden gezocht. Probeer opnieuw.';
-            } finally {
-                if (searchRequest === request) searching = false;
-            }
-        }, 250);
-    }
-
-    async function chooseUser(choice) {
+    async function loadHorses() {
         horsesRequest?.abort();
-        user = choice;
-        horses = [];
-        horseId = '';
-        destination = 'new';
-        error = '';
-        errors = {};
         loadingHorses = true;
+        loadFailed = false;
+        const chosenOwner = user?.id;
         const request = new AbortController();
         horsesRequest = request;
         try {
-            const data = await fetchJson(`/admin/protocols/copy-targets/users/${choice.id}/horses`, request);
-            if (!request.signal.aborted) horses = data.horses ?? [];
+            const response = await fetch(`/admin/protocols/${protocol.id}/copy-targets?to=${toTest ? 'test' : 'same'}`, { headers: { Accept: 'application/json' }, signal: request.signal });
+            if (!response.ok) throw new Error(`Request failed: ${response.status}`);
+            const data = await response.json();
+            if (request.signal.aborted) return;
+            horses = data.horses ?? [];
+            intake = data.intake ?? null;
+            // After a reload keep the admin's choice only where it still exists, with the same owner; never pick
+            // another destination or recipient for them.
+            const current = horses.find((item) => item.id === horseId && item.owner.id === chosenOwner && !horseUnavailable(item));
+            if (!current) {
+                horseId = '';
+                destination = 'new';
+                // The protocol's own horse is the only target of a plain copy: nothing to choose.
+                if (!toTest && horses[0] && !horseUnavailable(horses[0])) chooseHorse(horses[0]);
+            } else if (destination !== 'new' && !current.drafts?.some((draft) => draft.id === destination)) {
+                destination = '';
+            }
         } catch (exception) {
-            if (!request.signal.aborted && exception.name !== 'AbortError') error = 'De paarden van deze gebruiker konden niet worden geladen. Probeer opnieuw.';
+            if (request.signal.aborted || exception.name === 'AbortError') return;
+            // Nothing can be copied from a list that may be out of date.
+            horses = [];
+            intake = null;
+            horseId = '';
+            destination = 'new';
+            loadFailed = true;
         } finally {
             if (horsesRequest === request) loadingHorses = false;
         }
     }
 
-    function changeUser() {
-        horsesRequest?.abort();
-        user = null;
-        horses = [];
-        horseId = '';
-        destination = 'new';
-        loadingHorses = false;
-        errors = {};
-    }
-
     function chooseHorse(choice) {
         horseId = choice.id;
-        // Default to filling the horse's existing draft: that is where its intake already lives.
-        destination = choice.drafts?.length ? choice.drafts[0].id : 'new';
+        // Always a new draft by default: filling an existing draft is a choice the admin makes.
+        destination = 'new';
         errors = {};
     }
 
     function horseUnavailable(item) {
-        if (item.id === protocol.horse_id) return 'Paard van dit protocol';
         if (item.status !== 'active') return 'Gearchiveerd';
         return null;
     }
@@ -141,12 +133,15 @@
             destination: draft ? 'draft' : 'new',
             draft_id: draft ? destination : null,
             include_analysis: includeAnalysis,
+            title: title.trim(),
         }, {
             preserveScroll: true,
             onSuccess: () => { pending = false; close(); },
             onError: (bag) => {
                 errors = bag;
-                error = bag.copy || bag.protocol || bag.destination || '';
+                error = bag.copy || bag.protocol || bag.destination || bag.user_id || '';
+                // The chosen horse or draft changed or is gone: show the current ones before the admin chooses again.
+                if (bag.draft_id || bag.horse_id) loadHorses();
             },
             onFinish: () => { pending = false; },
         });
@@ -161,100 +156,63 @@
         };
         const removeInvalid = router.on('invalid', handleFailure);
         const removeException = router.on('exception', handleFailure);
-        return () => { clearTimeout(searchTimer); searchRequest?.abort(); horsesRequest?.abort(); removeInvalid(); removeException(); };
+        return () => { horsesRequest?.abort(); removeInvalid(); removeException(); };
     });
 </script>
 
-{#if showTrigger}<Button variant="outline" onclick={open}><Copy class="size-4" /> Kopiëren naar ander paard</Button>{/if}
+{#if showTrigger}<Button variant="outline" onclick={open}><Copy class="size-4" /> {label}</Button>{/if}
 
 <dialog bind:this={dialog} aria-labelledby={`${id}-title`} oncancel={(event) => { event.preventDefault(); close(); }}
     class="m-auto max-h-[90vh] w-[calc(100%-2rem)] max-w-xl overflow-y-auto rounded-xl border bg-card p-0 text-card-foreground shadow-xl backdrop:bg-black/50">
     <div class="border-b px-6 py-4">
-        <h2 id={`${id}-title`} class="text-lg font-semibold">Protocol kopiëren naar ander paard</h2>
+        <h2 id={`${id}-title`} class="text-lg font-semibold">{toTest ? 'Protocol kopiëren naar testgebruiker' : 'Protocol kopiëren'}</h2>
         <p class="mt-1 text-sm text-muted-foreground">{protocol.title} · {protocol.horse?.name}</p>
     </div>
 
     <div class="space-y-5 px-6 py-5 text-sm">
         <section class="space-y-2">
-            <h3 class="font-medium">1. Gebruiker</h3>
-            {#if user}
-                <div class="flex items-center justify-between gap-3 rounded-lg border p-3">
-                    <div class="min-w-0">
-                        <p class="truncate font-medium">{user.name}</p>
-                        <p class="truncate text-muted-foreground">{user.email}</p>
-                    </div>
-                    <Button size="sm" variant="ghost" disabled={pending} onclick={changeUser}>Wijzigen</Button>
-                </div>
-            {:else}
-                <label class="sr-only" for={`${id}-search`}>Zoek gebruiker op naam of e-mail</label>
-                <div class="relative">
-                    <Search class="pointer-events-none absolute left-2.5 top-2.5 size-4 text-muted-foreground" aria-hidden="true" />
-                    <Input id={`${id}-search`} class="pl-8" placeholder="Zoek op naam of e-mail" autocomplete="off" bind:value={query} oninput={search} />
-                </div>
-                {#if searching}
-                    <p role="status" class="text-muted-foreground">Zoeken…</p>
-                {:else if query.trim().length >= 2 && users.length === 0 && !error}
-                    <p class="text-muted-foreground">Geen gebruikers gevonden.</p>
-                {/if}
-                {#if users.length}
-                    <ul class="max-h-56 divide-y overflow-y-auto rounded-lg border">
-                        {#each users as item (item.id)}
-                            <li>
-                                <button type="button" class="flex w-full items-center justify-between gap-3 px-3 py-2 text-left hover:bg-muted/50" onclick={() => chooseUser(item)}>
-                                    <span class="min-w-0">
-                                        <span class="block truncate font-medium">{item.name}</span>
-                                        <span class="block truncate text-muted-foreground">{item.email}</span>
-                                    </span>
-                                    <span class="flex shrink-0 items-center gap-2 text-xs text-muted-foreground">
-                                        {#if item.disabled}<Badge variant="muted">Geblokkeerd</Badge>{/if}
-                                        {item.active_horses_count} {item.active_horses_count === 1 ? 'paard' : 'paarden'}
-                                    </span>
-                                </button>
-                            </li>
-                        {/each}
-                    </ul>
-                {/if}
-            {/if}
-            {#if errors.user_id}<p class="text-destructive">{errors.user_id}</p>{/if}
-        </section>
-
-        {#if user}
-            <section class="space-y-2">
-                <h3 class="font-medium">2. Paard van {user.name}</h3>
-                {#if loadingHorses}
-                    <p role="status" class="text-muted-foreground">Paarden laden…</p>
-                {:else if horses.length === 0 && !error}
-                    <p class="text-muted-foreground">Deze gebruiker heeft geen paarden.</p>
+            {#if toTest}<h3 class="font-medium">1. Paard van een testgebruiker</h3>{/if}
+            {#if loadingHorses}
+                <p role="status" class="text-muted-foreground">Laden…</p>
+            {:else if loadFailed}
+                <p role="alert" class="rounded-lg bg-destructive/10 p-3 text-destructive">De gegevens voor het kopiëren konden niet worden geladen.</p>
+                <Button size="sm" variant="outline" onclick={loadHorses}>Opnieuw laden</Button>
+            {:else if toTest}
+                {#if horses.length === 0}
+                    <p class="text-muted-foreground">Er zijn nog geen paarden van testgebruikers. Een admin markeert een gebruiker als testgebruiker op de pagina van die gebruiker (Users → Mark as test user); daarna verschijnen de actieve paarden van die gebruiker hier.</p>
                 {:else}
-                    <div class="space-y-2" role="radiogroup" aria-label="Paard">
+                    <div class="max-h-72 space-y-2 overflow-y-auto" role="radiogroup" aria-label="Paard">
                         {#each horses as item (item.id)}
-                            {@const unavailable = horseUnavailable(item)}
-                            <label class={`flex items-center gap-3 rounded-lg border p-3 ${unavailable ? 'opacity-60' : 'cursor-pointer hover:bg-muted/40'} ${horseId === item.id ? 'border-primary bg-primary/5' : ''}`}>
-                                <input type="radio" name={`${id}-horse`} value={item.id} checked={horseId === item.id} disabled={Boolean(unavailable) || pending} onchange={() => chooseHorse(item)} />
+                            <label class={`flex cursor-pointer items-center gap-3 rounded-lg border p-3 hover:bg-muted/40 ${horseId === item.id ? 'border-primary bg-primary/5' : ''}`}>
+                                <input type="radio" name={`${id}-horse`} value={item.id} checked={horseId === item.id} disabled={pending} onchange={() => chooseHorse(item)} />
                                 <span class="min-w-0 flex-1">
                                     <span class="block font-medium">{item.name}</span>
-                                    {#if item.breed}<span class="block text-muted-foreground">{item.breed}</span>{/if}
+                                    <span class="block truncate text-muted-foreground">{item.owner.name} · {item.owner.email}{item.breed ? ` · ${item.breed}` : ''}</span>
                                 </span>
-                                {#if unavailable}<Badge variant="muted">{unavailable}</Badge>
-                                {:else if item.has_active_protocol}<Badge variant="muted">Heeft actief protocol</Badge>{/if}
+                                {#if item.id === protocol.horse_id}<Badge variant="muted">Paard van dit protocol</Badge>{/if}
+                                {#if item.has_active_protocol}<Badge variant="muted">Heeft actief protocol</Badge>{/if}
                             </label>
                         {/each}
                     </div>
                 {/if}
-                {#if errors.horse_id}<p class="text-destructive">{errors.horse_id}</p>{/if}
-            </section>
-        {/if}
+            {:else if horses[0] && horseUnavailable(horses[0])}
+                <p class="text-muted-foreground">{horses[0].name} is gearchiveerd en kan geen protocol krijgen. Herstel het paard eerst.</p>
+            {:else if horse}
+                <p class="text-muted-foreground">De kopie komt bij {horse.name} ({user.name}), naast dit protocol.</p>
+            {/if}
+            {#if errors.horse_id}<p class="text-destructive">{errors.horse_id}</p>{/if}
+        </section>
 
         {#if horse}
             <section class="space-y-2">
-                <h3 class="font-medium">3. Bestemming</h3>
+                <h3 class="font-medium">{step + 1}. Bestemming</h3>
                 <div class="space-y-2" role="radiogroup" aria-label="Bestemming">
                     {#each drafts as draft (draft.id)}
                         <label class={`flex cursor-pointer items-start gap-3 rounded-lg border p-3 hover:bg-muted/40 ${destination === draft.id ? 'border-primary bg-primary/5' : ''}`}>
                             <input class="mt-1" type="radio" name={`${id}-destination`} value={draft.id} bind:group={destination} disabled={pending} />
                             <span>
                                 <span class="block font-medium">Bestaand concept invullen: {draft.title}</span>
-                                <span class="block text-muted-foreground">Intake {draft.intake_submitted ? 'is verstuurd' : 'is nog niet verstuurd'} · aangemaakt {new Date(draft.created_at).toLocaleDateString('nl-NL')}</span>
+                                <span class="block text-muted-foreground">Houdt zijn intake ({draft.intake_submitted ? 'verstuurd' : 'nog niet verstuurd'}) · aangemaakt {new Date(draft.created_at).toLocaleDateString('nl-NL')}</span>
                             </span>
                         </label>
                     {/each}
@@ -262,7 +220,13 @@
                         <input class="mt-1" type="radio" name={`${id}-destination`} value="new" bind:group={destination} disabled={pending} />
                         <span>
                             <span class="block font-medium">Nieuw concept</span>
-                            <span class="block text-muted-foreground">Maakt een nieuw protocol met een eigen, lege intake voor {user.name}.</span>
+                            <span class="block text-muted-foreground">
+                                {#if sourceCancelled}
+                                    Niet mogelijk: de intake van dit protocol is geannuleerd, dus een nieuw protocol kan die niet gebruiken. Zet de intake eerst terug.
+                                {:else}
+                                    Maakt een nieuw protocol dat dezelfde intake gebruikt als dit protocol{sourceSubmitted ? '' : ' (nog niet verstuurd)'}. De intake wordt niet gekopieerd.
+                                {/if}
+                            </span>
                         </span>
                     </label>
                 </div>
@@ -272,17 +236,61 @@
                     <input class="mt-1" type="checkbox" bind:checked={includeAnalysis} disabled={pending} />
                     <span>
                         <span class="block font-medium">Analyse meekopiëren</span>
-                        <span class="block text-muted-foreground">De analyse beschrijft het oorspronkelijke paard. Kopieer alleen als je deze gaat aanpassen.</span>
+                        <span class="block text-muted-foreground">{sameHorse ? 'De analyse beschrijft dit paard zoals het was bij het oorspronkelijke protocol.' : 'De analyse beschrijft het oorspronkelijke paard. Kopieer alleen als je deze gaat aanpassen.'}</span>
                     </span>
                 </label>
             </section>
 
+            <section class="space-y-2">
+                <h3 class="font-medium"><label for={`${id}-title-input`}>{step + 2}. Titel van de kopie</label></h3>
+                <Input id={`${id}-title-input`} maxlength="255" autocomplete="off" bind:value={title} disabled={pending}
+                    aria-invalid={Boolean(errors.title) || !title.trim()} aria-describedby={`${id}-title-hint`} />
+                <p id={`${id}-title-hint`} class={titleClash ? 'text-amber-800 dark:text-amber-200' : 'text-muted-foreground'}>
+                    {#if !title.trim()}
+                        Vul een titel in.
+                    {:else if titleClash}
+                        {horse.name} heeft al een protocol met deze titel. {user.name} krijgt de titel in de app te zien; kies een titel waarmee de protocollen uit elkaar te houden zijn.
+                    {:else}
+                        {user.name} krijgt deze titel in de app te zien.
+                    {/if}
+                </p>
+                {#if errors.title}<p class="text-destructive">{errors.title}</p>{/if}
+            </section>
+
+            {#if destination && !(destination === 'new' && sourceCancelled)}
             <div class="space-y-2 rounded-lg border bg-muted/30 p-3 text-muted-foreground">
                 <p><span class="font-medium text-foreground">Wordt gekopieerd:</span> template, fases en weken, supplementen, gekozen en handmatige adviezen en instellingen{includeAnalysis ? ', analyse' : ''}.</p>
-                <p><span class="font-medium text-foreground">Niet gekopieerd:</span> intake-antwoorden, gewicht en voerkeuzes van het paard, startdatum, voortgang en registraties.</p>
-                <p>Automatische doseringen worden opnieuw berekend met het gewicht van {horse.name}. Handmatige adviezen en instructies kunnen nog tekst over het oorspronkelijke paard bevatten.</p>
-                <p>De kopie blijft een ongepubliceerd concept. Aanpassen, publiceren en activeren kan pas nadat de intake bij dit protocol is verstuurd.</p>
+                <p><span class="font-medium text-foreground">Niet gekopieerd:</span> intake, gewicht- en voerinstellingen van het protocol, startdatum, voortgang en registraties.</p>
+                <p>
+                    {#if chosenDraft}
+                        Automatische doseringen worden opnieuw berekend met het gewicht dat bij het concept is ingesteld, anders het gewicht uit de verstuurde intake van het concept, en anders het gewicht van {horse.name}.
+                    {:else if sourceSubmitted}
+                        Automatische doseringen worden opnieuw berekend met het gewicht uit de intake, of anders het gewicht van {horse.name}.
+                    {:else}
+                        Automatische doseringen worden opnieuw berekend met het gewicht van {horse.name}. Het gewicht uit de intake telt pas mee als de intake is verstuurd.
+                    {/if}
+                    {#if !sameHorse}Handmatige adviezen en instructies kunnen nog gegevens over het oorspronkelijke paard bevatten{chosenDraft ? '' : ', en voeradviezen blijven gebaseerd op de intake van dat paard'}.{/if}
+                </p>
+                <p>
+                    De kopie blijft een ongepubliceerd concept.
+                    {#if intakeSubmitted}
+                        De intake is al verstuurd, dus je kunt de kopie direct aanpassen en publiceren.
+                        {#if horse.has_active_protocol}
+                            Activeren kan pas als het actieve protocol van {horse.name} is afgerond of gepauzeerd.
+                        {:else}
+                            Activeren kan daarna ook meteen.
+                        {/if}
+                    {:else}
+                        Aanpassen, publiceren en activeren kan zodra {chosenDraft ? `${user.name} de intake van het concept` : `${intakeUser?.name ?? 'de klant'} de intake`} heeft verstuurd.
+                    {/if}
+                </p>
             </div>
+            {#if !chosenDraft && otherOwner}
+                <p role="note" class="rounded-lg border bg-muted/30 p-3 text-muted-foreground">
+                    De intake blijft van {intakeUser?.name ?? 'de klant'}: {user.name} ziet het protocol in de app, maar niet de antwoorden en foto’s uit de intake.
+                </p>
+            {/if}
+            {/if}
         {/if}
 
         {#if error}<p role="alert" class="rounded-lg bg-destructive/10 p-3 text-destructive">{error}</p>{/if}

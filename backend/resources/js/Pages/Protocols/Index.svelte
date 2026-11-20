@@ -22,10 +22,11 @@
     function toggle(id) { selected = selected.includes(id) ? selected.filter((value) => value !== id) : [...selected, id]; }
     function bulk(action) {
         const ids = [...selected];
-        if (action === 'delete' && !window.confirm(`${ids.length} geselecteerde protocollen definitief verwijderen? De bijbehorende intake, antwoorden, bijlagen en protocolgegevens worden verwijderd. Dit kan niet ongedaan worden gemaakt.`)) return;
+        if (action === 'delete' && !window.confirm(`${ids.length} geselecteerde protocollen met hun intake definitief verwijderen? De bijbehorende intake, antwoorden, bijlagen en protocolgegevens worden verwijderd. Dit kan niet ongedaan worden gemaakt.`)) return;
+        if (action === 'delete_protocol' && !window.confirm(`${ids.length} geselecteerde protocollen definitief verwijderen? De protocolgegevens (fases, adviezen, voortgang en registraties) worden verwijderd. De intake met antwoorden en bijlagen blijft bewaard: bij een ander protocol van het paard dat dezelfde intake gebruikt, en anders bij een nieuw leeg concept. Dit kan niet ongedaan worden gemaakt.`)) return;
         failure = '';
         busy = true;
-        router.post('/admin/protocols/bulk', { action, ids, confirmed: action === 'delete' }, {
+        router.post('/admin/protocols/bulk', { action, ids, confirmed: action === 'delete' || action === 'delete_protocol' }, {
             preserveScroll: true,
             onSuccess: () => { selected = []; },
             onError: (errors) => { failure = Object.values(errors).join(' '); },
@@ -58,7 +59,8 @@
                     <span class="mr-auto text-sm font-semibold">{selected.length} protocollen geselecteerd</span>
                     {#if status === 'archived'}<Button disabled={busy} onclick={() => bulk('restore')}>Herstellen</Button>
                     {:else}<Button disabled={busy} onclick={() => bulk('archive')}>Archiveren</Button>{/if}
-                    <Button variant="destructive" disabled={busy} onclick={() => bulk('delete')}>Verwijderen</Button>
+                    <Button variant="destructive" disabled={busy} onclick={() => bulk('delete_protocol')}>Protocol verwijderen</Button>
+                    <Button variant="destructive" disabled={busy} onclick={() => bulk('delete')}>Protocol + intake verwijderen</Button>
                 </div>
             {/if}
             {#if failure}<p role="alert" class="mb-3 text-sm text-destructive">{failure}</p>{/if}
@@ -70,6 +72,7 @@
                             <TableCell onclick={(event) => event.stopPropagation()}><input type="checkbox" aria-label={`Selecteer protocol ${p.title}`} checked={selected.includes(p.id)} disabled={!canManage || busy} onchange={() => toggle(p.id)} /></TableCell>
                             <TableCell class="font-medium">
                                 <span>{p.protocol_template_name ?? p.protocol_template?.name ?? '—'}</span>
+                                {#if p.title}<span class="block text-xs font-normal text-muted-foreground">{p.title}</span>{/if}
                             </TableCell>
                             <TableCell class="text-muted-foreground">{p.horse?.name}</TableCell>
                             <TableCell class="text-muted-foreground">{p.horse?.owner?.name ?? '—'}</TableCell>

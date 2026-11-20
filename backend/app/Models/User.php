@@ -46,6 +46,8 @@ class User extends Authenticatable
             'notifications_on' => 'boolean',
             'onboarded_at' => 'datetime',
             'disabled_at' => 'datetime',
+            // Set by admins only (UserController): deliberately not fillable.
+            'is_test_user' => 'boolean',
         ];
     }
 

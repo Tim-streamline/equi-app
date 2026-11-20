@@ -23,7 +23,8 @@ class ProtocolPurchases
             // Repeat clicks and retries after a lost response reuse the unfinished pair.
             $existing = Protocol::where('horse_id', $horseId)->whereNotIn('status', ['completed', 'archived'])->oldest()->first();
             if ($existing) {
-                abort_unless($existing->intake && $existing->intake->user_id === $userId && $existing->intake->status !== 'cancelled',
+                // The intake must be this horse's own: a copy uses the intake of another horse.
+                abort_unless($existing->intake && $existing->intake->user_id === $userId && $existing->intake->horse_id === $horseId && $existing->intake->status !== 'cancelled',
                     409, 'Dit paard heeft al een protocol. Neem contact op met je behandelaar.');
 
                 return $existing;

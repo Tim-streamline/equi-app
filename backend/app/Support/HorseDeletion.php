@@ -5,6 +5,7 @@ namespace App\Support;
 use App\Models\Horse;
 use App\Models\IntakeAttachment;
 use App\Models\IntakeBooking;
+use App\Models\Protocol;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 
@@ -40,6 +41,12 @@ class HorseDeletion
             }
         }
 
+        // Copies on other horses (of test users) use this horse's intakes and go with them.
+        $copies = Protocol::query()->where('horse_id', '!=', $horse->id)->whereIn('intake_booking_id', IntakeBooking::where('horse_id', $horse->id)->select('id'))->count();
+        if ($copies) {
+            $result['removed']['protocol_copies'] = ['label' => 'Kopieën van protocollen op paarden van testgebruikers (inclusief hun voortgang en registraties)', 'count' => $copies];
+        }
+
         return $result;
     }
 
@@ -55,7 +62,9 @@ class HorseDeletion
             $bookings = IntakeBooking::where('horse_id', $locked->id)->lockForUpdate()->get();
             $paths = IntakeAttachment::whereIn('booking_id', $bookings->modelKeys())->pluck('path')->all();
             $paths = array_merge($paths, array_map(IntakePhotoPreview::path(...), $paths));
-            $locked->protocols()->delete();
+            // Also the copies on other horses (of test users) that use one of this horse's intakes: the database
+            // keeps an intake as long as a protocol uses it.
+            Protocol::query()->where('horse_id', $locked->id)->orWhereIn('intake_booking_id', $bookings->modelKeys())->delete();
             foreach ($bookings as $booking) {
                 // Answers, attachments and reminder deliveries cascade with the intake.
                 // The horse deletion below cascades protocols, intakes and their answers.

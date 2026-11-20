@@ -33,6 +33,30 @@ class ProtocolIntakeIntegrityTest extends TestCase
         DB::statement('SET CONSTRAINTS ALL IMMEDIATE');
     }
 
+    public function test_the_shared_intake_migration_links_existing_protocols_to_their_own_intake(): void
+    {
+        $migration = require database_path('migrations/2026_11_20_000002_let_protocols_share_an_intake.php');
+        $migration->down();
+        // A database from before the migration: protocols with their intake, and deferred checks still pending as
+        // they are for the rows the migration itself touches.
+        $horse = $this->horse();
+        $pairs = [];
+        foreach (['draft', 'completed'] as $status) {
+            $protocol = (string) Str::uuid7();
+            DB::table('protocols')->insert(['id' => $protocol, 'horse_id' => $horse->id, 'title' => 'Bestaand', 'status' => $status]);
+            $pairs[$protocol] = (string) Str::uuid7();
+            DB::table('intake_bookings')->insert(['id' => $pairs[$protocol], 'protocol_id' => $protocol, 'horse_id' => $horse->id, 'user_id' => $horse->owner_id]);
+        }
+        DB::statement('SET CONSTRAINTS ALL IMMEDIATE');
+        DB::statement('SET CONSTRAINTS ALL DEFERRED');
+
+        $migration->up();
+        DB::statement('SET CONSTRAINTS ALL IMMEDIATE');
+
+        $this->assertSame($pairs, DB::table('protocols')->whereIn('id', array_keys($pairs))->pluck('intake_booking_id', 'id')->all());
+        $this->artisan('protocols:audit-intakes')->assertSuccessful();
+    }
+
     public function test_deleting_a_draft_intake_takes_the_library_lock_before_locking_rows(): void
     {
         $horse = $this->horse();

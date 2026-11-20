@@ -50,7 +50,10 @@
             <Button variant="outline" onclick={() => setStatus('active')}>Resume</Button>
             <Button variant="outline" onclick={() => setStatus('paused')}>Pause</Button>
             <Button variant="outline" onclick={() => setStatus('completed')}>Complete</Button>
-            {#if protocol.protocol_template_id}<CopyProtocolDialog {protocol} />{/if}
+            {#if protocol.protocol_template_id}
+                <CopyProtocolDialog {protocol} />
+                <CopyProtocolDialog {protocol} mode="test" />
+            {/if}
         {/snippet}
     </PageHeader>
 

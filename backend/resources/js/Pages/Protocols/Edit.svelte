@@ -78,6 +78,7 @@
     const initialSelectedHorseId = untrack(() => selectedHorseId);
     const isNew = !initialProtocol;
     let copyDialog = $state();
+    let copyToTestDialog = $state();
     const canCopy = $derived(Boolean(protocol?.id && protocol?.protocol_template_id));
     const canChooseTemplate = !initialProtocol?.protocol_template_id;
     let pendingSave = $state(false);
@@ -821,7 +822,10 @@
                     {/if}
                     {#if canCopy}
                         <Button type="button" variant="outline" class="rounded-full" onclick={() => copyDialog?.open()} disabled={$form.processing || $form.isDirty} title={$form.isDirty ? 'Sla eerst je wijzigingen op; alleen de opgeslagen versie wordt gekopieerd.' : undefined}>
-                            <Copy class="size-4" /> Kopiëren naar ander paard
+                            <Copy class="size-4" /> Kopiëren
+                        </Button>
+                        <Button type="button" variant="outline" class="rounded-full" onclick={() => copyToTestDialog?.open()} disabled={$form.processing || $form.isDirty} title={$form.isDirty ? 'Sla eerst je wijzigingen op; alleen de opgeslagen versie wordt gekopieerd.' : undefined}>
+                            <Copy class="size-4" /> Kopiëren naar testgebruiker
                         </Button>
                     {/if}
                 </div>
@@ -1420,7 +1424,10 @@
             </div>
             </fieldset>
         </form>
-        {#if canCopy}<CopyProtocolDialog bind:this={copyDialog} {protocol} showTrigger={false} />{/if}
+        {#if canCopy}
+            <CopyProtocolDialog bind:this={copyDialog} {protocol} showTrigger={false} />
+            <CopyProtocolDialog bind:this={copyToTestDialog} {protocol} mode="test" showTrigger={false} />
+        {/if}
 
         {#if overviewOpen}
             <ProtocolCustomerPreview payload={$form.data()} protocolId={initialProtocol?.id ?? null} onclose={() => (overviewOpen = false)} />

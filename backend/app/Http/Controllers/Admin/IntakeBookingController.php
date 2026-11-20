@@ -3,7 +3,9 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Models\Horse;
 use App\Models\IntakeBooking;
+use App\Models\Protocol;
 use App\Models\Therapist;
 use App\Support\AuditLogger;
 use App\Support\IntakeAnswersPdf;
@@ -49,9 +51,41 @@ class IntakeBookingController extends Controller
 
     public function show(Request $request, IntakeBooking $booking): Response
     {
-        $booking->load('user:id,name,email', 'horse:id,name,breed', 'therapist:id,name,title');
+        $booking->load('user:id,name,email', 'horse:id,name,breed,status', 'therapist:id,name,title');
 
-        return Inertia::render('Bookings/Show', ['booking' => $booking, 'printMode' => $request->boolean('print'), 'review' => app(IntakeReview::class)->forBooking($booking)]);
+        return Inertia::render('Bookings/Show', ['booking' => $booking, 'printMode' => $request->boolean('print'), 'review' => app(IntakeReview::class)->forBooking($booking),
+            // Several protocols can use one intake; on another horse only for a test user's copy.
+            'protocols' => $booking->protocols()->with('horse:id,name')->oldest()->orderBy('id')->get(['id', 'horse_id', 'title', 'status', 'protocol_template_id', 'published_at'])
+                ->map(fn (Protocol $protocol): array => $protocol->only(['id', 'title', 'status']) + [
+                    'configured' => (bool) $protocol->protocol_template_id, 'published' => (bool) $protocol->published_at,
+                    'horse' => $protocol->horse_id === $booking->horse_id ? null : $protocol->horse?->name,
+                ])]);
+    }
+
+    /** Adds a new, empty draft protocol that uses this intake, next to the protocols that already do. */
+    public function createProtocol(IntakeBooking $booking): RedirectResponse
+    {
+        $protocol = DB::transaction(function () use ($booking) {
+            // Same order as horse deletion: library lock, the horse row, then the intake row.
+            LibrarySyncLock::acquire();
+            $horse = Horse::query()->lockForUpdate()->findOrFail($booking->horse_id);
+            $locked = IntakeBooking::query()->lockForUpdate()->findOrFail($booking->id);
+            if (! $locked->submitted_at || $locked->status === 'cancelled') {
+                // An unsubmitted intake still has the empty draft it was created with.
+                throw ValidationException::withMessages(['protocol' => 'Een nieuw protocol kan alleen op een verstuurde intake die niet is geannuleerd.']);
+            }
+            if ($horse->status !== 'active') {
+                throw ValidationException::withMessages(['protocol' => 'Een gearchiveerd paard kan geen protocol krijgen. Herstel het paard eerst.']);
+            }
+            $protocol = new Protocol(['horse_id' => $horse->id, 'title' => 'Persoonlijk protocol', 'status' => 'draft']);
+            // Uses this intake; Protocol::save then creates none for it.
+            $protocol->forceFill(['intake_booking_id' => $locked->id])->save();
+            AuditLogger::created($protocol, 'Nieuw protocol op bestaande intake '.$locked->id);
+
+            return $protocol;
+        });
+
+        return to_route('admin.protocols.edit', $protocol)->with('success', 'Nieuw concept aangemaakt op de bestaande intake. Je kunt het hier opstellen.');
     }
 
     public function answersPdf(IntakeBooking $booking, IntakeAnswersPdf $pdf): \Illuminate\Http\Response

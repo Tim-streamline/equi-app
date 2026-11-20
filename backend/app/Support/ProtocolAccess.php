@@ -14,7 +14,8 @@ class ProtocolAccess
         $this->owner($userId, $horseId);
 
         return IntakeBooking::where('user_id', $userId)->where('horse_id', $horseId)->where('status', '!=', 'cancelled')
-            ->whereHas('protocol', fn ($q) => $q->whereNotIn('status', ['completed', 'archived']))
+            // Any unfinished protocol of this horse that uses the intake, not only the one it was created for.
+            ->whereHas('protocols', fn ($q) => $q->where('horse_id', $horseId)->whereNotIn('status', ['completed', 'archived']))
             ->orderByRaw('submitted_at IS NOT NULL')->orderByDesc('created_at')->orderByDesc('id')->first();
     }
 

@@ -101,6 +101,20 @@ class UserController extends Controller
         return back()->with('success', 'User profile updated.');
     }
 
+    /**
+     * A test user's horses may receive a copy of any customer's protocol and submitted intake (ProtocolCopier).
+     * Its own action, for admins only (see the route), so no other form can carry the setting along.
+     */
+    public function setTestUser(Request $request, User $user): RedirectResponse
+    {
+        $on = $request->validate(['is_test_user' => ['required', 'boolean']])['is_test_user'];
+        $before = $user->only('is_test_user');
+        $user->forceFill(['is_test_user' => (bool) $on])->save();
+        AuditLogger::updated($user, $before);
+
+        return back()->with('success', $on ? 'Marked as test user.' : 'No longer a test user.');
+    }
+
     public function disable(Request $request, User $user): RedirectResponse
     {
         $user->update(['disabled_at' => Carbon::now()]);

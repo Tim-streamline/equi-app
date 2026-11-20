@@ -32,14 +32,20 @@ class IntakeBooking extends Model
             if ($this->exists && ($this->isDirty('protocol_id') || $this->isDirty('horse_id') || $this->isDirty('user_id'))) {
                 throw ValidationException::withMessages(['protocol_id' => 'Een intake kan niet naar een ander protocol, paard of account worden verplaatst.']);
             }
+            $protocol = null;
             if (! $this->exists && ! $this->protocol_id) {
                 $protocol = new Protocol(['horse_id' => $this->horse_id, 'title' => 'Intakeprotocol', 'status' => 'draft']);
                 $protocol->creatingForIntake = true;
                 $protocol->save();
                 $this->protocol_id = $protocol->id;
             }
+            $saved = parent::save($options);
+            if ($protocol) {
+                // The protocol created for this intake uses it.
+                $protocol->newQuery()->whereKey($protocol->id)->update(['intake_booking_id' => $this->id]);
+            }
 
-            return parent::save($options);
+            return $saved;
         });
     }
 
@@ -53,6 +59,9 @@ class IntakeBooking extends Model
             if ($protocol->status !== 'draft' || $protocol->protocol_template_id || $protocol->published_at) {
                 throw ValidationException::withMessages(['booking_delete' => 'Deze intake hoort bij een protocol. Verwijder het protocol om ook de intake te verwijderen.']);
             }
+            if ($this->protocols()->whereKeyNot($protocol->id)->exists()) {
+                throw ValidationException::withMessages(['booking_delete' => 'Andere protocollen gebruiken deze intake. Verwijder die protocollen eerst.']);
+            }
             $deleted = $protocol->delete();
             $this->exists = false;
 
@@ -60,9 +69,16 @@ class IntakeBooking extends Model
         });
     }
 
+    /** The protocol this intake was created for. */
     public function protocol(): BelongsTo
     {
         return $this->belongsTo(Protocol::class);
+    }
+
+    /** Every protocol that uses this intake: the one it was created for, copies of it, and protocols added to it. */
+    public function protocols(): HasMany
+    {
+        return $this->hasMany(Protocol::class, 'intake_booking_id');
     }
 
     protected $appends = ['submitted_at_label', 'status_label'];

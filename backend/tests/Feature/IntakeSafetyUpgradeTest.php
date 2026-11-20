@@ -68,6 +68,8 @@ class IntakeSafetyUpgradeTest extends TestCase
         }
         $owner = User::factory()->create();
         $horse = Horse::create(['owner_id' => $owner->id, 'name' => 'Upgrade horse']);
+        // Today's models record which intake a protocol uses; that column is newer than the schema under test.
+        Schema::table('protocols', fn ($table) => $table->uuid('intake_booking_id')->nullable());
         $bookings = [];
         foreach (range(1, 4) as $i) {
             $bookings[] = IntakeBooking::create(['user_id' => $owner->id, 'horse_id' => $horse->id]);

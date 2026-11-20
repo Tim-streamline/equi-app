@@ -7,6 +7,7 @@ use App\Http\Requests\Admin\CopyProtocolRequest;
 use App\Http\Requests\Admin\SaveProtocolRequest;
 use App\Models\BewegingAdvies;
 use App\Models\Horse;
+use App\Models\IntakeBooking;
 use App\Models\LibraryItem;
 use App\Models\ManagementAdvies;
 use App\Models\Protocol;
@@ -68,19 +69,39 @@ class ProtocolController extends Controller
     public function bulk(Request $request): RedirectResponse
     {
         $data = $request->validate([
-            'action' => ['required', 'in:archive,restore,delete'],
+            // "delete" removes the protocols with their intake; "delete_protocol" keeps the intake.
+            'action' => ['required', 'in:archive,restore,delete,delete_protocol'],
             'ids' => ['required', 'array', 'min:1', 'max:10000'],
             'ids.*' => ['required', 'uuid', 'distinct', 'exists:protocols,id'],
-            'confirmed' => ['required_if:action,delete', 'accepted_if:action,delete'],
+            'confirmed' => ['required_if:action,delete,delete_protocol', 'accepted_if:action,delete,delete_protocol'],
         ]);
         DB::transaction(function () use ($data) {
             \App\Support\LibrarySyncLock::acquire();
             $protocols = Protocol::whereIn('id', $data['ids'])->orderBy('id')->lockForUpdate()->get();
             abort_unless($protocols->count() === count($data['ids']), 409, 'De selectie is gewijzigd. Vernieuw het overzicht.');
+            if ($data['action'] === 'delete') {
+                // An intake goes only when every protocol that uses it goes with it.
+                $left = Protocol::whereIn('intake_booking_id', $protocols->pluck('intake_booking_id'))->whereNotIn('id', $protocols->modelKeys())->value('intake_booking_id');
+                if ($left) {
+                    throw ValidationException::withMessages(['protocol' => Protocol::intakeInUseMessage($protocols->firstWhere('intake_booking_id', $left)->title)]);
+                }
+                // Copies first: the protocol whose intake they use takes that intake with it.
+                $own = IntakeBooking::whereIn('protocol_id', $protocols->modelKeys())->pluck('protocol_id', 'id');
+                $protocols = $protocols->sortBy(fn (Protocol $protocol) => $own->get($protocol->intake_booking_id) === $protocol->id ? 1 : 0)->values();
+            }
             foreach ($protocols as $protocol) {
                 if ($data['action'] === 'delete') {
                     AuditLogger::deleted($protocol, 'Bulk verwijderen');
                     $protocol->delete();
+
+                    continue;
+                }
+                if ($data['action'] === 'delete_protocol') {
+                    AuditLogger::deleted($protocol, 'Bulk verwijderen, intake bewaard');
+                    $heir = $protocol->deleteKeepingIntake();
+                    if ($heir?->wasRecentlyCreated) {
+                        AuditLogger::created($heir, 'Leeg concept voor de bewaarde intake van protocol '.$protocol->id);
+                    }
 
                     continue;
                 }
@@ -242,62 +263,48 @@ class ProtocolController extends Controller
         return back()->with('success', "Protocol gemarkeerd als {$status}.");
     }
 
-    /** Copy dialog, step 1: find the owner of the target horse by name or email. */
-    public function copyTargetUsers(Request $request): JsonResponse
+    /**
+     * Copy dialog: the horses this protocol may be copied to. "same" is the protocol's own horse, "test" the
+     * active horses of the team's test users. Each comes with the drafts a copy can fill.
+     */
+    public function copyTargets(Request $request, Protocol $protocol): JsonResponse
     {
-        $q = trim($request->string('q')->toString());
-        if (mb_strlen($q) < 2) {
-            return response()->json(['users' => []]);
-        }
-        $like = '%'.addcslashes($q, '\\%_').'%';
-        $users = User::query()
-            ->where(fn ($query) => $query->where('name', 'ilike', $like)->orWhere('email', 'ilike', $like))
-            ->withCount(['horses' => fn ($horses) => $horses->where('status', 'active')])
-            ->orderBy('name')
-            ->limit(20)
-            ->get(['id', 'name', 'email', 'disabled_at']);
-
-        return response()->json(['users' => $users->map(fn (User $user): array => [
-            'id' => $user->id,
-            'name' => $user->name,
-            'email' => $user->email,
-            'disabled' => (bool) $user->disabled_at,
-            'active_horses_count' => $user->horses_count,
-        ])->values()]);
-    }
-
-    /** Copy dialog, step 2: the user's own horses, with the drafts a copy can fill. */
-    public function copyTargetHorses(User $user): JsonResponse
-    {
-        $horses = $user->horses()->orderBy('name')->get(['id', 'name', 'breed', 'status']);
+        $to = $request->validate(['to' => ['required', 'in:same,test']])['to'];
+        // The intake a copy will use too, read when the dialog opens and not from a page that may have been open for a
+        // while. Its user stays the previous owner after a horse transfer.
+        $intake = $protocol->intake()->with('user:id,name')->first(['id', 'user_id', 'submitted_at', 'status']);
+        $horses = Horse::query()
+            ->when($to === 'same', fn ($query) => $query->whereKey($protocol->horse_id))
+            ->when($to === 'test', fn ($query) => $query->where('status', 'active')->whereHas('owner', fn ($owner) => $owner->where('is_test_user', true)))
+            ->with('owner:id,name,email,is_test_user')
+            ->get(['id', 'owner_id', 'name', 'breed', 'status'])
+            ->sortBy(fn (Horse $horse) => [mb_strtolower($horse->owner->name), $horse->owner_id, mb_strtolower($horse->name), $horse->id])
+            ->values();
         $horseIds = $horses->pluck('id');
-        $active = Protocol::query()->whereIn('horse_id', $horseIds)->where('status', 'active')->pluck('horse_id')->flip();
-        // Same definition ProtocolCopier accepts for a reusable destination.
-        $drafts = Protocol::query()
-            ->whereIn('horse_id', $horseIds)
-            ->where('status', 'draft')
-            ->whereNull('protocol_template_id')
-            ->whereNull('published_at')
-            ->whereDoesntHave('phases')
-            ->whereHas('intake', fn ($intake) => $intake->where('user_id', $user->id)->where('status', '!=', 'cancelled'))
-            ->with('intake:id,protocol_id,intake_status,submitted_at')
+        $existing = Protocol::query()->whereIn('horse_id', $horseIds)->oldest()->orderBy('id')->get(['id', 'horse_id', 'title', 'status'])->groupBy('horse_id');
+        $drafts = $horses->pluck('owner')->unique('id')->flatMap(fn (User $owner) => ProtocolCopier::reusableDrafts($owner)
+            ->whereIn('horse_id', $horses->where('owner_id', $owner->id)->pluck('id'))
+            ->with('intake:id,submitted_at')
             ->oldest()
-            ->get(['id', 'horse_id', 'title', 'created_at'])
-            ->groupBy('horse_id');
+            ->orderBy('id')
+            ->get(['id', 'horse_id', 'intake_booking_id', 'title', 'created_at']))->groupBy('horse_id');
 
-        return response()->json(['horses' => $horses->map(fn (Horse $horse): array => [
+        return response()->json(['intake' => ['submitted' => (bool) $intake?->submitted_at, 'cancelled' => $intake?->status === 'cancelled', 'user' => $intake?->user?->only(['id', 'name'])], 'horses' => $horses->map(fn (Horse $horse): array => [
             'id' => $horse->id,
             'name' => $horse->name,
             'breed' => $horse->breed,
             'status' => $horse->status,
-            'has_active_protocol' => $active->has($horse->id),
+            'owner' => $horse->owner->only(['id', 'name', 'email', 'is_test_user']),
+            'has_active_protocol' => ($existing->get($horse->id) ?? collect())->contains('status', 'active'),
+            // Lets the dialog warn when the copy's title would match one the customer already sees for this horse.
+            'protocols' => ($existing->get($horse->id) ?? collect())->map(fn (Protocol $protocol): array => $protocol->only(['id', 'title']))->values(),
             'drafts' => ($drafts->get($horse->id) ?? collect())->map(fn (Protocol $draft): array => [
                 'id' => $draft->id,
                 'title' => $draft->title,
                 'created_at' => $draft->created_at,
                 'intake_submitted' => (bool) $draft->intake?->submitted_at,
             ])->values(),
-        ])->values()]);
+        ])]);
     }
 
     public function copy(CopyProtocolRequest $request, Protocol $protocol, ProtocolCopier $copier): RedirectResponse
@@ -307,7 +314,7 @@ class ProtocolController extends Controller
         $horse = Horse::query()->findOrFail($data['horse_id']);
 
         try {
-            $result = $copier->copy($protocol, $owner, $horse, $data['destination'] === 'draft' ? $data['draft_id'] : null, (bool) ($data['include_analysis'] ?? false));
+            $result = $copier->copy($protocol, $owner, $horse, $data['destination'] === 'draft' ? $data['draft_id'] : null, (bool) ($data['include_analysis'] ?? false), $data['title'] ?? null);
         } catch (ValidationException $exception) {
             throw $exception;
         } catch (Throwable $exception) {
@@ -317,6 +324,8 @@ class ProtocolController extends Controller
         }
 
         $message = "Protocol gekopieerd naar {$horse->name} ({$owner->name}) als ongepubliceerd concept.";
+        $message .= $result['reused_draft'] ? ' Het concept houdt zijn eigen intake.' : ' De kopie gebruikt dezelfde intake als het origineel.';
+        $message .= $result['intake_submitted'] ? ' Je kunt de kopie direct aanpassen.' : ' Aanpassen kan zodra die intake is verstuurd.';
         if ($result['missing_dosages'] > 0) {
             $message .= " Let op: {$result['missing_dosages']} automatische dosering(en) konden niet worden berekend omdat het gewicht van het paard onbekend is. Controleer de doseringen.";
         }

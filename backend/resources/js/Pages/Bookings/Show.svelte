@@ -10,7 +10,7 @@
     import { statusVariant } from '$lib/badges.js';
     import { ArrowLeft } from '@lucide/svelte';
 
-    let { booking, review, printMode = false } = $props();
+    let { booking, review, protocols = [], printMode = false } = $props();
     let tab = $state('intake');
     let reviewComponent;
     async function exportPdf() {
@@ -33,6 +33,20 @@
         sent: 'Verzonden', failed: 'Mislukt, controleer de verzending',
     };
     function setStatus(status) { router.post(`/admin/bookings/${booking.id}/status`, { status }); }
+    // A second protocol on the same intake, for example a follow-up, without asking the customer for a new intake.
+    const canAddProtocol = $derived(Boolean(booking.horse?.status === 'active' && booking.submitted_at && booking.status !== 'cancelled'));
+    let addingProtocol = $state(false);
+    let protocolError = $state('');
+    function addProtocol() {
+        if (!window.confirm('Een nieuw, leeg concept aanmaken dat deze intake gebruikt? De bestaande protocollen op deze intake blijven zoals ze zijn. De klant ziet het nieuwe protocol pas als het is gepubliceerd en actief is.')) return;
+        addingProtocol = true;
+        protocolError = '';
+        router.post(`/admin/bookings/${booking.id}/protocols`, {}, {
+            onError: (errors) => { protocolError = Object.values(errors).join(' '); },
+            onFinish: () => { addingProtocol = false; },
+        });
+    }
+    const protocolStatus = (protocol) => !protocol.configured ? (protocol.status === 'draft' ? 'leeg concept' : `leeg, ${protocol.status}`) : `${protocol.status}${protocol.published ? '' : ', niet gepubliceerd'}`;
 </script>
 
 {#if printMode}
@@ -53,9 +67,24 @@
             <Badge>{booking.submitted_at ? 'Intake ingevuld' : 'Intake in concept'}</Badge>
             <Badge variant={statusVariant(booking.status)}>{booking.status_label}</Badge>
             <Button variant="outline" onclick={exportPdf}>Exporteer PDF</Button>
+            {#if canAddProtocol}<Button variant="outline" disabled={addingProtocol} onclick={addProtocol}>Nieuw protocol op deze intake</Button>{/if}
             {#if booking.horse_id}<Link href={`/admin/protocols/${booking.protocol_id}/edit`} class="inline-flex h-11 items-center rounded-full bg-primary px-5 font-semibold text-white">Protocol opstellen</Link>{/if}
         {/snippet}
     </PageHeader>
+    {#if protocolError}<p role="alert" class="mb-4 rounded-md border border-destructive/30 bg-destructive/10 px-4 py-2 text-sm text-destructive">{protocolError}</p>{/if}
+    {#if protocols.length > 1}
+        <div class="mb-4 rounded-md border bg-muted/30 px-4 py-3 text-sm">
+            <p class="mb-1 font-medium">{protocols.length} protocollen gebruiken deze intake</p>
+            <ul class="space-y-1">
+                {#each protocols as protocol (protocol.id)}
+                    <li>
+                        <Link href={`/admin/protocols/${protocol.id}/edit`} class="text-primary underline">{protocol.title}</Link>
+                        <span class="text-muted-foreground"> · {protocolStatus(protocol)}{protocol.horse ? ` · op ${protocol.horse}` : ''}{protocol.id === booking.protocol_id ? ' · “Protocol opstellen” opent dit protocol' : ''}</span>
+                    </li>
+                {/each}
+            </ul>
+        </div>
+    {/if}
     <div role="tablist" aria-label="Booking" class="mb-6 flex gap-6 border-b">
         <button role="tab" aria-selected={tab === 'details'} class="border-b-2 px-1 py-3" class:border-primary={tab === 'details'} onclick={() => tab = 'details'}>Details</button>
         <button role="tab" aria-selected={tab === 'intake'} class="border-b-2 px-1 py-3" class:border-primary={tab === 'intake'} onclick={() => tab = 'intake'}>Intake-antwoorden</button>

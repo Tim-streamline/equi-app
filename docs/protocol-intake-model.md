@@ -1,8 +1,8 @@
 # Protocol and intake ownership
 
-A horse has many protocols over time. Each protocol has exactly one intake, and every intake belongs to exactly one protocol for the same horse. Only one protocol with `status = active` can exist for a horse. Completed protocols retain their own intake answers, analyses, phases and history. Draft, paused and archived protocols are not active.
+A horse has many protocols over time. Every intake is created for exactly one protocol of the same horse (`intake_bookings.protocol_id`), and every protocol uses exactly one intake (`protocols.intake_booking_id`). Normally that is its own intake. A copy made with the admin's copy action has no intake of its own: it uses the intake of the protocol it was copied from, so several protocols can use one intake. From an intake's page in the admin a new, empty draft can also be added to a submitted intake (**Nieuw protocol op deze intake**), for example for a follow-up protocol without a new intake. Nothing of the intake is duplicated, and a copy on a test user's horse reads the customer's intake on the server without that intake ever syncing to the test user. Only one protocol with `status = active` can exist for a horse. Completed protocols retain their own intake answers, analyses, phases and history. Draft, paused and archived protocols are not active.
 
-A protocol purchase creates an unpublished `draft` protocol and its intake in one transaction. Its template stays empty until a therapist configures it. The intake review links directly to this protocol. Creating a protocol through the admin also creates its intake. A protocol cannot be reassigned to another horse, and an intake cannot be reassigned to another protocol/account/horse through the application.
+A protocol purchase creates an unpublished `draft` protocol and its intake in one transaction. Its template stays empty until a therapist configures it. The intake review links directly to this protocol. Creating a protocol through the admin also creates its intake. A protocol cannot be reassigned to another horse, and an intake cannot be reassigned to another account or horse. An intake changes the protocol it belongs to in one case only: when that protocol is deleted with **Protocol verwijderen**, the intake is handed to another protocol of the same horse (see below).
 
 One account subscription unlocks all app features. Existing paid plan identifiers remain compatible but have identical access rights; `free` does not grant access. An inactive or expired subscription shows only the renewal page and blocks protected API calls. The app uses synced expiry dates while offline. Library credits and previously purchased library unlocks remain separate and are preserved when a subscription expires.
 
@@ -19,9 +19,10 @@ An intake already stored on the device opens and saves locally for an active sub
 - `intake_bookings.protocol_id`: required, unique FK to `protocols.id`, cascade delete.
 - `intake_bookings.horse_id`: required; a composite FK `(protocol_id, horse_id)` ensures agreement with the protocol's horse.
 - `protocols_one_active_per_horse`: partial unique index on `horse_id WHERE status = 'active'`, including unpublished protocols.
-- Deferred constraint triggers ensure that no transaction leaves a protocol without its intake. Direct SQL writes are covered as well as model writes.
+- `protocols.intake_booking_id`: FK to `intake_bookings.id`, without cascade: the database refuses to remove an intake that a protocol still uses.
+- Deferred constraint triggers ensure that no transaction leaves a protocol without an intake to use, and that the protocol an intake was created for uses that intake. Direct SQL writes are covered as well as model writes.
 - Application validation and a horse-row lock provide actionable activation errors, including bulk restore; the database index handles concurrent/direct writes.
-- Deleting a protocol deletes its intake/answers/attachment records. Attached files are removed after commit. A standalone intake delete is allowed only for an unconfigured draft and deletes that draft too. A configured protocol must be deleted explicitly. Horse deletion cascades both together.
+- The protocol list has two delete actions. **Protocol + intake verwijderen** deletes the protocols with their intake, answers and attachment records (attached files are removed after commit); it is refused while a protocol outside the selection still uses one of those intakes. **Protocol verwijderen** (`Protocol::deleteKeepingIntake`) keeps the intake: a copy is simply deleted, and the intake of an original moves to another protocol of the same horse that uses it (the oldest one still in use, else the oldest), or else to a new empty draft (`Persoonlijk protocol`, archived when the intake is cancelled), together with the purchase receipt. A standalone intake delete is allowed only for an unconfigured draft and deletes that draft too. Deleting a horse, from the admin or through the app's sync, deletes its protocols and intakes, and also the copies on other horses that use its intakes. Publishing a protocol completes the intake review only when the intake is on the protocol's own horse.
 
 ## Existing databases and deployment
 
@@ -68,7 +69,8 @@ Schema `down()` preserves created records, audit entries and archived history; i
 erDiagram
     users ||--o{ horses : owns
     horses ||--o{ protocols : history
-    protocols ||--|| intake_bookings : has
+    protocols ||--o| intake_bookings : "is created with (protocol_id)"
+    intake_bookings ||--|{ protocols : "is used by (intake_booking_id)"
     intake_bookings ||--o{ intake_answers : contains
     intake_bookings ||--o{ intake_attachments : contains
     protocols ||--o{ protocol_phases : contains

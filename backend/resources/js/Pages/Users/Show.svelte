@@ -3,11 +3,11 @@
     import PageHeader from '$lib/components/PageHeader.svelte';
     import Modal from '$lib/components/Modal.svelte';
     import Field from '$lib/components/Field.svelte';
-    import { Link, router, useForm } from '@inertiajs/svelte';
+    import { Link, router, useForm, page } from '@inertiajs/svelte';
     import { Card, CardHeader, CardTitle, CardContent, Button, Badge, Input, Select, Textarea, Separator } from '$lib/components/ui';
     import { formatDate, formatCents } from '$lib/utils.js';
     import { statusVariant } from '$lib/badges.js';
-    import { ArrowLeft, Pencil, KeyRound, Ban, RotateCcw, ShieldAlert, Download } from '@lucide/svelte';
+    import { ArrowLeft, Pencil, KeyRound, Ban, RotateCcw, ShieldAlert, Download, FlaskConical } from '@lucide/svelte';
 
     let { user, activeRestriction } = $props();
 
@@ -31,6 +31,13 @@
             router.post(`/admin/users/${user.id}/reset-password`);
         }
     }
+    // Only admins mark a test user; the route refuses other roles.
+    const canMarkTestUser = $derived(['owner', 'admin'].includes($page.props.auth?.user?.role));
+    function setTestUser(on) {
+        if (!on || confirm('Mark this account as a test user?\n\nProtocols of any customer can then be copied to its horses. Such a copy uses that customer\'s intake on the server, so the plan in this account\'s app shows the customer\'s doses and feed advice. Only do this for an account of our own team, never for a real customer.')) {
+            router.post(`/admin/users/${user.id}/test-user`, { is_test_user: on }, { preserveScroll: true });
+        }
+    }
     function requestExport(format) {
         router.post(`/admin/users/${user.id}/data-export`, { format });
     }
@@ -46,6 +53,9 @@
             <Button variant="outline" href={`/admin/users/${user.id}/edit`}><Pencil class="size-4" /> Edit</Button>
             <Button variant="outline" onclick={resetPassword}><KeyRound class="size-4" /> Reset password</Button>
             <Button variant="outline" onclick={() => (restrictOpen = true)}><ShieldAlert class="size-4" /> Restrict</Button>
+            {#if canMarkTestUser}
+                <Button variant="outline" onclick={() => setTestUser(!user.is_test_user)}><FlaskConical class="size-4" /> {user.is_test_user ? 'Remove test user' : 'Mark as test user'}</Button>
+            {/if}
             {#if user.disabled_at}
                 <Button onclick={restore}><RotateCcw class="size-4" /> Restore</Button>
             {:else}
@@ -54,6 +64,11 @@
         {/snippet}
     </PageHeader>
 
+    {#if user.is_test_user}
+        <div class="mb-4 rounded-md border bg-muted/40 px-4 py-2 text-sm text-muted-foreground">
+            Test user: protocols of any customer can be copied to this account's horses.
+        </div>
+    {/if}
     {#if user.disabled_at}
         <div class="mb-4 rounded-md border border-destructive/30 bg-destructive/10 px-4 py-2 text-sm text-destructive">
             Account disabled on {formatDate(user.disabled_at)}.
