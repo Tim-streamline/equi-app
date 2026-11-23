@@ -448,6 +448,58 @@ class IntakeSubmissionMailTest extends TestCase
         $this->assertNotSame('Later aangepast', $this->booking->fresh()->notes);
     }
 
+    public function test_customer_receives_one_plain_text_confirmation_of_their_intake(): void
+    {
+        $this->booking->answers()->create(['section_id' => 'paard', 'field_id' => 'naam', 'value' => json_encode('Rolo')]);
+        $this->travelTo(Carbon::parse('2026-09-29T22:24:00Z'));
+        $op = $this->submission();
+        $this->upload([$op])->assertOk();
+        $this->assertSame('pending', $this->booking->fresh()->confirmation_email_status);
+        $updatedAt = $this->booking->fresh()->updated_at;
+        $this->travel(5)->minutes();
+
+        $this->artisan('mail:send-customer-notifications')->assertSuccessful();
+        $this->assertCount(1, $this->messages());
+        $message = $this->messages()->first()->getOriginalMessage();
+        $this->assertSame('account@example.test', $message->getTo()[0]->getAddress());
+        $this->assertSame('Je intake voor Rolo is ontvangen | EquiApp', $message->getSubject());
+        foreach (['Hey Account,', 'De intake voor Rolo is goed ontvangen.', 'het herstelplan voor Rolo.', 'Binnen 5 werkdagen staat het herstelplan klaar in EquiApp.', 'Het EquiApp-team'] as $text) {
+            $this->assertStringContainsString($text, $message->getTextBody());
+        }
+        $this->assertNull($message->getHtmlBody());
+        $this->assertStringNotContainsString('Private therapist notes', $message->getTextBody());
+        $this->assertSame('sent', $this->booking->fresh()->confirmation_email_status);
+        $this->assertEquals($updatedAt, $this->booking->fresh()->updated_at);
+
+        // A replayed submission or a second run never mails again; the therapist notification is separate.
+        $this->upload([$op])->assertOk();
+        $this->artisan('mail:send-customer-notifications')->assertSuccessful();
+        $this->assertCount(1, $this->messages());
+        $this->assertSame('pending', $this->booking->fresh()->submission_email_status);
+    }
+
+    public function test_customer_confirmation_cannot_be_forged_and_skips_disabled_accounts(): void
+    {
+        $this->upload([$this->submission(['confirmation_email_status' => 'sent'])])->assertOk();
+        $this->assertSame('pending', $this->booking->fresh()->confirmation_email_status);
+        $this->booking->user->forceFill(['disabled_at' => now()])->save();
+        $this->artisan('mail:send-customer-notifications')->assertSuccessful();
+        $this->assertSame('skipped', $this->booking->fresh()->confirmation_email_status);
+        $this->assertCount(0, $this->messages());
+    }
+
+    public function test_customer_confirmation_failure_is_not_retried(): void
+    {
+        $this->upload([$this->submission()])->assertOk();
+        Event::listen(MessageSending::class, fn () => throw new RuntimeException('SMTP unavailable'));
+        $this->artisan('mail:send-customer-notifications')->assertFailed();
+        $this->assertSame('failed', $this->booking->fresh()->confirmation_email_status);
+        $this->assertSame('SMTP unavailable', $this->booking->fresh()->confirmation_email_error);
+        Event::forget(MessageSending::class);
+        $this->artisan('mail:send-customer-notifications')->assertSuccessful();
+        $this->assertCount(0, $this->messages());
+    }
+
     public function test_notification_transport_failure_does_not_retry_uncertain_delivery(): void
     {
         $this->upload([$this->submission()])->assertOk();

@@ -54,6 +54,10 @@ class Protocol extends Model
             // Only an unpublished-to-published transition completes intake review; later saves of a
             // published protocol (title edits, timing, repeated editor saves) must keep a reopened review.
             $publishing = $this->published_at !== null && ($new || $this->getRawOriginal('published_at') === null);
+            if ($publishing && $this->published_email_status === null) {
+                // The customer hears once that the plan is ready; unpublishing and republishing does not mail again.
+                $this->published_email_status = 'pending';
+            }
             $saved = parent::save($options);
             // A new protocol gets its own intake, unless it was given the intake of another protocol to use
             // (a copy, see ProtocolCopier) or an intake is creating it (IntakeBooking::save links the two).
