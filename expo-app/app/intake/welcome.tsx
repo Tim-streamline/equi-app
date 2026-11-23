@@ -51,7 +51,7 @@ export default function IntakeWelcome() {
             Vertel me over <Text className="text-mint-300">{horseName}</Text>.
           </Text>
           <Text className="mb-4 text-[14px] leading-[22px] text-white/80">
-            De intake bevat {Math.max(0, schema.length - 1)} korte secties. Tussentijds opslaan kan altijd; je hoeft
+            De intake bevat {Math.max(0, schema.length - 1)} secties en één fotosectie. Tussentijds opslaan kan altijd; je hoeft
             het niet in één keer af te ronden.
           </Text>
           <View className="mb-6 rounded-2xl bg-mint-500/20 p-4">
@@ -65,9 +65,6 @@ export default function IntakeWelcome() {
           <View className="rounded-2xl bg-white/10 p-4">
             <Text className="mb-3 font-bold text-[12.5px] leading-[19px] text-white/80">
               Belangrijk vooraf
-            </Text>
-            <Text className="mb-3 text-[12.5px] leading-[19px] text-white/80">
-              Binnen 5 werkdagen ontvang je de eerste fase van je protocol.
             </Text>
             <Text className="text-[12.5px] leading-[19px] text-white/80">
               {disclaimerBody}

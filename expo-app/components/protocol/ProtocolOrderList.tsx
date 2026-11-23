@@ -1,4 +1,5 @@
 import { Alert, Linking, Pressable, Text, View } from 'react-native';
+import { Check } from 'lucide-react-native';
 import type { DashboardOrderItem } from '@/lib/horse-dashboard';
 import { PLAIN_CARD } from '@/components/ui/styles';
 import { PROTOCOL_SCALE as S, PROTOCOL_TEXT as T } from './styles';
@@ -19,19 +20,40 @@ export function purchaseLinks(options: PurchaseOption[] | undefined) {
   });
 }
 
-export function ProtocolOrderList({ items, discount = '5% korting bij Dtails.nl met code: paardentherapeut-5' }: {
+/** One key per product and phase, so ticking a phase's list does not tick the product for later phases. */
+export function orderKeys(item: DashboardOrderItem): string[] {
+  const phases = Array.isArray(item.components) ? Array.from(new Set(item.components.map(component => component.phaseId))) : [];
+  return phases.length ? phases.map(phaseId => `${item.productKey}:${phaseId}`) : [`${item.productKey}:all`];
+}
+
+export function ProtocolOrderList({ items, discount = '5% korting bij Dtails.nl met code: paardentherapeut-5', orderedKeys, onToggle }: {
   items: DashboardOrderItem[];
   discount?: string;
+  /** Products the customer ticked off as ordered; without onToggle the list has no checkboxes. */
+  orderedKeys?: string[];
+  onToggle?: (keys: string[], ordered: boolean) => void;
 }) {
+  const ordered = new Set(orderedKeys ?? []);
+  // The code gets a line of its own so it never breaks at its hyphen. A non-breaking hyphen would
+  // also stop the break, but customers copy this code into a shop, which would then reject it.
+  const split = discount.lastIndexOf(': ');
+  const [label, code] = split < 0 ? [discount, ''] : [discount.slice(0, split + 1), discount.slice(split + 2)];
   return <View className="gap-3">
     <View className="rounded-[22px] bg-mint-50 p-4">
-      <Text className={`${S.rowTitle} text-teal-700`}>{discount}</Text>
+      <Text className={`${S.rowTitle} text-teal-700`}>{label}</Text>
+      {code ? <Text selectable className={`${S.rowTitle} font-bold text-teal-700`}>{code}</Text> : null}
     </View>
     {items.length === 0 && <Text className={`py-5 ${T.body}`}>Er staan geen producten op deze bestellijst.</Text>}
     {items.map(item => {
       const links = purchaseLinks(item.purchaseOptions);
+      const keys = orderKeys(item);
+      const done = keys.every(key => ordered.has(key));
       return <View key={item.id} className={`gap-2 ${PLAIN_CARD}`}>
-        <Text className={T.cardTitle}>{item.name}</Text>
+        {onToggle ? <Pressable accessibilityRole="checkbox" accessibilityLabel={`${item.name} besteld`} accessibilityState={{ checked: done }}
+          onPress={() => onToggle(keys, !done)} className="min-h-[44px] flex-row items-center gap-3">
+          <View className={`h-7 w-7 items-center justify-center rounded-full border-2 ${done ? 'border-mint-500 bg-mint-500' : 'border-ink-30'}`}>{done && <Check size={17} color="white" />}</View>
+          <Text className={`flex-1 ${T.cardTitle} ${done ? 'text-ink-70 line-through' : ''}`}>{item.name}</Text>
+        </Pressable> : <Text className={T.cardTitle}>{item.name}</Text>}
         <Text className={T.row}>Totaal nodig: <Text className="font-semi text-ink">{item.quantityLabel ?? 'hoeveelheid nog te bepalen'}</Text></Text>
         {links.map(link => <Pressable key={link.url} accessibilityRole="link" accessibilityLabel={`Bekijk / bestel ${item.name}${link.suffix}`}
           onPress={() => void Linking.openURL(link.url).catch(() => Alert.alert('Productlink niet geopend', 'Probeer het opnieuw.'))} className="min-h-[44px] justify-center">

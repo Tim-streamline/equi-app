@@ -105,6 +105,33 @@ class HorseDashboardController extends Controller
             : $history->day($protocol, $data['date'], $now));
     }
 
+    /** Ticks products off (or back on) in the customer's order list; one key per product and phase. */
+    public function orders(Request $request, Horse $horse)
+    {
+        $this->owner($request, $horse);
+        $data = $request->validate([
+            'protocol_id' => ['required', 'uuid'],
+            'keys' => ['required', 'array', 'min:1', 'max:100'],
+            'keys.*' => ['string', 'max:200', 'regex:/^[^:\s]+:[^:\s]+$/'],
+            'ordered' => ['required', 'boolean'],
+        ]);
+
+        $keys = DB::transaction(function () use ($horse, $data) {
+            $protocol = $horse->protocols()->whereKey($data['protocol_id'])->whereNotNull('published_at')
+                ->where('status', '!=', 'archived')->lockForUpdate()->firstOrFail();
+            $current = $protocol->ordered_product_keys ?? [];
+            $next = $data['ordered'] ? array_unique([...$current, ...$data['keys']]) : array_diff($current, $data['keys']);
+            abort_if(count($next) > 1000, 422, 'Te veel producten afgevinkt.');
+            $next = array_values($next);
+            // A plain column write: ticking a product is not a protocol edit and must not run its save rules.
+            \App\Models\Protocol::whereKey($protocol->id)->toBase()->update(['ordered_product_keys' => json_encode($next)]);
+
+            return $next;
+        });
+
+        return response()->json(['orderedKeys' => $keys]);
+    }
+
     private function owner(Request $request, Horse $horse): User
     {
         $user = User::query()->whereNull('disabled_at')->findOrFail($request->attributes->get('powersync_user_id'));

@@ -170,6 +170,7 @@ class Protocol extends Model
     {
         return [
             'customer_settings' => 'array',
+            'ordered_product_keys' => 'array',
             'started_at' => 'date',
             'published_at' => 'datetime',
         ];

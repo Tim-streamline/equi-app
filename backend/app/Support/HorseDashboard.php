@@ -237,6 +237,7 @@ class HorseDashboard
             'notifications' => $notifications,
             'orderItems' => app(ProtocolOrderList::class)->forProtocol($protocol),
             'orderDiscount' => ProtocolOrderList::DISCOUNT,
+            'orderedKeys' => array_values($protocol->ordered_product_keys ?? []),
             'calendar' => ['month' => $monthDate->format('Y-m'), 'label' => $monthDate->locale('nl')->translatedFormat('F Y'), 'previousMonth' => $monthDate->subMonth()->format('Y-m'), 'nextMonth' => $monthDate->addMonth()->format('Y-m'), 'cells' => $cells],
             'nutrition' => $this->nutrition->forProtocol($protocol, $answers) + ['advice' => $this->nutritionAdvice($protocol, $manual)],
             'management' => $this->management($protocol, $manual),

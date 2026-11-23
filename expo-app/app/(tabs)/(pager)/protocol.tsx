@@ -121,6 +121,31 @@ export default function ProtocolListScreen() {
   const visiblePhase = phase ? protocol?.phases.find((item) => item.id === phase.id) : null;
 
   const visibleOrders = scopeOrderItems(protocol?.orderItems, orders);
+  // Ticks show at once; the server's answer (or a failure) settles them.
+  const [ordered, setOrdered] = useState<{ protocolId: string; keys: string[] } | null>(null);
+  const [orderError, setOrderError] = useState<string | null>(null);
+  const orderSaving = useRef(0);
+  // A fresh dashboard (also after ticking on another device) replaces the local ticks.
+  const serverOrdered = protocol?.orderedKeys?.join(',');
+  useEffect(() => { setOrdered(null); }, [protocol?.id, serverOrdered]);
+  const orderedKeys = ordered && ordered.protocolId === protocol?.id ? ordered.keys : protocol?.orderedKeys ?? [];
+  const toggleOrdered = async (keys: string[], done: boolean) => {
+    if (!protocol || !horseId) return;
+    const protocolId = protocol.id;
+    const previous = orderedKeys;
+    const generation = ++orderSaving.current;
+    setOrderError(null);
+    setOrdered({ protocolId, keys: done ? Array.from(new Set([...previous, ...keys])) : previous.filter((key) => !keys.includes(key)) });
+    try {
+      const result = await dashboardRequest(`/api/horses/${horseId}/protocol-orders`, { protocol_id: protocolId, keys, ordered: done }) as { orderedKeys: string[] };
+      if (generation === orderSaving.current) setOrdered({ protocolId, keys: result.orderedKeys });
+    } catch {
+      if (generation === orderSaving.current) {
+        setOrdered({ protocolId, keys: previous });
+        setOrderError("Niet opgeslagen. Controleer je verbinding en probeer opnieuw.");
+      }
+    }
+  };
   const firstPhase = protocol?.phases[0];
   const linkedPhases = protocol?.phases.filter((item) => item.accessible && requestedPhases?.split(',').includes(item.id)) ?? [];
 
@@ -226,9 +251,10 @@ export default function ProtocolListScreen() {
             visible={orders !== null}
             title="Bestellijst"
             subtitle={orders && orders !== 'all' && orders.label ? `Voor ${orders.label}` : undefined}
-            onClose={() => setOrders(null)}
+            onClose={() => { setOrders(null); setOrderError(null); if (ordered) void refresh(); }}
           >
-            <ProtocolOrderList items={visibleOrders} discount={protocol.orderDiscount} />
+            {!!orderError && <Text className="mb-3 text-[13px] text-danger">{orderError}</Text>}
+            <ProtocolOrderList items={visibleOrders} discount={protocol.orderDiscount} orderedKeys={orderedKeys} onToggle={(keys, done) => void toggleOrdered(keys, done)} />
             {orders !== null && orders !== 'all' && (
               <Button variant="ghost" title="Bekijk volledige bestellijst" className="mt-4" onPress={() => setOrders('all')} />
             )}

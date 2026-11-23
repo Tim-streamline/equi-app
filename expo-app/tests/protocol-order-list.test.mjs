@@ -13,6 +13,7 @@ const code = ts.transpileModule(readFileSync(new URL('../components/protocol/Pro
 new Function('require', 'exports', code)(name => ({
   'react/jsx-runtime': { jsx, jsxs: jsx },
   ...protocolStyleModules,
+  'lucide-react-native': { Check: 'Check' },
   'react-native': { View: 'View', Text: 'Text', Pressable: 'Pressable', Linking: { openURL: async url => opened.push(url) }, Alert: { alert() {} } },
 })[name], exports);
 const item = { id: 'product', name: 'Heemstwortel', quantity: 630, unit: 'g', quantityLabel: '630 g',
@@ -22,11 +23,15 @@ const item = { id: 'product', name: 'Heemstwortel', quantity: 630, unit: 'g', qu
 test('order list shows full quantity and discount, omitting daily dose and usage instructions', () => {
   const tree = exports.ProtocolOrderList({ items: [item] });
   const copy = text(tree);
-  assert.ok(copy.includes('5% korting bij Dtails.nl met code: paardentherapeut-5'));
+  assert.ok(copy.includes('5% korting bij Dtails.nl met code:'));
+  // The code is a text of its own, so it always stays whole on one line.
+  const code = flatten(tree).find(n => n?.type === 'Text' && n.props.children === 'paardentherapeut-5');
+  assert.ok(code, 'discount code is rendered as its own text');
+  assert.equal(code.props.selectable, true);
   assert.ok(copy.includes('Heemstwortel'));
   assert.ok(copy.includes('Totaal nodig: 630 g'));
   for (const unwanted of ['15 g', item.instructions, item.description]) assert.ok(!copy.includes(unwanted));
-  assert.ok(flatten(tree).findIndex(n => n === '5% korting bij Dtails.nl met code: paardentherapeut-5') < flatten(tree).findIndex(n => n === 'Heemstwortel'));
+  assert.ok(flatten(tree).findIndex(n => n === 'paardentherapeut-5') < flatten(tree).findIndex(n => n === 'Heemstwortel'));
 });
 
 test('purchase button opens exactly the configured product URL', async () => {
@@ -72,4 +77,21 @@ test('full-protocol aggregate orders survive cached future phase locks', () => {
   new Function('exports', js)(module);
   const data = { timezone: 'Europe/Amsterdam', protocol: { phases: [], notifications: [], orderItems: [{ ...item, productKey: 'product' }] } };
   assert.deepEqual(module.dashboardAtTime(data, new Date()).protocol.orderItems, data.protocol.orderItems);
+});
+
+test('each product can be ticked off per phase, and ticking the full list ticks every phase', () => {
+  const ordered = { ...item, productKey: 'p', components: [{ selectionId: 's1', phaseId: 'f1' }, { selectionId: 's2', phaseId: 'f2' }] };
+  assert.deepEqual(exports.orderKeys(ordered), ['p:f1', 'p:f2']);
+  assert.deepEqual(exports.orderKeys({ ...item, productKey: 'p' }), ['p:all']);
+  const toggles = [];
+  const box = keys => flatten(exports.ProtocolOrderList({ items: [ordered], orderedKeys: keys, onToggle: (k, done) => toggles.push([k, done]) }))
+    .find(n => n?.props?.accessibilityRole === 'checkbox');
+  assert.equal(box([]).props.accessibilityState.checked, false);
+  assert.equal(box(['p:f1']).props.accessibilityState.checked, false, 'one phase ordered is not the whole list');
+  assert.equal(box(['p:f1', 'p:f2']).props.accessibilityState.checked, true);
+  box(['p:f1']).props.onPress();
+  box(['p:f1', 'p:f2']).props.onPress();
+  assert.deepEqual(toggles, [[['p:f1', 'p:f2'], true], [['p:f1', 'p:f2'], false]]);
+  // Without a handler (the admin preview, older callers) there is nothing to tick.
+  assert.ok(!flatten(exports.ProtocolOrderList({ items: [ordered] })).some(n => n?.props?.accessibilityRole === 'checkbox'));
 });

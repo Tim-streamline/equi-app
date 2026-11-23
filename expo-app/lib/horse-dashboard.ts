@@ -122,6 +122,8 @@ export type DashboardProtocol = {
   phases: DashboardPhase[];
   orderItems: DashboardOrderItem[];
   orderDiscount?: string;
+  /** Order-list products the customer ticked off, as "productKey:phaseId". */
+  orderedKeys?: string[];
   notifications: DashboardNotification[];
   today: {
     items: DashboardSupplement[];
