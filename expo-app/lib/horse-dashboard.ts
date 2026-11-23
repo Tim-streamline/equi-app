@@ -174,7 +174,13 @@ export type DashboardProtocol = {
 };
 /** A protocol card on Home: the server's summary of one horse's protocol in progress. */
 export type HorseProtocolSummary = {
-  evaluation?: { available: boolean; endsOn: string | null; daysRemaining: number | null; discountUntil: string | null; discountEligible: boolean };
+  evaluation?: {
+    available: boolean; endsOn: string | null; daysRemaining: number | null; discountUntil: string | null; discountEligible: boolean;
+    /** The owner has sent the evaluation; it can still be amended. */
+    submitted?: boolean;
+    /** The therapist closed the plan, possibly before its scheduled end. */
+    completed?: boolean;
+  };
   preparing?: boolean;
   startedAt?: string | null;
   horseId: string;

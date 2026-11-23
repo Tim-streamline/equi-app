@@ -18,10 +18,13 @@ class HorseDashboard
 {
     public function __construct(private ProtocolNutrition $nutrition) {}
 
-    public function build(User $user, ?Horse $horse, CarbonImmutable $now, ?string $month = null): array
+    /**
+     * @param  bool  $inactivePlans  Whether the app keeps paused and completed plans read-only
+     *                               (ClientCapabilities::READ_ONLY_PLANS). Other apps only get a running plan.
+     */
+    public function build(User $user, ?Horse $horse, CarbonImmutable $now, ?string $month = null, bool $inactivePlans = false): array
     {
-        $protocol = $horse?->protocols()->whereIn('status', ['active', 'paused', 'completed'])->whereNotNull('published_at')
-            ->where('published_at', '<=', $now)->orderByRaw("CASE WHEN status = 'active' THEN 0 WHEN status = 'paused' THEN 1 ELSE 2 END")->orderByDesc('published_at')->first();
+        $protocol = $horse ? $this->shownProtocols([$horse->id], $now, $inactivePlans)->first() : null;
         $answers = $this->nutrition->answers($protocol);
         $discovery = app(LibraryDiscovery::class);
         $access = $discovery->access($user);
@@ -69,15 +72,29 @@ class HorseDashboard
             'timezone' => $now->timezoneName, 'generatedAt' => $now->toIso8601String(), 'date' => $now->toDateString(),
             'greeting' => ($now->hour < 12 ? 'Goedemorgen' : ($now->hour < 18 ? 'Goedemiddag' : 'Goedenavond')).', '.explode(' ', trim($user->name))[0],
             'horse' => ['id' => $horse?->id ?? '', 'name' => $horse?->name ?? ''],
-            'hasPlus' => $hasPlus, 'showPlusUpsell' => $horse && $horse->owner_id === $user->id && ! app(ProtocolAccess::class)->existingForHorse($user->id, $horse->id) && ! $protocol,
+            'hasPlus' => $hasPlus, 'showPlusUpsell' => $horse && $horse->owner_id === $user->id && ! app(ProtocolAccess::class)->existingForHorse($user->id, $horse->id)
+                // A finished plan stays readable, and the owner can buy the next one beside it.
+                && (! $protocol || $protocol->status === 'completed'),
             'homeUpsell' => ['title' => $pageContent['homeTitle'], 'body' => $pageContent['homeBody'], 'button' => $pageContent['homeButton']],
             'variant' => $horse ? ($hasPlus || $protocol ? 'plus' : 'basic') : 'without-horse',
             'credits' => app(CreditLedger::class)->summary($user)['balance'],
             'plusOffer' => null,
             'seasonalTip' => $tip ? ['id' => $tip->id, 'intro' => Str::limit(trim(preg_replace('/\s+/u', ' ', strip_tags($tip->body))), 180), 'month' => $tip->month, 'title' => $tip->title ?: $tipItem?->title, 'body' => $tip->body, 'item' => $tipItem ? $itemData($tipItem) : null] : null,
             'recommendations' => $recommendations, 'protocol' => $data,
-            'horseProtocols' => $this->horseProtocols($user, $horse, $now),
+            'horseProtocols' => $this->horseProtocols($user, $horse, $now, $inactivePlans),
         ];
+    }
+
+    /**
+     * The plan each horse shows, best first: the active one, else the paused one, else the
+     * latest completed one. Home's cards and the Protocol tab must agree on this.
+     */
+    private function shownProtocols(array $horseIds, CarbonImmutable $now, bool $inactivePlans)
+    {
+        return Protocol::query()->whereIn('horse_id', $horseIds)
+            ->whereIn('status', $inactivePlans ? ['active', 'paused', 'completed'] : ['active'])
+            ->whereNotNull('published_at')->where('published_at', '<=', $now)
+            ->orderByRaw("CASE WHEN status = 'active' THEN 0 WHEN status = 'paused' THEN 1 ELSE 2 END")->orderByDesc('published_at');
     }
 
     /**
@@ -122,15 +139,16 @@ class HorseDashboard
      * the user's active horses plus the selected one, sorted by name, so Home can
      * show a card for each from this one response.
      */
-    private function horseProtocols(User $user, ?Horse $horse, CarbonImmutable $now): array
+    private function horseProtocols(User $user, ?Horse $horse, CarbonImmutable $now, bool $inactivePlans): array
     {
         $horses = $user->horses()->where('status', 'active')->get();
         if ($horse && ! $horses->contains('id', $horse->id)) {
             $horses->push($horse);
         }
-        $latest = Protocol::query()->whereIn('horse_id', $horses->pluck('id'))->whereIn('status', ['active', 'completed'])
-            ->whereNotNull('published_at')->where('published_at', '<=', $now)
-            ->orderByRaw("CASE WHEN status = 'active' THEN 0 ELSE 1 END")->orderByDesc('published_at')->with('phases.weeks')->get()->unique('horse_id')->keyBy('horse_id');
+        // A paused plan has its own notice on Home (PurchasedProtocols), so it gets no card here,
+        // and neither does an older completed plan of that horse.
+        $latest = $this->shownProtocols($horses->pluck('id')->all(), $now, $inactivePlans)->with('phases.weeks')->get()
+            ->unique('horse_id')->reject(fn (Protocol $protocol) => $protocol->status === 'paused')->keyBy('horse_id');
 
         return $horses->filter(fn ($item) => $latest->has($item->id))
             ->sortBy(fn ($item) => Str::lower(Str::ascii((string) $item->name)))
@@ -251,24 +269,18 @@ class HorseDashboard
         ];
     }
 
+    /**
+     * The library items the Voeding tab links to. Hay: the configured item, else one about hay analysis.
+     * Water: always the fixed drinking-water article (included in EquiBoost), never another item.
+     */
     public function nutritionLinks(Protocol $protocol, $items, callable $itemData): array
     {
-        $links = [];
-        $topic = fn ($term) => $items->first(fn ($item) => str_contains(mb_strtolower($item->slug.' '.$item->title), $term));
-        foreach (['hayLibraryItem' => 'hooianalyse', 'waterLibraryItem' => 'wateranalyse'] as $key => $term) {
-            $configuredId = $protocol->customer_settings[$key === 'hayLibraryItem' ? 'hay_library_item_id' : 'water_library_item_id'] ?? null;
-            $waterArticle = $key === 'waterLibraryItem'
-                ? $items->first(fn ($item) => Str::slug($item->title) === 'drinkwater-onder-de-loep-wat-krijgt-je-paard-binnen')
-                : null;
-            $item = $waterArticle ?? $items->firstWhere('id', $configuredId) ?? $topic($term);
-            if (! $item) {
-                $subject = $key === 'hayLibraryItem' ? 'hooi' : 'water';
-                $item = $items->first(fn ($item) => preg_match('/'.$subject.'.*analy|analy.*'.$subject.'/isu', $item->title.' '.$item->description) === 1);
-            }
-            $links[$key] = $item ? $itemData($item) : null;
-        }
+        $hay = $items->firstWhere('id', $protocol->customer_settings['hay_library_item_id'] ?? null)
+            ?? $items->first(fn ($item) => str_contains(mb_strtolower($item->slug.' '.$item->title), 'hooianalyse'))
+            ?? $items->first(fn ($item) => preg_match('/hooi.*analy|analy.*hooi/isu', $item->title.' '.$item->description) === 1);
+        $water = $items->first(fn ($item) => Str::slug($item->title) === 'drinkwater-onder-de-loep-wat-krijgt-je-paard-binnen');
 
-        return $links;
+        return ['hayLibraryItem' => $hay ? $itemData($hay) : null, 'waterLibraryItem' => $water ? $itemData($water) : null];
     }
 
     /**

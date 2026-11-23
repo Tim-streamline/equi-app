@@ -29,7 +29,13 @@ class ProtocolEvaluationController extends Controller
         $this->authorizeProtocol($request, $protocol);
         $questions = $service->questions($protocol);
         abort_unless($questions, 422, 'Er zijn nog geen evaluatievragen ingesteld.');
-        $rules = ['submit' => ['required', 'boolean'], 'question_version' => ['required', 'string', 'size:64'], 'answers' => ['required', 'array:'.implode(',', array_keys($questions))]];
+        // A draft may still be empty; a submission needs every answer (checked per question below).
+        $rules = ['submit' => ['required', 'boolean'], 'question_version' => ['required', 'string', 'size:64'], 'answers' => ['present', 'array']];
+        $request->validate($rules);
+        // Before the per-question rules: a form opened before the questions changed must get
+        // the 'reopen' answer, not a complaint about a question it never showed.
+        abort_unless(hash_equals($service->questionVersion($questions), $request->input('question_version')), 409, 'De evaluatievragen zijn aangepast. Heropen het formulier.');
+        $rules['answers'] = ['present', 'array:'.implode(',', array_keys($questions))];
         foreach ($questions as $key => $question) $rules['answers.'.$key] = [$request->boolean('submit') ? 'required' : 'nullable', 'string', 'max:5000'];
         $data = $request->validate($rules);
         DB::transaction(function () use ($protocol, $service, $request, $data) {
@@ -38,10 +44,11 @@ class ProtocolEvaluationController extends Controller
             abort_unless($service->timing($protocol, CarbonImmutable::now())['available'], 422);
             $questions = $service->questions($protocol);
             abort_unless(hash_equals($service->questionVersion($questions), $data['question_version']), 409, 'De evaluatievragen zijn aangepast. Heropen het formulier.');
-            $old = DB::table('protocol_evaluations')->where('protocol_id', $protocol->id)->first();
+            $old = $service->record($protocol);
             abort_if($old?->submitted_at && ! $data['submit'], 422, 'Verstuur wijzigingen opnieuw om je ingestuurde evaluatie bij te werken.');
             DB::table('protocol_evaluations')->updateOrInsert(['protocol_id' => $protocol->id], [
-                'user_id' => $request->attributes->get('powersync_user_id'), 'answers' => json_encode($data['answers']),
+                // timing() above refuses another owner's evaluation, so this never changes the author.
+                'user_id' => $old?->user_id ?? $request->attributes->get('powersync_user_id'), 'answers' => json_encode((object) $data['answers']),
                 'questions' => json_encode($questions),
                 'submitted_at' => $old?->submitted_at ?? ($data['submit'] ? now() : null),
                 'created_at' => $old?->created_at ?? now(), 'updated_at' => now(),

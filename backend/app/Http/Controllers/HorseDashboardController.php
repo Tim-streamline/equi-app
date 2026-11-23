@@ -19,7 +19,7 @@ class HorseDashboardController extends Controller
         $user = User::query()->whereNull('disabled_at')->findOrFail($request->attributes->get('powersync_user_id'));
         $data = $request->validate(['timezone' => ['sometimes', 'timezone']]);
 
-        return response()->json($this->forClient($request, $dashboard->build($user, null, CarbonImmutable::now($data['timezone'] ?? config('app.timezone')))));
+        return response()->json($this->forClient($request, $dashboard->build($user, null, CarbonImmutable::now($data['timezone'] ?? config('app.timezone')), null, ClientCapabilities::readOnlyPlans($request))));
     }
 
     public function show(Request $request, Horse $horse, HorseDashboard $dashboard)
@@ -27,7 +27,7 @@ class HorseDashboardController extends Controller
         $user = $this->owner($request, $horse);
         $data = $request->validate(['timezone' => ['sometimes', 'timezone'], 'month' => ['sometimes', 'date_format:Y-m']]);
 
-        return response()->json($this->forClient($request, $dashboard->build($user, $horse, CarbonImmutable::now($data['timezone'] ?? config('app.timezone')), $data['month'] ?? null)));
+        return response()->json($this->forClient($request, $dashboard->build($user, $horse, CarbonImmutable::now($data['timezone'] ?? config('app.timezone')), $data['month'] ?? null, ClientCapabilities::readOnlyPlans($request))));
     }
 
     public function weeklyUpdate(Request $request, Horse $horse, HorseDashboard $dashboard)
@@ -69,7 +69,7 @@ class HorseDashboardController extends Controller
             app(\App\Support\ProtocolTiming::class)->synchronize($protocol, $now);
         });
 
-        return response()->json($this->forClient($request, $dashboard->build($user, $horse, $now)));
+        return response()->json($this->forClient($request, $dashboard->build($user, $horse, $now, null, ClientCapabilities::readOnlyPlans($request))));
     }
 
     /** Released apps keep their original payload; see LegacyProtocolClient. */

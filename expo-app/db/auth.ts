@@ -96,7 +96,8 @@ export function deviceCredentials(res: LoginResponse): DeviceCredentials {
 
 const DEVICE_NAME = `${Platform.OS} ${Platform.Version}`;
 // Signed into each fresh JWT so the API and PowerSync agree on the protocol format.
-const CLIENT_CAPABILITIES = ['protocol-doses'];
+// 'read-only-plans': this app shows a paused or completed plan without working checkboxes.
+const CLIENT_CAPABILITIES = ['protocol-doses', 'read-only-plans'];
 
 async function authRequest(path: string, body: object, signal?: AbortSignal): Promise<LoginResponse> {
   const res = await fetch(`${apiBaseUrl}/api/auth/${path}`, {

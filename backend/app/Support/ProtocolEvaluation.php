@@ -18,6 +18,21 @@ class ProtocolEvaluation
         'c12e1000-0000-4000-8000-000000000006' => 'Waar wil je de komende periode aan werken? Wat wil je met je therapeut bespreken?',
     ];
 
+    /** The stored draft or submission of a protocol, if any. */
+    public function record(Protocol $protocol): ?object
+    {
+        return DB::table('protocol_evaluations')->where('protocol_id', $protocol->id)->first();
+    }
+
+    /**
+     * An evaluation stays with the owner who wrote it. After the horse changes owner,
+     * the new owner can neither read nor overwrite it; the therapist still sees it.
+     */
+    public function writtenByAnotherOwner(Protocol $protocol, ?object $record): bool
+    {
+        return $record !== null && $record->user_id !== $protocol->horse->owner_id;
+    }
+
     public function questions(Protocol $protocol): array
     {
         $snapshot = DB::table('protocol_evaluations')->where('protocol_id', $protocol->id)->value('questions');
@@ -38,9 +53,13 @@ class ProtocolEvaluation
         $weeks = max((int) $protocol->total_weeks, (int) $protocol->phases->flatMap->weeks->max('protocol_week_number'));
         $end = $protocol->started_at && $weeks > 0
             ? CarbonImmutable::parse($protocol->started_at->toDateString(), 'Europe/Amsterdam')->addWeeks($weeks)->subDay() : null;
+        $record = $this->record($protocol);
         $available = $end && $protocol->published_at && $protocol->published_at->lte($now)
-            && in_array($protocol->status, ['active', 'completed'], true) && $today->gte($end->subDays(14));
+            && in_array($protocol->status, ['active', 'completed'], true) && $today->gte($end->subDays(14))
+            && ! $this->writtenByAnotherOwner($protocol, $record);
         return ['available' => (bool) $available, 'endsOn' => $end?->toDateString(),
+            // Home words its notice by these: already sent, or closed before the scheduled end.
+            'submitted' => (bool) ($available && $record?->submitted_at), 'completed' => $protocol->status === 'completed',
             'daysRemaining' => $end ? (int) $today->diffInDays($end, false) : null,
             'discountUntil' => $end?->addDays(7)->toDateString(),
             'discountEligible' => (bool) ($available && $today->lte($end->addDays(7)))];
@@ -49,13 +68,17 @@ class ProtocolEvaluation
     public function payload(Protocol $protocol, CarbonImmutable $now): array
     {
         $timing = $this->timing($protocol, $now);
-        $record = DB::table('protocol_evaluations')->where('protocol_id', $protocol->id)->first();
+        $record = $this->record($protocol);
+        if ($this->writtenByAnotherOwner($protocol, $record)) {
+            $record = null;
+        }
         $base = (int) (PlusPage::current()->protocol_price_cents ?? 14700);
         $discount = $timing['discountEligible'] ? 10 : 0;
         $questions = $this->questions($protocol);
         return $timing + ['protocolId' => $protocol->id, 'horseId' => $protocol->horse_id,
             'horseName' => $protocol->horse->name, 'questions' => $questions, 'questionVersion' => $this->questionVersion($questions),
-            'answers' => $record ? json_decode($record->answers, true) : (object) [],
+            // An object also when empty, so the app always gets a map.
+            'answers' => (object) ($record ? json_decode($record->answers, true) : []),
             'submittedAt' => $record?->submitted_at,
             'basePriceCents' => $base,
             'priceCents' => (int) round($base * (100 - $discount) / 100),
@@ -66,6 +89,10 @@ class ProtocolEvaluation
     public function admin(Protocol $protocol): ?array
     {
         $record = DB::table('protocol_evaluations')->where('protocol_id', $protocol->id)->whereNotNull('submitted_at')->first();
-        return $record ? [...(array) $record, 'questions' => json_decode($record->questions, true), 'answers' => json_decode($record->answers, true)] : null;
+        // Stored in UTC without a zone; say so, or the browser reads them as local time.
+        $utc = fn (?string $time) => $time ? CarbonImmutable::parse($time, 'UTC')->toIso8601ZuluString() : null;
+
+        return $record ? [...(array) $record, 'questions' => json_decode($record->questions, true), 'answers' => json_decode($record->answers, true),
+            'submitted_at' => $utc($record->submitted_at), 'updated_at' => $utc($record->updated_at), 'created_at' => $utc($record->created_at)] : null;
     }
 }

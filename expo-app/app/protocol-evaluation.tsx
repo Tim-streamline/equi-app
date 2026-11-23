@@ -53,7 +53,7 @@ export default function ProtocolEvaluationScreen() {
       {data && !offer && <View className="gap-4">
         <Text className={HOME_NOTICE_LABEL}>{horsePossessive(data.horseName)} EquiBoost traject</Text>
         <Text className="font-bold text-[22px] leading-[28px] text-ink">Hoe gaat het nu met {data.horseName}?</Text>
-        <Text className={HOME_NOTICE_BODY}>Je huidige herstelplan loopt tot en met {evaluationDate(data.endsOn)}. Vertel wat er is veranderd en hoe het uitvoeren van de adviezen is gegaan. Zo kan je therapeut met je meedenken over passende vervolgstappen.</Text>
+        <Text className={HOME_NOTICE_BODY}>{data.completed ? 'Je herstelplan is afgerond.' : `Je huidige herstelplan loopt tot en met ${evaluationDate(data.endsOn)}.`} Vertel wat er is veranderd en hoe het uitvoeren van de adviezen is gegaan. Zo kan je therapeut met je meedenken over passende vervolgstappen.</Text>
         {Object.entries(data.questions).map(([key, question], index) => <View key={key} className={`gap-3 ${PLAIN_CARD}`}>
           <Text className="font-semi text-[16px] leading-[23px] text-ink">{index + 1}. {question}</Text>
           <KeyboardTextInput accessibilityLabel={question} editable={!busy} multiline numberOfLines={5} textAlignVertical="top" maxLength={5000}

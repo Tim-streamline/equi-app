@@ -138,6 +138,26 @@ export default function ProtocolListScreen() {
   ), [horsePicker, hasOrders]);
   useHeaderAction(headerAction);
 
+  // Also below a completed plan: the owner can buy the next protocol while the old one stays readable.
+  const purchaseCard = !!horseId && data?.horse.id === horseId && data.showPlusUpsell && (
+    <Pressable
+      accessibilityRole="link"
+      accessibilityLabel={`Protocol kopen voor ${data.horse.name}`}
+      onPress={() => router.push('/protocol-purchase')}
+      className="rounded-[22px] bg-[#FFF0EC] p-5"
+    >
+      <Text className="font-semi text-[17px] leading-[23px] text-ink">
+        Een persoonlijk protocol voor {data.horse.name}
+      </Text>
+      <Text className="mt-2 text-[14px] leading-[22px] text-ink-70">
+        Koop een persoonlijk protocol voor je paard, afgestemd op jouw paard, zijn klachten en jullie doelen.
+      </Text>
+      <Text className="mt-3 font-semi text-[14px] text-teal-600">
+        Protocol kopen →
+      </Text>
+    </Pressable>
+  );
+
   return (
     <View className="flex-1 bg-canvas">
       {!!error && <OfflineStrip message={error} stale={!!data} onRetry={() => void refresh()} />}
@@ -158,24 +178,7 @@ export default function ProtocolListScreen() {
               <Button title="Paard toevoegen" onPress={() => router.push('/onboarding/add-horse')} />
             </View>
           )}
-          {!!horseId && data?.horse.id === horseId && data.showPlusUpsell && (
-            <Pressable
-              accessibilityRole="link"
-              accessibilityLabel={`Protocol kopen voor ${data.horse.name}`}
-              onPress={() => router.push('/protocol-purchase')}
-              className="rounded-[22px] bg-[#FFF0EC] p-5"
-            >
-              <Text className="font-semi text-[17px] leading-[23px] text-ink">
-                Een persoonlijk protocol voor {data.horse.name}
-              </Text>
-              <Text className="mt-2 text-[14px] leading-[22px] text-ink-70">
-                Koop een persoonlijk protocol voor je paard, afgestemd op jouw paard, zijn klachten en jullie doelen.
-              </Text>
-              <Text className="mt-3 font-semi text-[14px] text-teal-600">
-                Protocol kopen →
-              </Text>
-            </Pressable>
-          )}
+          {purchaseCard}
         </ScrollView>
       )}
       {protocol && (
@@ -201,6 +204,7 @@ export default function ProtocolListScreen() {
                 onWeekly={() => setWeeklyOpen(true)}
               />
             )}
+            {tab === "vandaag" && !!purchaseCard && <View className="mt-4">{purchaseCard}</View>}
             {tab === "kalender" && (
               <Calendar
                 key={`${horseId}:${protocol.id}`}
@@ -303,11 +307,14 @@ function ProtocolPreparation({ protocol, horseId, horseName, onOrder, onRefresh 
         <Text className={T.link}>Bekijk bestellijst voor fase 1 →</Text>
       </Pressable>
     </View>
-    <View className="gap-4 rounded-[22px] bg-mint-50 p-5">
+    {/* Only a running plan can be started; the server refuses the others. */}
+    {protocol.paused || protocol.completed ? <View className="rounded-[22px] bg-mint-50 p-5">
+      <Text className={T.lead}>{protocol.paused ? 'Je herstelplan is gepauzeerd. Je kunt starten zodra je plan is hervat.' : 'Dit herstelplan is afgerond en kan niet meer worden gestart.'}</Text>
+    </View> : <View className="gap-4 rounded-[22px] bg-mint-50 p-5">
       <Text className={T.cardTitle}>Heb je alles in huis?</Text>
       <Text className={T.lead}>Start je protocol op de dag dat je daadwerkelijk met alle producten uit de eerste fase begint. Klik die dag op de button hieronder.</Text>
       <Button title="Ik start vandaag" className="mt-1" onPress={() => { setError(null); setConfirm(true); }} />
-    </View>
+    </View>}
     <Sheet visible={confirm} title="Vandaag wordt dag 1 van je protocol" onClose={() => { if (!busy.current) setConfirm(false); }}>
       <Text className={`mb-5 ${T.body}`}>Weet je zeker dat je vandaag wilt beginnen?</Text>
       {!!error && <Text accessibilityRole="alert" className="mb-4 text-[14px] text-danger">{error}</Text>}

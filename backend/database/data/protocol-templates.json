@@ -452,7 +452,7 @@
                         "dosis_type": "per_600_kg",
                         "dosis": 20,
                         "unit": "g",
-                        "instructions": "Bij voorkeur 2x daags de helft van de aanbevolen dosering door de bijvoeding mengen.\nAnders 1x daags de aanbevolen dosering door de bijvoeding mengen.",
+                        "instructions": "1× daags de berekende dosering door de bijvoeding mengen.",
                         "weeks": [
                             1,
                             2,

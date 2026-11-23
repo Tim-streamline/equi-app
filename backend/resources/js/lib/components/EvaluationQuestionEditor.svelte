@@ -20,7 +20,11 @@
     <div class="flex gap-3">
         <Button type="submit" disabled={$form.processing}>Opslaan</Button>
         {#if question.active}<Button type="button" variant="outline" onclick={() => {
-            if (confirm('Deze evaluatievraag verwijderen uit nieuwe formulieren? Eerdere evaluaties blijven bewaard.')) router.delete(`/admin/evaluation-questions/${question.id}`, { preserveScroll: true });
+            if (confirm('Deze evaluatievraag verwijderen uit nieuwe formulieren? Eerdere evaluaties blijven bewaard.')) router.delete(`/admin/evaluation-questions/${question.id}`, {
+                preserveScroll: true,
+                // This form outlives the visit; without this its next save would reactivate the question.
+                onSuccess: () => { $form.active = false; },
+            });
         }}>Verwijderen</Button>{/if}
     </div>
 </form>

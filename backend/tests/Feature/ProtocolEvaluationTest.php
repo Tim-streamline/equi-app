@@ -70,6 +70,100 @@ class ProtocolEvaluationTest extends TestCase
         $this->postJson($url, ['answers' => $answers, 'submit' => true, 'question_version' => $version])->assertNotFound();
     }
 
+    public function test_an_untouched_draft_can_be_saved_and_stays_an_empty_map(): void
+    {
+        $protocol = $this->plan();
+        $this->owner($protocol->horse->owner_id);
+        $url = '/api/protocols/'.$protocol->id.'/evaluation';
+        $version = $this->getJson($url)->assertOk()->json('questionVersion');
+        // The app sends "answers": {} until the owner has typed something.
+        $saved = $this->call('POST', $url, [], [], [], ['CONTENT_TYPE' => 'application/json', 'HTTP_ACCEPT' => 'application/json'],
+            json_encode(['answers' => new \stdClass, 'submit' => false, 'question_version' => $version]));
+        $saved->assertOk();
+        $this->assertStringContainsString('"answers":{}', $saved->getContent());
+        $this->assertStringContainsString('"answers":{}', $this->getJson($url)->assertOk()->getContent());
+        $this->postJson($url, ['answers' => [], 'submit' => true, 'question_version' => $version])->assertUnprocessable();
+        $this->assertNull(app(ProtocolEvaluation::class)->admin($protocol));
+    }
+
+    public function test_a_form_opened_before_questions_were_added_or_removed_is_told_to_reopen(): void
+    {
+        $protocol = $this->plan();
+        $this->owner($protocol->horse->owner_id);
+        $url = '/api/protocols/'.$protocol->id.'/evaluation';
+        $offer = $this->getJson($url)->assertOk()->json();
+        $answers = array_fill_keys(array_keys($offer['questions']), 'Voorbeeldantwoord');
+        // An added question the open form never showed must not surface as a missing answer.
+        $added = \App\Models\ProtocolEvaluationQuestion::create(['label' => 'Nieuwe vraag', 'order' => 9, 'active' => true]);
+        $this->postJson($url, ['answers' => $answers, 'submit' => true, 'question_version' => $offer['questionVersion']])->assertStatus(409);
+        $added->update(['active' => false]);
+        // A removed question the open form still answers must not surface as an unknown key.
+        DB::table('protocol_evaluation_questions')->where('id', 'c12e1000-0000-4000-8000-000000000006')->update(['active' => false]);
+        foreach ([true, false] as $submit) {
+            $this->postJson($url, ['answers' => $answers, 'submit' => $submit, 'question_version' => $offer['questionVersion']])->assertStatus(409);
+        }
+        $this->assertDatabaseCount('protocol_evaluations', 0);
+    }
+
+    public function test_an_evaluation_stays_with_the_owner_who_wrote_it_after_the_horse_changes_owner(): void
+    {
+        $protocol = $this->plan();
+        $first = $protocol->horse->owner_id;
+        $this->owner($first);
+        $url = '/api/protocols/'.$protocol->id.'/evaluation';
+        $version = $this->getJson($url)->assertOk()->json('questionVersion');
+        $this->postJson($url, ['answers' => ['c12e1000-0000-4000-8000-000000000001' => 'Privéconcept'], 'submit' => false, 'question_version' => $version])->assertOk();
+        $second = User::factory()->create();
+        $protocol->horse->update(['owner_id' => $second->id]);
+        $this->owner($second->id);
+        $service = app(ProtocolEvaluation::class);
+        $this->assertFalse($service->timing($protocol->fresh(), CarbonImmutable::now())['available'], 'Home shows the new owner no evaluation notice');
+        $this->assertStringNotContainsString('concept', $this->getJson($url)->assertUnprocessable()->getContent());
+        $answers = array_fill_keys(array_keys(ProtocolEvaluation::QUESTIONS), 'Van de nieuwe eigenaar');
+        $this->postJson($url, ['answers' => $answers, 'submit' => true, 'question_version' => $version])->assertUnprocessable();
+        $this->assertDatabaseHas('protocol_evaluations', ['protocol_id' => $protocol->id, 'user_id' => $first, 'submitted_at' => null]);
+        // Back with its author, the draft is there again.
+        $protocol->horse->update(['owner_id' => $first]);
+        $this->owner($first);
+        $this->getJson($url)->assertOk()->assertJsonPath('answers.c12e1000-0000-4000-8000-000000000001', 'Privéconcept');
+    }
+
+    public function test_home_knows_a_sent_evaluation_and_a_plan_closed_before_its_scheduled_end(): void
+    {
+        $protocol = $this->plan();
+        $this->owner($protocol->horse->owner_id);
+        $service = app(ProtocolEvaluation::class);
+        $timing = $service->timing($protocol, CarbonImmutable::now());
+        $this->assertFalse($timing['submitted']);
+        $this->assertFalse($timing['completed']);
+        $url = '/api/protocols/'.$protocol->id.'/evaluation';
+        $version = $this->getJson($url)->json('questionVersion');
+        $this->postJson($url, ['answers' => ['c12e1000-0000-4000-8000-000000000001' => 'Concept'], 'submit' => false, 'question_version' => $version])->assertOk();
+        $this->assertFalse($service->timing($protocol, CarbonImmutable::now())['submitted'], 'A draft is not sent');
+        $this->postJson($url, ['answers' => array_fill_keys(array_keys(ProtocolEvaluation::QUESTIONS), 'Antwoord'), 'submit' => true, 'question_version' => $version])->assertOk();
+        $this->assertTrue($service->timing($protocol, CarbonImmutable::now())['submitted']);
+        // Closed on the opening day, fourteen days before the scheduled end.
+        $protocol->update(['status' => 'completed']);
+        $closed = $service->timing($protocol->fresh(), CarbonImmutable::now());
+        $this->assertTrue($closed['completed']);
+        $this->assertSame(14, $closed['daysRemaining']);
+        $this->getJson($url)->assertOk()->assertJsonPath('completed', true);
+    }
+
+    public function test_admin_dates_name_their_timezone_so_the_panel_and_the_pdf_show_the_same_day(): void
+    {
+        $protocol = $this->plan();
+        // 00:30 on 19 November in Amsterdam is still 18 November in UTC.
+        $this->travelTo(CarbonImmutable::parse('2026-11-19 00:30:00', 'Europe/Amsterdam'));
+        $this->owner($protocol->horse->owner_id);
+        $url = '/api/protocols/'.$protocol->id.'/evaluation';
+        $version = $this->getJson($url)->json('questionVersion');
+        $this->postJson($url, ['answers' => array_fill_keys(array_keys(ProtocolEvaluation::QUESTIONS), 'Antwoord'), 'submit' => true, 'question_version' => $version])->assertOk();
+        $admin = app(ProtocolEvaluation::class)->admin($protocol);
+        $this->assertSame('2026-11-18T23:30:00Z', $admin['submitted_at']);
+        $this->assertSame('2026-11-18T23:30:00Z', $admin['updated_at']);
+    }
+
     public function test_offer_uses_current_admin_price_and_never_creates_a_purchase_or_protocol(): void
     {
         $protocol = $this->plan();
