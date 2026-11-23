@@ -1,6 +1,6 @@
 export type ProtocolEvaluationData = {
   available: boolean; protocolId: string; horseId: string; horseName: string;
-  endsOn: string; daysRemaining: number; discountUntil: string; discountEligible: boolean;
+  endsOn: string; daysRemaining: number; discountUntil: string; discountEligible: boolean; completed?: boolean;
   questions: Record<string, string>; questionVersion: string; answers: Record<string, string>; submittedAt: string | null;
   basePriceCents: number; priceCents: number; discountPercent: number; durationMonths: number;
 };

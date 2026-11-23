@@ -32,6 +32,7 @@ function app() {
   new Function('require', 'exports', ...Object.keys(dependencies), code)(() => ({ jsx, jsxs: jsx }), exports, ...Object.values(dependencies));
   return {
     card: () => flatten(exports.default()).find(node => node?.props?.accessibilityRole === 'link'), routes,
+    nodes: () => flatten(exports.default()),
     addHorse: () => flatten(exports.default()).find(node => node?.type === 'Button' && node.props.title === 'Paard toevoegen'),
     headerAction: () => { exports.default(); return flatten(header); },
     set horseId(value) { horseId = value; }, set data(value) { data = value; },
@@ -56,6 +57,16 @@ test('no purchase card while loading, without a horse, or when an existing proto
   assert.equal(screen.card(), undefined);
   screen.horseId = ''; screen.data = { horse: { id: '', name: '' }, showPlusUpsell: true };
   assert.equal(screen.card(), undefined);
+});
+
+test('a completed plan stays readable with the purchase card for the next protocol below it', () => {
+  const screen = app();
+  const plan = { id: 'p1', completed: true, orderItems: [], phases: [] };
+  screen.data = { horse: { id: 'rolo', name: 'Rolo' }, showPlusUpsell: true, protocol: plan };
+  assert.equal(screen.card().props.accessibilityLabel, 'Protocol kopen voor Rolo');
+  assert.ok(screen.nodes().some(node => node.type === 'Today'), 'the finished plan is still shown');
+  screen.data = { horse: { id: 'rolo', name: 'Rolo' }, showPlusUpsell: false, protocol: plan };
+  assert.equal(screen.card(), undefined, 'not while a new protocol or intake is already under way');
 });
 
 test('without a horse the protocol tab explains why it is empty and offers to add one', () => {

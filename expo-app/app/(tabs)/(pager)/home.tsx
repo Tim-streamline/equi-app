@@ -145,10 +145,14 @@ function protocolCards(data: HorseDashboard | null): HorseProtocolSummary[] {
 }
 
 /** A horse's protocol in progress; opens Protocol on that horse. */
-function ProtocolCard({ id, horseId, horseName, statusLabel, currentDay, currentWeek, phaseLabel, progressPercent, preparing }: HorseProtocolSummary) {
+function ProtocolCard({ id, horseId, horseName, statusLabel, currentDay, currentWeek, phaseLabel, progressPercent, preparing, startedAt }: HorseProtocolSummary) {
   const { selectHorse } = useDb();
   const readyToStart = preparing ?? (currentDay <= 0);
+  const stopped = /gepauzeerd|afgerond|voltooid/i.test(statusLabel ?? '');
+  // A start date that is still ahead: there is nothing to tick off yet.
+  const upcoming = !readyToStart && !stopped && currentDay <= 0;
   const possessive = horseName ? horsePossessive(horseName) : 'Je';
+  const plan = `${possessive} herstelplan`;
   return (
     <Pressable
       accessibilityRole="button"
@@ -167,21 +171,24 @@ function ProtocolCard({ id, horseId, horseName, statusLabel, currentDay, current
         {horseName ? `${possessive} EquiBoost traject` : "EquiBoost traject"}
       </Text>}
       <Text className={`${readyToStart ? '' : 'mt-3'} font-bold text-[20px] leading-[26px] text-ink`}>
-        {readyToStart ? `Het herstelplan voor ${horseName || 'je paard'} staat klaar!`  : /gepauzeerd|afgerond|voltooid/i.test(statusLabel ?? '') ? statusLabel : `${horseName ? `${possessive} herstelplan` : 'Je herstelplan'} is in volle gang!`}
+        {readyToStart ? `Het herstelplan voor ${horseName || 'je paard'} staat klaar!` : stopped ? statusLabel
+          : upcoming ? `${plan} start ${startedAt ? `op ${new Date(`${startedAt}T12:00:00`).toLocaleDateString('nl-NL', { day: 'numeric', month: 'long' })}` : 'binnenkort'}`
+          : `${plan} is in volle gang!`}
       </Text>
       <Text className={`${readyToStart ? 'mt-3' : 'mt-1'} ${HOME_NOTICE_BODY}`}>
         {readyToStart ? `Controleer welke kruiden, supplementen en andere producten je nodig hebt. Bestel wat je nog niet in huis hebt, zodat je op tijd met ${horseName ? `${possessive} herstelplan` : 'het herstelplan van je paard'} kunt starten.`
+          : upcoming ? 'Vanaf die dag zie je hier wat je elke dag geeft.'
           : `Dag ${currentDay} · Week ${currentWeek}`}
-        {!readyToStart && phaseLabel ? ` · ${phaseLabel}` : ""}
+        {!readyToStart && !upcoming && phaseLabel ? ` · ${phaseLabel}` : ""}
       </Text>
-      {!readyToStart && <View className="mt-4 h-1.5 overflow-hidden rounded-full bg-ink-8">
+      {!readyToStart && !upcoming && <View className="mt-4 h-1.5 overflow-hidden rounded-full bg-ink-8">
         <View
           className="h-full bg-mint-500"
           style={{ width: `${progressPercent}%` }}
         />
       </View>}
       <Text className={`mt-4 ${HOME_NOTICE_LINK}`}>
-        {readyToStart ? 'Bekijk hier je bestellijst →' : /afgerond|voltooid/i.test(statusLabel ?? '') ? 'Bekijk je herstelplan →' : 'Vink af wat je vandaag hebt gegeven →'}
+        {readyToStart ? 'Bekijk hier je bestellijst →' : upcoming || /afgerond|voltooid/i.test(statusLabel ?? '') ? 'Bekijk je herstelplan →' : 'Vink af wat je vandaag hebt gegeven →'}
       </Text>
     </Pressable>
   );
@@ -193,13 +200,18 @@ function EvaluationNotice({ id, horseId, horseName, evaluation }: HorseProtocolS
   if (!evaluation?.available) return null;
   const possessive = horseName ? horsePossessive(horseName) : 'Je';
   const remaining = evaluation.daysRemaining ?? 0;
-  const when = remaining === 14 ? 'Over twee weken loopt' : remaining > 0 ? `Over ${remaining} ${remaining === 1 ? 'dag' : 'dagen'} loopt` : remaining === 0 ? 'Vandaag loopt' : 'Inmiddels is';
-  return <Pressable accessibilityRole="button" accessibilityLabel={`Evalueer de gezondheid van ${horseName || 'je paard'}`}
+  // A plan the therapist closed early has ended, whatever its scheduled last day.
+  const ended = !!evaluation.completed || remaining < 0;
+  const when = ended ? 'Inmiddels is' : remaining === 14 ? 'Over twee weken loopt' : remaining > 0 ? `Over ${remaining} ${remaining === 1 ? 'dag' : 'dagen'} loopt` : 'Vandaag loopt';
+  const submitted = !!evaluation.submitted;
+  return <Pressable accessibilityRole="button" accessibilityLabel={submitted ? `Bekijk of wijzig de evaluatie van ${horseName || 'je paard'}` : `Evalueer de gezondheid van ${horseName || 'je paard'}`}
     onPress={() => { selectHorse(horseId); router.push({ pathname: '/protocol-evaluation' as any, params: { protocolId: id } }); }}
     className={`mb-4 ${PLAIN_CARD}`}>
     <Text className={HOME_NOTICE_LABEL}>{possessive} EquiBoost traject</Text>
-    <Text className="mt-3 font-bold text-[20px] leading-[26px] text-ink">{possessive} huidige EquiBoost traject is {remaining >= 0 ? 'bijna afgerond' : 'afgerond'}!</Text>
-    <Text className={`mt-3 ${HOME_NOTICE_BODY}`}>{when} {possessive} huidige herstelplan {remaining >= 0 ? 'af' : 'afgelopen'}. Dit is hét moment om te evalueren hoe het nu met {horseName || 'je paard'} gaat en welke vervolgstappen passend zijn.</Text>
-    <Text className={`mt-4 ${HOME_NOTICE_LINK}`}>Evalueer {possessive} gezondheid →</Text>
+    <Text className="mt-3 font-bold text-[20px] leading-[26px] text-ink">{submitted ? 'Je evaluatie is verstuurd' : `${possessive} huidige EquiBoost traject is ${ended ? 'afgerond' : 'bijna afgerond'}!`}</Text>
+    <Text className={`mt-3 ${HOME_NOTICE_BODY}`}>{submitted
+      ? `Je therapeut kan je antwoorden over ${horseName || 'je paard'} bekijken. Je kunt ze nog aanvullen en opnieuw versturen.`
+      : `${when} ${possessive} huidige herstelplan ${ended ? 'afgelopen' : 'af'}. Dit is hét moment om te evalueren hoe het nu met ${horseName || 'je paard'} gaat en welke vervolgstappen passend zijn.`}</Text>
+    <Text className={`mt-4 ${HOME_NOTICE_LINK}`}>{submitted ? 'Bekijk of wijzig je evaluatie →' : `Evalueer ${possessive} gezondheid →`}</Text>
   </Pressable>;
 }

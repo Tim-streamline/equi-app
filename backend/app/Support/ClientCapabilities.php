@@ -18,13 +18,25 @@ class ClientCapabilities
 
     public const PROTOCOL_DOSES_CLAIM = 'protocol_doses';
 
+    /** Shows a paused or completed plan read-only; older apps would offer its checkboxes. */
+    public const READ_ONLY_PLANS = 'read-only-plans';
+
+    public const READ_ONLY_PLANS_CLAIM = 'read_only_plans';
+
+    private const CLAIMS = [self::PROTOCOL_DOSES => self::PROTOCOL_DOSES_CLAIM, self::READ_ONLY_PLANS => self::READ_ONLY_PLANS_CLAIM];
+
     /** JWT claims for the capabilities in a token request; unknown values are ignored. */
     public static function claims(Request $request): array
     {
         $requested = $request->input('capabilities');
+        $claims = [];
+        foreach (self::CLAIMS as $capability => $claim) {
+            if (is_array($requested) && in_array($capability, $requested, true)) {
+                $claims[$claim] = 1;
+            }
+        }
 
-        return is_array($requested) && in_array(self::PROTOCOL_DOSES, $requested, true)
-            ? [self::PROTOCOL_DOSES_CLAIM => 1] : [];
+        return $claims;
     }
 
     /** Whether the authenticated app tracks protocol doses separately. */
@@ -33,5 +45,13 @@ class ClientCapabilities
         $claims = $request->attributes->get('powersync_claims', []);
 
         return (int) ($claims[self::PROTOCOL_DOSES_CLAIM] ?? 0) === 1;
+    }
+
+    /** Whether the authenticated app keeps paused and completed plans read-only. */
+    public static function readOnlyPlans(Request $request): bool
+    {
+        $claims = $request->attributes->get('powersync_claims', []);
+
+        return (int) ($claims[self::READ_ONLY_PLANS_CLAIM] ?? 0) === 1;
     }
 }

@@ -29,6 +29,8 @@ function screen(homeUpsell) {
   intakes.partial.state.answers = { paard: { naam: 'Luna' } };
   let selected = 'purchased', ready = true, delivered = false;
   const activeProtocols = [], preparingProtocols = [], evaluatingProtocols = [];
+  // Fields of one horse's server summary that a test sets itself.
+  const summaries = {};
   let oldCachedResponse = false;
   const routes = [];
   const purchases = { purchased: [{ id: 'p1', title: "purchased's intake", status: 'draft', booking_id: 'i1', submitted_at: null }], unpurchased: [], submitted: [{ id: 'p2', title: "submitted's intake", status: 'draft', booking_id: 'i2', submitted_at: '2026-10-01' }], partial: [{ id: 'p3', title: "partial's intake", status: 'draft', booking_id: 'i3', submitted_at: null }] };
@@ -63,7 +65,7 @@ function screen(homeUpsell) {
       data: ready ? { horse: { id: selected, name: selected }, greeting: selected ? 'Welkom, Tim' : 'Goedemorgen, Tim', hasPlus: !!selected && selected !== 'basic', showPlusUpsell: selected === 'unpurchased', homeUpsell, recommendations: selected ? [] : [1, 2, 3, 4].map(id => ({ id: `item-${id}`, title: `Item ${id}` })), protocol: activeProtocols.includes(selected) ? { id: `p-${selected}`, statusLabel: `Actief voor ${selected}`, currentDay: preparingProtocols.includes(selected) ? 0 : 3, currentWeek: preparingProtocols.includes(selected) ? 0 : 1, progressPercent: 10 } : null,
         // The server's per-horse summaries, sorted by name (older cached responses lack them).
         ...(oldCachedResponse ? {} : { horseProtocols: horses.filter(horse => activeProtocols.includes(horse.id)).sort((a, b) => a.name.localeCompare(b.name))
-          .map(horse => ({ horseId: horse.id, horseName: horse.name, id: `p-${horse.id}`, statusLabel: `Actief voor ${horse.id}`, currentDay: preparingProtocols.includes(horse.id) ? 0 : 10, currentWeek: preparingProtocols.includes(horse.id) ? 0 : 2, progressPercent: 36, evaluation: evaluatingProtocols.includes(horse.id) ? { available: true, daysRemaining: 14 } : undefined })) }) } : null,
+          .map(horse => ({ horseId: horse.id, horseName: horse.name, id: `p-${horse.id}`, statusLabel: `Actief voor ${horse.id}`, currentDay: preparingProtocols.includes(horse.id) ? 0 : 10, currentWeek: preparingProtocols.includes(horse.id) ? 0 : 2, progressPercent: 36, evaluation: evaluatingProtocols.includes(horse.id) ? { available: true, daysRemaining: 14 } : undefined, ...summaries[horse.id] })) }) } : null,
       loading: !ready, refresh() {},
     }) },
     '@/hooks/useTabBarPadding': { useTabBarPadding: () => 76 },
@@ -86,7 +88,7 @@ function screen(homeUpsell) {
   const entry = () => render().find(node => node?.type === 'Pressable' && /^(Start de intake|Ga verder met de intake) voor /.test(node.props.accessibilityLabel || ''));
   // The selected horse is chosen elsewhere (Protocol); Home has no selector.
   const select = id => { selected = id; };
-  return { render, entry, select, routes, intakes, purchases, activeProtocols, preparingProtocols, evaluatingProtocols, selected: () => selected,
+  return { render, entry, select, routes, intakes, purchases, activeProtocols, preparingProtocols, evaluatingProtocols, summaries, selected: () => selected,
     set ready(value) { ready = value; }, set oldCachedResponse(value) { oldCachedResponse = value; }, set delivered(value) { delivered = value; }, clearHorse() { selected = ''; }, withoutHorse() { selected = ''; horses.length = 0; }, addHorse(id) { horses.push({ id, name: id, status: 'active' }); selected = id; },
   };
 }
@@ -107,6 +109,47 @@ test('evaluation has top priority while the active protocol stays independently 
   assert.equal(app.routes.at(-1).pathname, '/protocol-evaluation');
   active.props.onPress();
   assert.equal(app.routes.at(-1).pathname, '/(tabs)/(pager)/protocol');
+});
+
+test('a sent evaluation is offered for review, not asked for again', () => {
+  const app = screen();
+  app.addHorse('Moos');
+  app.activeProtocols.push('Moos');
+  app.summaries.Moos = { evaluation: { available: true, daysRemaining: -40, submitted: true } };
+  const tree = app.render();
+  assert.ok(!tree.some(n => n?.props?.accessibilityLabel === 'Evalueer de gezondheid van Moos'));
+  const sent = tree.find(n => n?.props?.accessibilityLabel === 'Bekijk of wijzig de evaluatie van Moos');
+  assert.ok(text(sent).includes('Je evaluatie is verstuurd'));
+  assert.ok(text(sent).includes('Bekijk of wijzig je evaluatie →'));
+  assert.ok(!text(sent).includes('hét moment'));
+  sent.props.onPress();
+  assert.equal(app.routes.at(-1).pathname, '/protocol-evaluation');
+});
+
+test('a plan closed before its scheduled end is not announced as almost finished', () => {
+  const app = screen();
+  app.addHorse('Moos');
+  app.activeProtocols.push('Moos');
+  app.summaries.Moos = { statusLabel: 'Je protocol is afgerond', evaluation: { available: true, daysRemaining: 9, completed: true } };
+  const reminder = app.render().find(n => n?.props?.accessibilityLabel === 'Evalueer de gezondheid van Moos');
+  assert.ok(text(reminder).includes("Moos' huidige EquiBoost traject is afgerond!"));
+  assert.ok(text(reminder).includes("Inmiddels is Moos' huidige herstelplan afgelopen."));
+  assert.ok(!text(reminder).includes('bijna') && !text(reminder).includes('Over 9 dagen'));
+});
+
+test('a plan with a start date still ahead says when it starts and offers nothing to tick off', () => {
+  const app = screen();
+  app.addHorse('Moos');
+  app.activeProtocols.push('Moos');
+  app.summaries.Moos = { statusLabel: 'Je protocol start binnenkort', preparing: false, currentDay: 0, currentWeek: 0, progressPercent: 0, startedAt: '2026-11-23' };
+  const card = app.render().find(n => n?.props?.accessibilityLabel === 'Protocol van Moos');
+  assert.ok(text(card).includes("Moos' herstelplan start op 23 november"));
+  assert.ok(text(card).includes('Bekijk je herstelplan →'));
+  for (const wrong of ['in volle gang', 'Dag 0', 'Vink af']) assert.ok(!text(card).includes(wrong), wrong);
+  // Once running, the same card counts days again.
+  app.summaries.Moos = { statusLabel: 'Je protocol is actief', preparing: false, currentDay: 3, currentWeek: 1, startedAt: '2026-11-23' };
+  const running = app.render().find(n => n?.props?.accessibilityLabel === 'Protocol van Moos');
+  assert.ok(text(running).includes("Moos' herstelplan is in volle gang!") && text(running).includes('Dag 3 · Week 1'));
 });
 
 test('partially completed intake has its own heading and continuation link', () => {

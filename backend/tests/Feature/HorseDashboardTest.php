@@ -60,7 +60,9 @@ class HorseDashboardTest extends TestCase
             public function handle($request, $next)
             {
                 $request->attributes->set('powersync_user_id', $this->userId);
-                $request->attributes->set('powersync_claims', ['protocol_doses' => 1]);
+                // The released app with separate doses does not know read-only plans yet.
+                $request->attributes->set('powersync_claims', ['protocol_doses' => 1]
+                    + ($request->header('X-Released-App') ? [] : ['read_only_plans' => 1]));
 
                 return $next($request);
             }
@@ -161,6 +163,49 @@ class HorseDashboardTest extends TestCase
         $this->assertDatabaseCount('protocol_supplement_intakes', 0);
         $this->protocol->update(['status' => 'active']);
         $this->getJson($this->dayUrl('2026-08-27'))->assertOk()->assertJsonPath('editable', true);
+    }
+
+    public function test_released_apps_do_not_receive_a_paused_or_completed_plan_they_would_offer_to_tick_off(): void
+    {
+        $url = '/api/horses/'.$this->horse->id.'/dashboard';
+        foreach (['paused', 'completed'] as $status) {
+            $this->protocol->update(['status' => $status]);
+            $released = $this->withHeaders(['X-Released-App' => '1'])->getJson($url)->assertOk()->assertJsonPath('protocol', null)->json();
+            $this->assertSame([], $released['horseProtocols'], $status);
+            $this->flushHeaders();
+            $this->getJson($url)->assertOk()->assertJsonPath('protocol.id', $this->protocol->id)->assertJsonPath('protocol.'.$status, true);
+        }
+        $this->protocol->update(['status' => 'active']);
+        $this->withHeaders(['X-Released-App' => '1'])->getJson($url)->assertOk()->assertJsonPath('protocol.id', $this->protocol->id)
+            ->assertJsonPath('horseProtocols.0.id', $this->protocol->id);
+    }
+
+    public function test_home_and_the_protocol_tab_show_the_same_plan_of_a_horse(): void
+    {
+        $url = '/api/horses/'.$this->horse->id.'/dashboard';
+        $older = $this->horse->protocols()->create(['title' => 'Earlier plan', 'status' => 'completed',
+            'published_at' => now()->subMonths(6), 'started_at' => '2026-02-01', 'total_weeks' => 4]);
+        $this->getJson($url)->assertOk()->assertJsonPath('protocol.id', $this->protocol->id)
+            ->assertJsonPath('horseProtocols.0.id', $this->protocol->id);
+        // The paused plan is the one the Protocol tab opens; Home must not offer the older one as a card.
+        $this->protocol->update(['status' => 'paused']);
+        $this->getJson($url)->assertOk()->assertJsonPath('protocol.id', $this->protocol->id)->assertJsonPath('horseProtocols', []);
+        $this->protocol->update(['status' => 'archived']);
+        $this->getJson($url)->assertOk()->assertJsonPath('protocol.id', $older->id)->assertJsonPath('horseProtocols.0.id', $older->id);
+    }
+
+    public function test_a_completed_plan_is_shown_with_the_offer_to_buy_the_next_protocol(): void
+    {
+        $url = '/api/horses/'.$this->horse->id.'/dashboard';
+        $this->getJson($url)->assertOk()->assertJsonPath('showPlusUpsell', false);
+        $this->protocol->update(['status' => 'completed']);
+        $this->getJson($url)->assertOk()->assertJsonPath('protocol.id', $this->protocol->id)->assertJsonPath('showPlusUpsell', true);
+        // Once the next protocol is bought, its intake takes over and the offer goes away.
+        Protocol::create(['horse_id' => $this->horse->id, 'title' => 'Persoonlijk protocol', 'status' => 'draft']);
+        $this->getJson($url)->assertOk()->assertJsonPath('protocol.id', $this->protocol->id)->assertJsonPath('showPlusUpsell', false);
+        // Released apps do not get the finished plan; they keep the offer they always had.
+        Protocol::where('status', 'draft')->delete();
+        $this->getJson($url, ['X-Released-App' => '1'])->assertOk()->assertJsonPath('protocol', null)->assertJsonPath('showPlusUpsell', true);
     }
 
     public function test_reading_inactive_protocol_history_still_requires_publication_and_ownership(): void
