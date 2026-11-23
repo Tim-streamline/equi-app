@@ -84,7 +84,6 @@ Route::middleware('auth:admin')->group(function () {
         Route::put('{horse}', 'update')->name('update');
         Route::post('{horse}/archive', 'archive')->name('archive');
         Route::post('{horse}/restore', 'restore')->name('restore');
-        Route::post('{horse}/transfer', 'transfer')->name('transfer');
     });
 
     // ---- Therapists ------------------------------------------------------

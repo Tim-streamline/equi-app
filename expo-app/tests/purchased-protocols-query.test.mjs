@@ -15,7 +15,7 @@ test('purchased protocol query runs against the device schema and retains unfini
   const schema = Object.values(exports).find(value => value instanceof Schema);
   const db = new DatabaseSync(':memory:');
   try {
-    for (const name of ['protocols', 'intake_bookings', 'horses']) {
+    for (const name of ['protocols', 'intake_bookings', 'horses', 'intake_answers']) {
       const columns = Object.entries(schema.tables[name].columns).map(([name, type]) => `"${name}" ${type}`);
       db.exec(`CREATE TABLE ${name} (id TEXT PRIMARY KEY, ${columns.join(', ')})`);
     }
@@ -36,8 +36,16 @@ test('purchased protocol query runs against the device schema and retains unfini
     insertHorse.run('rolo', 'Rolo', 'active'); insertHorse.run('nova', 'Nova', 'active'); insertHorse.run('gone', 'Gone', 'archived');
     insertProtocol.run('gone-horse', 'gone', 'gone-horse', 'draft', '2026-10-17');
     insertIntake.run('intake-gone-horse', 'gone-horse', 'owner', 'gone', 'pending', null);
+    // Only a real answer counts as having started: not photos, "not applicable" markers or empty values.
+    const insertAnswer = db.prepare('INSERT INTO intake_answers (id, response_id, section_id, field_id, value) VALUES (?, ?, ?, ?, ?)');
+    insertAnswer.run('a1', 'intake-draft', 'paard', 'naam', '"Rolo"');
+    insertAnswer.run('a2', 'intake-finished', '__photos', 'foto', '"x"');
+    insertAnswer.run('a3', 'intake-finished', 'paard', 'na:gewicht', '"yes"');
+    insertAnswer.run('a4', 'intake-finished', 'paard', 'leeftijd', '""');
+    insertAnswer.run('a5', 'intake-finished', 'paard', 'ras', '[]');
     const rows = db.prepare(PROTOCOLS_FOR_HORSE).all('rolo', 'owner');
     assert.deepEqual(rows.map(row => row.id), ['draft', 'finished']);
+    assert.deepEqual(rows.map(row => row.has_answers), [1, 0]);
     assert.equal(rows[0].booking_id, 'intake-draft');
     assert.equal(rows[0].submitted_at, null);
     assert.equal(rows[0].horse_name, 'Rolo');

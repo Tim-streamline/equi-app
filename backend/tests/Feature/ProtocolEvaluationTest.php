@@ -110,7 +110,8 @@ class ProtocolEvaluationTest extends TestCase
         $this->actingAs($admin, 'admin');
         $this->get('/admin/evaluation-questions')->assertOk();
         $seedId = array_key_first(ProtocolEvaluation::QUESTIONS);
-        $longLabel = str_repeat('Een uitgebreide evaluatievraag. ', 20);
+        // Laravel trims request strings, so the stored label has no trailing space.
+        $longLabel = trim(str_repeat('Een uitgebreide evaluatievraag. ', 20));
         $this->put('/admin/evaluation-questions/'.$seedId, ['label' => $longLabel, 'order' => 0, 'active' => true])->assertSessionHasNoErrors();
         $this->assertDatabaseHas('audit_logs', ['target_id' => $seedId, 'action' => 'updated']);
         $this->assertDatabaseHas('protocol_evaluation_questions', ['id' => $seedId, 'label' => $longLabel]);
@@ -124,7 +125,8 @@ class ProtocolEvaluationTest extends TestCase
             ->component('Horses/Show')->where('evaluations.0.answers.c12e1000-0000-4000-8000-000000000001', 'Mijn evaluatie'));
         $pdf = $this->get('/admin/horses/'.$protocol->horse_id.'/evaluations/'.$protocol->id.'.pdf')->assertOk()->assertHeader('Content-Type', 'application/pdf');
         $this->assertStringStartsWith('%PDF-', $pdf->getContent());
-        $this->get('/admin/evaluation-questions/export.pdf')->assertNotFound();
+        // There is no export of all evaluations: that address only exists for changing or removing a question.
+        $this->get('/admin/evaluation-questions/export.pdf')->assertMethodNotAllowed();
         $otherHorse = Horse::create(['owner_id' => $protocol->horse->owner_id, 'name' => 'Ander paard', 'status' => 'active']);
         $this->get('/admin/horses/'.$otherHorse->id.'/evaluations/'.$protocol->id.'.pdf')->assertNotFound();
     }

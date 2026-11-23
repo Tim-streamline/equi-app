@@ -25,6 +25,7 @@ function app() {
     HEADER_ICON: '#466362', useHeaderAction: action => { header = action; },
     router: { push: route => routes.push(route) },
     scopeOrderItems: (items, scope) => scope === 'all' ? items : [],
+    createOrderTicks: () => ({ toggle() {} }), dashboardRequest: async () => ({}),
     ...protocolStyleGlobals,
   };
   const exports = {};

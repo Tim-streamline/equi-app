@@ -25,6 +25,7 @@ import {
   Leaf,
 } from "lucide-react-native";
 import { Button } from "@/components/ui/Button";
+import { createOrderTicks } from "@/lib/protocol-order-ticks";
 import { useTabBarPadding } from "@/hooks/useTabBarPadding";
 import {
   useHorseDashboard,
@@ -124,27 +125,26 @@ export default function ProtocolListScreen() {
   // Ticks show at once; the server's answer (or a failure) settles them.
   const [ordered, setOrdered] = useState<{ protocolId: string; keys: string[] } | null>(null);
   const [orderError, setOrderError] = useState<string | null>(null);
-  const orderSaving = useRef(0);
   // A fresh dashboard (also after ticking on another device) replaces the local ticks.
   const serverOrdered = protocol?.orderedKeys?.join(',');
   useEffect(() => { setOrdered(null); }, [protocol?.id, serverOrdered]);
   const orderedKeys = ordered && ordered.protocolId === protocol?.id ? ordered.keys : protocol?.orderedKeys ?? [];
-  const toggleOrdered = async (keys: string[], done: boolean) => {
+  // One queue per horse and protocol: taps are saved in order, so the stored state always ends as the list shows.
+  const orderTicks = useMemo(() => {
+    const protocolId = protocol?.id;
+    return createOrderTicks(async (keys, done) => {
+      const result = await dashboardRequest(`/api/horses/${horseId}/protocol-orders`, { protocol_id: protocolId, keys, ordered: done }) as { orderedKeys: string[] };
+      return result.orderedKeys;
+    });
+  }, [horseId, protocol?.id]);
+  const toggleOrdered = (keys: string[], done: boolean) => {
     if (!protocol || !horseId) return;
     const protocolId = protocol.id;
-    const previous = orderedKeys;
-    const generation = ++orderSaving.current;
     setOrderError(null);
-    setOrdered({ protocolId, keys: done ? Array.from(new Set([...previous, ...keys])) : previous.filter((key) => !keys.includes(key)) });
-    try {
-      const result = await dashboardRequest(`/api/horses/${horseId}/protocol-orders`, { protocol_id: protocolId, keys, ordered: done }) as { orderedKeys: string[] };
-      if (generation === orderSaving.current) setOrdered({ protocolId, keys: result.orderedKeys });
-    } catch {
-      if (generation === orderSaving.current) {
-        setOrdered({ protocolId, keys: previous });
-        setOrderError("Niet opgeslagen. Controleer je verbinding en probeer opnieuw.");
-      }
-    }
+    orderTicks.toggle(orderedKeys, keys, done, (next, failed) => {
+      setOrdered({ protocolId, keys: next });
+      if (failed) setOrderError("Niet opgeslagen. Controleer je verbinding en probeer opnieuw.");
+    });
   };
   const firstPhase = protocol?.phases[0];
   const linkedPhases = protocol?.phases.filter((item) => item.accessible && requestedPhases?.split(',').includes(item.id)) ?? [];
@@ -254,7 +254,7 @@ export default function ProtocolListScreen() {
             onClose={() => { setOrders(null); setOrderError(null); if (ordered) void refresh(); }}
           >
             {!!orderError && <Text className="mb-3 text-[13px] text-danger">{orderError}</Text>}
-            <ProtocolOrderList items={visibleOrders} discount={protocol.orderDiscount} orderedKeys={orderedKeys} onToggle={(keys, done) => void toggleOrdered(keys, done)} />
+            <ProtocolOrderList items={visibleOrders} discount={protocol.orderDiscount} orderedKeys={orderedKeys} onToggle={toggleOrdered} />
             {orders !== null && orders !== 'all' && (
               <Button variant="ghost" title="Bekijk volledige bestellijst" className="mt-4" onPress={() => setOrders('all')} />
             )}
@@ -329,11 +329,14 @@ function ProtocolPreparation({ protocol, horseId, horseName, onOrder, onRefresh 
         <Text className={T.link}>Bekijk bestellijst voor fase 1 →</Text>
       </Pressable>
     </View>
-    <View className="gap-4 rounded-[22px] bg-mint-50 p-5">
+    {protocol.paused
+      // Only an active plan can be started; the therapist reactivates a paused one, after which the button returns.
+      ? <View className="rounded-[22px] bg-mint-50 p-5"><Text className={T.body}>Je herstelplan is gepauzeerd. Je kunt de bestellijst en de uitleg bekijken; starten kan zodra je plan is hervat.</Text></View>
+      : <View className="gap-4 rounded-[22px] bg-mint-50 p-5">
       <Text className={T.cardTitle}>Heb je alles in huis?</Text>
       <Text className={T.lead}>Start je protocol op de dag dat je daadwerkelijk met alle producten uit de eerste fase begint. Klik die dag op de button hieronder.</Text>
       <Button title="Ik start vandaag" className="mt-1" onPress={() => { setError(null); setConfirm(true); }} />
-    </View>
+    </View>}
     <Sheet visible={confirm} title="Vandaag wordt dag 1 van je protocol" onClose={() => { if (!busy.current) setConfirm(false); }}>
       <Text className={`mb-5 ${T.body}`}>Weet je zeker dat je vandaag wilt beginnen?</Text>
       {!!error && <Text accessibilityRole="alert" className="mb-4 text-[14px] text-danger">{error}</Text>}

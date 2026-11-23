@@ -39,7 +39,7 @@ class SendCustomerNotificationMails extends Command
         };
         IntakeBooking::where('confirmation_email_status', 'pending')->where('intake_status', 'submitted')->whereNotNull('submitted_at')
             ->chunkById(50, fn ($bookings) => $each($bookings, $sender->sendIntakeReceived(...), 'Intakebevestiging'));
-        Protocol::where('published_email_status', 'pending')->whereNotNull('published_at')
+        CustomerNotificationMail::publishedPlanIsDue(Protocol::where('published_email_status', 'pending'))
             ->chunkById(50, fn ($protocols) => $each($protocols, $sender->sendRecoveryPlanPublished(...), 'Herstelplanmail'));
 
         return $failed ? self::FAILURE : self::SUCCESS;

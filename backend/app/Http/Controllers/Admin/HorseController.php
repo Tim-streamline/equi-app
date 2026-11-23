@@ -4,7 +4,6 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\Horse;
-use App\Models\User;
 use App\Support\AuditLogger;
 use App\Support\HorseDeletion;
 use Illuminate\Http\JsonResponse;
@@ -147,15 +146,5 @@ class HorseController extends Controller
         }
 
         return redirect()->route('admin.horses.index')->with('success', 'Paard definitief verwijderd.');
-    }
-
-    public function transfer(Request $request, Horse $horse): RedirectResponse
-    {
-        $data = $request->validate(['owner_id' => ['required', 'exists:users,id']]);
-        $before = ['owner_id' => $horse->owner_id];
-        $horse->update(['owner_id' => $data['owner_id']]);
-        AuditLogger::log('transfer', $horse, before: $before, after: ['owner_id' => $data['owner_id']]);
-
-        return back()->with('success', 'Ownership transferred to '.User::find($data['owner_id'])?->name.'.');
     }
 }

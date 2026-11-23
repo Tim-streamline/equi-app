@@ -21,6 +21,16 @@ use Throwable;
  */
 class CustomerNotificationMail
 {
+    /** The customer is mailed this long after publishing, so a correction made straight after is not announced twice. */
+    public const PUBLISHED_DELAY_MINUTES = 30;
+
+    /** A plan the customer can actually open, as in HorseDashboard, and published long enough ago. */
+    public static function publishedPlanIsDue($query)
+    {
+        return $query->whereIn('status', ['active', 'paused', 'completed'])->whereNotNull('published_at')
+            ->where('published_at', '<=', now()->subMinutes(self::PUBLISHED_DELAY_MINUTES));
+    }
+
     public function sendIntakeReceived(string $bookingId): void
     {
         $this->sendOnce(IntakeBooking::class, $bookingId, 'confirmation_email',
@@ -36,7 +46,7 @@ class CustomerNotificationMail
     public function sendRecoveryPlanPublished(string $protocolId): void
     {
         $this->sendOnce(Protocol::class, $protocolId, 'published_email',
-            fn ($query) => $query->whereNotNull('published_at'),
+            fn ($query) => self::publishedPlanIsDue($query),
             function (Protocol $protocol) {
                 $protocol->load('horse.owner');
 

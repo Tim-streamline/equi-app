@@ -8,7 +8,7 @@ const source = readFileSync(new URL('../app/(tabs)/(pager)/protocol.tsx', import
 const component = source.slice(source.indexOf('function ProtocolPreparation('), source.indexOf('function Today('));
 const code = ts.transpileModule(`export ${component}`, { compilerOptions: { jsx: ts.JsxEmit.ReactJSX, module: ts.ModuleKind.CommonJS } }).outputText;
 const flatten = n => Array.isArray(n) ? n.flatMap(flatten) : n && typeof n === 'object' ? [n, ...flatten(n.props?.children)] : [];
-function setup(request = async () => ({})) {
+function setup(request = async () => ({}), protocol = { id: 'protocol' }) {
   const state = [], ref = { current: false }, requests = [];
   let hook = 0, refreshed = 0, orders = 0;
   const jsx = (type, props) => ({ type, props });
@@ -22,7 +22,7 @@ function setup(request = async () => ({})) {
   };
   const exports = {};
   new Function('require', 'exports', ...Object.keys(deps), code)(() => ({ jsx, jsxs: jsx }), exports, ...Object.values(deps));
-  const render = () => { hook = 0; return flatten(exports.ProtocolPreparation({ protocol: { id: 'protocol' }, horseId: 'horse', onOrder: () => orders++, onRefresh: async () => { refreshed++; } })); };
+  const render = () => { hook = 0; return flatten(exports.ProtocolPreparation({ protocol, horseId: 'horse', onOrder: () => orders++, onRefresh: async () => { refreshed++; } })); };
   const button = title => render().find(n => n.type === 'Button' && n.props.title === title);
   return { render, button, requests, refreshed: () => refreshed, orders: () => orders };
 }
@@ -72,4 +72,14 @@ test('cached preparation keeps the full order list and never activates phases as
   new Function('exports', js)(exports);
   const data = { protocol: { preparing: true, phases: [{ state: 'locked', startsAt: null, statusLabel: 'Nog niet gestart' }], orderItems: [{ id: 'herb' }] } };
   assert.deepEqual(exports.dashboardAtTime(data, new Date('2027-01-01')), data);
+});
+
+test('a paused plan shows the pause notice instead of the start button and keeps the order list', () => {
+  const app = setup(async () => ({}), { id: 'protocol', paused: true });
+  assert.equal(app.button('Ik start vandaag'), undefined);
+  const copy = app.render().filter(n => typeof n.props?.children === 'string').map(n => n.props.children).join(' ');
+  assert.ok(copy.includes('Je herstelplan is gepauzeerd'));
+  app.render().find(n => n.props.accessibilityLabel === 'Open bestellijst voor fase 1').props.onPress();
+  assert.equal(app.orders(), 1);
+  assert.equal(app.requests.length, 0);
 });
