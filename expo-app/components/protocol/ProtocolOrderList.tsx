@@ -3,7 +3,7 @@ import type { DashboardOrderItem } from '@/lib/horse-dashboard';
 import { splitDiscount } from '@/lib/protocol-order-scope';
 import { PLAIN_CARD } from '@/components/ui/styles';
 import { SwitchRow } from '@/components/ui/SwitchRow';
-import { hasExtraGifts } from '@/lib/protocol-order-scope';
+import { dropBottleAdvice, hasExtraGifts } from '@/lib/protocol-order-scope';
 import { PROTOCOL_SCALE as S, PROTOCOL_TEXT as T } from './styles';
 import { DoneCircle } from './DoneCircle';
 
@@ -58,13 +58,15 @@ export function ProtocolOrderList({ items, discount = '5% korting bij Dtails.nl 
       const links = purchaseLinks(item.purchaseOptions);
       const keys = orderKeys(item);
       const done = keys.every(key => ordered.has(key));
+      const bottle = dropBottleAdvice(item.quantity, item.unit);
       return <View key={item.id} className={`gap-2 ${PLAIN_CARD}`}>
         {onToggle ? <Pressable accessibilityRole="checkbox" accessibilityLabel={`${item.name} besteld`} accessibilityState={{ checked: done }}
           onPress={() => onToggle(keys, !done)} className="min-h-[44px] flex-row items-center gap-3">
           <DoneCircle done={done} />
           <Text className={`flex-1 ${T.cardTitle} ${done ? 'text-ink-70 line-through' : ''}`}>{item.name}</Text>
         </Pressable> : <Text className={T.cardTitle}>{item.name}</Text>}
-        <Text className={T.row}>Totaal nodig: <Text className="font-semi text-ink">{item.quantityLabel ?? 'hoeveelheid nog te bepalen'}</Text></Text>
+        <Text className={T.row}>Totaal nodig: <Text className="font-semi text-ink">{item.quantityLabel ?? 'hoeveelheid nog te bepalen'}{bottle ? ` (± ${bottle.ml} ml)` : ''}</Text></Text>
+        {bottle && <Text className={T.row}>{bottle.bottle ? `Bestel het flesje van ${bottle.bottle} ml, dat is genoeg.` : `Bestel samen minstens ${bottle.ml} ml.`}</Text>}
         {links.map(link => <Pressable key={link.url} accessibilityRole="link" accessibilityLabel={`Bekijk / bestel ${item.name}${link.suffix}`}
           onPress={() => void Linking.openURL(link.url).catch(() => Alert.alert('Productlink niet geopend', 'Probeer het opnieuw.'))} className="min-h-[44px] justify-center">
           <Text className={T.link}>{`Bekijk / bestel product${link.suffix} →`}</Text>

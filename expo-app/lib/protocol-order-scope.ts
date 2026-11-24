@@ -33,6 +33,19 @@ export function orderQuantityLabel(quantity: number, unit: string | null) {
   return shown ? `${number} ${shown}` : number;
 }
 
+// A count of drops means little to customers, who buy a bottle. 20 drops per ml is the usual rule
+// of thumb; the sizes are the ones Dtails sells drop bottles in.
+const DROPS_PER_ML = 20;
+const DROP_BOTTLES_ML = [10, 30, 50, 100];
+
+/** For a quantity in drops: about how many ml that is and the smallest bottle that holds it. */
+export function dropBottleAdvice(quantity: number | null | undefined, unit: string | null | undefined) {
+  if (unit !== "druppels" || typeof quantity !== "number" || !Number.isFinite(quantity) || quantity <= 0) return null;
+  const ml = Math.ceil(quantity / DROPS_PER_ML);
+  const bottle = DROP_BOTTLES_ML.find((size) => size >= ml) ?? null;
+  return { ml, bottle };
+}
+
 /** True when a product in the list is set to more than one gift a day ("Giften per dag" in the admin). */
 export function hasExtraGifts(items: DashboardOrderItem[] | undefined) {
   return !!items?.some((item) => Array.isArray(item.components) && item.components.some((component) => (component.administrationsPerDay ?? 1) > 1));

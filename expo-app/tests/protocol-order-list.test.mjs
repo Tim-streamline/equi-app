@@ -124,3 +124,16 @@ test('one gift a day halves twice-daily products only, and the switch appears on
   assert.equal(switchFor([once]), undefined, 'no switch without a twice-daily product');
   assert.equal(flatten(exports.ProtocolOrderList({ items: [twice] })).find(n => n?.type === 'SwitchRow'), undefined, 'no switch without a handler');
 });
+
+test('drops are shown as ml with the bottle to order', () => {
+  // Silsterk for 7 days, 2x a day 10 drops: 140 drops, about 7 ml, so the 10 ml bottle.
+  const silsterk = { id: 'silsterk', name: 'Silsterk', quantity: 140, unit: 'druppels', quantityLabel: '140 druppels', purchaseOptions: [] };
+  const copy = text(exports.ProtocolOrderList({ items: [silsterk] }));
+  assert.ok(copy.includes('Totaal nodig: 140 druppels (± 7 ml)'));
+  assert.ok(copy.includes('Bestel het flesje van 10 ml, dat is genoeg.'));
+  assert.deepEqual(scope.dropBottleAdvice(560, 'druppels'), { ml: 28, bottle: 30 });
+  assert.deepEqual(scope.dropBottleAdvice(2400, 'druppels'), { ml: 120, bottle: null });
+  assert.equal(scope.dropBottleAdvice(630, 'g'), null);
+  // Other units keep their plain total.
+  assert.ok(!text(exports.ProtocolOrderList({ items: [item] })).includes('flesje'));
+});
