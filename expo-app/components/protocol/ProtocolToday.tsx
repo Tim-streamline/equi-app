@@ -3,6 +3,7 @@ import { Alert, Pressable, Text, View } from 'react-native';
 import { ChevronRight, Soup } from 'lucide-react-native';
 import { router } from 'expo-router';
 import { Button } from '@/components/ui/Button';
+import { EYEBROW } from '@/components/ui/styles';
 import { useStoreMutations, useSupplementIntakesForDate } from '@/db/hooks';
 import type { DashboardPhase, DashboardProtocol, DashboardSupplement } from '@/lib/horse-dashboard';
 import { administrationKey, inlineTiming, todayGroups, PHASE_COLORS } from '@/lib/protocol-today';
@@ -71,6 +72,14 @@ export function ProtocolToday({ protocol, date, horseId, onPhase, SheetComponent
       </View>
     </>}
     {groups.map(group => <View key={group.label} className="mb-4">
+      {/* The daily gift needs no heading. A further gift (more "Giften per dag" in the admin) is preferred, not required. */}
+      {group.number > 1 && <View className="mb-1 gap-0.5">
+        <View className="flex-row items-center justify-between gap-3">
+          <Text accessibilityRole="header" className={`${EYEBROW} text-ink-70`}>{group.label}<Text className="font-sans normal-case tracking-normal text-[12px] text-ink-50"> · bij voorkeur</Text></Text>
+          <Text className={T.meta}>{group.done} van {group.items.length}</Text>
+        </View>
+        <Text className={T.secondary}>Geef deze kruiden, als het lukt, op een ander moment van de dag nog een keer.</Text>
+      </View>}
       {group.items.map(item => {
         const buildup = buildupState(item, date);
         const timing = inlineTiming(item);

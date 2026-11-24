@@ -18,13 +18,14 @@ function app(overrides = {}) {
     useState: initial => [initial, () => {}], useEffect() {}, useMemo: fn => fn(), useRef: initial => ({ current: initial }),
     useLocalSearchParams: () => ({}), protocolTab: () => null,
     useDb: () => ({ selectHorse() {} }),
-    useHorseDashboard: () => ({ horseId, data, refresh() {} }),
+    useHorseDashboard: () => ({ horseId, data, revision: 0, refresh() {} }),
     useTabBarPadding: () => 76,
     ...Object.fromEntries(['HorseSwitcher', 'OfflineStrip', 'IconButton', 'ShoppingBag', 'ProtocolTabs'].map(name => [name, name])),
     ...Object.fromEntries(['Today', 'Calendar', 'Nutrition', 'CareAdvice', 'ProtocolAnalysis', 'Sheet', 'WeeklySheet', 'Supplement', 'Label', 'ProtocolOrderList'].map(name => [name, name])),
     HEADER_ICON: '#466362', useHeaderAction: action => { header = action; },
     router: { push: route => routes.push(route) },
     scopeOrderItems: (items, scope) => scope === 'all' ? items : [],
+    onceDailyOrderItems: items => items,
     createOrderTicks: () => ({ toggle() {} }), dashboardRequest: async () => ({}),
     shownOrderedKeys: (overlay, horse, protocol, server) => server, latestDashboardRequest: () => 0,
     ...protocolStyleGlobals, ...overrides,
@@ -49,6 +50,52 @@ test('an eligible selected horse has a protocol purchase card opening the purcha
   assert.equal(screen.card(), undefined, 'do not show the previous horse offer while switching');
   screen.data = { horse: { id: 'nova', name: 'Nova' }, showPlusUpsell: true };
   assert.equal(screen.card().props.accessibilityLabel, 'Protocol kopen voor Nova');
+});
+
+test('switching horses keeps unfinished ticks, replies and errors with their protocol', async () => {
+  const tickExports = {};
+  const tickCode = ts.transpileModule(readFileSync(new URL('../lib/protocol-order-ticks.ts', import.meta.url), 'utf8'), {
+    compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2020 },
+  }).outputText;
+  new Function('exports', tickCode)(tickExports);
+  const hooks = [], requests = [];
+  let index = 0;
+  const screen = app({
+    useRef(initial) { return hooks[index++] ??= { current: initial }; },
+    useState(initial) {
+      const slot = index++;
+      if (!(slot in hooks)) hooks[slot] = initial;
+      return [hooks[slot], value => { hooks[slot] = typeof value === 'function' ? value(hooks[slot]) : value; }];
+    },
+    shownOrderedKeys: tickExports.shownOrderedKeys,
+    createOrderTicks: tickExports.createOrderTicks,
+    dashboardRequest: (url, body) => new Promise((resolve, reject) => requests.push({ url, body, resolve, reject })),
+  });
+  const render = horse => {
+    screen.horseId = horse;
+    screen.data = { horse: { id: horse }, protocol: { id: horse + '-plan', orderItems: [], orderedKeys: [], phases: [] } };
+    index = 0;
+    const nodes = screen.nodes();
+    const list = nodes.find(node => node.type === 'ProtocolOrderList').props;
+    return { list, failed: nodes.some(node => node.type === 'Text' && node.props.children?.includes?.('Niet opgeslagen')) };
+  };
+  const settle = () => new Promise(resolve => setImmediate(resolve));
+  render('A').list.onToggle(['x'], true);
+  render('B').list.onToggle(['y'], true);
+  assert.deepEqual(render('A').list.orderedKeys, ['x']);
+  render('A').list.onToggle(['x'], false);
+  await settle();
+  assert.deepEqual(requests.map(r => r.body.protocol_id), ['A-plan', 'B-plan']);
+  requests[1].resolve({ orderedKeys: ['y'] });
+  requests[0].resolve({ orderedKeys: ['x'] });
+  await settle();
+  assert.deepEqual(requests[2].body, { protocol_id: 'A-plan', keys: ['x'], ordered: false });
+  requests[2].reject(new Error('offline'));
+  await settle();
+  assert.deepEqual(render('B').list.orderedKeys, ['y']);
+  assert.equal(render('B').failed, false);
+  assert.deepEqual(render('A').list.orderedKeys, ['x']);
+  assert.equal(render('A').failed, true);
 });
 
 test('no purchase card while loading, without a horse, or when an existing protocol/intake blocks purchase', () => {

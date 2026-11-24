@@ -175,6 +175,7 @@ class Protocol extends Model
         return [
             'customer_settings' => 'array',
             'ordered_product_keys' => 'array',
+            'order_once_daily' => 'boolean',
             'started_at' => 'date',
             'completed_on' => 'date',
             'closed_periods' => 'array',

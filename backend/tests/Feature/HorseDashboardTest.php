@@ -236,6 +236,34 @@ class HorseDashboardTest extends TestCase
         $this->getJson($this->dayUrl('2026-08-27'))->assertOk()->assertJsonPath('editable', true);
     }
 
+    public function test_calendar_history_stops_on_the_actual_completion_day(): void
+    {
+        $this->protocol->update(['status' => 'completed']);
+        $this->travel(3)->days();
+        $this->protocol->update(['title' => 'Bijgewerkt']);
+        $this->assertSame('2026-08-28', $this->protocol->fresh()->completed_on?->toDateString());
+        // A pre-upgrade snapshot past the boundary must also stay out of the calendar and day API.
+        DB::table('protocol_day_snapshots')->insert(['protocol_id' => $this->protocol->id,
+            'date' => '2026-08-29', 'items' => '[]', 'created_at' => now(), 'updated_at' => now()]);
+        $cells = collect($this->getJson('/api/horses/'.$this->horse->id.'/dashboard?timezone=Europe/Amsterdam')
+            ->assertOk()->json('protocol.calendar.cells'))->filter()->keyBy('date');
+        $this->assertTrue($cells['2026-08-28']['available']);
+        foreach (['2026-08-29', '2026-08-30', '2026-08-31'] as $date) {
+            $this->assertFalse($cells[$date]['available']);
+            $this->assertFalse($cells[$date]['isToday']);
+            $this->assertSame('default', $cells[$date]['state']);
+            $this->assertSame(0, $cells[$date]['total']);
+        }
+        $this->getJson($this->dayUrl('2026-08-28'))->assertOk()->assertJsonPath('editable', false);
+        $this->getJson($this->dayUrl('2026-08-29'))->assertNotFound();
+        $this->assertDatabaseMissing('protocol_day_snapshots', ['protocol_id' => $this->protocol->id, 'date' => '2026-08-30']);
+        $this->protocol->update(['status' => 'archived', 'archived_previous_status' => 'completed']);
+        $this->protocol->update(['status' => 'completed', 'archived_previous_status' => null]);
+        $this->assertSame('2026-08-28', $this->protocol->fresh()->completed_on?->toDateString());
+        $this->protocol->update(['status' => 'active']);
+        $this->assertNull($this->protocol->fresh()->completed_on?->toDateString());
+    }
+
     public function test_released_apps_do_not_receive_a_paused_or_completed_plan_they_would_offer_to_tick_off(): void
     {
         $url = '/api/horses/'.$this->horse->id.'/dashboard';

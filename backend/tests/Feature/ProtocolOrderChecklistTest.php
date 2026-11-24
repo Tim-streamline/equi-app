@@ -105,4 +105,24 @@ class ProtocolOrderChecklistTest extends TestCase
         $this->actAs(User::factory()->create());
         $this->tick($protocol, ['other:f1'], true)->assertNotFound();
     }
+
+    public function test_the_customer_can_choose_one_gift_a_day_for_the_order_list(): void
+    {
+        $protocol = $this->protocol();
+        $this->assertFalse($protocol->order_once_daily);
+        $updatedAt = $protocol->updated_at;
+        $this->travel(5)->minutes();
+        $url = '/api/horses/'.$protocol->horse_id.'/protocol-order-settings';
+
+        $this->postJson($url, ['protocol_id' => $protocol->id, 'once_daily' => true])->assertOk()->assertExactJson(['orderOnceDaily' => true]);
+        $this->assertTrue($protocol->fresh()->order_once_daily);
+        $this->assertEquals($updatedAt, $protocol->fresh()->updated_at);
+        $this->postJson($url, ['protocol_id' => $protocol->id, 'once_daily' => false])->assertOk()->assertExactJson(['orderOnceDaily' => false]);
+        $this->assertFalse($protocol->fresh()->order_once_daily);
+
+        $this->postJson($url, ['protocol_id' => $protocol->id])->assertUnprocessable();
+        $this->actAs(User::factory()->create());
+        $this->postJson($url, ['protocol_id' => $protocol->id, 'once_daily' => true])->assertNotFound();
+        $this->assertFalse($protocol->fresh()->order_once_daily);
+    }
 }

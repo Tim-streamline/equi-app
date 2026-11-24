@@ -16,9 +16,13 @@ const SELECT = `
         AND q.published_at IS NOT NULL AND datetime(q.published_at) <= datetime('now')
         AND (q.status != 'active', -julianday(q.published_at), q.id) < (p.status != 'active', -julianday(p.published_at), p.id))
       THEN 1 ELSE 0 END AS shown_in_tab
-  FROM protocols p JOIN intake_bookings i ON i.protocol_id = p.id LEFT JOIN horses h ON h.id = p.horse_id`;
+  FROM protocols p LEFT JOIN intake_bookings i ON i.protocol_id = p.id LEFT JOIN horses h ON h.id = p.horse_id`;
 const OPEN_FOR_USER = `
-  AND i.user_id = ? AND p.status != 'archived' AND i.status != 'cancelled'
+  AND coalesce(i.user_id, h.owner_id) = ? AND p.status != 'archived'
+  AND (i.status != 'cancelled' OR (
+    -- Follow-up plans can use the original intake and have no booking of their own.
+    i.id IS NULL AND h.status = 'active' AND p.status = 'paused' AND published = 1
+  ))
   ORDER BY p.created_at DESC, p.id DESC`;
 
 /** Parameters: horse id, user id. */
@@ -30,7 +34,7 @@ export const PROTOCOLS_FOR_ALL_HORSES = `${SELECT}
   WHERE h.status = 'active'${OPEN_FOR_USER}`;
 
 export type PurchasedProtocolRow = {
-  id: string; title: string; status: string; horse_id: string; booking_id: string;
+  id: string; title: string; status: string; horse_id: string; booking_id: string | null;
   submitted_at: string | null; completed_at: string | null; horse_name: string | null;
   /** 1 once the therapist has published the plan (publication date reached). */
   published?: number | null;

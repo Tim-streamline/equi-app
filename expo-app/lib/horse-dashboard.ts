@@ -126,6 +126,8 @@ export type DashboardProtocol = {
   orderDiscount?: string;
   /** Order-list products the customer ticked off, as "productKey:phaseId". */
   orderedKeys?: string[];
+  /** The customer gives only one gift a day; the order list then counts one gift for every product. */
+  orderOnceDaily?: boolean;
   notifications: DashboardNotification[];
   today: {
     items: DashboardSupplement[];

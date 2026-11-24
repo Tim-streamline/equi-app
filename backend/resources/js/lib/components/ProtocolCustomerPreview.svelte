@@ -1,4 +1,6 @@
 <script>
+    /** A blank line starts a new paragraph, as in the app's Analyse tab. */
+    const paragraphs = (text) => (text ?? '').trim().split(/\r?\n\s*\r?\n/);
     import { X, ArrowLeft, Leaf, Check, ChevronRight, Soup } from '@lucide/svelte';
     import { onMount } from 'svelte';
     import { PROTOCOL_TABS } from '../../../../../expo-app/lib/protocol-tabs.ts';
@@ -145,15 +147,19 @@
                     {#each careSections(protocol) as group}<h3 class="pt-2 text-sm font-bold">{group.title}</h3>{#each group.items as advice}{@render adviceCard(advice)}{/each}{/each}
                     {#if !careSections(protocol).length}<p class="text-sm text-[#1B2A2A]/55">Er zijn voor dit paard geen actieve zorgadviezen.</p>{/if}
                 {:else if tab === 'analyse'}
-                    {#if protocol.analysis}<section class="rounded-[22px] bg-[#EAFBF9] p-5"><h3 class="text-xs font-semibold uppercase tracking-wide text-[#0E6F69]">Persoonlijke analyse</h3><p class="mt-3 max-w-[72ch] whitespace-pre-wrap break-words text-base leading-7">{protocol.analysis.summary}</p></section>{#if protocol.analysis.observations.length}<h3 class="text-xs font-semibold uppercase">Waar letten we op?</h3><ul class="list-disc space-y-2 pl-4 text-sm leading-6">{#each protocol.analysis.observations as observation}<li>{observation}</li>{/each}</ul>{/if}{:else}<p class="text-sm text-[#1B2A2A]/55">De persoonlijke analyse is nog niet ingevuld voor dit paard.</p>{/if}
+                    {#if protocol.analysis}<div class="space-y-8">
+                        {@render article('Persoonlijke analyse', protocol.analysis.summary)}
+                        {#if protocol.analysis.observations.length}<div class="space-y-3"><h3 class="text-xs font-semibold uppercase tracking-[1.4px] text-[#1B2A2A]/70">Waar letten we op?</h3><div class="rounded-[22px] bg-white px-5 py-1">{#each protocol.analysis.observations as observation, index}<div class={`flex items-start gap-3 py-3.5 ${index < protocol.analysis.observations.length - 1 ? 'border-b border-[#1B2A2A]/[0.08]' : ''}`}><span class="mt-[9px] h-1.5 w-1.5 shrink-0 rounded-full bg-[#18BAB0]"></span><p class="flex-1 text-[15px] leading-6 text-[#1B2A2A]/70">{observation}</p></div>{/each}</div></div>{/if}
+                        {#if protocol.analysis.expectationFollowUp?.trim()}<div class="h-px bg-[#1B2A2A]/[0.08]"></div>{@render article('Verwachting en vervolg', protocol.analysis.expectationFollowUp)}{/if}
+                    </div>{:else}<p class="text-sm text-[#1B2A2A]/55">De persoonlijke analyse is nog niet ingevuld voor dit paard.</p>{/if}
                 {/if}
-                {#if tab === 'analyse' && protocol.analysis?.expectationFollowUp}<section class="rounded-[22px] bg-[#EAFBF9] p-5"><h3 class="text-xs font-semibold uppercase tracking-wide text-[#0E6F69]">Verwachting en vervolg</h3><p class="mt-3 whitespace-pre-wrap break-words text-base leading-7">{protocol.analysis.expectationFollowUp}</p></section>{/if}
             </div>
         {/if}
     </section>
 </div>
 </dialog>
 
+{#snippet article(title, text)}<section class="max-w-[720px] space-y-3.5"><h3 class="text-xl font-bold leading-[26px] text-[#1B2A2A]">{title}</h3>{#each paragraphs(text) as paragraph}<p class="whitespace-pre-wrap break-words text-base leading-[27px] text-[#1B2A2A]/[0.82]">{paragraph}</p>{/each}</section>{/snippet}
 {#snippet supplement(item)}
     <article class="rounded-2xl border border-[#1B2A2A]/10 bg-white p-4"><div class="flex items-start justify-between gap-3"><h4 class="text-sm font-semibold">{item.name}</h4><span class="max-w-[40%] text-[13px] font-bold text-[#108A82]">{item.buildupLabel ? `Volledige dosis: ${item.dosage}` : item.dosage ?? 'Dosering niet ingesteld'}</span></div>{#if item.buildupLabel}<p class="mt-2 text-xs text-[#1B2A2A]/75">{item.buildupLabel}</p>{/if}{#if item.frequencyLabel}<p class="mt-1 text-xs text-[#1B2A2A]/55">{item.frequencyLabel}</p>{/if}{#if item.weekNumbers?.length}<p class="mt-1 text-xs text-[#1B2A2A]/55">Protocolweek {item.weekNumbers.join(', ')}</p>{/if}{#if item.description}<p class="mt-1 whitespace-pre-line text-xs leading-[18px] text-[#1B2A2A]/55">{item.description}</p>{/if}{#if item.instructions}<p class="mt-2 whitespace-pre-line text-xs leading-[19px] text-[#1B2A2A]/75">{item.instructions}</p>{/if}</article>
 {/snippet}

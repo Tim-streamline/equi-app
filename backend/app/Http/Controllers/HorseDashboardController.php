@@ -147,6 +147,19 @@ class HorseDashboardController extends Controller
         return response()->json(['orderedKeys' => $keys]);
     }
 
+    /** Whether the customer can give a second gift a day; when not, the order list counts one gift. */
+    public function orderSettings(Request $request, Horse $horse)
+    {
+        $this->owner($request, $horse);
+        $data = $request->validate(['protocol_id' => ['required', 'uuid'], 'once_daily' => ['required', 'boolean']]);
+        $protocol = $horse->protocols()->whereKey($data['protocol_id'])->whereNotNull('published_at')
+            ->where('status', '!=', 'archived')->firstOrFail();
+        // A plain column write: this is the customer's own setting, not a protocol edit.
+        \App\Models\Protocol::whereKey($protocol->id)->toBase()->update(['order_once_daily' => (bool) $data['once_daily']]);
+
+        return response()->json(['orderOnceDaily' => (bool) $data['once_daily']]);
+    }
+
     private function owner(Request $request, Horse $horse): User
     {
         $user = User::query()->whereNull('disabled_at')->findOrFail($request->attributes->get('powersync_user_id'));

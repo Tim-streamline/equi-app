@@ -4,13 +4,13 @@ export const PHASE_COLORS = ['#18BAB0', '#0D5C5B', '#5FD7CB', '#B58339'];
 
 export const administrationKey = (item: DashboardSupplement) => `${item.id}:${item.administration ?? 1}`;
 
+/**
+ * Gifts are named by meaning, not time of day: every product is given once a day, at any moment,
+ * and a product set to more gifts per day ("Giften per dag" in the admin) is preferably given again.
+ */
 export function administrationLabel(item: DashboardSupplement): string {
   const number = item.administration ?? 1;
-  const count = item.administrationsPerDay ?? 1;
-  if (number === 1) return 'Ochtend';
-  if ((count === 2 && number === 2) || (count === 3 && number === 3)) return 'Avond';
-  if (count === 3 && number === 2) return 'Middag';
-  return `Gift ${number}`;
+  return number === 1 ? 'Elke dag' : number === 2 ? 'Tweede gift' : number === 3 ? 'Derde gift' : `Gift ${number}`;
 }
 
 /** Only products given more than once a day show their moment; once-daily rows stay compact. */
@@ -36,6 +36,6 @@ export function todayGroups(items: DashboardSupplement[], records: {
     rows.push({ ...item, dosage: item.recordedOnly ? item.dosage : record?.dosage !== undefined ? record.dosage : dailyDosages.has(item.id) ? dailyDosages.get(item.id)! : item.dosage, done: record ? !!record.done : !!item.done });
     groups.set(label, rows);
   }
-  const rank = (label: string) => ['Ochtend', 'Middag', 'Avond'].includes(label) ? ['Ochtend', 'Middag', 'Avond'].indexOf(label) : 3;
-  return [...groups].sort(([a], [b]) => rank(a) - rank(b)).map(([label, rows]) => ({ label, items: rows, done: rows.filter(row => row.done).length }));
+  return [...groups].map(([label, rows]) => ({ label, number: rows[0]?.administration ?? 1, items: rows, done: rows.filter(row => row.done).length }))
+    .sort((a, b) => a.number - b.number);
 }

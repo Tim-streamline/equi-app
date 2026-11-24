@@ -48,7 +48,7 @@ export function PurchasedProtocols({ allHorses = false, excludeProtocolIds = [],
         onPress={() => {
           selectHorse(protocol.horse_id);
           if (paused) router.push({ pathname: '/(tabs)/(pager)/protocol', params: { horseId: protocol.horse_id, protocolId: protocol.id, tab: 'vandaag' } });
-          else router.push({ pathname: '/intake', params: { bookingId: protocol.booking_id } });
+          else if (protocol.booking_id) router.push({ pathname: '/intake', params: { bookingId: protocol.booking_id } });
         }} className={`gap-3 ${PLAIN_CARD}`}>
       {/* With several horses a custom title alone does not say which horse it is for. */}
       {allHorses && !generic && named && !paused && <Text className="-mb-2 font-semi text-[14px] text-ink-70">{horseName}</Text>}

@@ -240,7 +240,7 @@ class HorseDashboard
                 $completed = $scheduled->where('done', true)->count();
                 $state = $history->state($rows->all());
             }
-            $cells[] = ['available' => (bool) $start && $iso < $now->toDateString() && $historicalDays->has($iso), 'date' => $iso, 'day' => $dayNumber, 'state' => $state, 'isToday' => (bool) $start && $iso === $now->toDateString(),
+            $cells[] = ['available' => (bool) $start && $iso < $now->toDateString() && $historicalDays->has($iso), 'date' => $iso, 'day' => $dayNumber, 'state' => $state, 'isToday' => (bool) $start && ! $afterPlan && $iso === $now->toDateString(),
                 'total' => $iso <= $now->toDateString() ? $scheduled->count() : 0, 'done' => $iso <= $now->toDateString() ? $completed : 0,
                 'recordedOnly' => $rows->isNotEmpty() && $rows->every(fn ($row) => $row['recordedOnly'] ?? false)];
         }
@@ -263,6 +263,7 @@ class HorseDashboard
             'orderItems' => app(ProtocolOrderList::class)->forProtocol($protocol),
             'orderDiscount' => ProtocolOrderList::DISCOUNT,
             'orderedKeys' => array_values($protocol->ordered_product_keys ?? []),
+            'orderOnceDaily' => (bool) $protocol->order_once_daily,
             'calendar' => ['month' => $monthDate->format('Y-m'), 'label' => $monthDate->locale('nl')->translatedFormat('F Y'), 'previousMonth' => $monthDate->subMonth()->format('Y-m'), 'nextMonth' => $monthDate->addMonth()->format('Y-m'), 'cells' => $cells],
             'nutrition' => $this->nutrition->forProtocol($protocol, $answers) + ['advice' => $this->nutritionAdvice($protocol, $manual)],
             'management' => $this->management($protocol, $manual),

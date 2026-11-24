@@ -32,6 +32,7 @@ export function createOrderTicks(send: SendOrderTick) {
   let chain: Promise<void> = Promise.resolve();
 
   return {
+    get pending() { return pending > 0; },
     /** `current` is what the list shows now; it is only read when nothing is pending. */
     /** `settled` is true for the update after the last pending request was answered or failed. */
     toggle(current: string[], keys: string[], ordered: boolean, onUpdate: (keys: string[], failed: boolean, settled: boolean) => void) {

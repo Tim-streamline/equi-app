@@ -156,6 +156,8 @@ function ProtocolCard({ id, horseId, horseName, statusLabel, currentDay, current
   const showProgress = progressKnown !== false && currentDay > 0;
   // A start date that is still ahead: there is nothing to tick off yet.
   const upcoming = !readyToStart && !stopped && currentDay <= 0;
+  // Completed before the customer ever started: there are no days or progress to show.
+  const neverStarted = finished && currentDay <= 0;
   const possessive = horseName ? horsePossessive(horseName) : 'Je';
   const plan = `${possessive} herstelplan`;
   return (
@@ -180,11 +182,12 @@ function ProtocolCard({ id, horseId, horseName, statusLabel, currentDay, current
           : upcoming ? `${plan} start ${startedAt ? `op ${shortDate(startedAt, { day: 'numeric', month: 'long' })}` : 'binnenkort'}`
           : `${plan} is in volle gang!`}
       </Text>
-      {(readyToStart || upcoming || showProgress) && <Text className={`${readyToStart ? 'mt-3' : 'mt-1'} ${HOME_NOTICE_BODY}`}>
+      {(readyToStart || upcoming || showProgress || neverStarted) && <Text className={`${readyToStart ? 'mt-3' : 'mt-1'} ${HOME_NOTICE_BODY}`}>
         {readyToStart ? `Controleer welke kruiden, supplementen en andere producten je nodig hebt. Bestel wat je nog niet in huis hebt, zodat je op tijd met ${horseName ? plan : 'het herstelplan van je paard'} kunt starten.`
           : upcoming ? 'Vanaf die dag zie je hier wat je elke dag geeft.'
+          : neverStarted ? 'Je kunt de uitleg in het herstelplan blijven teruglezen.'
           : `Dag ${currentDay} · Week ${currentWeek}`}
-        {!readyToStart && !upcoming && phaseLabel ? ` · ${phaseLabel}` : ""}
+        {!readyToStart && !upcoming && !neverStarted && phaseLabel ? ` · ${phaseLabel}` : ""}
       </Text>}
       {showProgress && !readyToStart && <View className="mt-4 h-1.5 overflow-hidden rounded-full bg-ink-8">
         <View

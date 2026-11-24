@@ -79,8 +79,8 @@ test('midnight closes the checked Today sheet and reopening yesterday fetches it
   const app = screen(true, async () => ({ date:'2026-11-03', label:'Yesterday', editable:true, state:'complete',
     items:[{id:'herb',name:'Real herb',dosage:'15 g',administration:2,administrationsPerDay:2,done:true}] }));
   app.render().find(n=>n?.props?.accessibilityLabel?.startsWith('dinsdag 3')).props.onPress();
-  await app.render().find(n=>n?.props?.accessibilityLabel==='Real herb, Avond, 15 g').props.onPress();
-  assert.equal(app.render().find(n=>n?.props?.accessibilityRole==='checkbox' && n.props.accessibilityLabel.includes('Avond')).props.accessibilityState.checked,true);
+  await app.render().find(n=>n?.props?.accessibilityLabel==='Real herb, Tweede gift, 15 g').props.onPress();
+  assert.equal(app.render().find(n=>n?.props?.accessibilityRole==='checkbox' && n.props.accessibilityLabel.includes('Tweede gift')).props.accessibilityState.checked,true);
   app.props.today='2026-11-04'; app.setLocal([]);
   app.props.protocol.calendar={...app.props.protocol.calendar,cells:[{date:'2026-11-03',day:3,available:true,state:'complete',total:1,done:1}]};
   assert.ok(!app.render().some(n=>n?.type==='Sheet' && n.props.visible));
@@ -109,16 +109,16 @@ test('a historical response started before midnight cannot repopulate the closed
 });
 test('day sheet groups doses and Uitleg never changes a checkbox; historical evening saves separately', async()=>{
   const app=screen();await app.open();
-  let nodes=app.render();assert.ok(nodes.includes('Ochtend') && nodes.includes('Avond'));
-  nodes.find(n=>n?.props?.accessibilityLabel==='Uitleg over Real herb, Ochtend').props.onPress();
+  let nodes=app.render();assert.ok(nodes.includes('Tweede gift') && !nodes.includes('Elke dag'));
+  nodes.find(n=>n?.props?.accessibilityLabel==='Uitleg over Real herb, Elke dag').props.onPress();
   nodes=app.render();assert.ok(nodes.includes('Real instructions'));assert.equal(app.calls.length,1);
   nodes.find(n=>n?.props?.title==='Terug naar daglijst').props.onPress();
-  await app.render().find(n=>n?.props?.accessibilityLabel==='Real herb, Avond, 15 g').props.onPress();
+  await app.render().find(n=>n?.props?.accessibilityLabel==='Real herb, Tweede gift, 15 g').props.onPress();
   assert.equal(app.calls[1].body.administration,2);assert.equal(app.calls[1].body.date,'2026-11-02');
 });
 test('readonly history cannot be checked and calendar navigation preserves month and Today actions',async()=>{
   const app=screen(false);await app.open();
-  const check=app.render().find(n=>n?.props?.accessibilityLabel==='Real herb, Ochtend, 15 g');assert.equal(check.props.disabled,true);
+  const check=app.render().find(n=>n?.props?.accessibilityLabel==='Real herb, Elke dag, 15 g');assert.equal(check.props.disabled,true);
   await check.props.onPress();assert.equal(app.calls.length,1);
   app.render().find(n=>n?.props?.accessibilityLabel==='Volgende maand').props.onPress();
   app.render().find(n=>n?.props?.accessibilityLabel?.startsWith('dinsdag 3')).props.onPress();
@@ -133,21 +133,21 @@ for (const status of ['paused', 'completed']) {
     app.render().find(n => n?.props?.accessibilityLabel?.startsWith('dinsdag 3')).props.onPress();
     app.props.protocol[status] = true;
     let nodes = app.render();
-    let check = nodes.find(n => n?.props?.accessibilityLabel === 'Real herb, Avond, 15 g');
+    let check = nodes.find(n => n?.props?.accessibilityLabel === 'Real herb, Tweede gift, 15 g');
     assert.equal(check.props.disabled, true);
     assert.ok(nodes.find(n => n?.type === 'Sheet' && n.props.visible).props.subtitle.includes('Alleen te bekijken'));
     await check.props.onPress();
-    assert.equal(app.render().find(n => n?.props?.accessibilityLabel === 'Real herb, Avond, 15 g').props.accessibilityState.checked, false);
+    assert.equal(app.render().find(n => n?.props?.accessibilityLabel === 'Real herb, Tweede gift, 15 g').props.accessibilityState.checked, false);
     assert.equal(app.calls.length, 0);
     // Even a stale API response with editable=true must not enable a paused/completed plan.
     await app.open();
-    check = app.render().find(n => n?.props?.accessibilityLabel === 'Real herb, Avond, 15 g');
+    check = app.render().find(n => n?.props?.accessibilityLabel === 'Real herb, Tweede gift, 15 g');
     assert.equal(check.props.disabled, true);
     await check.props.onPress();
     assert.equal(app.calls.length, 1);
     app.render().find(n => n?.type === 'Sheet' && n.props.visible).props.onClose();
     app.render().find(n => n?.props?.accessibilityLabel?.startsWith('dinsdag 3')).props.onPress();
-    assert.equal(app.render().find(n => n?.props?.accessibilityLabel === 'Real herb, Avond, 15 g').props.disabled, true);
+    assert.equal(app.render().find(n => n?.props?.accessibilityLabel === 'Real herb, Tweede gift, 15 g').props.disabled, true);
   });
 }
 
@@ -166,7 +166,7 @@ for (const status of ['paused', 'completed']) {
  test('today opens the day sheet and checks a gift through local storage',async()=>{
    const app=screen();app.render().find(n=>n?.props?.accessibilityLabel?.startsWith('dinsdag 3')).props.onPress();
    assert.equal(app.calls.length,0);
-   await app.render().find(n=>n?.props?.accessibilityLabel==='Real herb, Avond, 15 g').props.onPress();
+   await app.render().find(n=>n?.props?.accessibilityLabel==='Real herb, Tweede gift, 15 g').props.onPress();
    const ring=app.render().find(n=>n?.props?.progress===.5);assert.ok(ring);
    assert.equal(app.calls.length,0);
  });

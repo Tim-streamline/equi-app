@@ -17,6 +17,7 @@ new Function('require', 'exports', code)(name => ({
   'lucide-react-native': { Check: 'Check' },
   '@/lib/protocol-order-scope': orderScope,
   './DoneCircle': { DoneCircle: 'DoneCircle' },
+  '@/components/ui/SwitchRow': { SwitchRow: 'SwitchRow' },
   'react-native': { View: 'View', Text: 'Text', Pressable: 'Pressable', Linking: { openURL: async url => opened.push(url) }, Alert: { alert() {} } },
 })[name], exports);
 const item = { id: 'product', name: 'Heemstwortel', quantity: 630, unit: 'g', quantityLabel: '630 g',
@@ -97,4 +98,29 @@ test('each product can be ticked off per phase, and ticking the full list ticks 
   assert.deepEqual(toggles, [[['p:f1', 'p:f2'], true], [['p:f1', 'p:f2'], false]]);
   // Without a handler (the admin preview, older callers) there is nothing to tick.
   assert.ok(!flatten(exports.ProtocolOrderList({ items: [ordered] })).some(n => n?.props?.accessibilityRole === 'checkbox'));
+});
+
+test('one gift a day halves twice-daily products only, and the switch appears only when such a product is listed', () => {
+  const twice = { ...item, id: 'salt', productKey: 'salt', name: 'Celzout nr. 7', unit: 'tabletten', quantity: 224, quantityLabel: '224 tabletten', calculationComplete: true,
+    components: [{ selectionId: 's', phaseId: 'f1', administrationsPerDay: 2, daysPerWeek: 7, administrationsPerWeek: 14, scheduledWeeks: 8, administrations: 112, quantity: 224 }] };
+  const once = { ...item, id: 'herb', productKey: 'herb', unit: 'g', quantity: 840, quantityLabel: '840 g', calculationComplete: true,
+    components: [{ selectionId: 'h', phaseId: 'f1', administrationsPerDay: 1, daysPerWeek: 7, administrationsPerWeek: 7, scheduledWeeks: 8, administrations: 56, quantity: 840 }] };
+  const adjusted = orderScope.onceDailyOrderItems([twice, once], true);
+  assert.equal(adjusted[0].quantityLabel, '112 tabletten');
+  assert.equal(adjusted[0].components[0].quantity, 112);
+  assert.equal(adjusted[1], once, 'once-daily products are untouched');
+  assert.equal(orderScope.onceDailyOrderItems([twice], false)[0], twice, 'two gifts a day keeps the server quantities');
+  // A phase list is summed from the adjusted components.
+  assert.equal(orderScope.scopeOrderItems(adjusted, { phaseId: 'f1' })[0].quantityLabel, '112 tabletten');
+
+  const changes = [];
+  const switchFor = items => flatten(exports.ProtocolOrderList({ items, onTwiceDailyChange: value => changes.push(value), twiceDaily: true }))
+    .find(n => n?.type === 'SwitchRow');
+  const row = switchFor([twice, once]);
+  assert.equal(row.props.label, 'Ben je in de gelegenheid om 2x daags te geven?');
+  assert.equal(row.props.value, true);
+  row.props.onChange(false);
+  assert.deepEqual(changes, [false]);
+  assert.equal(switchFor([once]), undefined, 'no switch without a twice-daily product');
+  assert.equal(flatten(exports.ProtocolOrderList({ items: [twice] })).find(n => n?.type === 'SwitchRow'), undefined, 'no switch without a handler');
 });

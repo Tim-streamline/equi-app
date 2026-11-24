@@ -2,6 +2,8 @@ import { Alert, Linking, Pressable, Text, View } from 'react-native';
 import type { DashboardOrderItem } from '@/lib/horse-dashboard';
 import { splitDiscount } from '@/lib/protocol-order-scope';
 import { PLAIN_CARD } from '@/components/ui/styles';
+import { SwitchRow } from '@/components/ui/SwitchRow';
+import { hasExtraGifts } from '@/lib/protocol-order-scope';
 import { PROTOCOL_SCALE as S, PROTOCOL_TEXT as T } from './styles';
 import { DoneCircle } from './DoneCircle';
 
@@ -27,12 +29,15 @@ export function orderKeys(item: DashboardOrderItem): string[] {
   return phases.length ? phases.map(phaseId => `${item.productKey}:${phaseId}`) : [`${item.productKey}:all`];
 }
 
-export function ProtocolOrderList({ items, discount = '5% korting bij Dtails.nl met code: paardentherapeut-5', orderedKeys, onToggle }: {
+export function ProtocolOrderList({ items, discount = '5% korting bij Dtails.nl met code: paardentherapeut-5', orderedKeys, onToggle, twiceDaily = true, onTwiceDailyChange }: {
   items: DashboardOrderItem[];
   discount?: string;
   /** Products the customer ticked off as ordered; without onToggle the list has no checkboxes. */
   orderedKeys?: string[];
   onToggle?: (keys: string[], ordered: boolean) => void;
+  /** Whether the customer can give a second gift a day; shown only when a product in the list has one. */
+  twiceDaily?: boolean;
+  onTwiceDailyChange?: (value: boolean) => void;
 }) {
   const ordered = new Set(orderedKeys ?? []);
   // The code gets a line of its own so it never breaks at its hyphen. A non-breaking hyphen would
@@ -43,6 +48,11 @@ export function ProtocolOrderList({ items, discount = '5% korting bij Dtails.nl 
       <Text className={`${S.rowTitle} text-teal-700`}>{label}</Text>
       {code ? <Text selectable className={`${S.rowTitle} font-bold text-teal-700`}>{code}</Text> : null}
     </View>
+    {onTwiceDailyChange && hasExtraGifts(items) && <View className={PLAIN_CARD}>
+      <SwitchRow label="Ben je in de gelegenheid om 2x daags te geven?"
+        description="Voor sommige kruiden is een tweede gift per dag wenselijk. Kun je maar 1x per dag geven? Zet dit schuifje dan uit, dan passen we de hoeveelheden daarop aan."
+        value={twiceDaily} onChange={onTwiceDailyChange} />
+    </View>}
     {items.length === 0 && <Text className={`py-5 ${T.body}`}>Er staan geen producten op deze bestellijst.</Text>}
     {items.map(item => {
       const links = purchaseLinks(item.purchaseOptions);

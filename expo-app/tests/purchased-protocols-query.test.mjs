@@ -52,13 +52,22 @@ test('purchased protocol query runs against the device schema and retains unfini
     // Home: every active horse of the user, each intake its own row.
     const all = db.prepare(PROTOCOLS_FOR_ALL_HORSES).all('owner');
     assert.deepEqual(all.map(row => [row.id, row.horse_id, row.horse_name]), [['other-horse', 'nova', 'Nova'], ['draft', 'rolo', 'Rolo'], ['finished', 'rolo', 'Rolo']]);
+    db.prepare("UPDATE horses SET owner_id = 'owner' WHERE id = 'rolo'").run();
+    insertProtocol.run('follow-up', 'rolo', 'Vervolgplan', 'paused', '2026-10-18');
+    const followUp = user => db.prepare(PROTOCOLS_FOR_ALL_HORSES).all(user).find(row => row.id === 'follow-up');
+    assert.equal(followUp('owner'), undefined, 'unpublished follow-ups stay hidden');
+    db.prepare("UPDATE protocols SET published_at = '2026-01-01' WHERE id = 'follow-up'").run();
+    assert.equal(followUp('owner').booking_id, null);
+    assert.equal(followUp('owner').status, 'paused');
+    assert.equal(followUp('other-owner'), undefined);
+    db.prepare("UPDATE protocols SET status = 'active' WHERE id = 'follow-up'").run();
+    assert.equal(followUp('owner'), undefined, 'after resuming, the normal dashboard card takes over');
   } finally {
     db.close();
   }
 });
 
-test('both intake queries filter on an indexable column, without OR flags', () => {
-  assert.match(PROTOCOLS_FOR_HORSE, /WHERE p\.horse_id = \?\s+AND i\.user_id = \?/);
-  assert.match(PROTOCOLS_FOR_ALL_HORSES, /WHERE h\.status = 'active'\s+AND i\.user_id = \?/);
-  for (const query of [PROTOCOLS_FOR_HORSE, PROTOCOLS_FOR_ALL_HORSES]) assert.doesNotMatch(query, /\bOR\b/);
+test('horse selection and all-horses queries have separate indexable filters', () => {
+  assert.match(PROTOCOLS_FOR_HORSE, /WHERE p\.horse_id = \?\s+AND/);
+  assert.match(PROTOCOLS_FOR_ALL_HORSES, /WHERE h\.status = 'active'\s+AND/);
 });

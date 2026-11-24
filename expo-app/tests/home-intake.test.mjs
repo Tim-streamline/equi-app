@@ -166,6 +166,20 @@ test('a plan with a start date still ahead says when it starts and offers nothin
   assert.ok(text(running).includes("Moos' herstelplan is in volle gang!") && text(running).includes('Dag 3 · Week 1'));
 });
 
+test('a plan completed before day one says it is finished, not ready, and opens the plan without the order list', () => {
+  const app = screen();
+  app.addHorse('Moos');
+  app.activeProtocols.push('Moos');
+  app.summaries.Moos = { statusLabel: 'Je protocol is afgerond', preparing: true, currentDay: 0, currentWeek: 0, progressPercent: 0, startedAt: null };
+  const card = app.render().find(n => n?.props?.accessibilityLabel === 'Protocol van Moos');
+  assert.ok(text(card).includes('Je protocol is afgerond'));
+  assert.ok(text(card).includes('Bekijk je herstelplan →'));
+  for (const wrong of ['staat klaar', 'Bestel', 'bestellijst', 'Dag 0', 'Week 0', 'Vink af']) assert.ok(!text(card).includes(wrong), wrong);
+  assert.ok(!flatten(card).some(n => n?.props?.style?.width), 'no progress bar');
+  card.props.onPress();
+  assert.equal(app.routes.at(-1).params.orderList, '0');
+});
+
 test('partially completed intake has its own heading and continuation link', () => {
   const app = screen();
   app.purchases.partial[0].has_answers = 1;
@@ -307,6 +321,17 @@ test('a published plan without a protocol card says it is ready, while active dr
   assert.ok(!text(app.render()).includes('Je herstelplan staat klaar.'));
 });
 
+test('a paused follow-up without its own booking opens the plan from Home', () => {
+  const app = screen();
+  app.purchases.submitted.push({ id: 'follow-up', status: 'paused', published: 1, shown_in_tab: 1, booking_id: null });
+  const nodes = app.render();
+  assert.ok(text(nodes).includes("submitted's herstelplan is gepauzeerd"));
+  nodes.find(node => node?.props?.accessibilityLabel === 'Bekijk je herstelplan voor submitted').props.onPress();
+  assert.deepEqual(app.routes.at(-1), {
+    pathname: '/(tabs)/(pager)/protocol', params: { horseId: 'submitted', protocolId: 'follow-up', tab: 'vandaag' },
+  });
+});
+
 test('the local intake query derives publication like the dashboard, ignoring future dates', async () => {
   const { DatabaseSync } = await import('node:sqlite');
   const queries = await import('../lib/intake/protocol-queries.ts');
@@ -314,8 +339,8 @@ test('the local intake query derives publication like the dashboard, ignoring fu
   db.exec(`CREATE TABLE protocols (id TEXT, title TEXT, status TEXT, horse_id TEXT, published_at TEXT, created_at TEXT);
     CREATE TABLE intake_bookings (id TEXT, protocol_id TEXT, user_id TEXT, status TEXT, submitted_at TEXT, completed_at TEXT);
     CREATE TABLE intake_answers (response_id TEXT, section_id TEXT, field_id TEXT, value TEXT);
-    CREATE TABLE horses (id TEXT, name TEXT, status TEXT);
-    INSERT INTO horses VALUES ('h', 'Nova', 'active');`);
+    CREATE TABLE horses (id TEXT, name TEXT, status TEXT, owner_id TEXT);
+    INSERT INTO horses VALUES ('h', 'Nova', 'active', 'u');`);
   const rows = [['past', '2026-01-01 10:00:00.000Z'], ['future', '2999-01-01T10:00:00+00:00'], ['draft', null]];
   rows.forEach(([id, published], index) => {
     db.prepare("INSERT INTO protocols VALUES (?, 'Plan', 'active', 'h', ?, ?)").run(id, published, `2026-01-0${index + 1}`);
@@ -338,8 +363,8 @@ test('the local query marks only the plan the Protocol tab will show, with the d
   db.exec(`CREATE TABLE protocols (id TEXT, title TEXT, status TEXT, horse_id TEXT, published_at TEXT, created_at TEXT);
     CREATE TABLE intake_bookings (id TEXT, protocol_id TEXT, user_id TEXT, status TEXT, submitted_at TEXT, completed_at TEXT);
     CREATE TABLE intake_answers (response_id TEXT, section_id TEXT, field_id TEXT, value TEXT);
-    CREATE TABLE horses (id TEXT, name TEXT, status TEXT);
-    INSERT INTO horses VALUES ('h', 'Nova', 'active');`);
+    CREATE TABLE horses (id TEXT, name TEXT, status TEXT, owner_id TEXT);
+    INSERT INTO horses VALUES ('h', 'Nova', 'active', 'u');`);
   const shown = () => Object.fromEntries(db.prepare(queries.PROTOCOLS_FOR_HORSE).all('h', 'u').map(row => [row.id, row.shown_in_tab]));
   const add = (id, status, published, withIntake = true) => {
     db.prepare("INSERT INTO protocols VALUES (?, 'Plan', ?, 'h', ?, '2026-01-01')").run(id, status, published);
@@ -350,10 +375,10 @@ test('the local query marks only the plan the Protocol tab will show, with the d
   add('a-old', 'paused', '2026-01-01 10:00:00');
   // Equal publication times: the lowest id wins, as on the server.
   assert.deepEqual(shown(), { 'b-paused': 1, 'c-paused': 0, 'a-old': 0 });
-  // A future active plan is not shown yet; a later paused plan, even without its own intake card, wins.
+  // A future active plan is not shown yet; a later paused plan, even without its own intake booking, wins.
   add('future', 'active', '2999-01-01 10:00:00');
   add('later', 'paused', '2026-03-01 10:00:00', false);
-  assert.deepEqual(shown(), { 'b-paused': 0, 'c-paused': 0, 'a-old': 0, future: 0 });
+  assert.deepEqual(shown(), { 'b-paused': 0, 'c-paused': 0, 'a-old': 0, future: 0, later: 1 });
   // A visible active plan always wins over every paused plan.
   db.exec("DELETE FROM protocols WHERE id = 'later'");
   add('running', 'active', '2026-01-15 10:00:00', false);

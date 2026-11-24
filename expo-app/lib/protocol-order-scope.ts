@@ -33,6 +33,35 @@ export function orderQuantityLabel(quantity: number, unit: string | null) {
   return shown ? `${number} ${shown}` : number;
 }
 
+/** True when a product in the list is set to more than one gift a day ("Giften per dag" in the admin). */
+export function hasExtraGifts(items: DashboardOrderItem[] | undefined) {
+  return !!items?.some((item) => Array.isArray(item.components) && item.components.some((component) => (component.administrationsPerDay ?? 1) > 1));
+}
+
+/**
+ * The order list for a customer who can give only one gift a day: products with more gifts a day
+ * count one, so their quantity is divided by their gifts per day. Other products stay as they are.
+ */
+export function onceDailyOrderItems(items: DashboardOrderItem[] | undefined, onceDaily: boolean): DashboardOrderItem[] | undefined {
+  if (!onceDaily || !items) return items;
+  return items.map((item) => {
+    if (!Array.isArray(item.components) || !item.components.some((component) => (component.administrationsPerDay ?? 1) > 1)) return item;
+    const components = item.components.map((component) => {
+      const perDay = component.administrationsPerDay ?? 1;
+      if (perDay <= 1) return component;
+      return {
+        ...component,
+        quantity: typeof component.quantity === "number" ? Math.round(component.quantity / perDay * 1e9) / 1e9 : component.quantity,
+        administrationsPerWeek: component.daysPerWeek,
+        administrations: component.administrations === null ? null : Math.round(component.administrations / perDay),
+      };
+    });
+    const complete = components.every((component) => typeof component.quantity === "number" && Number.isFinite(component.quantity));
+    const quantity = complete ? Math.round(components.reduce((sum, component) => sum + (component.quantity as number), 0) * 1e9) / 1e9 : null;
+    return { ...item, components, quantity, calculationComplete: complete, quantityLabel: quantity === null ? null : orderQuantityLabel(quantity, item.unit) };
+  });
+}
+
 /**
  * Restrict full-protocol aggregates to the selected phase or notice items. Quantities
  * are summed from the matching components only, so a phase never shows the full total.
