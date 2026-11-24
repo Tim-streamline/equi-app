@@ -255,7 +255,8 @@ class HorseDashboardTest extends TestCase
             $this->assertSame(0, $cells[$date]['total']);
         }
         $this->getJson($this->dayUrl('2026-08-28'))->assertOk()->assertJsonPath('editable', false);
-        $this->getJson($this->dayUrl('2026-08-29'))->assertNotFound();
+        $this->getJson($this->dayUrl('2026-08-29'))->assertUnprocessable()
+            ->assertJsonPath('message', 'Het herstelplan was op deze dag al afgerond.');
         $this->assertDatabaseMissing('protocol_day_snapshots', ['protocol_id' => $this->protocol->id, 'date' => '2026-08-30']);
         $this->protocol->update(['status' => 'archived', 'archived_previous_status' => 'completed']);
         $this->protocol->update(['status' => 'completed', 'archived_previous_status' => null]);
@@ -645,12 +646,22 @@ class HorseDashboardTest extends TestCase
         $this->getJson($this->dayUrl('2026-08-27'))->assertOk();
         $this->postJson('/api/sync/upload', ['operations' => [$operation]])->assertOk();
         $this->getJson($this->dayUrl('2026-08-27'))->assertJsonPath('state', 'complete');
+        $future = $operation;
+        $future['id'] = (string) Str::uuid();
+        $future['data']['date'] = '2026-08-29';
+        $this->postJson('/api/sync/upload', ['operations' => [$future]])->assertUnprocessable();
+        // Ticks older than the correction window are acknowledged without being stored, so an
+        // offline queue that waited too long does not block the device's later uploads.
         foreach (['2026-08-20', '2026-08-13'] as $date) {
-            $bad = $operation;
-            $bad['id'] = (string) Str::uuid();
-            $bad['data']['date'] = $date;
-            $this->postJson('/api/sync/upload', ['operations' => [$bad]])->assertOk()->assertJson(['applied' => 0, 'skipped' => 1]);
-            $this->assertDatabaseMissing('protocol_supplement_intakes', ['id' => $bad['id']]);
+            $stale = $operation;
+            $stale['id'] = (string) Str::uuid();
+            $stale['data']['date'] = $date;
+            $this->postJson('/api/sync/upload', ['operations' => [
+                $stale,
+                ['op' => 'PATCH', 'type' => 'horses', 'id' => $this->horse->id, 'data' => ['name' => 'Synced after '.$date]],
+            ]])->assertOk()->assertJson(['applied' => 1, 'skipped' => 1]);
+            $this->assertDatabaseMissing('protocol_supplement_intakes', ['id' => $stale['id']]);
+            $this->assertSame('Synced after '.$date, $this->horse->fresh()->name);
         }
         $this->postJson('/api/sync/upload', ['operations' => [['op' => 'PATCH', 'type' => 'protocol_supplement_intakes', 'id' => $id, 'data' => ['done' => false]]]])->assertOk();
         $this->getJson($this->dayUrl('2026-08-27'))->assertJsonPath('state', 'missed');

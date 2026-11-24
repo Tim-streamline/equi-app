@@ -73,15 +73,34 @@ export function retryPendingLogout(): Promise<boolean> {
   if (!saved) return Promise.resolve(false);
   let state: LocalSignout;
   try { state = JSON.parse(saved); } catch { return Promise.resolve(false); }
-  // Never send an unscoped deferred logout to an older backend.
-  if (!state.pending || !state.logoutId) return Promise.resolve(false);
+  if (!state.pending) return Promise.resolve(false);
   const controller = new AbortController();
   logoutController = controller;
+  let current: string = saved;
   const check = () => {
-    if (controller.signal.aborted || authenticating || readSignout() !== saved) throw new Error('Logout superseded');
+    if (controller.signal.aborted || authenticating || readSignout() !== current) throw new Error('Logout superseded');
   };
   const attempt = withAuthLock(async () => {
     check();
+    if (!state.logoutId) {
+      // Signed out before this tab held a token (after a reload or an expiry). The session
+      // cookie may still be valid, so ask the server which login it belongs to first.
+      const minted = await syncRequest(20_000, signal => request('token', { capabilities: CLIENT_CAPABILITIES }, signal, check), controller.signal);
+      check();
+      if (minted.status === 401) {
+        // Nothing is signed in on the server any more.
+        writeSignout(JSON.stringify({ ...state, pending: false }));
+        return true;
+      }
+      if (!minted.ok) return false;
+      const logoutId = ((await minted.json()) as Partial<LoginResponse>).logout_id;
+      check();
+      // Never send an unscoped deferred logout to an older backend.
+      if (!logoutId) return false;
+      state = { ...state, logoutId };
+      current = JSON.stringify(state);
+      writeSignout(current);
+    }
     const response = await syncRequest(20_000, signal => request('logout', { logout_id: state.logoutId }, signal, check), controller.signal);
     check();
     if (!response.ok) return false;

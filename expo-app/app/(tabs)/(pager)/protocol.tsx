@@ -122,26 +122,56 @@ export default function ProtocolListScreen() {
   // Keep an open sheet in sync when a therapist changes the schedule or content.
   const visiblePhase = phase ? protocol?.phases.find((item) => item.id === phase.id) : null;
 
-  // One gift a day: the customer's choice in the order list, saved per plan. Shown at once, saved in tap order.
-  const [onceDailyByProtocol, setOnceDailyByProtocol] = useState<Record<string, { value: boolean; failed?: boolean }>>({});
-  const onceDailySaves = useRef(new Map<string, Promise<unknown>>());
-  const onceDaily = (protocol && onceDailyByProtocol[protocol.id]?.value) ?? protocol?.orderOnceDaily ?? false;
+  const planKey = protocol && horseId ? `${horseId}:${protocol.id}` : '';
+  const visibleOrdersView = useRef({ planKey, refresh });
+  visibleOrdersView.current = { planKey, refresh };
+
+  const [orderFailures, setOrderFailures] = useState<Record<string, boolean>>({});
+
+  // Save each plan's order setting in tap order. Only a dashboard requested after the last save can replace it.
+  const [onceDailyByProtocol, setOnceDailyByProtocol] = useState<Record<string, { value: boolean; settledAt: number | null }>>({});
+  const onceDailySaves = useRef(new Map<string, Promise<boolean>>());
+  const setting = onceDailyByProtocol[planKey];
+  const onceDaily = setting && (setting.settledAt === null || revision <= setting.settledAt)
+    ? setting.value : protocol?.orderOnceDaily ?? false;
+  useEffect(() => {
+    if (!setting || setting.settledAt === null || revision <= setting.settledAt) return;
+    setOnceDailyByProtocol(current => {
+      if (current[planKey] !== setting) return current;
+      const next = { ...current };
+      delete next[planKey];
+      return next;
+    });
+  }, [planKey, revision, setting]);
   const setOnceDaily = (value: boolean) => {
     if (!protocol || !horseId) return;
-    const id = protocol.id, previous = onceDaily;
-    setOnceDailyByProtocol(current => ({ ...current, [id]: { value } }));
-    const save = (onceDailySaves.current.get(id) ?? Promise.resolve()).then(() =>
-      dashboardRequest(`/api/horses/${horseId}/protocol-order-settings`, { protocol_id: id, once_daily: value }))
-      .catch(() => setOnceDailyByProtocol(current => current[id]?.value === value ? { ...current, [id]: { value: previous, failed: true } } : current));
-    onceDailySaves.current.set(id, save);
+    setOrderFailures(current => ({ ...current, [planKey]: false }));
+    setOnceDailyByProtocol(current => ({ ...current, [planKey]: { value, settledAt: null } }));
+    const previous = onceDailySaves.current.get(planKey) ?? Promise.resolve(onceDaily);
+    const save = previous.then(async confirmed => {
+      let failed = false;
+      try {
+        await dashboardRequest(`/api/horses/${horseId}/protocol-order-settings`, { protocol_id: protocol.id, once_daily: value });
+        confirmed = value;
+      } catch {
+        failed = true;
+      }
+      if (onceDailySaves.current.get(planKey) === save) {
+        onceDailySaves.current.delete(planKey);
+        const settledAt = latestDashboardRequest();
+        setOnceDailyByProtocol(current => ({ ...current, [planKey]: { value: confirmed, settledAt } }));
+        if (failed) setOrderFailures(current => ({ ...current, [planKey]: true }));
+        if (visibleOrdersView.current.planKey === planKey) void visibleOrdersView.current.refresh();
+      }
+      return confirmed;
+    });
+    onceDailySaves.current.set(planKey, save);
   };
   const visibleOrders = scopeOrderItems(onceDailyOrderItems(protocol?.orderItems, onceDaily), orders);
   // Ticks show at once; the server's answer (or a failure) settles them. A dashboard requested after the last
   // answer then takes over, also when another device changed the list (see shownOrderedKeys).
-  const planKey = protocol && horseId ? `${horseId}:${protocol.id}` : '';
   const [overlays, setOverlays] = useState<Record<string, OrderOverlay>>({});
-  const [tickFailures, setTickFailures] = useState<Record<string, boolean>>({});
-  const orderError = tickFailures[planKey] || (protocol && onceDailyByProtocol[protocol.id]?.failed)
+  const orderError = orderFailures[planKey]
     ? "Niet opgeslagen. Controleer je verbinding en probeer opnieuw." : null;
   const ordered = overlays[planKey] ?? null;
   const orderedKeys = shownOrderedKeys(ordered, horseId, protocol?.id, protocol?.orderedKeys ?? [], revision);
@@ -159,8 +189,6 @@ export default function ProtocolListScreen() {
   // Keep the queue for its entire write, including when navigation temporarily unloads this plan.
   const queuesRef = useRef<Map<string, ReturnType<typeof createOrderTicks>> | null>(null);
   const queues = queuesRef.current ??= new Map<string, ReturnType<typeof createOrderTicks>>();
-  const visibleOrdersView = useRef({ planKey, refresh });
-  visibleOrdersView.current = { planKey, refresh };
   const toggleOrdered = (keys: string[], done: boolean) => {
     if (!protocol || !horseId) return;
     const protocolId = protocol.id;
@@ -172,13 +200,13 @@ export default function ProtocolListScreen() {
       });
       queues.set(planKey, queue);
     }
-    setTickFailures(previous => ({ ...previous, [planKey]: false }));
+    setOrderFailures(previous => ({ ...previous, [planKey]: false }));
     queue.toggle(orderedKeys, keys, done, (next, failed, settled) => {
       const overlay = { horseId, protocolId, keys: next, settledAt: settled ? latestDashboardRequest() : null };
       setOverlays(previous => ({ ...previous, [planKey]: overlay }));
       if (!settled) return;
       queues.delete(planKey);
-      if (failed) setTickFailures(previous => ({ ...previous, [planKey]: true }));
+      if (failed) setOrderFailures(previous => ({ ...previous, [planKey]: true }));
       if (visibleOrdersView.current.planKey === planKey) {
         void visibleOrdersView.current.refresh();
       }
@@ -296,8 +324,7 @@ export default function ProtocolListScreen() {
             subtitle={orders && orders !== 'all' && orders.label ? `Voor ${orders.label}` : undefined}
             onClose={() => {
               setOrders(null);
-              if (tickFailures[planKey]) setTickFailures(previous => ({ ...previous, [planKey]: false }));
-              if (onceDailyByProtocol[protocol.id]?.failed) setOnceDailyByProtocol(current => ({ ...current, [protocol.id]: { value: current[protocol.id].value } }));
+              if (orderFailures[planKey]) setOrderFailures(previous => ({ ...previous, [planKey]: false }));
             }}
           >
             {!!orderError && <Text className="mb-3 text-[13px] text-danger">{orderError}</Text>}

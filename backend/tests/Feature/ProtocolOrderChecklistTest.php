@@ -120,6 +120,14 @@ class ProtocolOrderChecklistTest extends TestCase
         $this->postJson($url, ['protocol_id' => $protocol->id, 'once_daily' => false])->assertOk()->assertExactJson(['orderOnceDaily' => false]);
         $this->assertFalse($protocol->fresh()->order_once_daily);
 
+        // A plan scheduled to appear later is not the customer's to change yet.
+        $scheduled = $this->protocol();
+        $scheduled->update(['published_at' => now()->addDay()]);
+        $this->postJson('/api/horses/'.$scheduled->horse_id.'/protocol-order-settings', ['protocol_id' => $scheduled->id, 'once_daily' => true])->assertNotFound();
+        $this->tick($scheduled, ['product:f1'], true)->assertNotFound();
+        $this->assertFalse($scheduled->fresh()->order_once_daily);
+        $this->assertNull($scheduled->fresh()->ordered_product_keys);
+
         $this->postJson($url, ['protocol_id' => $protocol->id])->assertUnprocessable();
         $this->actAs(User::factory()->create());
         $this->postJson($url, ['protocol_id' => $protocol->id, 'once_daily' => true])->assertNotFound();

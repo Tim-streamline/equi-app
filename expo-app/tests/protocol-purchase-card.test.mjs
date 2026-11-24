@@ -196,4 +196,16 @@ test('an order save survives switching away and cannot replay over a later cache
   assert.deepEqual(render().orderedKeys, [], 'a second device removed the tick before this refresh');
   revision = 0;
   assert.deepEqual(render().orderedKeys, [], 'reloading cached data cannot resurrect the acknowledged overlay');
+
+  revision = 3;
+  render().onTwiceDailyChange(false);
+  await flush();
+  horse = 'a';
+  assert.equal(render().twiceDaily, true);
+  writes[2].resolve({orderOnceDaily: true});
+  await flush();
+  horse = 'b';
+  assert.equal(render().twiceDaily, false, 'the earlier dashboard cannot undo a saved setting');
+  revision = 4;
+  assert.equal(render().twiceDaily, true, 'a later dashboard supplies the current setting');
 });

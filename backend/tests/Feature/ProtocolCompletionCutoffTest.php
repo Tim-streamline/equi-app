@@ -182,7 +182,7 @@ class ProtocolCompletionCutoffTest extends TestCase
         }
         $this->assertSame('2026-08-22', DB::table('protocol_day_snapshots')->where('protocol_id', $this->protocol->id)->max('date'));
         $this->getJson($this->dayUrl('2026-08-22'))->assertOk()->assertJsonPath('state', 'complete');
-        $this->getJson($this->dayUrl('2026-08-24'))->assertNotFound();
+        $this->getJson($this->dayUrl('2026-08-24'))->assertUnprocessable()->assertJsonPath('message', 'Het herstelplan was op deze dag al afgerond.');
         $home = $this->getJson('/api/home?timezone=Europe/Amsterdam')->assertOk()->json('horseProtocols.0');
         $this->assertSame([8, 29], [$home['currentDay'], $home['progressPercent']]);
     }
@@ -199,7 +199,7 @@ class ProtocolCompletionCutoffTest extends TestCase
         $protocol = $this->dashboard();
         $this->assertSame('default', $this->cell($protocol, '2026-08-24')['state']);
         $this->assertSame('complete', $this->cell($protocol, '2026-08-25')['state']);
-        $this->getJson($this->dayUrl('2026-08-24'))->assertNotFound();
+        $this->getJson($this->dayUrl('2026-08-24'))->assertUnprocessable()->assertJsonPath('message', 'Het herstelplan was op deze dag al afgerond.');
         $this->getJson($this->dayUrl('2026-08-25'))->assertOk();
         $this->assertSame(2, DB::table('protocol_day_snapshots')->where('protocol_id', $this->protocol->id)->where('date', '>', '2026-08-22')->count(), 'nothing is deleted');
     }

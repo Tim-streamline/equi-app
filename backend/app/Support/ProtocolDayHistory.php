@@ -173,6 +173,8 @@ class ProtocolDayHistory
         abort_unless($date < $now->toDateString(), 422, 'Open vandaag via Vandaag. Toekomstige dagen zijn niet beschikbaar.');
         $this->preserve($protocol, $now);
         $items = $this->historyBetween($protocol, $date, $date)->get($date);
+        $lastDay = app(ProtocolCompletion::class)->lastPlanDay($protocol);
+        abort_if($items === null && $lastDay !== null && $date > $lastDay, 422, 'Het herstelplan was op deze dag al afgerond.');
         abort_if($items === null, 404, 'Op deze datum was er geen protocol gepland.');
 
         return [

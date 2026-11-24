@@ -143,6 +143,33 @@ test('only email confirmation creates a renewable browser session using fresh CS
   assert.deepEqual(JSON.parse(requests.at(-1).options.body), { capabilities: ['protocol-doses', 'read-only-plans', 'read-only-doses'] });
 });
 
+test('signing out before this tab holds a token still ends the scoped server session', async () => {
+  const requests = [];
+  let tokenStatus = 200;
+  globalThis.fetch = async (url, options) => {
+    if (url.endsWith('/csrf')) return response({ token: 'csrf' });
+    requests.push({ path: url.replace('/web-session/', ''), body: JSON.parse(options.body) });
+    if (url.endsWith('/token')) return response(tokenStatus === 200 ? session('reloaded') : {}, tokenStatus);
+    return response({ ok: true });
+  };
+  // After a reload no token is in memory, so logout() knows no logout_id yet.
+  await logout();
+  assert.equal(await retryPendingLogout(), true);
+  assert.deepEqual(requests.map(r => r.path), ['token', 'logout']);
+  assert.deepEqual(requests[1].body, { logout_id: 'login-reloaded' });
+  assert.equal(JSON.parse(localStorage.getItem(LOCAL_SIGNOUT_KEY)).pending, false);
+  assert.equal(await getSession(), null);
+
+  // A server session that already ended needs no logout request.
+  localStorage.removeItem(LOCAL_SIGNOUT_KEY);
+  requests.length = 0;
+  tokenStatus = 401;
+  await logout();
+  await retryPendingLogout();
+  assert.deepEqual(requests.map(r => r.path), ['token']);
+  assert.equal(JSON.parse(localStorage.getItem(LOCAL_SIGNOUT_KEY)).pending, false);
+});
+
 test('every request that mints a PowerSync token declares per-dose protocol support', async () => {
   const { register, completeRegistration, checkRegistration } = await import('../db/auth.ts');
   const requests = [];

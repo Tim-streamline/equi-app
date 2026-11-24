@@ -152,10 +152,13 @@ class HorseDashboardController extends Controller
     {
         $this->owner($request, $horse);
         $data = $request->validate(['protocol_id' => ['required', 'uuid'], 'once_daily' => ['required', 'boolean']]);
-        $protocol = $horse->protocols()->whereKey($data['protocol_id'])->whereNotNull('published_at')
-            ->where('status', '!=', 'archived')->firstOrFail();
-        // A plain column write: this is the customer's own setting, not a protocol edit.
-        \App\Models\Protocol::whereKey($protocol->id)->toBase()->update(['order_once_daily' => (bool) $data['once_daily']]);
+        DB::transaction(function () use ($horse, $data) {
+            // Only a plan the customer can already see, locked like the order ticks.
+            $protocol = $horse->protocols()->whereKey($data['protocol_id'])->visibleToOwner(now(), true)
+                ->lockForUpdate()->firstOrFail();
+            // A plain column write: this is the customer's own setting, not a protocol edit.
+            \App\Models\Protocol::whereKey($protocol->id)->toBase()->update(['order_once_daily' => (bool) $data['once_daily']]);
+        });
 
         return response()->json(['orderOnceDaily' => (bool) $data['once_daily']]);
     }

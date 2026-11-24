@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import ts from 'typescript';
 import { protocolStyleModules } from './protocol-styles.mjs';
-import * as orderScope from '../lib/protocol-order-scope.ts';
+import * as scope from '../lib/protocol-order-scope.ts';
 const jsx = (type, props) => ({ type, props });
 const flatten = n => Array.isArray(n) ? n.flatMap(flatten) : n && typeof n === 'object' ? [n, ...flatten(n.props?.children)] : [n];
 const text = n => flatten(n).filter(n => typeof n === 'string').join('');
@@ -15,7 +15,7 @@ new Function('require', 'exports', code)(name => ({
   'react/jsx-runtime': { jsx, jsxs: jsx },
   ...protocolStyleModules,
   'lucide-react-native': { Check: 'Check' },
-  '@/lib/protocol-order-scope': orderScope,
+  '@/lib/protocol-order-scope': scope,
   './DoneCircle': { DoneCircle: 'DoneCircle' },
   '@/components/ui/SwitchRow': { SwitchRow: 'SwitchRow' },
   'react-native': { View: 'View', Text: 'Text', Pressable: 'Pressable', Linking: { openURL: async url => opened.push(url) }, Alert: { alert() {} } },
@@ -105,13 +105,13 @@ test('one gift a day halves twice-daily products only, and the switch appears on
     components: [{ selectionId: 's', phaseId: 'f1', administrationsPerDay: 2, daysPerWeek: 7, administrationsPerWeek: 14, scheduledWeeks: 8, administrations: 112, quantity: 224 }] };
   const once = { ...item, id: 'herb', productKey: 'herb', unit: 'g', quantity: 840, quantityLabel: '840 g', calculationComplete: true,
     components: [{ selectionId: 'h', phaseId: 'f1', administrationsPerDay: 1, daysPerWeek: 7, administrationsPerWeek: 7, scheduledWeeks: 8, administrations: 56, quantity: 840 }] };
-  const adjusted = orderScope.onceDailyOrderItems([twice, once], true);
+  const adjusted = scope.onceDailyOrderItems([twice, once], true);
   assert.equal(adjusted[0].quantityLabel, '112 tabletten');
   assert.equal(adjusted[0].components[0].quantity, 112);
   assert.equal(adjusted[1], once, 'once-daily products are untouched');
-  assert.equal(orderScope.onceDailyOrderItems([twice], false)[0], twice, 'two gifts a day keeps the server quantities');
+  assert.equal(scope.onceDailyOrderItems([twice], false)[0], twice, 'two gifts a day keeps the server quantities');
   // A phase list is summed from the adjusted components.
-  assert.equal(orderScope.scopeOrderItems(adjusted, { phaseId: 'f1' })[0].quantityLabel, '112 tabletten');
+  assert.equal(scope.scopeOrderItems(adjusted, { phaseId: 'f1' })[0].quantityLabel, '112 tabletten');
 
   const changes = [];
   const switchFor = items => flatten(exports.ProtocolOrderList({ items, onTwiceDailyChange: value => changes.push(value), twiceDaily: true }))

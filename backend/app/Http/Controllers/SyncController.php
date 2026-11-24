@@ -438,7 +438,7 @@ class SyncController extends Controller
     /**
      * Valid offline records survive frequency changes; daily frequency controls display, not storage.
      *
-     * @return array{protocol: Models\Protocol, date: string, item_id: string, done: bool, now: CarbonImmutable, administration: int, scheduled: bool, dose_count: int}|null
+     * @return array{protocol: Models\Protocol, date: string, item_id: string, done: bool, now: CarbonImmutable, administration: int, scheduled: bool, dose_count: int}|array{skip: string}|null
      */
     private function validateIntake(array $op, ?string $timezone): ?array
     {
