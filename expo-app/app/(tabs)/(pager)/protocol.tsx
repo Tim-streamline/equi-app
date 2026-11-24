@@ -170,7 +170,6 @@ export default function ProtocolListScreen() {
       }
     });
   };
-  const firstPhase = protocol?.phases[0];
   const linkedPhases = protocol?.phases.filter((item) => item.accessible && requestedPhases?.split(',').includes(item.id)) ?? [];
 
   // The selected horse and the order list live in the shared header, only while Protocol is visible.
@@ -244,7 +243,7 @@ export default function ProtocolListScreen() {
             {tab === "vandaag" && (
               protocol.preparing ? <ProtocolPreparation key={`${horseId}:${protocol.id}`}
                 protocol={protocol} horseId={horseId} horseName={data.horse.name}
-                onOrder={() => setOrders(firstPhase ? { phaseId: firstPhase.id, label: firstPhase.title } : 'all')} onRefresh={refresh} /> : <Today
+                onOrder={() => setOrders('all')} onRefresh={refresh} /> : <Today
                 protocol={protocol}
                 date={data.date}
                 horseId={horseId}
@@ -346,8 +345,8 @@ function ProtocolPreparation({ protocol, horseId, horseName, onOrder, onRefresh 
     }
   };
   const orderLink = (
-    <Pressable accessibilityRole="button" accessibilityLabel="Open bestellijst voor fase 1" onPress={onOrder} className="min-h-[44px] justify-center">
-      <Text className={T.link}>Bekijk bestellijst voor fase 1 →</Text>
+    <Pressable accessibilityRole="button" accessibilityLabel="Open de volledige bestellijst" onPress={onOrder} className="min-h-[44px] justify-center">
+      <Text className={T.link}>Bekijk de volledige bestellijst →</Text>
     </Pressable>
   );
   if (protocol.completed) return <View className="gap-5">
@@ -356,25 +355,28 @@ function ProtocolPreparation({ protocol, horseId, horseName, onOrder, onRefresh 
     {orderLink}
   </View>;
   return <View className="gap-5">
-    <Text accessibilityRole="header" className={T.title}>Je herstelplan{horseName ? ` voor ${horseName}` : ''} staat klaar</Text>
-    <View className="gap-4">
-      <Text className={T.lead}>Je herstelplan bestaat uit adviezen over <Text className="font-semi text-ink">voeding, beweging, huisvesting en management</Text>, plus een <Text className="font-semi text-ink">herstelprotocol</Text> waarmee je het lichaam stap voor stap ondersteunt bij herstel van binnenuit.</Text>
-      <Text className={T.lead}>De verschillende onderdelen zijn <Text className="font-semi text-ink">bewust op elkaar afgestemd</Text>. Het resultaat hangt daarom af van hoe consequent je <Text className="font-semi text-ink">álle adviezen opvolgt</Text>.</Text>
-      <Text className={T.lead}>Bekijk eerst welke kruiden en andere producten je voor de <Text className="font-semi text-ink">eerste fase</Text> nodig hebt en zorg dat je die <Text className="font-semi text-ink">in huis hebt voordat je begint</Text>. Daarna kun je het protocol starten.</Text>
+    <View className="gap-3">
+      <Text accessibilityRole="header" className={T.title}>Het herstelplan{horseName ? ` voor ${horseName}` : ''} staat klaar</Text>
+      <Text className={T.lead}>Je herstelplan combineert adviezen over voeding, beweging, huisvesting en management met een herstelprotocol. Alle onderdelen zijn op elkaar afgestemd, dus volg ze zo goed mogelijk allemaal op.</Text>
     </View>
-    <View className={PLAIN_CARD}>
-      <Text className={`mb-2 ${T.cardTitle}`}>Wat heb je nodig voor fase 1?</Text>
-      <Text className={`mb-4 ${T.lead}`}>Bekijk welke producten en hoeveelheden je voor de eerste fase nodig hebt.</Text>
-      {orderLink}
+    <View className="gap-3">
+      <Text accessibilityRole="header" className={`${EYEBROW} text-teal-700`}>Zo begin je</Text>
+      <View className="rounded-[22px] bg-white px-5 py-1">
+        <PreparationStep n={1} title="Bestel de producten voor je herstelplan">
+          <Text className={T.secondary}>De fases volgen elkaar snel op. Bestel daarom meteen alles wat je voor het hele herstelplan nodig hebt.</Text>
+          {orderLink}
+        </PreparationStep>
+        <PreparationStep n={2} title="Zorg dat alles in huis is voor fase 1">
+          <Text className={T.secondary}>Begin pas als je alle producten voor de eerste fase binnen hebt.</Text>
+        </PreparationStep>
+        <PreparationStep n={3} last title={protocol.paused ? 'Je herstelplan is gepauzeerd' : 'Klaar om te starten?'}>
+          {!protocol.paused ? <>
+            <Text className={T.secondary}>Klik hieronder op de button. Vandaag wordt dan dag 1 van je herstelplan.</Text>
+            <Button title="Ik start vandaag" className="mt-3" onPress={() => { setError(null); setConfirm(true); }} />
+          </> : <Text className={T.secondary}>Je herstelplan is gepauzeerd. Je kunt starten zodra je plan is hervat.</Text>}
+        </PreparationStep>
+      </View>
     </View>
-    {/* Only a running plan can be started; the server refuses the others. */}
-    {protocol.paused ? <View className="rounded-[22px] bg-mint-50 p-5">
-      <Text className={T.lead}>Je herstelplan is gepauzeerd. Je kunt starten zodra je plan is hervat.</Text>
-    </View> : <View className="gap-4 rounded-[22px] bg-mint-50 p-5">
-      <Text className={T.cardTitle}>Heb je alles in huis?</Text>
-      <Text className={T.lead}>Start je protocol op de dag dat je daadwerkelijk met alle producten uit de eerste fase begint. Klik die dag op de button hieronder.</Text>
-      <Button title="Ik start vandaag" className="mt-1" onPress={() => { setError(null); setConfirm(true); }} />
-    </View>}
     <Sheet visible={confirm} title="Vandaag wordt dag 1 van je protocol" onClose={() => { if (!busy.current) setConfirm(false); }}>
       <Text className={`mb-5 ${T.body}`}>Weet je zeker dat je vandaag wilt beginnen?</Text>
       {!!error && <Text accessibilityRole="alert" className="mb-4 text-[14px] text-danger">{error}</Text>}
@@ -383,6 +385,17 @@ function ProtocolPreparation({ protocol, horseId, horseName, onOrder, onRefresh 
         <Button title="Nog niet" variant="ghost" disabled={starting} onPress={() => setConfirm(false)} />
       </View>
     </Sheet>
+  </View>;
+}
+
+/** One numbered step of the "Zo begin je" list on the preparation screen. */
+function PreparationStep({ n, title, last, children }: { n: number; title: string; last?: boolean; children: ReactNode }) {
+  return <View className={`flex-row gap-3.5 py-4 ${last ? '' : 'border-b border-ink-8'}`}>
+    <View className="h-7 w-7 items-center justify-center rounded-full bg-mint-50"><Text className={`${S.label} text-teal-700`}>{n}</Text></View>
+    <View className="flex-1 gap-1">
+      <Text className={T.section}>{title}</Text>
+      {children}
+    </View>
   </View>;
 }
 

@@ -31,7 +31,7 @@ const settle = () => new Promise(resolve => setImmediate(resolve));
 test('preparation opens orders and confirms before starting; cancellation never saves a date', () => {
   const app = setup();
   assert.equal(app.render().find(n => n.type === 'Sheet').props.visible, false);
-  app.render().find(n => n.props.accessibilityLabel === 'Open bestellijst voor fase 1').props.onPress();
+  app.render().find(n => n.props.accessibilityLabel === 'Open de volledige bestellijst').props.onPress();
   assert.equal(app.orders(), 1);
   app.button('Ik start vandaag').props.onPress();
   assert.equal(app.render().find(n => n.type === 'Sheet').props.visible, true);
@@ -79,8 +79,23 @@ test('a plan paused or completed before day one cannot be started, but its order
     const app = setup(undefined, status);
     assert.equal(app.button('Ik start vandaag'), undefined);
     assert.ok(app.render().some(n => n.props.children === notice));
-    app.render().find(n => n.props.accessibilityLabel === 'Open bestellijst voor fase 1').props.onPress();
+    app.render().find(n => n.props.accessibilityLabel === 'Open de volledige bestellijst').props.onPress();
     assert.equal(app.orders(), 1);
     assert.equal(app.requests.length, 0);
   }
+});
+
+test('preparation reads as three steps, and its order link opens the full order list', () => {
+  const app = setup();
+  const nodes = app.render();
+  // Step titles are a prop of the step component, which this shallow render does not expand.
+  const texts = [...nodes.filter(n => n.type === 'Text' && typeof n.props.children === 'string').map(n => n.props.children),
+    ...nodes.filter(n => typeof n.props?.title === 'string' && typeof n.props?.n === 'number').map(n => n.props.title)];
+  for (const text of ['Zo begin je', 'Bestel de producten voor je herstelplan', 'Zorg dat alles in huis is voor fase 1', 'Klaar om te starten?',
+    'Klik hieronder op de button. Vandaag wordt dan dag 1 van je herstelplan.', 'Bekijk de volledige bestellijst →']) {
+    assert.ok(texts.includes(text), text);
+  }
+  assert.ok(app.button('Ik start vandaag'));
+  // The screen opens the whole list from this link, not only the first phase.
+  assert.match(source, /onOrder=\{\(\) => setOrders\('all'\)\}/);
 });
