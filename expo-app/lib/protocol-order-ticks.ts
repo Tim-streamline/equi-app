@@ -42,7 +42,7 @@ export function createOrderTicks(send: SendOrderTick) {
       chain = chain.then(async () => {
         try { confirmed = await send(keys, ordered); } catch { failed = true; }
         pending -= 1;
-        if (pending === 0) { local = confirmed; onUpdate(confirmed, failed, true); }
+        if (pending === 0) onUpdate(confirmed, failed, true);
       });
     },
   };

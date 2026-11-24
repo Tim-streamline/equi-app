@@ -11,6 +11,7 @@ import { Check } from 'lucide-react-native';
 import { Button } from '@/components/ui/Button';
 import { useCurrentUser } from '@/db/hooks';
 import { useIntake } from '@/lib/intake/store';
+import { BRAND_NAME } from '@/constants/brand';
 
 function formatSubmittedLabel(iso: string | null): string {
   if (!iso) return 'Zojuist';
@@ -68,7 +69,7 @@ export default function IntakeSent() {
           >
             We nemen je antwoorden zorgvuldig door en gaan aan de slag met je persoonlijke herstelplan.
             {'\n\n'}
-            Binnen 5 werkdagen staat de eerste fase voor je klaar in EquiApp. Je ontvangt een melding via de mail
+            Binnen 5 werkdagen staat de eerste fase voor je klaar in {BRAND_NAME}. Je ontvangt een melding via de mail
             zodra je kunt beginnen.
           </Text>
 

@@ -192,6 +192,26 @@ class AdminProtocolManagementTest extends TestCase
         }
     }
 
+    public function test_preserving_removed_doses_merges_with_earlier_rows_per_date(): void
+    {
+        $this->travelTo(now()->setDate(2026, 9, 22)->setTime(12, 0));
+        $this->actingAs($this->admin, 'admin')->post('/admin/protocols', [...$this->payload(), 'published' => true, 'status' => 'active'])->assertSessionHasNoErrors();
+        $protocol = Protocol::firstOrFail();
+        $id = $this->storedPayload($protocol)['phases'][0]['supplements'][0]['id'];
+        $earlier = ['id' => 'earlier', 'administration' => 1, 'done' => true, 'recordedOnly' => true];
+        \Illuminate\Support\Facades\DB::table('protocol_removed_doses')->insert(['protocol_id' => $protocol->id, 'date' => '2026-09-16', 'items' => json_encode([$earlier])]);
+        foreach (['2026-09-16', '2026-09-17'] as $date) {
+            \App\Models\ProtocolSupplementIntake::create(['protocol_phase_supplement_id' => $id, 'horse_id' => $protocol->horse_id,
+                'date' => $date, 'administration' => 2, 'done' => true, 'dosage' => '9 g']);
+        }
+        $history = app(\App\Support\ProtocolDayHistory::class);
+        $history->preserveRemovedDoses($protocol->id, [$id]);
+        $history->preserveRemovedDoses($protocol->id, [$id]);
+
+        $this->assertSame([['earlier', 1], [$id, 2]], collect($history->removedDosesOn($protocol, '2026-09-16'))->map(fn ($row) => [$row['id'], $row['administration']])->all());
+        $this->assertSame([[$id, 2]], collect($history->removedDosesOn($protocol, '2026-09-17'))->map(fn ($row) => [$row['id'], $row['administration']])->all());
+    }
+
     public function test_admin_can_open_the_horse_specific_protocol_creator(): void
     {
         $draft = $this->horse->protocols()->sole();

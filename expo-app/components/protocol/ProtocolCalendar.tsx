@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, type ComponentType, type ReactNode } from 'react';
 import { ActivityIndicator, Pressable, Text, View } from 'react-native';
 import Svg, { Circle } from 'react-native-svg';
-import { Check, ChevronLeft, ChevronRight, ShoppingBag } from 'lucide-react-native';
+import { ChevronLeft, ChevronRight, ShoppingBag } from 'lucide-react-native';
 import { Button } from '@/components/ui/Button';
 import { useSupplementIntakesForDate, useStoreMutations } from '@/db/hooks';
 import { dashboardRequest, deviceTimezone } from '@/hooks/useHorseDashboard';
@@ -11,6 +11,7 @@ import { calendarDate, dayProgress, nextPhaseStart, phaseStarts, shortDate, week
 import { selectionHaptic } from '@/lib/haptics';
 import { EYEBROW } from '@/components/ui/styles';
 import { PROTOCOL_SCALE as S, PROTOCOL_TEXT as T } from './styles';
+import { DoneCircle } from './DoneCircle';
 
 type SheetProps = { visible: boolean; title: string; subtitle?: string; children: ReactNode; onClose: () => void; footer?: ReactNode };
 type ProtocolDay = { date: string; label: string; editable: boolean; editableUntil?: string; weekNumber?: number; items: DashboardSupplement[]; state: 'default' | 'complete' | 'partial' | 'missed' };
@@ -168,7 +169,7 @@ export function ProtocolCalendar({ protocol, today, horseId, onMonth, onPhase, o
           {groups.length > 1 && <View className="mb-1 flex-row items-center justify-between"><Text accessibilityRole="header" className={`${EYEBROW} text-ink-70`}>{group.label}</Text><Text className={T.meta}>{group.done} van {group.items.length}</Text></View>}
           {group.items.map(item => <View key={administrationKey(item)} className="flex-row items-center gap-2">
             <Pressable accessibilityRole="checkbox" accessibilityLabel={`${item.name}, ${group.label}, ${item.dosage ?? ''}`} accessibilityState={{ checked: !!item.done, disabled: busy || !canEditDay || !!item.recordedOnly }} disabled={busy || !canEditDay || !!item.recordedOnly} onPress={() => void toggle(item)} className="min-h-[48px] min-w-[44px] items-center justify-center">
-              <View className={`h-7 w-7 items-center justify-center rounded-full border-2 ${item.done ? 'border-mint-500 bg-mint-500' : 'border-ink-30'}`}>{item.done && <Check size={17} color="white" />}</View>
+              <DoneCircle done={!!item.done} />
             </Pressable>
             <View className="flex-1 flex-row items-center gap-2 border-b border-ink-8 py-3"><Text className={`flex-1 ${S.row} text-ink`}><Text className={S.rowTitle}>{item.name}</Text>{'  '}<Text className="text-ink-70">{item.dosage}</Text>{item.recordedOnly && <Text> · Eerder geregistreerd</Text>}</Text><Pressable accessibilityRole="button" accessibilityLabel={`Uitleg over ${item.name}, ${group.label}`} onPress={() => setDetail(administrationKey(item))} className="min-h-[44px] flex-row items-center gap-1"><Text className={T.link}>Uitleg</Text><ChevronRight size={17} color="#106E6D" /></Pressable></View>
           </View>)}

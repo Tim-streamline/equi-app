@@ -5,7 +5,6 @@ namespace App\Support;
 use App\Models\IntakeAttachment;
 use App\Models\IntakeBooking;
 use Dompdf\Dompdf;
-use Dompdf\Options;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
@@ -81,19 +80,12 @@ class IntakeAnswersPdf
 
     public function render(IntakeBooking $booking): string
     {
-        $pdf = new Dompdf(new Options([
-            'isRemoteEnabled' => false, 'isPhpEnabled' => false, 'isJavascriptEnabled' => false,
-            'allowedProtocols' => ['file://'], 'chroot' => Storage::disk('local')->path(''), 'defaultFont' => 'DejaVu Sans',
-            'tempDir' => storage_path('framework/cache'), 'fontCache' => storage_path('framework/cache'),
-        ]));
-        $pdf->loadHtml($this->html($booking), 'UTF-8');
-        if (! $pdf->getDom()->getElementById('intake-document-complete')) {
-            throw new RuntimeException('De PDF is onvolledig opgebouwd. Probeer opnieuw of neem contact op met de beheerder.');
-        }
-        $pdf->setPaper('A4');
-        $pdf->render();
-        $pdf->getCanvas()->page_text(485, 805, '{PAGE_NUM} / {PAGE_COUNT}', null, 8, [0.4, 0.4, 0.4]);
-
-        return $pdf->output();
+        return PdfDocument::render($this->html($booking),
+            ['allowedProtocols' => ['file://'], 'chroot' => Storage::disk('local')->path('')],
+            function (Dompdf $pdf) {
+                if (! $pdf->getDom()->getElementById('intake-document-complete')) {
+                    throw new RuntimeException('De PDF is onvolledig opgebouwd. Probeer opnieuw of neem contact op met de beheerder.');
+                }
+            });
     }
 }

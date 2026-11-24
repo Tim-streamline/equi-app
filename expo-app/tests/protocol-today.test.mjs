@@ -39,7 +39,7 @@ function screen(phases = 2) {
     'expo-router': { router: { push: r => opened.push(r) } },
     '@/components/ui/Button': { Button: 'Button' },
     '@/db/hooks': { useSupplementIntakesForDate: () => local, useStoreMutations: () => ({ toggleSupplementIntake: async (...args) => mutations.push(args) }) },
-    '@/lib/protocol-buildup': buildupLogic, './DoseBuildupSchedule': { DoseBuildupSchedule: 'DoseBuildupSchedule' }, '@/lib/protocol-today': logic, '@/lib/haptics': { selectionHaptic() {} },
+    '@/lib/protocol-buildup': buildupLogic, './DoseBuildupSchedule': { DoseBuildupSchedule: 'DoseBuildupSchedule' }, './DoneCircle': { DoneCircle: 'DoneCircle' }, '@/lib/protocol-today': logic, '@/lib/haptics': { selectionHaptic() {} },
   };
   const component = load('../components/protocol/ProtocolToday.tsx', modules).ProtocolToday;
   const props = { protocol: { id: 'protocol', currentWeek: 2, totalWeeks: 10, dateLabel: 'Actual date', weekLabel: 'Week 2 van 10', today: { items }, phases: [{ id: 'phase1', title: 'Phase A', state: 'active' }, { id: 'phase2', title: 'Phase B', state: phases === 2 ? 'active' : 'locked' }] }, date: '2026-11-03', horseId: 'horse', onPhase: p => opened.push(p.id), SheetComponent: 'Sheet' };

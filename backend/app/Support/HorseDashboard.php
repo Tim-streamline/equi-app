@@ -94,15 +94,16 @@ class HorseDashboard
     {
         $protocol->loadMissing('phases.weeks');
         $start = $protocol->started_at ? CarbonImmutable::parse($protocol->started_at->toDateString(), $now->timezone)->startOfDay() : null;
-        $totalWeeks = max((int) $protocol->total_weeks, (int) $protocol->phases->flatMap->weeks->max('protocol_week_number'));
+        $totalWeeks = $protocol->scheduledWeeks();
         $totalDays = $totalWeeks * 7;
         $elapsed = $start ? (int) $start->diffInDays($now->startOfDay(), false) + 1 : 0;
         $day = max(0, min($totalDays, $elapsed));
+        $completion = app(ProtocolCompletion::class);
         // An early completion ends progress on its last plan day, not on today.
-        if ($start && ($last = app(ProtocolCompletion::class)->lastPlanDay($protocol))) {
+        if ($start && ($last = $completion->lastPlanDay($protocol))) {
             $day = max(0, min($day, (int) $start->diffInDays(CarbonImmutable::parse($last, $now->timezone), false) + 1));
         }
-        $progressKnown = ! app(ProtocolCompletion::class)->unknownEnd($protocol);
+        $progressKnown = ! $completion->unknownEnd($protocol);
         if (! $progressKnown) $day = 0;
         $running = $protocol->status !== 'completed' && $elapsed > 0 && $elapsed <= $totalDays;
 
@@ -201,7 +202,7 @@ class HorseDashboard
         if (! $preview) {
             $today = $today->concat($history->removedDosesOn($protocol, $todayDate));
         }
-        $scheduledToday = $today->reject(fn ($row) => $row['recordedOnly'] ?? false);
+        $scheduledToday = ProtocolDayHistory::scheduled($today);
         $done = $scheduledToday->where('done', true)->count();
         $notifications = [];
         $reminderDay = (int) ($protocol->customer_settings['weekly_update_day'] ?? 7);
@@ -227,7 +228,7 @@ class HorseDashboard
             // never frozen is no plan day: the live fallback must not show it as missed or count it.
             $afterPlan = ! $preview && $completion->containsDate($closedPeriods, $iso);
             $rows = $iso === $todayDate ? $today : ($afterPlan ? collect() : $rowsFor($n, $iso));
-            $scheduled = $rows->reject(fn ($row) => $row['recordedOnly'] ?? false);
+            $scheduled = ProtocolDayHistory::scheduled($rows);
             $completed = $scheduled->where('done', true)->count();
             $state = 'default';
             if ($scheduled->isNotEmpty() && $iso <= $now->toDateString()) {
@@ -235,7 +236,7 @@ class HorseDashboard
             }
             if ($iso < $now->toDateString() && $historicalDays->has($iso)) {
                 $rows = collect($historicalDays->get($iso));
-                $scheduled = $rows->reject(fn ($row) => $row['recordedOnly'] ?? false);
+                $scheduled = ProtocolDayHistory::scheduled($rows);
                 $completed = $scheduled->where('done', true)->count();
                 $state = $history->state($rows->all());
             }

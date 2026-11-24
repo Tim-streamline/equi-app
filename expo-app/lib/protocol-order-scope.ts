@@ -12,6 +12,16 @@ export type OrderScope =
 
 type Component = DashboardOrderItem["components"][number];
 
+/**
+ * Splits the order discount at its last ": " so the code can get a line of its own. `code` is null
+ * without a separator. Shared with the admin's customer preview.
+ */
+export function splitDiscount(discount: string | null | undefined) {
+  const text = discount ?? "";
+  const split = text.lastIndexOf(": ");
+  return split < 0 ? { label: text, code: null } : { label: text.slice(0, split + 1), code: text.slice(split + 2) };
+}
+
 /** Same presentation as the server's order list: 1000 g → 1 kg, comma decimals. */
 export function orderQuantityLabel(quantity: number, unit: string | null) {
   let value = quantity, shown = unit;

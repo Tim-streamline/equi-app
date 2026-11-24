@@ -7,9 +7,8 @@ use App\Models\Horse;
 use App\Models\Protocol;
 use App\Models\ProtocolEvaluationQuestion;
 use App\Support\AuditLogger;
+use App\Support\PdfDocument;
 use App\Support\ProtocolEvaluation;
-use Dompdf\Dompdf;
-use Dompdf\Options;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
@@ -66,13 +65,8 @@ class ProtocolEvaluationController extends Controller
 
     private function document(string $title, string $meta, array $questions, array $answers, string $filename)
     {
-        $pdf = new Dompdf(new Options(['isRemoteEnabled' => false, 'isPhpEnabled' => false, 'isJavascriptEnabled' => false,
-            'defaultFont' => 'DejaVu Sans', 'tempDir' => storage_path('framework/cache'), 'fontCache' => storage_path('framework/cache')]));
-        $pdf->loadHtml(view('intake.evaluation-pdf', compact('title', 'meta', 'questions', 'answers'))->render(), 'UTF-8');
-        $pdf->setPaper('A4');
-        $pdf->render();
-        $pdf->getCanvas()->page_text(485, 805, '{PAGE_NUM} / {PAGE_COUNT}', null, 8, [0.4, 0.4, 0.4]);
-        return response($pdf->output(), 200, ['Content-Type' => 'application/pdf',
+        $pdf = PdfDocument::render(view('intake.evaluation-pdf', compact('title', 'meta', 'questions', 'answers'))->render());
+        return response($pdf, 200, ['Content-Type' => 'application/pdf',
             'Content-Disposition' => 'attachment; filename="'.$filename.'"',
             'Cache-Control' => 'private, no-store', 'X-Content-Type-Options' => 'nosniff']);
     }

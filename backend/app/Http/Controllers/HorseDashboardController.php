@@ -87,7 +87,7 @@ class HorseDashboardController extends Controller
     /** Earlier dose-aware clients render every row as an editable scheduled dose. */
     private function scheduledItemsOnly(array $day): array
     {
-        $day['items'] = array_values(array_filter($day['items'], fn ($item) => ! ($item['recordedOnly'] ?? false)));
+        $day['items'] = ProtocolDayHistory::scheduled($day['items'])->values()->all();
         return $day;
     }
 
@@ -103,8 +103,7 @@ class HorseDashboardController extends Controller
         ]);
         $now = CarbonImmutable::now($data['timezone'] ?? 'Europe/Amsterdam');
         $protocol = $horse->protocols()->whereKey($data['protocol_id'])
-            ->whereIn('status', $request->isMethod('POST') ? ['active'] : ['active', 'paused', 'completed'])
-            ->whereNotNull('published_at')->where('published_at', '<=', $now)->firstOrFail();
+            ->visibleToOwner($now, ! $request->isMethod('POST'))->firstOrFail();
 
         if (! ClientCapabilities::protocolDoses($request)) {
             // A released app's single checkbox stands for every dose of that product on that day.
@@ -133,8 +132,8 @@ class HorseDashboardController extends Controller
         $keys = DB::transaction(function () use ($horse, $data) {
             // Only a plan the owner can see (as in HorseDashboard): no drafts, future publications or archived plans.
             // Paused and completed plans stay readable, with their order list.
-            $protocol = $horse->protocols()->whereKey($data['protocol_id'])->whereIn('status', ['active', 'paused', 'completed'])
-                ->whereNotNull('published_at')->where('published_at', '<=', now())->lockForUpdate()->firstOrFail();
+            $protocol = $horse->protocols()->whereKey($data['protocol_id'])->visibleToOwner(now(), true)
+                ->lockForUpdate()->firstOrFail();
             $current = $protocol->ordered_product_keys ?? [];
             $next = $data['ordered'] ? array_unique([...$current, ...$data['keys']]) : array_diff($current, $data['keys']);
             abort_if(count($next) > 1000, 422, 'Te veel producten afgevinkt.');

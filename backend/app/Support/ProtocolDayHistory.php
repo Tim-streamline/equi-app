@@ -27,21 +27,21 @@ class ProtocolDayHistory
             $protocol = Protocol::query()->lockForUpdate()->findOrFail($protocol->id);
             $protocol->load('phases.weeks', 'phases.supplements.weeks', 'phases.supplements.intakes', 'phases.supplements.supplement');
             $start = CarbonImmutable::parse($protocol->started_at->toDateString(), $now->timezone);
-            $weeks = max((int) $protocol->total_weeks, (int) $protocol->phases->flatMap->weeks->max('protocol_week_number'));
+            $weeks = $protocol->scheduledWeeks();
             $end = $now->startOfDay()->subDay()->min($start->addWeeks($weeks)->subDay());
             // Days after an early completion are not plan days: never freeze them as missed. Without a known
             // last day (an old completion) nothing new is frozen.
-            if (app(ProtocolCompletion::class)->unknownEnd($protocol)) {
+            $completion = app(ProtocolCompletion::class);
+            if ($completion->unknownEnd($protocol)) {
                 return;
             }
-            if ($last = app(ProtocolCompletion::class)->lastPlanDay($protocol)) {
+            if ($last = $completion->lastPlanDay($protocol)) {
                 $end = $end->min(CarbonImmutable::parse($last, $now->timezone));
             }
             if ($end->lt($start)) {
                 return;
             }
             $existing = DB::table('protocol_day_snapshots')->where('protocol_id', $protocol->id)->pluck('date')->flip();
-            $completion = app(ProtocolCompletion::class);
             $closedPeriods = $completion->closedPeriods($protocol);
             $intakes = $protocol->horse->supplementIntakes()->whereBetween('date', [$start->toDateString(), $end->toDateString()])->get()->groupBy(fn ($row) => $row->date->toDateString());
             $selections = $protocol->phases->flatMap->supplements->keyBy('id');
@@ -111,11 +111,12 @@ class ProtocolDayHistory
             ->where('done', true)->with('protocolPhaseSupplement.phase', 'protocolPhaseSupplement.supplement')
             ->orderBy('protocol_phase_supplement_id')->orderBy('administration')->get()
             ->groupBy(fn ($intake) => $intake->date->toDateString());
-        foreach ($byDate as $date => $doses) {
-            $key = ['protocol_id' => $protocolId, 'date' => $date];
-            $previous = DB::table('protocol_removed_doses')->where($key)->value('items');
-            $items = $this->withRecordedDoses(collect(json_decode($previous ?? '[]', true)), $doses);
-            DB::table('protocol_removed_doses')->updateOrInsert($key, ['items' => json_encode($items->all(), JSON_THROW_ON_ERROR)]);
+        foreach ($byDate->chunk(500) as $chunk) {
+            $previous = DB::table('protocol_removed_doses')->where('protocol_id', $protocolId)
+                ->whereIn('date', $chunk->keys()->all())->pluck('items', 'date');
+            $rows = $chunk->map(fn ($doses, $date) => ['protocol_id' => $protocolId, 'date' => $date,
+                'items' => json_encode($this->withRecordedDoses(collect(json_decode($previous[$date] ?? '[]', true)), $doses)->all(), JSON_THROW_ON_ERROR)]);
+            DB::table('protocol_removed_doses')->upsert($rows->values()->all(), ['protocol_id', 'date'], ['items']);
         }
     }
 
@@ -198,10 +199,16 @@ class ProtocolDayHistory
 
     public function state(array $items): string
     {
-        $items = array_filter($items, fn ($row) => ! ($row['recordedOnly'] ?? false));
-        $done = count(array_filter($items, fn ($item) => $item['done']));
+        $items = self::scheduled($items);
+        $done = $items->filter(fn ($item) => $item['done'])->count();
 
-        return ! $items ? 'default' : ($done === count($items) ? 'complete' : ($done ? 'partial' : 'missed'));
+        return $items->isEmpty() ? 'default' : ($done === $items->count() ? 'complete' : ($done ? 'partial' : 'missed'));
+    }
+
+    /** The day's scheduled doses: recorded-only rows are shown but never count as planned or missed. */
+    public static function scheduled(iterable $rows): Collection
+    {
+        return collect($rows)->reject(fn ($row) => $row['recordedOnly'] ?? false);
     }
 
     /**

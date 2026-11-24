@@ -1,8 +1,9 @@
 import { Alert, Linking, Pressable, Text, View } from 'react-native';
-import { Check } from 'lucide-react-native';
 import type { DashboardOrderItem } from '@/lib/horse-dashboard';
+import { splitDiscount } from '@/lib/protocol-order-scope';
 import { PLAIN_CARD } from '@/components/ui/styles';
 import { PROTOCOL_SCALE as S, PROTOCOL_TEXT as T } from './styles';
+import { DoneCircle } from './DoneCircle';
 
 type PurchaseOption = DashboardOrderItem['purchaseOptions'][number];
 
@@ -36,8 +37,7 @@ export function ProtocolOrderList({ items, discount = '5% korting bij Dtails.nl 
   const ordered = new Set(orderedKeys ?? []);
   // The code gets a line of its own so it never breaks at its hyphen. A non-breaking hyphen would
   // also stop the break, but customers copy this code into a shop, which would then reject it.
-  const split = discount.lastIndexOf(': ');
-  const [label, code] = split < 0 ? [discount, ''] : [discount.slice(0, split + 1), discount.slice(split + 2)];
+  const { label, code } = splitDiscount(discount);
   return <View className="gap-3">
     <View className="rounded-[22px] bg-mint-50 p-4">
       <Text className={`${S.rowTitle} text-teal-700`}>{label}</Text>
@@ -51,7 +51,7 @@ export function ProtocolOrderList({ items, discount = '5% korting bij Dtails.nl 
       return <View key={item.id} className={`gap-2 ${PLAIN_CARD}`}>
         {onToggle ? <Pressable accessibilityRole="checkbox" accessibilityLabel={`${item.name} besteld`} accessibilityState={{ checked: done }}
           onPress={() => onToggle(keys, !done)} className="min-h-[44px] flex-row items-center gap-3">
-          <View className={`h-7 w-7 items-center justify-center rounded-full border-2 ${done ? 'border-mint-500 bg-mint-500' : 'border-ink-30'}`}>{done && <Check size={17} color="white" />}</View>
+          <DoneCircle done={done} />
           <Text className={`flex-1 ${T.cardTitle} ${done ? 'text-ink-70 line-through' : ''}`}>{item.name}</Text>
         </Pressable> : <Text className={T.cardTitle}>{item.name}</Text>}
         <Text className={T.row}>Totaal nodig: <Text className="font-semi text-ink">{item.quantityLabel ?? 'hoeveelheid nog te bepalen'}</Text></Text>

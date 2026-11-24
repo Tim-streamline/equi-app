@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import ts from 'typescript';
 import { protocolStyleModules } from './protocol-styles.mjs';
+import * as orderScope from '../lib/protocol-order-scope.ts';
 const jsx = (type, props) => ({ type, props });
 const flatten = n => Array.isArray(n) ? n.flatMap(flatten) : n && typeof n === 'object' ? [n, ...flatten(n.props?.children)] : [n];
 const text = n => flatten(n).filter(n => typeof n === 'string').join('');
@@ -14,6 +15,8 @@ new Function('require', 'exports', code)(name => ({
   'react/jsx-runtime': { jsx, jsxs: jsx },
   ...protocolStyleModules,
   'lucide-react-native': { Check: 'Check' },
+  '@/lib/protocol-order-scope': orderScope,
+  './DoneCircle': { DoneCircle: 'DoneCircle' },
   'react-native': { View: 'View', Text: 'Text', Pressable: 'Pressable', Linking: { openURL: async url => opened.push(url) }, Alert: { alert() {} } },
 })[name], exports);
 const item = { id: 'product', name: 'Heemstwortel', quantity: 630, unit: 'g', quantityLabel: '630 g',

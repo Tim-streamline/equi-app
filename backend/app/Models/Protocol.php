@@ -193,11 +193,23 @@ class Protocol extends Model
 
     public function scopeShownToOwner(Builder $query, CarbonImmutable $now, bool $inactivePlans): Builder
     {
-        return $query->whereIn('status', $inactivePlans ? ['active', 'paused', 'completed'] : ['active'])
-            ->whereNotNull('published_at')->where('published_at', '<=', $now)
+        return $query->visibleToOwner($now, $inactivePlans)
             // The id settles equal publication times, so Home's paused-plan link (protocol-queries.ts) can tell
             // exactly which plan the Protocol tab shows.
             ->orderByRaw("CASE WHEN status = 'active' THEN 0 WHEN status = 'paused' THEN 1 ELSE 2 END")->orderByDesc('published_at')->orderBy('id');
+    }
+
+    /** Weeks the plan runs: its stated length, or longer when a phase schedules later weeks. */
+    public function scheduledWeeks(): int
+    {
+        return max((int) $this->total_weeks, (int) $this->phases->flatMap->weeks->max('protocol_week_number'));
+    }
+
+    /** Plans the owner may see: published by now; paused and completed ones only when $inactivePlans. */
+    public function scopeVisibleToOwner(Builder $query, \DateTimeInterface $now, bool $inactivePlans): Builder
+    {
+        return $query->whereIn('status', $inactivePlans ? ['active', 'paused', 'completed'] : ['active'])
+            ->whereNotNull('published_at')->where('published_at', '<=', $now);
     }
 
     public function horse(): BelongsTo

@@ -129,10 +129,10 @@ export default function ProtocolListScreen() {
   const [overlays, setOverlays] = useState<Record<string, OrderOverlay>>({});
   const [orderError, setOrderError] = useState<string | null>(null);
   const ordered = overlays[planKey] ?? null;
-  const orderedKeys = shownOrderedKeys(ordered, horseId, protocol?.id, protocol?.orderedKeys ?? [], revision ?? 0);
+  const orderedKeys = shownOrderedKeys(ordered, horseId, protocol?.id, protocol?.orderedKeys ?? [], revision);
   // Once acknowledged, a later offline dashboard must never revive the old local selection.
   useEffect(() => {
-    if (!ordered || ordered.settledAt === null || (revision ?? 0) <= ordered.settledAt) return;
+    if (!ordered || ordered.settledAt === null || revision <= ordered.settledAt) return;
     setOverlays(previous => {
       if (previous[planKey] !== ordered) return previous;
       const next = { ...previous };
@@ -143,26 +143,27 @@ export default function ProtocolListScreen() {
   useEffect(() => { setOrderError(null); }, [planKey]);
 
   // Keep the queue for its entire write, including when navigation temporarily unloads this plan.
-  const queues = useRef(new Map<string, ReturnType<typeof createOrderTicks>>());
+  const queuesRef = useRef<Map<string, ReturnType<typeof createOrderTicks>> | null>(null);
+  const queues = queuesRef.current ??= new Map<string, ReturnType<typeof createOrderTicks>>();
   const visibleOrdersView = useRef({ planKey, refresh });
   visibleOrdersView.current = { planKey, refresh };
   const toggleOrdered = (keys: string[], done: boolean) => {
     if (!protocol || !horseId) return;
     const protocolId = protocol.id;
-    let queue = queues.current.get(planKey);
+    let queue = queues.get(planKey);
     if (!queue) {
       queue = createOrderTicks(async (keys, done) => {
         const result = await dashboardRequest(`/api/horses/${horseId}/protocol-orders`, { protocol_id: protocolId, keys, ordered: done }) as { orderedKeys: string[] };
         return result.orderedKeys;
       });
-      queues.current.set(planKey, queue);
+      queues.set(planKey, queue);
     }
     setOrderError(null);
     queue.toggle(orderedKeys, keys, done, (next, failed, settled) => {
       const overlay = { horseId, protocolId, keys: next, settledAt: settled ? latestDashboardRequest() : null };
       setOverlays(previous => ({ ...previous, [planKey]: overlay }));
       if (!settled) return;
-      queues.current.delete(planKey);
+      queues.delete(planKey);
       if (visibleOrdersView.current.planKey === planKey) {
         if (failed) setOrderError("Niet opgeslagen. Controleer je verbinding en probeer opnieuw.");
         void visibleOrdersView.current.refresh();

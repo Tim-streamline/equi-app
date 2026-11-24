@@ -4,6 +4,7 @@
     import { PROTOCOL_TABS } from '../../../../../expo-app/lib/protocol-tabs.ts';
     import { careSections } from '../../../../../expo-app/lib/protocol-care.ts';
     import { administrationKey, inlineTiming, todayGroups } from '../../../../../expo-app/lib/protocol-today.ts';
+    import { splitDiscount } from '../../../../../expo-app/lib/protocol-order-scope.ts';
     import { csrfHeaders } from '$lib/csrf.js';
     let { payload, protocolId = null, onclose } = $props();
     let result = $state(null);
@@ -26,6 +27,7 @@
     const protocol = $derived(result?.protocol);
     const phase = $derived(protocol?.phases.find((p) => p.id === phaseId));
     const product = $derived(protocol?.today.items.find(item => administrationKey(item) === productKey));
+    const discount = $derived(splitDiscount(protocol?.orderDiscount));
     $effect(() => { void load(week); });
     async function load(selectedWeek) {
         const version = ++request;
@@ -67,7 +69,7 @@
             <div class="min-h-0 flex-1 space-y-4 overflow-y-auto px-5 pb-8 pt-4">
                 {#if ordersOpen}
                     <h3 class="text-xl font-bold">Bestellijst</h3>
-                    <p class="rounded-2xl bg-[#EAFBF9] p-4 text-sm font-semibold text-[#0E6F69]">{#if protocol.orderDiscount?.includes(': ')}{protocol.orderDiscount.slice(0, protocol.orderDiscount.lastIndexOf(': ') + 1)}<br><span class="whitespace-nowrap font-bold">{protocol.orderDiscount.slice(protocol.orderDiscount.lastIndexOf(': ') + 2)}</span>{:else}{protocol.orderDiscount}{/if}</p>
+                    <p class="rounded-2xl bg-[#EAFBF9] p-4 text-sm font-semibold text-[#0E6F69]">{#if discount.code !== null}{discount.label}<br><span class="whitespace-nowrap font-bold">{discount.code}</span>{:else}{discount.label}{/if}</p>
                     {#each protocol.orderItems as item}
                         <section class="rounded-2xl border bg-white p-4">
                             <h4 class="text-lg font-semibold">{item.name}</h4>

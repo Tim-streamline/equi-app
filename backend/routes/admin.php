@@ -23,6 +23,7 @@ use App\Http\Controllers\Admin\PlanController;
 use App\Http\Controllers\Admin\PlusPageController;
 use App\Http\Controllers\Admin\ProductController;
 use App\Http\Controllers\Admin\ProtocolController;
+use App\Http\Controllers\Admin\ProtocolEvaluationController;
 use App\Http\Controllers\Admin\ProtocolMeasureController;
 use App\Http\Controllers\Admin\ProtocolSettingsController;
 use App\Http\Controllers\Admin\ScanResultController;
@@ -54,12 +55,12 @@ Route::middleware('auth:admin')->group(function () {
 
     Route::patch('bookings/{booking}/review', [IntakeBookingController::class, 'review'])->name('bookings.review');
     Route::get('intake-media/{attachment}', [IntakeAttachmentController::class, 'admin'])->whereUuid('attachment')->name('intake-media');
-    Route::get('horses/{horse}/evaluations/{protocol}.pdf', [\App\Http\Controllers\Admin\ProtocolEvaluationController::class, 'pdf'])->name('horses.evaluation-pdf');
+    Route::get('horses/{horse}/evaluations/{protocol}.pdf', [ProtocolEvaluationController::class, 'pdf'])->name('horses.evaluation-pdf');
     Route::middleware('admin.role:admin')->prefix('evaluation-questions')->group(function () {
-        Route::get('/', [\App\Http\Controllers\Admin\ProtocolEvaluationController::class, 'index']);
-        Route::post('/', [\App\Http\Controllers\Admin\ProtocolEvaluationController::class, 'store']);
-        Route::put('{question}', [\App\Http\Controllers\Admin\ProtocolEvaluationController::class, 'update']);
-        Route::delete('{question}', [\App\Http\Controllers\Admin\ProtocolEvaluationController::class, 'destroy']);
+        Route::get('/', [ProtocolEvaluationController::class, 'index']);
+        Route::post('/', [ProtocolEvaluationController::class, 'store']);
+        Route::put('{question}', [ProtocolEvaluationController::class, 'update']);
+        Route::delete('{question}', [ProtocolEvaluationController::class, 'destroy']);
     });
 
     // ---- Support console: users, horses ---------------------------------

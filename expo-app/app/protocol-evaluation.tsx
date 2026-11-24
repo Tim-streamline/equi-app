@@ -22,18 +22,16 @@ function EvaluationForm({ protocolId }: { protocolId: string }) {
   const [answers, setAnswers] = useState<Record<string, string>>({});
   const [offer, setOffer] = useState(false), [busy, setBusy] = useState(false);
   const [error, setError] = useState(''), [notice, setNotice] = useState(''), [retry, setRetry] = useState(0);
-  const mounted = useRef(true), pending = useRef(false);
-  const generation = useRef(0);
+  const pending = useRef(false), generation = useRef(0);
   usePreventRemove(busy, () => {});
   useEffect(() => {
-    mounted.current = true;
     const current = ++generation.current;
     setError(''); setNotice(''); setData(null); setAnswers({}); setOffer(false);
     if (!protocolId) { setError('Open de evaluatie vanuit je herstelplan.'); return; }
     void dashboardRequest(`/api/protocols/${protocolId}/evaluation`).then((result: ProtocolEvaluationData) => {
-      if (mounted.current && generation.current === current) { setData(result); setAnswers(result.answers ?? {}); }
-    }).catch(() => { if (mounted.current && generation.current === current) setError('De evaluatie kon niet worden geladen. Controleer je verbinding of probeer het later opnieuw.'); });
-    return () => { mounted.current = false; generation.current++; };
+      if (generation.current === current) { setData(result); setAnswers(result.answers ?? {}); }
+    }).catch(() => { if (generation.current === current) setError('De evaluatie kon niet worden geladen. Controleer je verbinding of probeer het later opnieuw.'); });
+    return () => { generation.current++; };
   }, [protocolId, retry]);
   async function save(submit: boolean) {
     if (!data || pending.current) return;
@@ -42,12 +40,12 @@ function EvaluationForm({ protocolId }: { protocolId: string }) {
     pending.current = true; setBusy(true); setError(''); setNotice('');
     try {
       const result = await dashboardRequest(`/api/protocols/${protocolId}/evaluation`, { answers, submit, revision: data.revision, question_version: data.questionVersion });
-      if (mounted.current && revision === accountSession.revision && current === generation.current) {
+      if (revision === accountSession.revision && current === generation.current) {
         setData(result); setConflicts({}); setNotice(submit ? 'Je evaluatie is verstuurd naar je therapeut.' : 'Je concept is opgeslagen. Je kunt later verdergaan.');
         if (submit) setOffer(true);
       }
     } catch (error) {
-      const currentForm = () => mounted.current && current === generation.current && revision === accountSession.revision;
+      const currentForm = () => current === generation.current && revision === accountSession.revision;
       if (!currentForm()) return;
       if (String(error).includes('(412)')) {
         setError('Er is al een nieuwere versie van deze evaluatie opgeslagen. Je eigen antwoorden staan nog op dit scherm.');
@@ -68,7 +66,7 @@ function EvaluationForm({ protocolId }: { protocolId: string }) {
           : 'Opslaan is niet gelukt. Je antwoorden staan nog op dit scherm. Probeer het opnieuw.');
       }
     }
-    finally { pending.current = false; if (mounted.current && current === generation.current) setBusy(false); }
+    finally { pending.current = false; if (current === generation.current) setBusy(false); }
   }
   return <SafeAreaView className="flex-1 bg-canvas">
     <SubHeader title={offer ? 'Vervolg van je EquiBoost traject' : 'Evaluatie herstelplan'} onBack={() => {

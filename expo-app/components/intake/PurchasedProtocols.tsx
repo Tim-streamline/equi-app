@@ -38,15 +38,11 @@ export function PurchasedProtocols({ allHorses = false, excludeProtocolIds = [],
   if (!visible.length) return null;
   return <View className="mb-4 gap-3">
     {visible.map(protocol => {
-      const { completedAt, ready, named, submitted, paused, canOpen } = cardState(protocol);
+      const { completedAt, named, submitted, paused, canOpen } = cardState(protocol);
       const horseName = protocol.horse_name || 'je paard';
       const possessive = protocol.horse_name ? horsePossessive(protocol.horse_name) : 'Je';
       const generic = protocol.title === 'Persoonlijk protocol';
       const partial = !completedAt && !named && !!protocol.has_answers;
-      const body = protocol.status === 'completed' ? 'Afgerond'
-        : ready ? (protocol.status === 'paused' ? 'Je herstelplan is gepauzeerd.' : 'Je herstelplan staat klaar.')
-          : completedAt ? 'Je intake is verstuurd. Je behandelaar stelt je herstelplan op.'
-            : `Vul de intake voor ${horseName}'s EquiBoost traject in`;
       const action = paused ? 'Bekijk je herstelplan' : completedAt ? 'Intake bekijken' : partial ? 'Ga verder met je intake' : 'Start de intake';
       return <Pressable key={protocol.id} accessibilityRole={canOpen ? 'button' : undefined} accessibilityLabel={canOpen ? `${action} voor ${horseName}` : undefined} disabled={!canOpen}
         onPress={() => {
@@ -63,7 +59,7 @@ export function PurchasedProtocols({ allHorses = false, excludeProtocolIds = [],
         : partial ? 'Je bent goed op weg! Maak de intake verder af, zodat we zo snel mogelijk aan de slag kunnen met je herstelplan.'
         : !completedAt && !named
         ? `We gaan aan de slag met de gezondheid van ${horseName}. Vul de intake zo goed en volledig mogelijk in, zodat we een compleet beeld krijgen en gericht aan de slag kunnen.`
-        : body}</Text>
+        : protocol.status === 'completed' ? 'Afgerond' : 'Je herstelplan staat klaar.'}</Text>
       {submitted && <Text className="font-semi text-[14px] leading-[22px] text-ink">Binnen 5 werkdagen staat het herstelplan hier voor je klaar.</Text>}
       {!!completedAt && !submitted && !paused && <Text className="text-sm text-ink-70">Intake ingestuurd op {formatIntakeDate(completedAt)}</Text>}
       {canOpen && <Text className={`mt-1 ${HOME_NOTICE_LINK}`}>{action} →</Text>}

@@ -1,6 +1,6 @@
 import { useRef, useState, type ComponentType, type ReactNode } from 'react';
 import { Alert, Pressable, Text, View } from 'react-native';
-import { Check, ChevronRight, Soup } from 'lucide-react-native';
+import { ChevronRight, Soup } from 'lucide-react-native';
 import { router } from 'expo-router';
 import { Button } from '@/components/ui/Button';
 import { useStoreMutations, useSupplementIntakesForDate } from '@/db/hooks';
@@ -9,6 +9,7 @@ import { administrationKey, inlineTiming, todayGroups, PHASE_COLORS } from '@/li
 import { selectionHaptic } from '@/lib/haptics';
 import { buildupState, dailyDoseChanges } from '@/lib/protocol-buildup';
 import { DoseBuildupSchedule } from './DoseBuildupSchedule';
+import { DoneCircle } from './DoneCircle';
 import { PROTOCOL_SCALE as S, PROTOCOL_TEXT as T } from './styles';
 
 type SheetProps = { visible: boolean; title: string; subtitle?: string; children: ReactNode; onClose: () => void; footer?: ReactNode };
@@ -77,9 +78,7 @@ export function ProtocolToday({ protocol, date, horseId, onPhase, SheetComponent
           <Pressable accessibilityRole="checkbox" accessibilityLabel={`${item.name}, ${group.label}, ${item.dosage ?? 'dosering niet ingesteld'}`}
             accessibilityState={{ checked: !!item.done, disabled: pending || readOnly || !!item.recordedOnly }} disabled={pending || readOnly || item.recordedOnly} onPress={() => void toggle(item)}
             className="min-h-[48px] min-w-[44px] items-center justify-center">
-            <View className={`h-7 w-7 items-center justify-center rounded-full border-2 ${item.done ? 'border-mint-500 bg-mint-500' : 'border-ink-30'}`}>
-              {item.done && <Check size={17} color="white" />}
-            </View>
+            <DoneCircle done={!!item.done} />
           </Pressable>
           <View className="flex-1 flex-row items-center gap-2 border-b border-ink-8 py-3">
             <View className="flex-1 gap-1.5">

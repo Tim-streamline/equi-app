@@ -50,7 +50,7 @@ class ProtocolEvaluation
         // Use one business timezone for the offer; client timezone cannot extend a discount.
         $today = $now->setTimezone('Europe/Amsterdam')->startOfDay();
         $protocol->loadMissing('phases.weeks');
-        $weeks = max((int) $protocol->total_weeks, (int) $protocol->phases->flatMap->weeks->max('protocol_week_number'));
+        $weeks = $protocol->scheduledWeeks();
         $end = $protocol->started_at && $weeks > 0
             ? CarbonImmutable::parse($protocol->started_at->toDateString(), 'Europe/Amsterdam')->addWeeks($weeks)->subDay() : null;
         $record = $this->record($protocol);

@@ -476,7 +476,7 @@ class SyncController extends Controller
                 if (! DB::table('protocol_day_snapshots')->where('protocol_id', $protocol->id)->where('date', $date)->exists()) return ['skip' => 'unplanned'];
             }
             $day = $history->day($protocol, $date, $now);
-            $doses = collect($day['items'])->where('id', $item->id)->reject(fn ($row) => $row['recordedOnly'] ?? false);
+            $doses = ProtocolDayHistory::scheduled($day['items'])->where('id', $item->id);
             if ($doses->isEmpty() && $protocol->status === 'completed') return ['skip' => 'unplanned'];
             abort_if($doses->isEmpty(), 422, 'Deze gift stond niet op deze dag gepland.');
             return ['protocol' => $protocol, 'date' => $data['date'], 'item_id' => $item->id,

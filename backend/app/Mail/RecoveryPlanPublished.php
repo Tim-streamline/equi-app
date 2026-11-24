@@ -19,6 +19,6 @@ class RecoveryPlanPublished extends Mailable
 
     public function content(): Content
     {
-        return new Content(text: 'mail.recovery-plan-published-text', with: ['brandName' => Brand::NAME]);
+        return new Content(text: 'mail.recovery-plan-published-text');
     }
 }

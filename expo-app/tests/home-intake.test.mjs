@@ -4,6 +4,7 @@ import test from 'node:test';
 import ts from 'typescript';
 import * as uiStyles from '../components/ui/styles.ts';
 import * as evaluationHelpers from '../lib/protocol-evaluation.ts';
+import * as calendarHelpers from '../lib/protocol-calendar.ts';
 
 function load(path, modules) {
   const code = ts.transpileModule(readFileSync(new URL(path, import.meta.url), 'utf8'), {
@@ -60,6 +61,7 @@ function screen(homeUpsell) {
     '@/components/ui/Button': { Button: 'Button', PRIMARY_INK: '#083635' },
     '@/components/ui/styles': uiStyles,
     '@/lib/protocol-evaluation': evaluationHelpers,
+    '@/lib/protocol-calendar': calendarHelpers,
     '@/db/provider': { useDb: () => ({ selectHorse: id => { selected = id; } }) },
     '@/hooks/useHorseDashboard': { useHorseDashboard: () => ({
       data: ready ? { horse: { id: selected, name: selected }, greeting: selected ? 'Welkom, Tim' : 'Goedemorgen, Tim', hasPlus: !!selected && selected !== 'basic', showPlusUpsell: selected === 'unpurchased', homeUpsell, recommendations: selected ? [] : [1, 2, 3, 4].map(id => ({ id: `item-${id}`, title: `Item ${id}` })), protocol: activeProtocols.includes(selected) ? { id: `p-${selected}`, statusLabel: `Actief voor ${selected}`, currentDay: preparingProtocols.includes(selected) ? 0 : 3, currentWeek: preparingProtocols.includes(selected) ? 0 : 1, progressPercent: 10 } : null,

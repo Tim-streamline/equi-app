@@ -27,6 +27,7 @@ import { ShelbyChatButton } from "@/components/shelby/ShelbyChatButton";
 import { Button, PRIMARY_INK } from "@/components/ui/Button";
 import { PLAIN_CARD, HOME_NOTICE_LABEL, HOME_NOTICE_BODY, HOME_NOTICE_LINK } from "@/components/ui/styles";
 import { horsePossessive } from '@/lib/protocol-evaluation';
+import { shortDate } from '@/lib/protocol-calendar';
 
 export default function HomeScreen() {
   const { data, error, refresh, loading } = useHorseDashboard();
@@ -41,8 +42,8 @@ export default function HomeScreen() {
   const { preferences, ready: preferencesReady, saving, save } = useHomePreferences();
   const openLibrary = () => router.push("/(tabs)/(pager)/library");
   const cards = protocolCards(data);
-  const evaluations = [...cards.filter(card => card.evaluation?.available),
-    ...(data?.evaluationDrafts ?? []).filter(draft => !cards.some(card => card.id === draft.id && card.evaluation?.available))];
+  const due = cards.filter(card => card.evaluation?.available);
+  const evaluations = [...due, ...(data?.evaluationDrafts ?? []).filter(draft => !due.some(card => card.id === draft.id))];
   const seasonalCard = hasHorse && preferencesReady && seasonal && seasonalTipVisible(seasonal, preferences) && (
     <SeasonalTipCard
       tip={seasonal}
@@ -149,7 +150,8 @@ function protocolCards(data: HorseDashboard | null): HorseProtocolSummary[] {
 /** A horse's protocol in progress; opens Protocol on that horse. */
 function ProtocolCard({ id, horseId, horseName, statusLabel, currentDay, currentWeek, phaseLabel, progressPercent, progressKnown, preparing, startedAt }: HorseProtocolSummary) {
   const { selectHorse } = useDb();
-  const stopped = /gepauzeerd|afgerond|voltooid/i.test(statusLabel ?? '');
+  const finished = /afgerond|voltooid/i.test(statusLabel ?? '');
+  const stopped = finished || /gepauzeerd/i.test(statusLabel ?? '');
   const readyToStart = !stopped && (preparing ?? (currentDay <= 0));
   const showProgress = progressKnown !== false && currentDay > 0;
   // A start date that is still ahead: there is nothing to tick off yet.
@@ -175,23 +177,23 @@ function ProtocolCard({ id, horseId, horseName, statusLabel, currentDay, current
       </Text>}
       <Text className={`${readyToStart ? '' : 'mt-3'} font-bold text-[20px] leading-[26px] text-ink`}>
         {readyToStart ? `Het herstelplan voor ${horseName || 'je paard'} staat klaar!` : stopped ? statusLabel
-          : upcoming ? `${plan} start ${startedAt ? `op ${new Date(`${startedAt}T12:00:00`).toLocaleDateString('nl-NL', { day: 'numeric', month: 'long' })}` : 'binnenkort'}`
+          : upcoming ? `${plan} start ${startedAt ? `op ${shortDate(startedAt, { day: 'numeric', month: 'long' })}` : 'binnenkort'}`
           : `${plan} is in volle gang!`}
       </Text>
       {(readyToStart || upcoming || showProgress) && <Text className={`${readyToStart ? 'mt-3' : 'mt-1'} ${HOME_NOTICE_BODY}`}>
-        {readyToStart ? `Controleer welke kruiden, supplementen en andere producten je nodig hebt. Bestel wat je nog niet in huis hebt, zodat je op tijd met ${horseName ? `${possessive} herstelplan` : 'het herstelplan van je paard'} kunt starten.`
+        {readyToStart ? `Controleer welke kruiden, supplementen en andere producten je nodig hebt. Bestel wat je nog niet in huis hebt, zodat je op tijd met ${horseName ? plan : 'het herstelplan van je paard'} kunt starten.`
           : upcoming ? 'Vanaf die dag zie je hier wat je elke dag geeft.'
           : `Dag ${currentDay} · Week ${currentWeek}`}
         {!readyToStart && !upcoming && phaseLabel ? ` · ${phaseLabel}` : ""}
       </Text>}
-      {showProgress && !readyToStart && !upcoming && <View className="mt-4 h-1.5 overflow-hidden rounded-full bg-ink-8">
+      {showProgress && !readyToStart && <View className="mt-4 h-1.5 overflow-hidden rounded-full bg-ink-8">
         <View
           className="h-full bg-mint-500"
           style={{ width: `${progressPercent}%` }}
         />
       </View>}
       <Text className={`mt-4 ${HOME_NOTICE_LINK}`}>
-        {readyToStart ? 'Bekijk hier je bestellijst →' : upcoming || /afgerond|voltooid/i.test(statusLabel ?? '') ? 'Bekijk je herstelplan →' : 'Vink af wat je vandaag hebt gegeven →'}
+        {readyToStart ? 'Bekijk hier je bestellijst →' : upcoming || finished ? 'Bekijk je herstelplan →' : 'Vink af wat je vandaag hebt gegeven →'}
       </Text>
     </Pressable>
   );

@@ -19,6 +19,6 @@ class IntakeReceived extends Mailable
 
     public function content(): Content
     {
-        return new Content(text: 'mail.intake-received-text', with: ['brandName' => Brand::NAME]);
+        return new Content(text: 'mail.intake-received-text');
     }
 }

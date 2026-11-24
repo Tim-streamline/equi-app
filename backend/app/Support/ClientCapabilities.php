@@ -35,16 +35,19 @@ class ClientCapabilities
 
     public static function readOnlyDoses(Request $request): bool
     {
-        return (int) ($request->attributes->get('powersync_claims', [])[self::READ_ONLY_DOSES_CLAIM] ?? 0) === 1;
+        return self::has($request, self::READ_ONLY_DOSES_CLAIM);
     }
 
     /** JWT claims for the capabilities in a token request; unknown values are ignored. */
     public static function claims(Request $request): array
     {
         $requested = $request->input('capabilities');
+        if (! is_array($requested)) {
+            return [];
+        }
         $claims = [];
         foreach (self::CLAIMS as $capability => $claim) {
-            if (is_array($requested) && in_array($capability, $requested, true)) {
+            if (in_array($capability, $requested, true)) {
                 $claims[$claim] = 1;
             }
         }
@@ -55,16 +58,17 @@ class ClientCapabilities
     /** Whether the authenticated app tracks protocol doses separately. */
     public static function protocolDoses(Request $request): bool
     {
-        $claims = $request->attributes->get('powersync_claims', []);
-
-        return (int) ($claims[self::PROTOCOL_DOSES_CLAIM] ?? 0) === 1;
+        return self::has($request, self::PROTOCOL_DOSES_CLAIM);
     }
 
     /** Whether the authenticated app keeps paused and completed plans read-only. */
     public static function readOnlyPlans(Request $request): bool
     {
-        $claims = $request->attributes->get('powersync_claims', []);
+        return self::has($request, self::READ_ONLY_PLANS_CLAIM);
+    }
 
-        return (int) ($claims[self::READ_ONLY_PLANS_CLAIM] ?? 0) === 1;
+    private static function has(Request $request, string $claim): bool
+    {
+        return (int) ($request->attributes->get('powersync_claims', [])[$claim] ?? 0) === 1;
     }
 }
