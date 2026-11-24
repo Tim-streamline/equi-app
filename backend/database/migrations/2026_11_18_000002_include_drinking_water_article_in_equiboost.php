@@ -8,9 +8,11 @@ return new class extends Migration
 {
     public function up(): void
     {
-        // Keep already-free articles free for everyone; retain existing EquiBoost modes.
-        $items = DB::table('library_items')->whereNull('equiboost_access')
-            ->where(fn ($query) => $query->where('credit_cost', '>', 0)->orWhere('is_plus', true))->get();
+        // Only a credit-priced article moves to "credits for Basic, free during EquiBoost". Plus articles
+        // (included for every subscriber), free articles and any existing EquiBoost mode stay as they are:
+        // an EquiBoost mode would otherwise replace their broader regular access.
+        $items = DB::table('library_items')->whereNull('equiboost_access')->where('credit_cost', '>', 0)
+            ->where(fn ($query) => $query->where('is_plus', false)->orWhereNull('is_plus'))->get();
         foreach ($items as $item) {
             if (Str::slug($item->title) === 'drinkwater-onder-de-loep-wat-krijgt-je-paard-binnen') {
                 DB::table('library_items')->where('id', $item->id)->update(['equiboost_access' => 'included', 'updated_at' => now()]);

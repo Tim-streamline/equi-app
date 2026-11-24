@@ -125,13 +125,14 @@ class AdminProtocolManagementTest extends TestCase
     {
         // Day 16 must fall inside the 7-day window in which a past day can still be corrected.
         $this->travelTo(now()->setDate(2026, 9, 22)->setTime(12, 0));
-        $payload = [...$this->payload(), 'published' => true, 'started_at' => '2026-09-15'];
+        $payload = [...$this->payload(), 'published' => true, 'status' => 'active', 'started_at' => '2026-09-15'];
         $this->actingAs($this->admin, 'admin')->post('/admin/protocols', $payload)->assertSessionHasNoErrors();
         $protocol = Protocol::firstOrFail();
         $history = app(\App\Support\ProtocolDayHistory::class);
         // Simulate the owner's earlier start; publishing itself no longer starts the plan.
         $protocol->update(['started_at' => '2026-09-15']);
         $update = $this->storedPayload($protocol);
+        $update['status'] = 'active';
         $update['phases'][0]['supplements'] = [];
         $this->put('/admin/protocols/'.$protocol->id, $update)->assertSessionHasNoErrors();
         $day = $history->day($protocol->fresh(), '2026-09-16', \Carbon\CarbonImmutable::now('Europe/Amsterdam'));
@@ -140,6 +141,55 @@ class AdminProtocolManagementTest extends TestCase
         $this->assertDatabaseMissing('protocol_phase_supplements', ['id' => $day['items'][0]['id']]);
         $corrected = $history->setDone($protocol, '2026-09-16', $day['items'][0]['id'], true, \Carbon\CarbonImmutable::now('Europe/Amsterdam'));
         $this->assertTrue($corrected['items'][0]['done']);
+    }
+
+    #[\PHPUnit\Framework\Attributes\TestWith([false])]
+    #[\PHPUnit\Framework\Attributes\TestWith([true])]
+    public function test_removing_a_selection_or_phase_keeps_recorded_doses(bool $removePhase): void
+    {
+        $this->travelTo(now()->setDate(2026, 9, 22)->setTime(12, 0));
+        $payload = [...$this->payload(), 'published' => true, 'status' => 'active'];
+        $this->actingAs($this->admin, 'admin')->post('/admin/protocols', $payload)->assertSessionHasNoErrors();
+        $protocol = Protocol::firstOrFail();
+        $protocol->update(['started_at' => $removePhase ? '2026-08-18' : '2026-09-15']);
+        $update = $this->storedPayload($protocol);
+        $id = $update['phases'][$removePhase ? 1 : 0]['supplements'][0]['id'];
+        $history = app(\App\Support\ProtocolDayHistory::class);
+        $now = \Carbon\CarbonImmutable::now('Europe/Amsterdam');
+        $history->preserve($protocol, $now);
+        // These evening registrations arrived after the past day was frozen at one dose.
+        foreach (['2026-09-16', '2026-09-22'] as $date) {
+            \App\Models\ProtocolSupplementIntake::create(['protocol_phase_supplement_id' => $id, 'horse_id' => $protocol->horse_id,
+                'date' => $date, 'administration' => 2, 'done' => true, 'dosage' => '9 g']);
+        }
+        $update['status'] = 'active';
+        $update['published'] = true;
+        if ($removePhase) {
+            array_splice($update['phases'], 1, 1);
+        } else {
+            $update['phases'][0]['supplements'] = [];
+        }
+        $this->put('/admin/protocols/'.$protocol->id, $update)->assertSessionHasNoErrors();
+        $protocol->refresh();
+        $this->assertDatabaseMissing('protocol_supplement_intakes', ['protocol_phase_supplement_id' => $id]);
+        $this->assertDatabaseMissing('protocol_day_snapshots', ['protocol_id' => $protocol->id, 'date' => '2026-09-22']);
+        $today = app(\App\Support\HorseDashboard::class)->protocol($protocol, $now)['today'];
+        $extra = collect($today['items'])->firstWhere('id', $id);
+        $this->assertTrue($extra['recordedOnly']);
+        $this->assertSame('9 g', $extra['dosage']);
+
+        $day = $history->setDone($protocol, '2026-09-16', $id, false, $now, administration: null);
+        $rows = collect($day['items'])->where('id', $id)->keyBy('administration');
+        $this->assertFalse($rows[1]['done']);
+        $this->assertTrue($rows[2]['recordedOnly']);
+        $this->assertTrue($rows[2]['done']);
+        $this->assertSame('missed', $day['state']);
+        try {
+            $history->setDone($protocol, '2026-09-16', $id, false, $now, administration: 2);
+            $this->fail('An archived dose cannot be edited.');
+        } catch (\Symfony\Component\HttpKernel\Exception\HttpException $error) {
+            $this->assertSame(422, $error->getStatusCode());
+        }
     }
 
     public function test_admin_can_open_the_horse_specific_protocol_creator(): void

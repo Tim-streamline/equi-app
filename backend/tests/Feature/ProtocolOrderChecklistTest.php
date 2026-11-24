@@ -43,7 +43,7 @@ class ProtocolOrderChecklistTest extends TestCase
         $horse = Horse::create(['owner_id' => $this->owner->id, 'name' => 'Moos', 'status' => 'active']);
         $protocol = IntakeBooking::create(['user_id' => $this->owner->id, 'horse_id' => $horse->id, 'status' => 'pending', 'submitted_at' => now()])->protocol;
         if ($published) {
-            $protocol->update(['published_at' => now()->subMinute()]);
+            $protocol->update(['status' => 'active', 'published_at' => now()->subMinute()]);
         }
 
         return $protocol->fresh();
@@ -80,5 +80,29 @@ class ProtocolOrderChecklistTest extends TestCase
         $this->actAs(User::factory()->create());
         $this->tick($protocol, ['product:f1'], true)->assertNotFound();
         $this->assertNull($protocol->fresh()->ordered_product_keys);
+    }
+
+    public function test_writes_follow_what_the_owner_can_see(): void
+    {
+        $protocol = $this->protocol();
+        // A fresh draft, even with a publication date, and a plan published in the future are not visible yet.
+        Protocol::whereKey($protocol->id)->toBase()->update(['status' => 'draft']);
+        $this->tick($protocol, ['product:f1'], true)->assertNotFound();
+        Protocol::whereKey($protocol->id)->toBase()->update(['status' => 'active', 'published_at' => now()->addDay()]);
+        $this->tick($protocol, ['product:f1'], true)->assertNotFound();
+        Protocol::whereKey($protocol->id)->toBase()->update(['status' => 'archived', 'published_at' => now()->subDay()]);
+        $this->tick($protocol, ['product:f1'], true)->assertNotFound();
+        $this->assertNull($protocol->fresh()->ordered_product_keys);
+
+        // Paused and completed plans stay readable, and so does their order list.
+        foreach (['paused', 'completed'] as $status) {
+            Protocol::whereKey($protocol->id)->toBase()->update(['status' => $status]);
+            $this->tick($protocol, [$status.':f1'], true)->assertOk();
+        }
+        $this->assertSame(['paused:f1', 'completed:f1'], $protocol->fresh()->ordered_product_keys);
+
+        // Ownership still applies to visible plans.
+        $this->actAs(User::factory()->create());
+        $this->tick($protocol, ['other:f1'], true)->assertNotFound();
     }
 }

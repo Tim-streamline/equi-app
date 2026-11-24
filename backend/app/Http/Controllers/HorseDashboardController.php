@@ -75,7 +75,20 @@ class HorseDashboardController extends Controller
     /** Released apps keep their original payload; see LegacyProtocolClient. */
     private function forClient(Request $request, array $dashboard): array
     {
-        return ClientCapabilities::protocolDoses($request) ? $dashboard : app(LegacyProtocolClient::class)->dashboard($dashboard);
+        if (! ClientCapabilities::protocolDoses($request)) return app(LegacyProtocolClient::class)->dashboard($dashboard);
+        if (! ClientCapabilities::readOnlyDoses($request) && isset($dashboard['protocol']['today'])) {
+            $dashboard['protocol']['today'] = $dashboard['protocol']['completed']
+                ? ['items' => [], 'total' => 0, 'done' => 0, 'percentage' => 0]
+                : $this->scheduledItemsOnly($dashboard['protocol']['today']);
+        }
+        return $dashboard;
+    }
+
+    /** Earlier dose-aware clients render every row as an editable scheduled dose. */
+    private function scheduledItemsOnly(array $day): array
+    {
+        $day['items'] = array_values(array_filter($day['items'], fn ($item) => ! ($item['recordedOnly'] ?? false)));
+        return $day;
     }
 
     public function day(Request $request, Horse $horse, ProtocolDayHistory $history)
@@ -100,9 +113,10 @@ class HorseDashboardController extends Controller
                 : $history->day($protocol, $data['date'], $now)));
         }
 
-        return response()->json($request->isMethod('POST')
+        $day = $request->isMethod('POST')
             ? $history->setDone($protocol, $data['date'], $data['item_id'], (bool) $data['done'], $now, true, $data['administration'] ?? 1)
-            : $history->day($protocol, $data['date'], $now));
+            : $history->day($protocol, $data['date'], $now);
+        return response()->json(ClientCapabilities::readOnlyDoses($request) ? $day : $this->scheduledItemsOnly($day));
     }
 
     /** Ticks products off (or back on) in the customer's order list; one key per product and phase. */
@@ -117,8 +131,10 @@ class HorseDashboardController extends Controller
         ]);
 
         $keys = DB::transaction(function () use ($horse, $data) {
-            $protocol = $horse->protocols()->whereKey($data['protocol_id'])->whereNotNull('published_at')
-                ->where('status', '!=', 'archived')->lockForUpdate()->firstOrFail();
+            // Only a plan the owner can see (as in HorseDashboard): no drafts, future publications or archived plans.
+            // Paused and completed plans stay readable, with their order list.
+            $protocol = $horse->protocols()->whereKey($data['protocol_id'])->whereIn('status', ['active', 'paused', 'completed'])
+                ->whereNotNull('published_at')->where('published_at', '<=', now())->lockForUpdate()->firstOrFail();
             $current = $protocol->ordered_product_keys ?? [];
             $next = $data['ordered'] ? array_unique([...$current, ...$data['keys']]) : array_diff($current, $data['keys']);
             abort_if(count($next) > 1000, 422, 'Te veel producten afgevinkt.');

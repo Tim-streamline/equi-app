@@ -59,7 +59,7 @@ export function ProtocolCalendar({ protocol, today, horseId, onMonth, onPhase, o
     finally { if (generation === request.current) setBusy(false); }
   };
   const toggle = async (item: DashboardSupplement) => {
-    if (!day || !canEditDay || saving.current || busy) return;
+    if (!day || !canEditDay || item.recordedOnly || saving.current || busy) return;
     saving.current = true;
     selectionHaptic();
     const generation = ++request.current;
@@ -81,7 +81,7 @@ export function ProtocolCalendar({ protocol, today, horseId, onMonth, onPhase, o
   };
   const showPhases = (phases: DashboardPhase[]) => { if (phases.length === 1) onPhase(phases[0]); else setChoices(phases); };
   const next = nextPhaseStart(protocol, today);
-  const todayItems = todayGroups(protocol.today.items, local).flatMap(group => group.items);
+  const todayItems = todayGroups(protocol.today.items, readOnly ? [] : local).flatMap(group => group.items);
   const shownDay = day?.date === today ? { ...day, items: todayItems } : day;
   const selectedItem = shownDay?.items.find(item => administrationKey(item) === detail);
   const groups = todayGroups(shownDay?.items ?? [], []);
@@ -115,9 +115,9 @@ export function ProtocolCalendar({ protocol, today, horseId, onMonth, onPhase, o
         {cells.map((cell, index) => {
         const changed = cell ? overrides[cell.date] : null;
         const isToday = !!cell?.isToday && !protocol.preparing;
-        const counts = isToday ? { total: todayItems.length, done: todayItems.filter(item => item.done).length, state: cell?.state ?? 'default' }
-          : changed ? { total: changed.items.length, done: changed.items.filter(item => item.done).length, state: changed.state } : cell;
-        const progress = !protocol.preparing && cell && cell.date <= today && counts ? dayProgress(counts) : null;
+        const scheduled = (isToday ? todayItems : changed?.items)?.filter(item => !item.recordedOnly);
+        const counts = scheduled ? { total: scheduled.length, done: scheduled.filter(item => item.done).length, state: changed?.state ?? cell?.state ?? 'default' } : cell;
+        const progress = !protocol.preparing && cell && !cell.recordedOnly && cell.date <= today && counts ? dayProgress(counts) : null;
         const starts = cell ? phaseStarts(protocol, cell.date) : [];
         const available = !!cell && (isToday || cell.available || starts.length > 0);
         return <View key={cell?.date ?? `blank-${index}`} style={{ width: '14.285714%', minHeight: 64 }} className="items-center justify-center">
@@ -167,10 +167,10 @@ export function ProtocolCalendar({ protocol, today, horseId, onMonth, onPhase, o
         {groups.map(group => <View key={group.label} className="mb-4">
           {groups.length > 1 && <View className="mb-1 flex-row items-center justify-between"><Text accessibilityRole="header" className={`${EYEBROW} text-ink-70`}>{group.label}</Text><Text className={T.meta}>{group.done} van {group.items.length}</Text></View>}
           {group.items.map(item => <View key={administrationKey(item)} className="flex-row items-center gap-2">
-            <Pressable accessibilityRole="checkbox" accessibilityLabel={`${item.name}, ${group.label}, ${item.dosage ?? ''}`} accessibilityState={{ checked: !!item.done, disabled: busy || !canEditDay }} disabled={busy || !canEditDay} onPress={() => void toggle(item)} className="min-h-[48px] min-w-[44px] items-center justify-center">
+            <Pressable accessibilityRole="checkbox" accessibilityLabel={`${item.name}, ${group.label}, ${item.dosage ?? ''}`} accessibilityState={{ checked: !!item.done, disabled: busy || !canEditDay || !!item.recordedOnly }} disabled={busy || !canEditDay || !!item.recordedOnly} onPress={() => void toggle(item)} className="min-h-[48px] min-w-[44px] items-center justify-center">
               <View className={`h-7 w-7 items-center justify-center rounded-full border-2 ${item.done ? 'border-mint-500 bg-mint-500' : 'border-ink-30'}`}>{item.done && <Check size={17} color="white" />}</View>
             </Pressable>
-            <View className="flex-1 flex-row items-center gap-2 border-b border-ink-8 py-3"><Text className={`flex-1 ${S.row} text-ink`}><Text className={S.rowTitle}>{item.name}</Text>{'  '}<Text className="text-ink-70">{item.dosage}</Text></Text><Pressable accessibilityRole="button" accessibilityLabel={`Uitleg over ${item.name}, ${group.label}`} onPress={() => setDetail(administrationKey(item))} className="min-h-[44px] flex-row items-center gap-1"><Text className={T.link}>Uitleg</Text><ChevronRight size={17} color="#106E6D" /></Pressable></View>
+            <View className="flex-1 flex-row items-center gap-2 border-b border-ink-8 py-3"><Text className={`flex-1 ${S.row} text-ink`}><Text className={S.rowTitle}>{item.name}</Text>{'  '}<Text className="text-ink-70">{item.dosage}</Text>{item.recordedOnly && <Text> · Eerder geregistreerd</Text>}</Text><Pressable accessibilityRole="button" accessibilityLabel={`Uitleg over ${item.name}, ${group.label}`} onPress={() => setDetail(administrationKey(item))} className="min-h-[44px] flex-row items-center gap-1"><Text className={T.link}>Uitleg</Text><ChevronRight size={17} color="#106E6D" /></Pressable></View>
           </View>)}
         </View>)}
       </>}

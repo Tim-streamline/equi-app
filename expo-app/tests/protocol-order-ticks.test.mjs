@@ -74,3 +74,78 @@ test('a tick that cannot be saved is undone and reported, and later taps still g
   assert.deepEqual(shown.at(-1)[0], ['b:all']);
   assert.equal(shown.at(-1)[1], false, 'a new tap starts without the earlier error');
 });
+
+test('the last answer is marked as settled, also after a failure', async () => {
+  const fake = server();
+  const ticks = exports.createOrderTicks(fake.send);
+  const shown = [];
+  ticks.toggle([], ['a:all'], true, (...args) => shown.push(args));
+  ticks.toggle([], ['b:all'], true, (...args) => shown.push(args));
+  await settle(); fake.answer(); await settle(); fake.fail(); await settle();
+  assert.deepEqual(shown.map(update => update[2]), [false, false, true]);
+  assert.deepEqual(shown.at(-1), [['a:all'], true, true], 'a failure settles on the last confirmed list');
+});
+
+test('another device undoing a tick shows once a dashboard requested after the last answer arrives', () => {
+  const show = exports.shownOrderedKeys;
+  // This device ticked p:all; the server confirmed it after dashboard request 5 had started.
+  const pending = { horseId: 'h', protocolId: 'p', keys: ['p:all'], settledAt: null };
+  assert.deepEqual(show(pending, 'h', 'p', [], 9), ['p:all'], 'while saving the own taps stay, whatever polls return');
+  const settled = { ...pending, settledAt: 5 };
+  // The dashboard from before the tick still lists nothing, and a later one too after the other device unticked it:
+  // equal key lists, so only the request number can tell them apart.
+  assert.deepEqual(show(settled, 'h', 'p', [], 0), ['p:all'], 'a cached response does not decide');
+  assert.deepEqual(show(settled, 'h', 'p', [], 5), ['p:all'], 'a poll already under way does not decide');
+  assert.deepEqual(show(settled, 'h', 'p', [], 6), [], 'a dashboard requested afterwards does');
+  assert.deepEqual(show(settled, 'h', 'p', ['p:all', 'q:all'], 6), ['p:all', 'q:all']);
+  // Another horse or protocol never shows these ticks.
+  assert.deepEqual(show(settled, 'other', 'p', ['x:all'], 0), ['x:all']);
+  assert.deepEqual(show(pending, 'h', 'other', ['x:all'], 0), ['x:all']);
+  assert.deepEqual(show(null, 'h', 'p', ['x:all'], 0), ['x:all']);
+});
+
+test('dashboard responses carry their request number; cached and superseded polls never look newer', async t => {
+  const compile = path => ts.transpileModule(readFileSync(new URL(path, import.meta.url), 'utf8'), { compilerOptions: { target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.CommonJS } }).outputText;
+  const flush = async () => { for (let i = 0; i < 20; i++) await Promise.resolve(); };
+  const state = [], refs = [], effects = [];
+  let index = 0, refIndex = 0, started = false;
+  const modules = {
+    react: {
+      useState: initial => { const i = index++; if (!(i in state)) state[i] = typeof initial === 'function' ? initial() : initial; return [state[i], next => { state[i] = typeof next === 'function' ? next(state[i]) : next; }]; },
+      useRef: initial => refs[refIndex++] ??= { current: initial }, useCallback: fn => fn,
+      useEffect: fn => { if (!started) effects.push(fn); },
+    },
+    'react-native': {}, 'expo-router': { useFocusEffect: () => {} },
+    '@/lib/library-events': { onLibraryUnlock: () => () => {} },
+    '@/lib/account-session': { accountSession: { revision: 0 } },
+    '@react-native-async-storage/async-storage': { default: {
+      getAllKeys: async () => [], multiRemove: async () => {}, removeItem: async () => {}, setItem: async () => {},
+      getItem: async () => JSON.stringify({ orderedKeys: ['cached:all'] }),
+    } },
+    '@/db/provider': { useDb: () => ({ currentUserId: 'user', syncStatus: 'offline' }) },
+    '@/db/hooks': { useCurrentHorseId: () => 'horse' }, '@/db/auth': { getApiBaseUrl: () => 'https://example.test' },
+    '@/db/connector': { getOrMintToken: async () => 'token' },
+    '@/lib/horse-dashboard': { dashboardAtTime: data => data, dashboardForHorse: data => data },
+  };
+  const answers = [];
+  t.mock.method(globalThis, 'fetch', async () => new Promise(resolve => { answers.push(resolve); }));
+  const hook = {};
+  new Function('require', 'exports', compile('../hooks/useHorseDashboard.ts'))(name => modules[name], hook);
+  const render = () => { index = refIndex = 0; return hook.useHorseDashboard(); };
+  render(); effects.forEach(fn => fn()); started = true; await flush();
+  assert.deepEqual([render().data.orderedKeys, render().revision], [['cached:all'], 0]);
+  const before = hook.latestDashboardRequest();
+  void render().refresh();
+  const mark = hook.latestDashboardRequest();
+  assert.equal(mark, before + 1);
+  void render().refresh();
+  await flush();
+  // The newer poll answers first; the older one, answering later, is discarded.
+  answers[1](new Response(JSON.stringify({ orderedKeys: [] })));
+  await flush();
+  answers[0](new Response(JSON.stringify({ orderedKeys: ['stale:all'] })));
+  await flush();
+  assert.deepEqual(render().data.orderedKeys, []);
+  assert.equal(render().revision, mark + 1);
+  assert.deepEqual(exports.shownOrderedKeys({ horseId: 'horse', protocolId: 'p', keys: ['mine:all'], settledAt: mark }, 'horse', 'p', render().data.orderedKeys, render().revision), []);
+});

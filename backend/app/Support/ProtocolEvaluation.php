@@ -65,6 +65,23 @@ class ProtocolEvaluation
             'discountEligible' => (bool) ($available && $today->lte($end->addDays(7)))];
     }
 
+    /** Saved, unfinished evaluations remain reachable after a follow-up plan takes over the horse's card. */
+    public function draftNotices(\App\Models\User $user, CarbonImmutable $now): array
+    {
+        $protocols = Protocol::whereIn('id', DB::table('protocol_evaluations')->select('protocol_id')
+            ->where('user_id', $user->id)->whereNull('submitted_at'))
+            ->whereHas('horse', fn ($query) => $query->where('owner_id', $user->id)->where('status', 'active'))
+            ->with('horse', 'phases.weeks')->orderByDesc('published_at')->orderBy('id')->get();
+
+        $notices = [];
+        foreach ($protocols as $protocol) {
+            $evaluation = $this->timing($protocol, $now);
+            if ($evaluation['available']) $notices[] = ['id' => $protocol->id, 'horseId' => $protocol->horse_id,
+                'horseName' => $protocol->horse->name, 'evaluation' => $evaluation];
+        }
+        return $notices;
+    }
+
     public function payload(Protocol $protocol, CarbonImmutable $now): array
     {
         $timing = $this->timing($protocol, $now);
@@ -78,6 +95,7 @@ class ProtocolEvaluation
         return $timing + ['protocolId' => $protocol->id, 'horseId' => $protocol->horse_id,
             'horseName' => $protocol->horse->name, 'questions' => $questions, 'questionVersion' => $this->questionVersion($questions),
             // An object also when empty, so the app always gets a map.
+            'revision' => (int) ($record->revision ?? 0),
             'answers' => (object) ($record ? json_decode($record->answers, true) : []),
             'submittedAt' => $record?->submitted_at,
             'basePriceCents' => $base,

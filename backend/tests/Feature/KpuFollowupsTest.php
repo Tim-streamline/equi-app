@@ -4,8 +4,10 @@ namespace Tests\Feature;
 
 use App\Models\Horse;
 use App\Models\IntakeBooking;
+use App\Models\IntakeField;
 use App\Models\IntakeQuestionnaire;
 use App\Models\User;
+use App\Support\IntakeQuestionnaireSnapshot;
 use Database\Seeders\IntakeQuestionnaireSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -43,5 +45,32 @@ class KpuFollowupsTest extends TestCase
         $this->assertSame(json_encode('Indikan 10, KPU 20'), $answer->fresh()->value);
         $migration->up();
         $this->assertSame($keys, $section->fields()->orderBy('order')->pluck('key')->all());
+    }
+
+    public function test_the_shipped_local_snapshot_already_matches_the_migration_so_a_sync_does_not_undo_it(): void
+    {
+        $this->seed(IntakeQuestionnaireSeeder::class);
+        $snapshots = app(IntakeQuestionnaireSnapshot::class);
+        $file = json_decode(file_get_contents(database_path('data/intake-questionnaire-local.json')), true);
+        $directory = storage_path('framework/testing/kpu-snapshot-'.\Illuminate\Support\Str::uuid());
+        try {
+            $snapshots->sync($file, true, $directory);
+            $user = User::factory()->create();
+            $horse = Horse::create(['owner_id' => $user->id, 'name' => 'KPU']);
+            $answer = IntakeBooking::create(['user_id' => $user->id, 'horse_id' => $horse->id])->answers()
+                ->create(['section_id' => 'medisch', 'field_id' => 'kpu-onderzoek-uitslag', 'value' => json_encode('Indikan 10, KPU 20')]);
+            // The migration on a destination that matches the snapshot changes nothing, and the README's
+            // manual sync after it finds nothing to change either.
+            (require database_path('migrations/2026_11_19_000001_expand_kpu_urine_followups.php'))->up();
+            $this->assertSame([], $snapshots->sync($file)['changes']);
+            $this->assertSame([], $snapshots->sync($file, true, $directory)['changes']);
+            $fields = IntakeField::where('key', 'like', 'kpu-%')->orderBy('order')->get()->keyBy('key');
+            $this->assertSame(['kpu-status', 'kpu-onderzoek-datum', 'kpu-indikan-waarde', 'kpu-kryptopyrrolurie-waarde', 'kpu-hertest', 'kpu-hertest-datum'], $fields->keys()->take(6)->all());
+            $this->assertFalse($fields['kpu-onderzoek-uitslag']->active);
+            $this->assertContains('Ja, aangetoond met urineonderzoek', $fields['kpu-attest']->show_if['kpu-status']);
+            $this->assertSame(json_encode('Indikan 10, KPU 20'), $answer->fresh()->value);
+        } finally {
+            \Illuminate\Support\Facades\File::deleteDirectory($directory);
+        }
     }
 }

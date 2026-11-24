@@ -137,6 +137,18 @@ test('a plan closed before its scheduled end is not announced as almost finished
   assert.ok(!text(reminder).includes('bijna') && !text(reminder).includes('Over 9 dagen'));
 });
 
+test('a plan completed before the owner started opens read-only without an order prompt or day zero', () => {
+  const app = screen();
+  app.addHorse('Moos');
+  app.activeProtocols.push('Moos');
+  app.summaries.Moos = { statusLabel: 'Je protocol is afgerond', preparing: true, currentDay: 0, currentWeek: 0 };
+  const card = app.render().find(node => node?.props?.accessibilityLabel === 'Protocol van Moos');
+  assert.match(text(card), /Je protocol is afgerond/);
+  assert.doesNotMatch(text(card), /Bestel|Dag 0|Week 0/);
+  card.props.onPress();
+  assert.equal(app.routes.at(-1).params.orderList, '0');
+});
+
 test('a plan with a start date still ahead says when it starts and offers nothing to tick off', () => {
   const app = screen();
   app.addHorse('Moos');
@@ -315,6 +327,77 @@ test('the local intake query derives publication like the dashboard, ignoring fu
   const progress = db.prepare(queries.PROTOCOLS_FOR_ALL_HORSES).all('u');
   assert.equal(progress.find(row => row.id === 'draft').has_answers, 1);
   assert.equal(progress.find(row => row.id === 'past').has_answers, 0);
+});
+
+test('the local query marks only the plan the Protocol tab will show, with the dashboard order and id tie-break', async () => {
+  const { DatabaseSync } = await import('node:sqlite');
+  const queries = await import('../lib/intake/protocol-queries.ts');
+  const db = new DatabaseSync(':memory:');
+  db.exec(`CREATE TABLE protocols (id TEXT, title TEXT, status TEXT, horse_id TEXT, published_at TEXT, created_at TEXT);
+    CREATE TABLE intake_bookings (id TEXT, protocol_id TEXT, user_id TEXT, status TEXT, submitted_at TEXT, completed_at TEXT);
+    CREATE TABLE intake_answers (response_id TEXT, section_id TEXT, field_id TEXT, value TEXT);
+    CREATE TABLE horses (id TEXT, name TEXT, status TEXT);
+    INSERT INTO horses VALUES ('h', 'Nova', 'active');`);
+  const shown = () => Object.fromEntries(db.prepare(queries.PROTOCOLS_FOR_HORSE).all('h', 'u').map(row => [row.id, row.shown_in_tab]));
+  const add = (id, status, published, withIntake = true) => {
+    db.prepare("INSERT INTO protocols VALUES (?, 'Plan', ?, 'h', ?, '2026-01-01')").run(id, status, published);
+    if (withIntake) db.prepare("INSERT INTO intake_bookings VALUES (?, ?, 'u', 'pending', '2026-01-01', NULL)").run(`i-${id}`, id);
+  };
+  add('b-paused', 'paused', '2026-02-01 10:00:00');
+  add('c-paused', 'paused', '2026-02-01T10:00:00Z');
+  add('a-old', 'paused', '2026-01-01 10:00:00');
+  // Equal publication times: the lowest id wins, as on the server.
+  assert.deepEqual(shown(), { 'b-paused': 1, 'c-paused': 0, 'a-old': 0 });
+  // A future active plan is not shown yet; a later paused plan, even without its own intake card, wins.
+  add('future', 'active', '2999-01-01 10:00:00');
+  add('later', 'paused', '2026-03-01 10:00:00', false);
+  assert.deepEqual(shown(), { 'b-paused': 0, 'c-paused': 0, 'a-old': 0, future: 0 });
+  // A visible active plan always wins over every paused plan.
+  db.exec("DELETE FROM protocols WHERE id = 'later'");
+  add('running', 'active', '2026-01-15 10:00:00', false);
+  assert.deepEqual(shown(), { 'b-paused': 0, 'c-paused': 0, 'a-old': 0, future: 0 });
+});
+
+test('a paused plan card links to the Protocol tab only when the tab shows that exact plan', () => {
+  const app = screen();
+  app.purchases.submitted[0] = { ...app.purchases.submitted[0], status: 'paused', published: 1, shown_in_tab: 0 };
+  let card = app.render().find(n => n?.type === 'Pressable' && text(n).includes("submitted's herstelplan is gepauzeerd"));
+  assert.ok(card && card.props.disabled && !card.props.accessibilityRole);
+  assert.ok(!text(card).includes('Bekijk je herstelplan'));
+  app.purchases.submitted[0].shown_in_tab = 1;
+  card = app.render().find(n => n?.type === 'Pressable' && text(n).includes("submitted's herstelplan is gepauzeerd"));
+  assert.ok(!card.props.disabled && text(card).includes('Bekijk je herstelplan →'));
+  card.props.onPress();
+  assert.deepEqual(app.routes.at(-1).params, { horseId: 'submitted', protocolId: 'p2', tab: 'vandaag' });
+});
+
+test('actionableOnly keeps open intakes and drops completed, excluded and unopenable rows', () => {
+  const routes = [];
+  const rows = [
+    { id: 'done', title: 'Oud plan', status: 'completed', booking_id: 'b0', submitted_at: '2026-01-01', published: 1 },
+    { id: 'next', title: 'Persoonlijk protocol', status: 'draft', booking_id: 'b1', submitted_at: null },
+    { id: 'sent', title: 'Persoonlijk protocol', status: 'draft', booking_id: 'b2', submitted_at: '2026-10-01' },
+    { id: 'behind', title: 'Plan', status: 'paused', booking_id: 'b3', submitted_at: '2026-01-01', published: 1, shown_in_tab: 0 },
+    { id: 'shown', title: 'Plan', status: 'completed', booking_id: 'b4', submitted_at: '2026-01-01', published: 1 },
+  ].map(row => ({ ...row, horse_id: 'h', horse_name: 'Nova' }));
+  const jsx = (type, props) => typeof type === 'function' ? type(props) : ({ type, props });
+  const { PurchasedProtocols } = load('../components/intake/PurchasedProtocols.tsx', {
+    'react/jsx-runtime': { jsx, jsxs: jsx, Fragment: 'Fragment' },
+    'react-native': { View: 'View', Text: 'Text', Pressable: 'Pressable' },
+    'expo-router': { router: { push: route => routes.push(route) } },
+    '@/db/hooks': { useCurrentHorseId: () => 'h', useCurrentUserId: () => 'u' },
+    '@/db/provider': { useDb: () => ({ selectHorse() {} }) },
+    '@powersync/react': { useQuery: () => ({ data: rows }) },
+    '@/components/ui/styles': uiStyles, '@/lib/protocol-evaluation': evaluationHelpers,
+    '@/lib/intake/submission': { formatIntakeDate: () => '1 oktober 2026' },
+    '@/lib/intake/protocol-queries': { PROTOCOLS_FOR_HORSE: 'for-horse', PROTOCOLS_FOR_ALL_HORSES: 'all-horses' },
+  });
+  const cards = flatten(PurchasedProtocols({ excludeProtocolIds: ['shown'], actionableOnly: true })).filter(n => n?.type === 'Pressable');
+  assert.deepEqual(cards.map(card => card.props.accessibilityLabel), ['Start de intake voor Nova']);
+  cards[0].props.onPress();
+  assert.deepEqual(routes.at(-1), { pathname: '/intake', params: { bookingId: 'b1' } });
+  // Without the option every row keeps its card, as on Home.
+  assert.equal(flatten(PurchasedProtocols({})).filter(n => n?.type === 'Pressable').length, 5);
 });
 
 test('Home removes only the intake card whose published protocol already has a protocol card', () => {

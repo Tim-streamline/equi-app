@@ -1,9 +1,20 @@
 <script>
-    import { router, useForm } from '@inertiajs/svelte';
+    import { useForm } from '@inertiajs/svelte';
     import Field from '$lib/components/Field.svelte';
     import { Button, Input, Textarea } from '$lib/components/ui';
     let { question } = $props();
     const form = useForm({ label: question.label, order: question.order, active: question.active });
+
+    // Through this form, so a refusal (such as removing the last active question) shows below it. The server only
+    // deactivates the stored question; unsaved edits in the form stay as they are.
+    function remove() {
+        if (!confirm('Deze evaluatievraag verwijderen uit nieuwe formulieren? Eerdere evaluaties blijven bewaard.')) return;
+        $form.delete(`/admin/evaluation-questions/${question.id}`, {
+            preserveScroll: true,
+            // This form outlives the visit; without this its next save would reactivate the question.
+            onSuccess: () => { $form.active = false; },
+        });
+    }
 </script>
 
 <form class="space-y-4 rounded-xl border bg-card p-5" onsubmit={event => { event.preventDefault(); $form.put(`/admin/evaluation-questions/${question.id}`, { preserveScroll: true }); }}>
@@ -19,12 +30,6 @@
     {#if $form.errors.active}<p class="text-sm text-destructive">{$form.errors.active}</p>{/if}
     <div class="flex gap-3">
         <Button type="submit" disabled={$form.processing}>Opslaan</Button>
-        {#if question.active}<Button type="button" variant="outline" onclick={() => {
-            if (confirm('Deze evaluatievraag verwijderen uit nieuwe formulieren? Eerdere evaluaties blijven bewaard.')) router.delete(`/admin/evaluation-questions/${question.id}`, {
-                preserveScroll: true,
-                // This form outlives the visit; without this its next save would reactivate the question.
-                onSuccess: () => { $form.active = false; },
-            });
-        }}>Verwijderen</Button>{/if}
+        {#if question.active}<Button type="button" variant="outline" disabled={$form.processing} onclick={remove}>Verwijderen</Button>{/if}
     </div>
 </form>

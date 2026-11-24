@@ -62,7 +62,7 @@ test('login uses CSRF and HttpOnly session transport; renewal never resends the 
   assert.deepEqual(requests.map(request => request.url), ['/web-session/csrf', '/web-session/login', '/web-session/csrf', '/web-session/token']);
   assert.equal(requests[1].options.headers['X-CSRF-TOKEN'], 'current-csrf');
   assert.equal(requests[1].options.credentials, 'same-origin');
-  assert.deepEqual(JSON.parse(requests[3].options.body), { capabilities: ['protocol-doses'] });
+  assert.deepEqual(JSON.parse(requests[3].options.body), { capabilities: ['protocol-doses', 'read-only-plans', 'read-only-doses'] });
   assert.equal((await getSession()).user.id, 'first');
   assert.equal(requests.length, 4, 'valid tokens are cached in memory');
 });
@@ -135,12 +135,12 @@ test('only email confirmation creates a renewable browser session using fresh CS
   assert.equal((await getSession()).user.id, 'new-user');
   const verify = requests.find(r=>r.url.endsWith('/complete'));
   assert.equal(verify.options.headers['X-CSRF-TOKEN'],'registration-csrf');
-  assert.deepEqual(JSON.parse(verify.options.body),{registration_token:'challenge',capabilities:['protocol-doses']});
+  assert.deepEqual(JSON.parse(verify.options.body),{registration_token:'challenge',capabilities:['protocol-doses', 'read-only-plans', 'read-only-doses']});
   assert.equal(requests[1].url, '/web-session/register');
   assert.equal(requests[1].options.headers['X-CSRF-TOKEN'], 'registration-csrf');
   assert.deepEqual(JSON.parse(requests[1].options.body), input);
   await getSession(undefined, true);
-  assert.deepEqual(JSON.parse(requests.at(-1).options.body), { capabilities: ['protocol-doses'] });
+  assert.deepEqual(JSON.parse(requests.at(-1).options.body), { capabilities: ['protocol-doses', 'read-only-plans', 'read-only-doses'] });
 });
 
 test('every request that mints a PowerSync token declares per-dose protocol support', async () => {
@@ -174,7 +174,7 @@ test('every request that mints a PowerSync token declares per-dose protocol supp
   await requestPasswordReset('owner@example.test');
 
   assert.deepEqual(minted().map(r => r.path), ['token', 'token', 'token', 'login', 'register/complete']);
-  for (const r of minted()) assert.deepEqual(r.body.capabilities, ['protocol-doses'], r.path);
+  for (const r of minted()) assert.deepEqual(r.body.capabilities, ['protocol-doses', 'read-only-plans', 'read-only-doses'], r.path);
   assert.equal(requests.find(r => r.path === 'login').body.password, 'secret');
   assert.equal(requests.find(r => r.path === 'register/complete').body.registration_token, 'challenge');
   for (const r of requests.filter(r => !minted().includes(r))) assert.equal('capabilities' in r.body, false, r.path);

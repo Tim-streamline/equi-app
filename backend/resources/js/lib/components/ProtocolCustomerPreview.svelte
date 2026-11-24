@@ -3,7 +3,7 @@
     import { onMount } from 'svelte';
     import { PROTOCOL_TABS } from '../../../../../expo-app/lib/protocol-tabs.ts';
     import { careSections } from '../../../../../expo-app/lib/protocol-care.ts';
-    import { administrationKey, todayGroups } from '../../../../../expo-app/lib/protocol-today.ts';
+    import { administrationKey, inlineTiming, todayGroups } from '../../../../../expo-app/lib/protocol-today.ts';
     import { csrfHeaders } from '$lib/csrf.js';
     let { payload, protocolId = null, onclose } = $props();
     let result = $state(null);
@@ -111,7 +111,7 @@
                             {#each group.items as item}
                                 <div class="flex items-center gap-3 py-3">
                                     <span class="size-7 shrink-0 rounded-full border-2 border-[#1B2A2A]/30"></span>
-                                    <div class="flex-1 border-b border-[#1B2A2A]/10 pb-2"><span class="text-base font-semibold">{item.name}</span><span class="ml-2 text-base text-[#1B2A2A]/60">{item.dosage}</span></div>
+                                    <div class="flex-1 border-b border-[#1B2A2A]/10 pb-2"><span class="text-base font-semibold">{item.name}</span><span class="ml-2 text-base text-[#1B2A2A]/60">{item.dosage}</span>{#if inlineTiming(item)}<span class="text-base font-semibold text-[#106E6D]"> · {inlineTiming(item)}</span>{/if}</div>
                                     <button type="button" class="text-sm font-semibold text-[#106E6D]" onclick={() => productKey = administrationKey(item)}>Uitleg ›</button>
                                 </div>
                             {/each}

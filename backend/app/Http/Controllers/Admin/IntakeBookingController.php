@@ -153,9 +153,18 @@ class IntakeBookingController extends Controller
     public function updateStatus(Request $request, IntakeBooking $booking): RedirectResponse
     {
         $status = $request->validate(['status' => ['required', 'in:pending,confirmed,done,cancelled']])['status'];
-        $before = $booking->only('status');
-        $booking->update(['status' => $status]);
-        AuditLogger::updated($booking, $before, $request->input('reason'));
+        $booking = DB::transaction(function () use ($booking, $status, $request) {
+            $booking = IntakeBooking::whereKey($booking->id)->lockForUpdate()->firstOrFail();
+            $before = $booking->only('status');
+            // Retire older pending confirmations even when an admin immediately reopens a cancelled booking.
+            if (($booking->status === 'cancelled' || $status === 'cancelled') && $booking->confirmation_email_status === 'pending') {
+                $booking->confirmation_email_status = 'skipped';
+            }
+            $booking->update(['status' => $status]);
+            AuditLogger::updated($booking, $before, $request->input('reason'));
+
+            return $booking;
+        });
 
         return back()->with('success', "Booking: {$booking->status_label}.");
     }

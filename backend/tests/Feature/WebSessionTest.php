@@ -91,6 +91,8 @@ class WebSessionTest extends TestCase
         $this->assertFalse(property_exists($claims($this->postJson('/web-session/token', ['capabilities' => ['protocol-doses']])), 'read_only_plans'));
         $readOnly = $claims($this->postJson('/web-session/token', ['capabilities' => ['protocol-doses', 'read-only-plans']]));
         $this->assertSame([1, 1], [$readOnly->protocol_doses, $readOnly->read_only_plans]);
+        $this->assertFalse(property_exists($readOnly, 'read_only_doses'));
+        $this->assertSame(1, $claims($this->postJson('/web-session/token', ['capabilities' => ['read-only-doses']]))->read_only_doses);
         // Each token carries only its own request's declaration, never the session's history.
         $this->assertFalse(property_exists($claims($this->postJson('/web-session/token', ['capabilities' => ['unknown']])), 'protocol_doses'));
         $this->postJson('/web-session/logout')->assertOk();

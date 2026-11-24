@@ -21,9 +21,20 @@ Renaming an answer is a new option: check its label when changing the answer.
 Renaming the question's visible text does not rename its label. Empty question
 labels get a default; clearing an answer label regenerates its default.
 
+New defaults reserve saved labels across the entire field, including all
+repeater levels. If an older configuration already contains duplicates, edit
+the conflicting labels in the questionnaire editor before saving that field.
+
 Deploy the migration before serving the new admin code. No existing intake
 answers or protocols are backfilled or modified. Rollback drops only the label
 metadata column (including manually edited labels).
+
+Questionnaire snapshots (`intakes:export-questionnaire` / `intakes:sync-questionnaire`)
+carry `label_config` as an optional, validated field setting. On import, a field
+without it (older snapshots) keeps the destination's labels; a field created by
+the import gets defaults. A field with labels takes the snapshot's question and
+answer labels, keeps destination labels the snapshot does not mention, and
+follows the snapshot's current answers. Labels never cause answer warnings.
 
 Validation: `php artisan test --filter=IntakeLabelsTest` and
 `node --test tests/frontend/intakeLabels.test.js`.

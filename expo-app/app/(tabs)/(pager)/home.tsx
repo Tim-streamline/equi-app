@@ -41,6 +41,8 @@ export default function HomeScreen() {
   const { preferences, ready: preferencesReady, saving, save } = useHomePreferences();
   const openLibrary = () => router.push("/(tabs)/(pager)/library");
   const cards = protocolCards(data);
+  const evaluations = [...cards.filter(card => card.evaluation?.available),
+    ...(data?.evaluationDrafts ?? []).filter(draft => !cards.some(card => card.id === draft.id && card.evaluation?.available))];
   const seasonalCard = hasHorse && preferencesReady && seasonal && seasonalTipVisible(seasonal, preferences) && (
     <SeasonalTipCard
       tip={seasonal}
@@ -74,7 +76,7 @@ export default function HomeScreen() {
           {data?.greeting ?? greeting}
         </Text>
         {/* Every horse's intake gets its own card; Home does not depend on a selected horse for this. */}
-        {cards.filter(card => card.evaluation?.available).map(card => <EvaluationNotice key={`evaluation-${card.id}`} {...card} />)}
+        {evaluations.map(card => <EvaluationNotice key={`evaluation-${card.id}`} {...card} />)}
         <PurchasedProtocols allHorses excludeProtocolIds={cards.map(card => card.id)} />
         {cards.map((card) => <ProtocolCard key={card.horseId} {...card} />)}
         {!hasHorse && <View className="mb-5 rounded-2xl bg-white p-5">
@@ -145,10 +147,11 @@ function protocolCards(data: HorseDashboard | null): HorseProtocolSummary[] {
 }
 
 /** A horse's protocol in progress; opens Protocol on that horse. */
-function ProtocolCard({ id, horseId, horseName, statusLabel, currentDay, currentWeek, phaseLabel, progressPercent, preparing, startedAt }: HorseProtocolSummary) {
+function ProtocolCard({ id, horseId, horseName, statusLabel, currentDay, currentWeek, phaseLabel, progressPercent, progressKnown, preparing, startedAt }: HorseProtocolSummary) {
   const { selectHorse } = useDb();
-  const readyToStart = preparing ?? (currentDay <= 0);
   const stopped = /gepauzeerd|afgerond|voltooid/i.test(statusLabel ?? '');
+  const readyToStart = !stopped && (preparing ?? (currentDay <= 0));
+  const showProgress = progressKnown !== false && currentDay > 0;
   // A start date that is still ahead: there is nothing to tick off yet.
   const upcoming = !readyToStart && !stopped && currentDay <= 0;
   const possessive = horseName ? horsePossessive(horseName) : 'Je';
@@ -175,13 +178,13 @@ function ProtocolCard({ id, horseId, horseName, statusLabel, currentDay, current
           : upcoming ? `${plan} start ${startedAt ? `op ${new Date(`${startedAt}T12:00:00`).toLocaleDateString('nl-NL', { day: 'numeric', month: 'long' })}` : 'binnenkort'}`
           : `${plan} is in volle gang!`}
       </Text>
-      <Text className={`${readyToStart ? 'mt-3' : 'mt-1'} ${HOME_NOTICE_BODY}`}>
+      {(readyToStart || upcoming || showProgress) && <Text className={`${readyToStart ? 'mt-3' : 'mt-1'} ${HOME_NOTICE_BODY}`}>
         {readyToStart ? `Controleer welke kruiden, supplementen en andere producten je nodig hebt. Bestel wat je nog niet in huis hebt, zodat je op tijd met ${horseName ? `${possessive} herstelplan` : 'het herstelplan van je paard'} kunt starten.`
           : upcoming ? 'Vanaf die dag zie je hier wat je elke dag geeft.'
           : `Dag ${currentDay} · Week ${currentWeek}`}
         {!readyToStart && !upcoming && phaseLabel ? ` · ${phaseLabel}` : ""}
-      </Text>
-      {!readyToStart && !upcoming && <View className="mt-4 h-1.5 overflow-hidden rounded-full bg-ink-8">
+      </Text>}
+      {showProgress && !readyToStart && !upcoming && <View className="mt-4 h-1.5 overflow-hidden rounded-full bg-ink-8">
         <View
           className="h-full bg-mint-500"
           style={{ width: `${progressPercent}%` }}
@@ -195,7 +198,7 @@ function ProtocolCard({ id, horseId, horseName, statusLabel, currentDay, current
 }
 
 /** Evaluation is an additional priority notice; daily tracking stays available below. */
-function EvaluationNotice({ id, horseId, horseName, evaluation }: HorseProtocolSummary) {
+function EvaluationNotice({ id, horseId, horseName, evaluation }: Pick<HorseProtocolSummary, 'id' | 'horseId' | 'horseName' | 'evaluation'>) {
   const { selectHorse } = useDb();
   if (!evaluation?.available) return null;
   const possessive = horseName ? horsePossessive(horseName) : 'Je';

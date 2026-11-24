@@ -23,30 +23,42 @@ class IntakeLabels
     public function complete(array $field, string $prefix, ?array $existing): array
     {
         $saved = collect($existing ?? [])->keyBy('key');
-        $result = [];
-        foreach ($this->definitions($field) as $node) {
-            $previous = $saved->get($node['key'], []);
-            $label = $previous['label'] ?? $this->slug($prefix.($node['key'] === '' ? '' : '_'.$node['key']));
-            $answers = collect($previous['answers'] ?? [])->keyBy('answer');
-            $used = [$label];
-            $rows = [];
-            // Reserve existing labels before allocating defaults for new answers.
-            foreach ($node['options'] as $answer) {
-                if (isset($answers[$answer]['label'])) $used[] = $answers[$answer]['label'];
+        $nodes = $this->definitions($field);
+        $used = [];
+        $questionLabels = [];
+        $answerLabels = [];
+
+        // Custom labels keep their meaning, even when an earlier node would generate the same default.
+        foreach ($nodes as $node) {
+            $key = $node['key'];
+            $previous = $saved->get($key, []);
+            if (isset($previous['label'])) {
+                $questionLabels[$key] = $previous['label'];
+                $used[$previous['label']] = true;
             }
+            $answers = collect($previous['answers'] ?? [])->pluck('label', 'answer');
             foreach ($node['options'] as $answer) {
-                $answerLabel = $answers->get($answer)['label'] ?? null;
-                if ($answerLabel === null) {
-                    $base = $this->slug($label.'_'.$answer);
-                    $answerLabel = $base;
-                    $suffix = 2;
-                    while (in_array($answerLabel, $used, true)) $answerLabel = $base.'_'.$suffix++;
-                    $used[] = $answerLabel;
+                if (isset($answers[$answer])) {
+                    $answerLabels[$key][$answer] = $answers[$answer];
+                    $used[$answers[$answer]] = true;
                 }
-                $rows[] = ['answer' => $answer, 'label' => $answerLabel];
             }
-            $result[] = ['key' => $node['key'], 'label' => $label, 'answers' => $rows];
         }
+        foreach ($nodes as $node) {
+            $key = $node['key'];
+            $questionLabels[$key] ??= $this->allocate($prefix.($key === '' ? '' : '_'.$key), $used);
+        }
+        $result = [];
+        foreach ($nodes as $node) {
+            $key = $node['key'];
+            $label = $questionLabels[$key];
+            $rows = [];
+            foreach ($node['options'] as $answer) {
+                $rows[] = ['answer' => $answer, 'label' => $answerLabels[$key][$answer] ?? $this->allocate($label.'_'.$answer, $used)];
+            }
+            $result[] = ['key' => $key, 'label' => $label, 'answers' => $rows];
+        }
+
         return $result;
     }
 
@@ -64,6 +76,18 @@ class IntakeLabels
                 $seen[] = $label;
             }
         }
+    }
+
+    private function allocate(string $value, array &$used): string
+    {
+        $base = $this->slug($value);
+        $label = $base;
+        for ($suffix = 2; isset($used[$label]); $suffix++) {
+            $label = $base.'_'.$suffix;
+        }
+        $used[$label] = true;
+
+        return $label;
     }
 
     private function slug(string $value): string

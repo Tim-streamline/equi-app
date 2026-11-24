@@ -42,6 +42,23 @@ class IntakeLabelsTest extends TestCase
         $this->assertSame([], $labels->complete(['type' => 'sectionhead'], 'kop', null));
     }
 
+    public function test_repeater_defaults_reserve_question_and_custom_labels_across_the_field(): void
+    {
+        $labels = new IntakeLabels;
+        $field = ['type' => 'repeater', 'sub' => [
+            ['id' => 'gebruik', 'type' => 'radio', 'options' => ['Ja', 'Nee']],
+            ['id' => 'gebruik_ja', 'type' => 'text'],
+            ['id' => 'ander', 'type' => 'text'],
+        ]];
+        $custom = [['key' => 'ander', 'label' => 'middel_gebruik_nee', 'answers' => []]];
+        $config = $labels->complete($field, 'middel', $custom);
+        $labels->validate($config);
+        $this->assertSame(['middel_gebruik_ja_2', 'middel_gebruik_nee_2'], array_column($config[1]['answers'], 'label'));
+        $this->assertSame('middel_gebruik_ja', $config[2]['label']);
+        $this->assertSame('middel_gebruik_nee', $config[3]['label']);
+        $this->assertSame($config, $labels->complete($field, 'middel', $config));
+    }
+
     public function test_duplicate_labels_are_rejected(): void
     {
         $this->expectException(ValidationException::class);

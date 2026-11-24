@@ -488,6 +488,38 @@ class IntakeSubmissionMailTest extends TestCase
         $this->assertCount(0, $this->messages());
     }
 
+    public function test_a_cancelled_intake_confirmation_is_retired_even_if_the_booking_is_reopened(): void
+    {
+        $this->upload([$this->submission()])->assertOk();
+        IntakeBooking::whereKey($this->booking->id)->toBase()->update(['status' => 'cancelled']);
+        $this->artisan('mail:send-customer-notifications')->assertSuccessful();
+        // The atomic claim checks the same eligibility as the scan.
+        app(\App\Support\CustomerNotificationMail::class)->sendIntakeReceived($this->booking->id);
+        $this->assertCount(0, $this->messages());
+        $this->assertSame('skipped', $this->booking->fresh()->confirmation_email_status);
+        $this->assertNull($this->booking->fresh()->confirmation_email_claimed_at);
+
+        IntakeBooking::whereKey($this->booking->id)->toBase()->update(['status' => 'pending']);
+        $this->artisan('mail:send-customer-notifications')->assertSuccessful();
+        $this->assertCount(0, $this->messages());
+    }
+
+    public function test_admin_cancellation_immediately_skips_only_an_unclaimed_confirmation(): void
+    {
+        $this->upload([$this->submission()])->assertOk();
+        $this->actingAs(AdminUser::create(['name' => 'Admin', 'email' => 'admin@example.test', 'password' => 'password', 'role' => 'owner', 'active' => true]), 'admin');
+        $url = '/admin/bookings/'.$this->booking->id.'/status';
+        $this->post($url, ['status' => 'cancelled'])->assertRedirect();
+        $this->assertSame('skipped', $this->booking->fresh()->confirmation_email_status);
+        $this->post($url, ['status' => 'pending'])->assertRedirect();
+        $this->artisan('mail:send-customer-notifications')->assertSuccessful();
+        $this->assertCount(0, $this->messages());
+
+        $this->booking->forceFill(['confirmation_email_status' => 'sending'])->save();
+        $this->post($url, ['status' => 'cancelled'])->assertRedirect();
+        $this->assertSame('sending', $this->booking->fresh()->confirmation_email_status);
+    }
+
     public function test_customer_confirmation_failure_is_not_retried(): void
     {
         $this->upload([$this->submission()])->assertOk();

@@ -8,34 +8,45 @@ import { PLAIN_CARD, HOME_NOTICE_LABEL, HOME_NOTICE_BODY, HOME_NOTICE_LINK } fro
 import { horsePossessive } from '@/lib/protocol-evaluation';
 import { PROTOCOLS_FOR_ALL_HORSES, PROTOCOLS_FOR_HORSE, type PurchasedProtocolRow } from '@/lib/intake/protocol-queries';
 
+/** What a purchased protocol's card says and whether it opens anything. */
+function cardState(protocol: PurchasedProtocolRow) {
+  const completedAt = protocol.completed_at ?? protocol.submitted_at;
+  // Drafts can already be active; only a published plan is ready for the owner.
+  const ready = protocol.published === 1 && (protocol.status === 'active' || protocol.status === 'paused');
+  const named = protocol.status === 'completed' || ready;
+  const submitted = !!completedAt && !named;
+  const paused = ready && protocol.status === 'paused';
+  // The Protocol tab shows one plan per horse. A paused plan behind another active or paused plan keeps
+  // its notice, but offers no link that would silently open that other plan.
+  const canOpen = paused ? protocol.shown_in_tab === 1 : !submitted && (!!completedAt || protocol.status !== 'completed');
+  return { completedAt, ready, named, submitted, paused, canOpen };
+}
+
 /**
  * One card per purchased protocol and its intake. By default for the selected
  * horse; with `allHorses` for every active horse of the user (Home), so intakes
  * of several horses each get their own card.
+ * With `actionableOnly` (below a completed plan on Vandaag) only intakes and plans the owner can still
+ * open, never another completed plan.
  */
-export function PurchasedProtocols({ allHorses = false, excludeProtocolIds = [] }: { allHorses?: boolean; excludeProtocolIds?: string[] }) {
+export function PurchasedProtocols({ allHorses = false, excludeProtocolIds = [], actionableOnly = false }: { allHorses?: boolean; excludeProtocolIds?: string[]; actionableOnly?: boolean }) {
   const horseId = useCurrentHorseId(), userId = useCurrentUserId();
   const { selectHorse } = useDb();
   const { data } = useQuery<PurchasedProtocolRow>(allHorses ? PROTOCOLS_FOR_ALL_HORSES : PROTOCOLS_FOR_HORSE, allHorses ? [userId] : [horseId, userId]);
-  const visible = data.filter(protocol => !excludeProtocolIds.includes(protocol.id));
+  const visible = data.filter(protocol => !excludeProtocolIds.includes(protocol.id)
+    && (!actionableOnly || (protocol.status !== 'completed' && cardState(protocol).canOpen)));
   if (!visible.length) return null;
   return <View className="mb-4 gap-3">
     {visible.map(protocol => {
-      const completedAt = protocol.completed_at ?? protocol.submitted_at;
+      const { completedAt, ready, named, submitted, paused, canOpen } = cardState(protocol);
       const horseName = protocol.horse_name || 'je paard';
       const possessive = protocol.horse_name ? horsePossessive(protocol.horse_name) : 'Je';
       const generic = protocol.title === 'Persoonlijk protocol';
-      // Drafts can already be active; only a published plan is ready for the owner.
-      const ready = protocol.published === 1 && (protocol.status === 'active' || protocol.status === 'paused');
-      const named = protocol.status === 'completed' || ready;
-      const submitted = !!completedAt && !named;
-      const paused = ready && protocol.status === 'paused';
       const partial = !completedAt && !named && !!protocol.has_answers;
       const body = protocol.status === 'completed' ? 'Afgerond'
         : ready ? (protocol.status === 'paused' ? 'Je herstelplan is gepauzeerd.' : 'Je herstelplan staat klaar.')
           : completedAt ? 'Je intake is verstuurd. Je behandelaar stelt je herstelplan op.'
             : `Vul de intake voor ${horseName}'s EquiBoost traject in`;
-      const canOpen = !submitted && (!!completedAt || protocol.status !== 'completed');
       const action = paused ? 'Bekijk je herstelplan' : completedAt ? 'Intake bekijken' : partial ? 'Ga verder met je intake' : 'Start de intake';
       return <Pressable key={protocol.id} accessibilityRole={canOpen ? 'button' : undefined} accessibilityLabel={canOpen ? `${action} voor ${horseName}` : undefined} disabled={!canOpen}
         onPress={() => {

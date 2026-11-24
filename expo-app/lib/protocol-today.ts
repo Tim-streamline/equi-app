@@ -13,6 +13,11 @@ export function administrationLabel(item: DashboardSupplement): string {
   return `Gift ${number}`;
 }
 
+/** Only products given more than once a day show their moment; once-daily rows stay compact. */
+export function inlineTiming(item: DashboardSupplement): string | null {
+  return (item.administrationsPerDay ?? 1) > 1 ? administrationLabel(item) : null;
+}
+
 export function todayGroups(items: DashboardSupplement[], records: {
   protocolPhaseSupplementId: string; administration?: number | null; done?: boolean | number; dosage?: string | null;
 }[]) {
@@ -25,10 +30,10 @@ export function todayGroups(items: DashboardSupplement[], records: {
   }
   const groups = new Map<string, DashboardSupplement[]>();
   for (const item of items) {
-    const record = local.get(administrationKey(item));
+    const record = item.recordedOnly ? undefined : local.get(administrationKey(item));
     const label = administrationLabel(item);
     const rows = groups.get(label) ?? [];
-    rows.push({ ...item, dosage: record?.dosage !== undefined ? record.dosage : dailyDosages.has(item.id) ? dailyDosages.get(item.id)! : item.dosage, done: record ? !!record.done : !!item.done });
+    rows.push({ ...item, dosage: item.recordedOnly ? item.dosage : record?.dosage !== undefined ? record.dosage : dailyDosages.has(item.id) ? dailyDosages.get(item.id)! : item.dosage, done: record ? !!record.done : !!item.done });
     groups.set(label, rows);
   }
   const rank = (label: string) => ['Ochtend', 'Middag', 'Avond'].includes(label) ? ['Ochtend', 'Middag', 'Avond'].indexOf(label) : 3;

@@ -2,7 +2,9 @@
 
 ## Synchronize the intake questionnaire
 
-`database/data/intake-questionnaire-local.json` is a definition-only export of the local database from 2026-10-20 (13 sections, 394 fields, including inactive legacy definitions). It includes answer choices, conditional logic, ordering and photo settings, but **no customer answers or files**. It deliberately captures the database rather than the seeder, which may differ from CMS edits.
+`database/data/intake-questionnaire-local.json` is a definition-only export of the local database (13 sections, 436 fields, including inactive legacy definitions). It includes answer choices, conditional logic, ordering and photo settings, but **no customer answers or files**. It deliberately captures the database rather than the seeder, which may differ from CMS edits. It already contains the result of the KPU migration (`2026_11_19_000001_expand_kpu_urine_followups`: the Indikan, Kryptopyrrolurie and retest questions, the combined result question archived, and the renumbered medical section), so a sync after that migration does not undo it. A snapshot has no `label_config` (admin labels); the destination keeps its own labels. Newer exports include them; see `docs/intake-labels.md`.
+
+When a later migration changes questionnaire definitions, update this snapshot with that migration's exact result (or export a new one), otherwise a sync reverts the migration.
 
 After deploying this code and applying the intake schema migrations through the normal deployment process, run these commands from the backend/release directory on the destination:
 

@@ -16,11 +16,10 @@ class SendCustomerNotificationMails extends Command
 
     public function handle(CustomerNotificationMail $sender): int
     {
-        // Keep pending emails intact while the TransIP mailbox is being configured.
-        if (config('mail.default') === 'smtp'
-            && config('mail.mailers.smtp.host') === 'smtp.transip.email'
-            && (blank(config('mail.mailers.smtp.username')) || blank(config('mail.mailers.smtp.password')))) {
-            $this->warn('TransIP SMTP-wachtwoord of gebruikersnaam ontbreekt. Klantmails blijven in afwachting.');
+        CustomerNotificationMail::skipCancelledConfirmations();
+        // Keep pending emails intact (nothing is claimed) until a real mail transport is configured.
+        if ($hold = $sender->deliveryHold()) {
+            $this->warn($hold);
 
             return self::FAILURE;
         }
@@ -37,7 +36,7 @@ class SendCustomerNotificationMails extends Command
                 }
             }
         };
-        IntakeBooking::where('confirmation_email_status', 'pending')->where('intake_status', 'submitted')->whereNotNull('submitted_at')
+        CustomerNotificationMail::intakeIsDue(IntakeBooking::where('confirmation_email_status', 'pending'))
             ->chunkById(50, fn ($bookings) => $each($bookings, $sender->sendIntakeReceived(...), 'Intakebevestiging'));
         CustomerNotificationMail::publishedPlanIsDue(Protocol::where('published_email_status', 'pending'))
             ->chunkById(50, fn ($protocols) => $each($protocols, $sender->sendRecoveryPlanPublished(...), 'Herstelplanmail'));

@@ -75,10 +75,16 @@ test('all active phases are accessible and each row uses the actual name and dos
   assert.ok(!single.some(n => n?.props?.accessibilityLabel === 'Bekijk Phase B'));
 });
 
-test('product list precedes phase explanations and has no visible morning or evening headings', () => {
+test('product list precedes phase explanations; only multi-dose rows show their moment inline', () => {
   const app = screen();
   const nodes = app.render();
-  assert.ok(!nodes.includes('Ochtend') && !nodes.includes('Avond'));
+  const rowText = name => nodes.filter(n => n?.props?.className?.includes?.('text-ink') && copy(flatten(n.props.children)).startsWith(name)).map(n => copy(flatten(n.props.children)));
+  assert.deepEqual(rowText('Actual A'), ['Actual A  12 g']);
+  assert.deepEqual(rowText('Actual B'), ['Actual B  8 ml · Ochtend', 'Actual B  8 ml · Avond']);
+  assert.equal(nodes.filter(n => n === 'Ochtend').length, 1);
+  assert.equal(nodes.filter(n => n === 'Avond').length, 1);
+  assert.equal(logic.inlineTiming(items[0]), null);
+  assert.equal(logic.inlineTiming({ ...items[0], administrationsPerDay: 3, administration: 2 }), 'Middag');
   const products = nodes.map((node, index) => node?.props?.accessibilityRole === 'checkbox' ? index : -1);
   const phase = nodes.findIndex(node => node?.props?.accessibilityLabel === 'Bekijk Phase A');
   assert.ok(phase > Math.max(...products));
@@ -164,4 +170,15 @@ test('the actual schedule groups equal doses and highlights the present step',()
   assert.ok(text.includes('Dag 1–2'));assert.ok(text.includes('Huidige stap'));assert.ok(text.includes('Vandaag: 10 g'));
   assert.equal(component({item:items[0]}),null);
   assert.equal(buildupLogic.buildupState({...items[0],dosage:'5.0 g',buildup},'2026-11-03').changed,false);
+});
+
+test('a completed plan shows its server tick and the checkbox is read-only', async () => {
+  const app = screen();
+  app.props.protocol.completed = true;
+  app.props.protocol.today = { items: [{ ...items[2], done: true }] };
+  app.setLocal([{ protocolPhaseSupplementId: 'two', administration: 2, done: false }]);
+  const row = app.render().find(node => node?.props?.accessibilityRole === 'checkbox');
+  assert.deepEqual(row.props.accessibilityState, { checked: true, disabled: true });
+  await row.props.onPress();
+  assert.deepEqual(app.mutations, []);
 });

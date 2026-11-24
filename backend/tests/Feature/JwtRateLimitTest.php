@@ -57,6 +57,8 @@ class JwtRateLimitTest extends TestCase
             'api/library/'.Str::uuid().'/unlock' => 'throttle:library-unlock',
             'api/library/credits/purchase' => 'throttle:credit-purchase',
             'api/library/credits/temporary-top-up' => 'throttle:credit-temporary-top-up',
+            'api/horses/'.Str::uuid().'/protocol-orders' => 'throttle:protocol-orders',
+            'api/protocols/'.Str::uuid().'/evaluation' => 'throttle:protocol-evaluation',
         ] as $uri => $throttle) {
             $route = $routes->match(\Illuminate\Http\Request::create('/'.$uri, 'POST'));
             $this->assertContains($throttle, $route->gatherMiddleware(), $uri);
@@ -96,6 +98,23 @@ class JwtRateLimitTest extends TestCase
             $this->assertNotSame(429, $this->postAs($alice, "/api/intakes/{$second}/attachments")->status());
         }
         $this->postAs($alice, '/api/intakes/'.Str::uuid().'/attachments')->assertStatus(429);
+    }
+
+    public function test_order_ticks_and_evaluations_have_their_own_per_account_budgets(): void
+    {
+        [$alice, $bob] = [$this->subscriber(), $this->subscriber()];
+        $evaluation = '/api/protocols/'.Str::uuid().'/evaluation';
+        for ($i = 0; $i < 30; $i++) {
+            $this->assertNotSame(429, $this->postAs($alice, $evaluation)->status());
+        }
+        $this->postAs($alice, $evaluation)->assertStatus(429);
+        // Order ticks are a separate bucket, and another account behind the same IP is unaffected.
+        $this->assertNotSame(429, $this->postAs($alice, '/api/horses/'.Str::uuid().'/protocol-orders')->status());
+        $this->assertNotSame(429, $this->postAs($bob, $evaluation)->status());
+        for ($i = 0; $i < 59; $i++) {
+            $this->assertNotSame(429, $this->postAs($alice, '/api/horses/'.Str::uuid().'/protocol-orders')->status());
+        }
+        $this->postAs($alice, '/api/horses/'.Str::uuid().'/protocol-orders')->assertStatus(429);
     }
 
     private function subscriber(): User

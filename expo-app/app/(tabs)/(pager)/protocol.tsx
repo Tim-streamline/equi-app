@@ -25,10 +25,11 @@ import {
   Leaf,
 } from "lucide-react-native";
 import { Button } from "@/components/ui/Button";
-import { createOrderTicks } from "@/lib/protocol-order-ticks";
+import { createOrderTicks, shownOrderedKeys, type OrderOverlay } from "@/lib/protocol-order-ticks";
 import { useTabBarPadding } from "@/hooks/useTabBarPadding";
 import {
   useHorseDashboard,
+  latestDashboardRequest,
   dashboardRequest,
   deviceTimezone,
 } from "@/hooks/useHorseDashboard";
@@ -75,7 +76,7 @@ export default function ProtocolListScreen() {
   const handledLink = useRef<string | null>(null);
   const handledOrderLink = useRef<string | null>(null);
   const [month, setMonth] = useState<string>();
-  const { data, error, refresh, horseId } = useHorseDashboard(month);
+  const { data, error, refresh, horseId, revision } = useHorseDashboard(month);
   // 'all' is the protocol's full order list; otherwise only a phase's or notice's share of it.
   const [orders, setOrders] = useState<OrderScope | null>(null);
   const orderSelections = (items: DashboardSupplement[], label?: string): OrderScope =>
@@ -122,28 +123,50 @@ export default function ProtocolListScreen() {
   const visiblePhase = phase ? protocol?.phases.find((item) => item.id === phase.id) : null;
 
   const visibleOrders = scopeOrderItems(protocol?.orderItems, orders);
-  // Ticks show at once; the server's answer (or a failure) settles them.
-  const [ordered, setOrdered] = useState<{ protocolId: string; keys: string[] } | null>(null);
+  // Ticks show at once; the server's answer (or a failure) settles them. A dashboard requested after the last
+  // answer then takes over, also when another device changed the list (see shownOrderedKeys).
+  const planKey = protocol && horseId ? `${horseId}:${protocol.id}` : '';
+  const [overlays, setOverlays] = useState<Record<string, OrderOverlay>>({});
   const [orderError, setOrderError] = useState<string | null>(null);
-  // A fresh dashboard (also after ticking on another device) replaces the local ticks.
-  const serverOrdered = protocol?.orderedKeys?.join(',');
-  useEffect(() => { setOrdered(null); }, [protocol?.id, serverOrdered]);
-  const orderedKeys = ordered && ordered.protocolId === protocol?.id ? ordered.keys : protocol?.orderedKeys ?? [];
-  // One queue per horse and protocol: taps are saved in order, so the stored state always ends as the list shows.
-  const orderTicks = useMemo(() => {
-    const protocolId = protocol?.id;
-    return createOrderTicks(async (keys, done) => {
-      const result = await dashboardRequest(`/api/horses/${horseId}/protocol-orders`, { protocol_id: protocolId, keys, ordered: done }) as { orderedKeys: string[] };
-      return result.orderedKeys;
+  const ordered = overlays[planKey] ?? null;
+  const orderedKeys = shownOrderedKeys(ordered, horseId, protocol?.id, protocol?.orderedKeys ?? [], revision ?? 0);
+  // Once acknowledged, a later offline dashboard must never revive the old local selection.
+  useEffect(() => {
+    if (!ordered || ordered.settledAt === null || (revision ?? 0) <= ordered.settledAt) return;
+    setOverlays(previous => {
+      if (previous[planKey] !== ordered) return previous;
+      const next = { ...previous };
+      delete next[planKey];
+      return next;
     });
-  }, [horseId, protocol?.id]);
+  }, [ordered, planKey, revision]);
+  useEffect(() => { setOrderError(null); }, [planKey]);
+
+  // Keep the queue for its entire write, including when navigation temporarily unloads this plan.
+  const queues = useRef(new Map<string, ReturnType<typeof createOrderTicks>>());
+  const visibleOrdersView = useRef({ planKey, refresh });
+  visibleOrdersView.current = { planKey, refresh };
   const toggleOrdered = (keys: string[], done: boolean) => {
     if (!protocol || !horseId) return;
     const protocolId = protocol.id;
+    let queue = queues.current.get(planKey);
+    if (!queue) {
+      queue = createOrderTicks(async (keys, done) => {
+        const result = await dashboardRequest(`/api/horses/${horseId}/protocol-orders`, { protocol_id: protocolId, keys, ordered: done }) as { orderedKeys: string[] };
+        return result.orderedKeys;
+      });
+      queues.current.set(planKey, queue);
+    }
     setOrderError(null);
-    orderTicks.toggle(orderedKeys, keys, done, (next, failed) => {
-      setOrdered({ protocolId, keys: next });
-      if (failed) setOrderError("Niet opgeslagen. Controleer je verbinding en probeer opnieuw.");
+    queue.toggle(orderedKeys, keys, done, (next, failed, settled) => {
+      const overlay = { horseId, protocolId, keys: next, settledAt: settled ? latestDashboardRequest() : null };
+      setOverlays(previous => ({ ...previous, [planKey]: overlay }));
+      if (!settled) return;
+      queues.current.delete(planKey);
+      if (visibleOrdersView.current.planKey === planKey) {
+        if (failed) setOrderError("Niet opgeslagen. Controleer je verbinding en probeer opnieuw.");
+        void visibleOrdersView.current.refresh();
+      }
     });
   };
   const firstPhase = protocol?.phases[0];
@@ -229,6 +252,8 @@ export default function ProtocolListScreen() {
                 onWeekly={() => setWeeklyOpen(true)}
               />
             )}
+            {/* A completed plan stays readable; a later purchase's intake must still be reachable below it. */}
+            {tab === "vandaag" && protocol.completed && <View className="mt-4"><PurchasedProtocols excludeProtocolIds={[protocol.id]} actionableOnly /></View>}
             {tab === "vandaag" && !!purchaseCard && <View className="mt-4">{purchaseCard}</View>}
             {tab === "kalender" && (
               <Calendar
@@ -255,7 +280,7 @@ export default function ProtocolListScreen() {
             visible={orders !== null}
             title="Bestellijst"
             subtitle={orders && orders !== 'all' && orders.label ? `Voor ${orders.label}` : undefined}
-            onClose={() => { setOrders(null); setOrderError(null); if (ordered) void refresh(); }}
+            onClose={() => { setOrders(null); setOrderError(null); }}
           >
             {!!orderError && <Text className="mb-3 text-[13px] text-danger">{orderError}</Text>}
             <ProtocolOrderList items={visibleOrders} discount={protocol.orderDiscount} orderedKeys={orderedKeys} onToggle={toggleOrdered} />
@@ -319,6 +344,16 @@ function ProtocolPreparation({ protocol, horseId, horseName, onOrder, onRefresh 
       setStarting(false);
     }
   };
+  const orderLink = (
+    <Pressable accessibilityRole="button" accessibilityLabel="Open bestellijst voor fase 1" onPress={onOrder} className="min-h-[44px] justify-center">
+      <Text className={T.link}>Bekijk bestellijst voor fase 1 →</Text>
+    </Pressable>
+  );
+  if (protocol.completed) return <View className="gap-5">
+    <Text accessibilityRole="header" className={T.title}>Afgerond herstelplan{horseName ? ` voor ${horseName}` : ''}</Text>
+    <Text className={T.lead}>Dit herstelplan is afgerond en kan niet meer worden gestart.</Text>
+    {orderLink}
+  </View>;
   return <View className="gap-5">
     <Text accessibilityRole="header" className={T.title}>Je herstelplan{horseName ? ` voor ${horseName}` : ''} staat klaar</Text>
     <View className="gap-4">
@@ -329,13 +364,11 @@ function ProtocolPreparation({ protocol, horseId, horseName, onOrder, onRefresh 
     <View className={PLAIN_CARD}>
       <Text className={`mb-2 ${T.cardTitle}`}>Wat heb je nodig voor fase 1?</Text>
       <Text className={`mb-4 ${T.lead}`}>Bekijk welke producten en hoeveelheden je voor de eerste fase nodig hebt.</Text>
-      <Pressable accessibilityRole="button" accessibilityLabel="Open bestellijst voor fase 1" onPress={onOrder} className="min-h-[44px] justify-center">
-        <Text className={T.link}>Bekijk bestellijst voor fase 1 →</Text>
-      </Pressable>
+      {orderLink}
     </View>
     {/* Only a running plan can be started; the server refuses the others. */}
-    {protocol.paused || protocol.completed ? <View className="rounded-[22px] bg-mint-50 p-5">
-      <Text className={T.lead}>{protocol.paused ? 'Je herstelplan is gepauzeerd. Je kunt starten zodra je plan is hervat.' : 'Dit herstelplan is afgerond en kan niet meer worden gestart.'}</Text>
+    {protocol.paused ? <View className="rounded-[22px] bg-mint-50 p-5">
+      <Text className={T.lead}>Je herstelplan is gepauzeerd. Je kunt starten zodra je plan is hervat.</Text>
     </View> : <View className="gap-4 rounded-[22px] bg-mint-50 p-5">
       <Text className={T.cardTitle}>Heb je alles in huis?</Text>
       <Text className={T.lead}>Start je protocol op de dag dat je daadwerkelijk met alle producten uit de eerste fase begint. Klik die dag op de button hieronder.</Text>

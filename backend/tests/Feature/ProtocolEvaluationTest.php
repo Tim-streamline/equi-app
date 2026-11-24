@@ -35,6 +35,26 @@ class ProtocolEvaluationTest extends TestCase
         });
     }
 
+    public function test_an_older_draft_remains_reachable_and_a_stale_save_cannot_replace_answers(): void
+    {
+        $plan = $this->plan();
+        $this->owner($plan->horse->owner_id);
+        $url = '/api/protocols/'.$plan->id.'/evaluation';
+        $version = $this->getJson($url)->assertOk()->assertJsonPath('revision', 0)->json('questionVersion');
+        $key = array_key_first(ProtocolEvaluation::QUESTIONS);
+        $draft = ['question_version' => $version, 'revision' => 0, 'submit' => false, 'answers' => [$key => 'Eerste apparaat']];
+        $this->postJson($url, $draft)->assertOk()->assertJsonPath('revision', 1);
+        $this->postJson($url, [...$draft, 'answers' => [$key => 'Tweede apparaat']])->assertStatus(412);
+        $this->getJson($url)->assertOk()->assertJsonPath('answers.'.$key, 'Eerste apparaat');
+        $plan->update(['status' => 'completed']);
+        $next = $plan->horse->protocols()->create(['title' => 'Vervolg', 'status' => 'active', 'published_at' => now()]);
+        $home = '/api/horses/'.$plan->horse_id.'/dashboard';
+        $this->getJson($home)->assertOk()->assertJsonPath('horseProtocols.0.id', $next->id)->assertJsonPath('evaluationDrafts.0.id', $plan->id);
+        $this->postJson($url, [...$draft, 'revision' => 1, 'submit' => true,
+            'answers' => array_fill_keys(array_keys(ProtocolEvaluation::QUESTIONS), 'Gereed')])->assertOk()->assertJsonPath('revision', 2);
+        $this->getJson($home)->assertOk()->assertJsonCount(0, 'evaluationDrafts');
+    }
+
     public function test_exact_evaluation_and_discount_boundaries_use_the_business_timezone(): void
     {
         $protocol = $this->plan();

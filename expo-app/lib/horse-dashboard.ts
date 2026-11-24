@@ -22,6 +22,7 @@ export type DoseBuildupDisplay = {
   schedule: { day: number; dosage: string | null }[];
 };
 export type DashboardSupplement = {
+  recordedOnly?: boolean;
   buildup?: DoseBuildupDisplay | null;
   buildupLabel?: string | null;
   administration?: number;
@@ -114,6 +115,7 @@ export type DashboardProtocol = {
   currentWeek: number;
   totalWeeks: number;
   progressPercent: number;
+  progressKnown?: boolean;
   statusLabel: string;
   todayLabel: string;
   dateLabel?: string;
@@ -144,6 +146,7 @@ export type DashboardProtocol = {
       available?: boolean;
       total?: number;
       done?: number;
+      recordedOnly?: boolean;
     } | null)[];
   };
   nutrition: {
@@ -192,6 +195,7 @@ export type HorseProtocolSummary = {
   currentDay: number;
   currentWeek: number;
   progressPercent: number;
+  progressKnown?: boolean;
   phaseLabel?: string;
 };
 
@@ -225,6 +229,7 @@ export type HorseDashboard = {
   protocol: DashboardProtocol | null;
   /** Per horse with a protocol in progress, sorted by name (absent in older cached responses). */
   horseProtocols?: HorseProtocolSummary[];
+  evaluationDrafts?: Pick<HorseProtocolSummary, 'id' | 'horseId' | 'horseName' | 'evaluation'>[];
 };
 
 // A response/cache from a previous selection must never appear under the new horse.

@@ -1,3 +1,4 @@
+import { CLIENT_CAPABILITIES } from '../../expo-app/lib/client-capabilities.ts';
 import { syncRequest, SyncRequestError } from '../../expo-app/lib/sync-request.ts';
 
 export type LoginResponse = {
@@ -12,9 +13,6 @@ let session: Session | null = null;
 let revision = 0;
 let pending: Promise<LoginResponse | null> | null = null;
 export const getApiBaseUrl = () => '';
-// Signed into each token this browser receives, so the API and PowerSync serve the shared
-// protocol screens the per-dose format. Without it the server keeps the legacy format.
-const CLIENT_CAPABILITIES = ['protocol-doses'];
 
 export const LOCAL_SIGNOUT_KEY = 'equinova:signed-out';
 type LocalSignout = { id: string; logoutId?: string; pending: boolean };

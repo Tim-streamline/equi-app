@@ -61,6 +61,8 @@ class AppServiceProvider extends ServiceProvider
             'library-unlock' => 60,
             'credit-purchase' => 15,
             'credit-temporary-top-up' => 15,
+            'protocol-orders' => 60,
+            'protocol-evaluation' => 30,
         ] as $name => $perMinute) {
             RateLimiter::for($name, fn (Request $request) => Limit::perMinute($perMinute)->by($perAccount($request)));
         }

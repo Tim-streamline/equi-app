@@ -23,7 +23,20 @@ class ClientCapabilities
 
     public const READ_ONLY_PLANS_CLAIM = 'read_only_plans';
 
-    private const CLAIMS = [self::PROTOCOL_DOSES => self::PROTOCOL_DOSES_CLAIM, self::READ_ONLY_PLANS => self::READ_ONLY_PLANS_CLAIM];
+    /** Displays recorded doses outside the schedule and disables edits to individual read-only rows. */
+    public const READ_ONLY_DOSES = 'read-only-doses';
+    public const READ_ONLY_DOSES_CLAIM = 'read_only_doses';
+
+    private const CLAIMS = [
+        self::PROTOCOL_DOSES => self::PROTOCOL_DOSES_CLAIM,
+        self::READ_ONLY_PLANS => self::READ_ONLY_PLANS_CLAIM,
+        self::READ_ONLY_DOSES => self::READ_ONLY_DOSES_CLAIM,
+    ];
+
+    public static function readOnlyDoses(Request $request): bool
+    {
+        return (int) ($request->attributes->get('powersync_claims', [])[self::READ_ONLY_DOSES_CLAIM] ?? 0) === 1;
+    }
 
     /** JWT claims for the capabilities in a token request; unknown values are ignored. */
     public static function claims(Request $request): array
