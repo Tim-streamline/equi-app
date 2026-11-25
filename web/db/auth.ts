@@ -85,16 +85,17 @@ export function retryPendingLogout(): Promise<boolean> {
     if (!state.logoutId) {
       // Signed out before this tab held a token (after a reload or an expiry). The session
       // cookie may still be valid, so ask the server which login it belongs to first.
-      const minted = await syncRequest(20_000, signal => request('token', { capabilities: CLIENT_CAPABILITIES }, signal, check), controller.signal);
+      const { status, logoutId } = await syncRequest(20_000, async signal => {
+        const minted = await request('token', { capabilities: CLIENT_CAPABILITIES }, signal, check);
+        const token: Partial<LoginResponse> | null = minted.ok ? await minted.json() : null;
+        return { status: minted.status, logoutId: token?.logout_id };
+      }, controller.signal);
       check();
-      if (minted.status === 401) {
+      if (status === 401) {
         // Nothing is signed in on the server any more.
         writeSignout(JSON.stringify({ ...state, pending: false }));
         return true;
       }
-      if (!minted.ok) return false;
-      const logoutId = ((await minted.json()) as Partial<LoginResponse>).logout_id;
-      check();
       // Never send an unscoped deferred logout to an older backend.
       if (!logoutId) return false;
       state = { ...state, logoutId };

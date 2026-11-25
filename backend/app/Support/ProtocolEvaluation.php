@@ -4,6 +4,7 @@ namespace App\Support;
 
 use App\Models\PlusPage;
 use App\Models\Protocol;
+use App\Models\User;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\DB;
 
@@ -47,39 +48,54 @@ class ProtocolEvaluation
 
     public function timing(Protocol $protocol, CarbonImmutable $now): array
     {
+        $record = $this->record($protocol);
+        return $this->evaluationTiming($protocol, $now, (bool) $record?->submitted_at, ! $this->writtenByAnotherOwner($protocol, $record));
+    }
+
+    private function evaluationTiming(Protocol $protocol, CarbonImmutable $now, bool $submitted, bool $ownerMatches): array
+    {
         // Use one business timezone for the offer; client timezone cannot extend a discount.
         $today = $now->setTimezone('Europe/Amsterdam')->startOfDay();
         $protocol->loadMissing('phases.weeks');
         $weeks = $protocol->scheduledWeeks();
         $end = $protocol->started_at && $weeks > 0
             ? CarbonImmutable::parse($protocol->started_at->toDateString(), 'Europe/Amsterdam')->addWeeks($weeks)->subDay() : null;
-        $record = $this->record($protocol);
         $available = $end && $protocol->published_at && $protocol->published_at->lte($now)
             && in_array($protocol->status, ['active', 'completed'], true) && $today->gte($end->subDays(14))
-            && ! $this->writtenByAnotherOwner($protocol, $record);
+            && $ownerMatches;
         return ['available' => (bool) $available, 'endsOn' => $end?->toDateString(),
             // Home words its notice by these: already sent, or closed before the scheduled end.
-            'submitted' => (bool) ($available && $record?->submitted_at), 'completed' => $protocol->status === 'completed',
+            'submitted' => (bool) ($available && $submitted), 'completed' => $protocol->status === 'completed',
             'daysRemaining' => $end ? (int) $today->diffInDays($end, false) : null,
             'discountUntil' => $end?->addDays(7)->toDateString(),
             'discountEligible' => (bool) ($available && $today->lte($end->addDays(7)))];
     }
 
-    /** Saved, unfinished evaluations remain reachable after a follow-up plan takes over the horse's card. */
-    public function draftNotices(\App\Models\User $user, CarbonImmutable $now): array
+    /** Home shows drafts for all owned horses. The Protocol tab links submissions for the selected horse. */
+    public function dashboardLinks(User $user, ?string $horseId, CarbonImmutable $now): array
     {
-        $protocols = Protocol::whereIn('id', DB::table('protocol_evaluations')->select('protocol_id')
-            ->where('user_id', $user->id)->whereNull('submitted_at'))
+        $protocols = Protocol::join('protocol_evaluations as evaluation', 'evaluation.protocol_id', '=', 'protocols.id')
+            ->where('evaluation.user_id', $user->id)
+            ->where(function ($query) use ($horseId) {
+                $query->whereNull('evaluation.submitted_at');
+                if ($horseId !== null) $query->orWhere('protocols.horse_id', $horseId);
+            })
             ->whereHas('horse', fn ($query) => $query->where('owner_id', $user->id)->where('status', 'active'))
-            ->with('horse', 'phases.weeks')->orderByDesc('published_at')->orderBy('id')->get();
+            ->with('horse', 'phases.weeks')->orderByDesc('published_at')->orderBy('protocols.id')
+            ->get(['protocols.*', 'evaluation.submitted_at']);
 
-        $notices = [];
+        $links = ['evaluationDrafts' => [], 'submittedEvaluations' => []];
         foreach ($protocols as $protocol) {
-            $evaluation = $this->timing($protocol, $now);
-            if ($evaluation['available']) $notices[] = ['id' => $protocol->id, 'horseId' => $protocol->horse_id,
-                'horseName' => $protocol->horse->name, 'evaluation' => $evaluation];
+            $evaluation = $this->evaluationTiming($protocol, $now, (bool) $protocol->submitted_at, ownerMatches: true);
+            if (! $evaluation['available']) continue;
+            if ($evaluation['submitted']) {
+                $links['submittedEvaluations'][] = ['id' => $protocol->id, 'title' => $protocol->title, 'endsOn' => $evaluation['endsOn']];
+            } else {
+                $links['evaluationDrafts'][] = ['id' => $protocol->id, 'horseId' => $protocol->horse_id,
+                    'horseName' => $protocol->horse->name, 'evaluation' => $evaluation];
+            }
         }
-        return $notices;
+        return $links;
     }
 
     public function payload(Protocol $protocol, CarbonImmutable $now): array

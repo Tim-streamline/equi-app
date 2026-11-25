@@ -26,8 +26,8 @@ test('an evaluation stays open through a pending save and conflict refetch', asy
   const { default: ts } = await import('typescript');
   const helpers = await import('../lib/protocol-evaluation.ts');
   const jsx = (type, props) => ({ type, props });
-  const state = [], effects = [], stored = { horseName: 'Nova', revision: 0, questions: { a: 'Hoe gaat het?' }, answers: {}, questionVersion: 'v' };
-  let cursor = 0, guard, destination, back = 0, fetches = 0, rejectSave, finishRefresh;
+  const state = [], effects = [], stored = { horseName: 'Nova', revision: 0, questions: { a: 'Hoe gaat het?', b: 'Wat viel op?' }, answers: {}, questionVersion: 'v' };
+  let cursor = 0, guard, destination, back = 0, fetches = 0, saves = 0, rejectSave, finishRefresh;
   const modules = {
     react: {
       useState(value) { const i = cursor++; if (!(i in state)) state[i] = value;
@@ -43,6 +43,7 @@ test('an evaluation stays open through a pending save and conflict refetch', asy
     '@/components/ui/SubHeader': { SubHeader: 'Header' }, '@/components/ui/Button': { Button: 'Button' },
     '@/lib/account-session': { accountSession: { revision: 0 } }, '@/lib/protocol-evaluation': helpers, '@/components/ui/styles': {},
     '@/hooks/useHorseDashboard': { dashboardRequest: (_url, body) => {
+      if (body && ++saves === 1) return Promise.resolve({ ...stored, revision: 1, answers: { b: body.answers.b.trim() } });
       if (body) return new Promise((_, reject) => { rejectSave = reject; });
       if (++fetches === 1) return Promise.resolve(stored);
       return new Promise(resolve => { finishRefresh = resolve; });
@@ -56,6 +57,9 @@ test('an evaluation stays open through a pending save and conflict refetch', asy
   const flatten = n => Array.isArray(n) ? n.flatMap(flatten) : n?.props ? [n, ...flatten(n.props.children)] : [];
   const render = () => { cursor = 0; return flatten(form.type(form.props)); };
   render(); effects.shift()(); await Promise.resolve();
+  render().find(x => x.props.accessibilityLabel === stored.questions.b).props.onChangeText('Goed ');
+  render().find(x => x.props.title === 'Concept opslaan').props.onPress();
+  await Promise.resolve();
   render().find(x => x.type === 'Input').props.onChangeText('Mijn antwoord');
   const nodes = render();
   nodes.find(x => x.props.title === 'Concept opslaan').props.onPress();
@@ -63,9 +67,10 @@ test('an evaluation stays open through a pending save and conflict refetch', asy
   render(); assert.equal(guard, true); assert.equal(back, 0);
   rejectSave(new Error('(412)')); await Promise.resolve();
   render(); assert.equal(guard, true);
-  finishRefresh({ ...stored, submittedAt: '2026-08-22T16:00:00Z', revision: 1, answers: { a: 'Eerder opgeslagen' } }); await Promise.resolve();
+  finishRefresh({ ...stored, submittedAt: '2026-08-22T16:00:00Z', revision: 2, answers: { a: 'Eerder opgeslagen', b: 'Nieuwe observatie' } }); await Promise.resolve();
   const after = render();
   assert.equal(after.find(x => x.type === 'Input').props.value, 'Mijn antwoord');
+  assert.equal(after.find(x => x.props.accessibilityLabel === stored.questions.b).props.value, 'Nieuwe observatie');
   assert.equal(guard, false);
   after.find(x => x.type === 'Header').props.onBack();
   assert.equal(back, 1);

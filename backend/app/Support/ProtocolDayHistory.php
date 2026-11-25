@@ -137,9 +137,16 @@ class ProtocolDayHistory
         $completion = app(ProtocolCompletion::class);
         $closedPeriods = array_filter($completion->closedPeriods($protocol), fn ($period) =>
             ($period['after'] === null || $period['after'] < $to) && ($period['before'] === null || $period['before'] > $from));
+        $knownClosures = array_filter($closedPeriods, fn ($period) => $period['after'] !== null);
         $frozen = DB::table('protocol_day_snapshots')->where('protocol_id', $protocol->id)
             ->whereBetween('date', [$from, $to])->get()
-            ->mapWithKeys(fn ($row) => [$row->date => $this->displayItems(json_decode($row->items, true))])
+            ->mapWithKeys(function ($row) use ($completion, $knownClosures) {
+                $items = $this->displayItems(json_decode($row->items, true));
+                if ($completion->containsDate($knownClosures, $row->date)) {
+                    $items = array_values(array_filter($items, fn ($item) => $item['done']));
+                }
+                return [$row->date => $items];
+            })
             ->filter(fn ($items, $date) => ! $completion->containsDate($closedPeriods, $date) || collect($items)->contains('done', true));
         $records = $this->recordedIntakes($protocol, $from, $to);
         foreach ($records as $date => $doses) {

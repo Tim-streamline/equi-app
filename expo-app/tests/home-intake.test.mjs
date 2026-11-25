@@ -132,8 +132,10 @@ test('a plan closed before its scheduled end is not announced as almost finished
   const app = screen();
   app.addHorse('Moos');
   app.activeProtocols.push('Moos');
-  app.summaries.Moos = { statusLabel: 'Je protocol is afgerond', evaluation: { available: true, daysRemaining: 9, completed: true } };
-  const reminder = app.render().find(n => n?.props?.accessibilityLabel === 'Evalueer de gezondheid van Moos');
+  app.summaries.Moos = { statusLabel: 'Je protocol is afgerond', phaseLabel: 'Week drie', evaluation: { available: true, daysRemaining: 9, completed: true } };
+  const tree = app.render();
+  const reminder = tree.find(n => n?.props?.accessibilityLabel === 'Evalueer de gezondheid van Moos');
+  assert.doesNotMatch(text(tree.find(n => n?.props?.accessibilityLabel === 'Protocol van Moos')), /Week drie/);
   assert.ok(text(reminder).includes("Moos' huidige EquiBoost traject is afgerond!"));
   assert.ok(text(reminder).includes("Inmiddels is Moos' huidige herstelplan afgelopen."));
   assert.ok(!text(reminder).includes('bijna') && !text(reminder).includes('Over 9 dagen'));

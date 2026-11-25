@@ -187,7 +187,7 @@ function ProtocolCard({ id, horseId, horseName, statusLabel, currentDay, current
           : upcoming ? 'Vanaf die dag zie je hier wat je elke dag geeft.'
           : neverStarted ? 'Je kunt de uitleg in het herstelplan blijven teruglezen.'
           : `Dag ${currentDay} · Week ${currentWeek}`}
-        {!readyToStart && !upcoming && !neverStarted && phaseLabel ? ` · ${phaseLabel}` : ""}
+        {!readyToStart && !upcoming && !stopped && phaseLabel ? ` · ${phaseLabel}` : ""}
       </Text>}
       {showProgress && !readyToStart && <View className="mt-4 h-1.5 overflow-hidden rounded-full bg-ink-8">
         <View

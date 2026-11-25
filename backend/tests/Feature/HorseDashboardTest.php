@@ -902,6 +902,7 @@ class HorseDashboardTest extends TestCase
         ]);
         $this->protocol->update(['status' => 'paused']);
         $notices = $this->getJson($url.'/dashboard')->assertOk()->assertJsonPath('protocol.paused', true)
+            ->assertJsonPath('protocol.statusLabel', 'Je protocol is gepauzeerd')
             ->json('protocol.notifications');
         $this->assertFalse(collect($notices)->contains('type', 'weekly_update'));
         $this->postJson($url.'/weekly-update', ['protocol_id' => $this->protocol->id, 'note' => 'Already open form'])

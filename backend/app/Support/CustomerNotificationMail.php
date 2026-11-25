@@ -125,7 +125,8 @@ class CustomerNotificationMail
                 $protocol->load('horse.owner');
 
                 return $this->recipient($protocol->horse?->owner, fn (User $user) => new RecoveryPlanPublished(
-                    $this->firstName($user), $protocol->horse->name, rtrim(config('app.web_url'), '/').'/'));
+                    $this->firstName($user), $protocol->horse->name, rtrim(config('app.web_url'), '/').'/',
+                    app(SubscriptionAccess::class)->active($user->id) !== null));
             },
             function (Protocol $announced) {
                 // A delivered newer publication supersedes older pending notices. A later follow-up

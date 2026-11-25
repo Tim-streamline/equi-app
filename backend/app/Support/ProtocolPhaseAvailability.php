@@ -21,6 +21,8 @@ class ProtocolPhaseAvailability
         $available = $start?->subDays(7);
         $state = ! $start || $now->lt($available) ? 'locked'
             : ($now->lt($start) ? 'preview' : ($now->lt($end) ? 'active' : 'done'));
+        $completed = $protocol->status === 'completed';
+        if ($completed && $state === 'active') $state = 'done';
 
         $duration = $first > 0 ? max(0, $last - $first + 1) : 0;
         $currentWeek = $state === 'active' ? (int) floor($start->diffInDays($now->startOfDay()) / 7) + 1 : null;
@@ -32,7 +34,7 @@ class ProtocolPhaseAvailability
             'weekLabel' => ! $protocol->started_at ? 'Nog niet gestart' : ($first ? 'Week '.$first.($last > $first ? ' t/m '.$last : '') : 'Nog niet ingepland'),
             'state' => $state, 'accessible' => $state !== 'locked',
             'startsAt' => $start?->toIso8601String(), 'endsAt' => $end?->toIso8601String(), 'availableAt' => $available?->toIso8601String(),
-            'statusLabel' => match ($state) {
+            'statusLabel' => $completed ? 'Herstelplan afgerond' : match ($state) {
                 'active' => 'Actief · week '.$currentWeek.' van '.$duration,
                 'preview' => 'Start volgende week',
                 'done' => 'Afgerond',

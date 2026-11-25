@@ -54,7 +54,7 @@ export function PurchasedProtocols({ allHorses = false, excludeProtocolIds = [],
       {allHorses && !generic && named && !paused && <Text className="-mb-2 font-semi text-[14px] text-ink-70">{horseName}</Text>}
       <Text className={named && !paused ? 'font-bold text-[20px] leading-[26px] text-ink' : HOME_NOTICE_LABEL}>{paused || submitted ? `${possessive} EquiBoost traject` : named ? (generic ? `Herstelplan van ${horseName}` : protocol.title) : `${possessive} intake`}</Text>
       {(!named || paused) && <Text className="font-bold text-[20px] leading-[26px] text-ink">{paused ? `${possessive} herstelplan is gepauzeerd` : submitted ? `${possessive} intake is verstuurd!` : partial ? `Je bent al begonnen met ${protocol.horse_name ? `${possessive} intake` : 'de intake voor je paard'}!` : 'Welkom bij je EquiBoost traject!'}</Text>}
-      <Text className={HOME_NOTICE_BODY}>{paused ? 'Je herstelplan staat momenteel op pauze. Zodra het weer wordt hervat, kun je verdergaan waar je gebleven was.'
+      <Text className={HOME_NOTICE_BODY}>{paused ? 'Je herstelplan staat momenteel op pauze.'
         : submitted ? `We gaan met alle informatie aan de slag om een herstelplan voor ${horseName} op te stellen.`
         : partial ? 'Je bent goed op weg! Maak de intake verder af, zodat we zo snel mogelijk aan de slag kunnen met je herstelplan.'
         : !completedAt && !named

@@ -170,6 +170,41 @@ test('signing out before this tab holds a token still ends the scoped server ses
   assert.equal(JSON.parse(localStorage.getItem(LOCAL_SIGNOUT_KEY)).pending, false);
 });
 
+for (const interrupt of ['login', 'timeout']) {
+  test(`a stalled logout token body releases the auth lock on ${interrupt}`, async t => {
+    t.mock.timers.enable({ apis: ['setTimeout'] });
+    const bodyStarted = Promise.withResolvers();
+    const body = Promise.withResolvers();
+    let logoutRequests = 0, signal;
+    globalThis.fetch = async (url, options) => {
+      if (url.endsWith('/csrf')) return response({ token: 'csrf' });
+      if (url.endsWith('/token')) {
+        signal = options.signal;
+        return { ok: true, status: 200, json: () => { bodyStarted.resolve(); return body.promise; } };
+      }
+      if (url.endsWith('/logout')) logoutRequests++;
+      return response(session('new'));
+    };
+    logout();
+    const attempt = retryPendingLogout();
+    await bodyStarted.promise;
+    try {
+      if (interrupt === 'timeout') {
+        t.mock.timers.tick(20_000);
+        assert.equal(signal.aborted, true);
+      }
+      const nextLogin = login('owner@example.test', 'password');
+      assert.equal(signal.aborted, true);
+      assert.equal(await attempt, false);
+      assert.equal((await nextLogin).user.id, 'new');
+    } finally {
+      body.resolve(session('old'));
+    }
+    await new Promise(resolve => setImmediate(resolve));
+    assert.equal(logoutRequests, 0);
+  });
+}
+
 test('every request that mints a PowerSync token declares per-dose protocol support', async () => {
   const { register, completeRegistration, checkRegistration } = await import('../db/auth.ts');
   const requests = [];

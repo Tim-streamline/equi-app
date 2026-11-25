@@ -8,7 +8,7 @@ export function phaseStarts(protocol: DashboardProtocol, date: string) {
   return protocol.preparing ? [] : protocol.phases.filter(phase => calendarDate(phase.startsAt) === date);
 }
 export function nextPhaseStart(protocol: DashboardProtocol, today: string) {
-  if (protocol.preparing) return [];
+  if (protocol.preparing || protocol.paused || protocol.completed) return [];
   const future = protocol.phases.filter(phase => calendarDate(phase.startsAt) > today).sort((a,b) => calendarDate(a.startsAt).localeCompare(calendarDate(b.startsAt)));
   const limit = new Date(today + 'T00:00:00Z'); limit.setUTCDate(limit.getUTCDate() + 14);
   return future.length && calendarDate(future[0].startsAt) <= limit.toISOString().slice(0,10) ? future.filter(phase => calendarDate(phase.startsAt) === calendarDate(future[0].startsAt)) : [];

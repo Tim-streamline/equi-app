@@ -231,6 +231,7 @@ export type HorseDashboard = {
   protocol: DashboardProtocol | null;
   /** Per horse with a protocol in progress, sorted by name (absent in older cached responses). */
   horseProtocols?: HorseProtocolSummary[];
+  submittedEvaluations?: { id: string; title: string; endsOn: string }[];
   evaluationDrafts?: Pick<HorseProtocolSummary, 'id' | 'horseId' | 'horseName' | 'evaluation'>[];
 };
 
@@ -258,13 +259,14 @@ export function libraryPath(
 export function dashboardAtTime(data: HorseDashboard, now: Date): HorseDashboard {
   if (!data.protocol) return data;
   if (data.protocol.preparing) return data;
+  const completed = data.protocol.completed;
   const phases = data.protocol.phases.map((phase): DashboardPhase => {
     const available = Date.parse(phase.availableAt ?? '');
     const start = Date.parse(phase.startsAt ?? '');
     const end = Date.parse(phase.endsAt ?? '');
     const time = now.getTime();
     const state = !Number.isFinite(available) || time < available ? 'locked'
-      : time < start ? 'preview' : time < end ? 'active' : 'done';
+      : time < start ? 'preview' : time < end && !completed ? 'active' : 'done';
     const durationWeeks = Math.max(0, phase.weekEnd - phase.weekStart + 1);
     // Count calendar dates in the response timezone, not 24-hour periods across DST.
     const dateParts = new Intl.DateTimeFormat('en-CA', {
@@ -278,7 +280,7 @@ export function dashboardAtTime(data: HorseDashboard, now: Date): HorseDashboard
       ? Math.min(durationWeeks, Math.max(1, Math.floor((dayNumber(now) - dayNumber(new Date(start))) / 7) + 1)) : null;
     return { ...phase, state, durationWeeks, currentPhaseWeek,
       durationLabel: phase.weekStart > 0 ? `Duur: ${durationWeeks} ${durationWeeks === 1 ? 'week' : 'weken'}` : 'Nog niet ingepland', accessible: state !== 'locked',
-      statusLabel: state === 'active' ? `Actief · week ${currentPhaseWeek} van ${durationWeeks}`
+      statusLabel: completed ? 'Herstelplan afgerond' : state === 'active' ? `Actief · week ${currentPhaseWeek} van ${durationWeeks}`
         : state === 'preview' ? 'Start volgende week' : state === 'done' ? 'Afgerond'
           : phase.weekStart ? `Start in protocolweek ${phase.weekStart}` : 'Nog niet ingepland',
       description: phase.description,

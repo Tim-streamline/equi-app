@@ -65,6 +65,43 @@ class IntakeLabelsTest extends TestCase
         (new IntakeLabels)->validate([['label' => 'zelfde', 'answers' => [['answer' => 'Ja', 'label' => 'zelfde']]]]);
     }
 
+    public function test_legacy_repeater_choices_round_trip_with_one_label_per_exact_string(): void
+    {
+        $labels = new IntakeLabels;
+        $field = ['type' => 'repeater', 'sub' => [
+            'invalid child', ['type' => 'text'],
+            ['id' => 'use', 'options' => ['Ja', ['value' => 'Nee'], 'Ja', 'Ja ', ' ', '01', '1'], 'sub' => 'invalid'],
+        ]];
+        $legacy = [['key' => 'use', 'answers' => [
+            ['answer' => 'Ja', 'label' => 'first_choice'], ['answer' => 'Ja', 'label' => 'duplicate_choice'],
+            ['answer' => '01', 'label' => 'leading_zero'], ['answer' => '1', 'label' => 'one'],
+        ]]];
+        $config = $labels->complete($field, 'medicatie', $legacy);
+        $labels->validate($config);
+        $this->assertSame(['', 'use'], array_column($config, 'key'));
+        $this->assertSame(['Ja', 'Ja ', '01', '1'], array_column($config[1]['answers'], 'answer'));
+        $this->assertSame(['first_choice', 'medicatie_use_ja', 'leading_zero', 'one'], array_column($config[1]['answers'], 'label'));
+        $this->assertSame($config, $labels->complete($field, 'medicatie', $config));
+    }
+
+    public function test_admin_can_label_two_distinct_repeater_answer_strings(): void
+    {
+        $this->seed(IntakeQuestionnaireSeeder::class);
+        $admin = AdminUser::create(['name' => 'Admin', 'email' => 'sub@example.com', 'password' => 'password', 'role' => 'admin', 'active' => true]);
+        $field = IntakeField::where('type', 'repeater')->firstOrFail();
+        $subfields = [['id' => 'keuze', 'label' => 'Keuze', 'type' => 'radio', 'options' => ['Ja', 'Ja ']]];
+        $answers = [['answer' => 'Ja', 'label' => 'eerste'], ['answer' => 'Ja ', 'label' => 'tweede']];
+        $this->actingAs($admin, 'admin')->put('/admin/intake-questionnaire/fields/'.$field->id, [
+            'section_id' => $field->section_id, 'key' => $field->key, 'label' => $field->label, 'type' => 'repeater',
+            'required' => true, 'optional' => false, 'tall' => false, 'active' => true, 'order' => $field->order,
+            'repeater_sub_json' => json_encode($subfields),
+            'label_config' => [['key' => 'keuze', 'label' => 'keuze', 'answers' => $answers]],
+        ])->assertSessionHasNoErrors();
+        $field->refresh();
+        $this->assertSame(['Ja', 'Ja '], $field->repeater_sub[0]['options']);
+        $this->assertEquals($answers, $field->label_config[1]['answers']);
+    }
+
     public function test_admin_can_save_labels_without_changing_question_or_answer_values(): void
     {
         $this->seed(IntakeQuestionnaireSeeder::class);
@@ -73,7 +110,7 @@ class IntakeLabelsTest extends TestCase
         $data = ['section_id' => $field->section_id, 'key' => $field->key, 'label' => 'Actuele tekst uit admin', 'type' => 'radio',
             'required' => true, 'optional' => false, 'tall' => false, 'active' => true, 'order' => $field->order,
             'options_json' => json_encode(['Nieuwe keuze', 'Andere keuze']),
-            'label_config' => [['key' => '', 'label' => 'mijn_vraag', 'answers' => [['answer' => 'Nieuwe keuze', 'label' => 'mijn_antwoord']]]]];
+            'label_config' => [['key' => '', 'label' => 'mijn_vraag', 'answers' => [['answer' => ' Nieuwe keuze ', 'label' => 'mijn_antwoord']]]]];
         $url = '/admin/intake-questionnaire/fields/'.$field->id;
         $this->actingAs($admin, 'admin')->put($url, $data)->assertSessionHasNoErrors();
         $saved = $field->fresh();

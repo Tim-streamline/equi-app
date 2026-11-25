@@ -47,6 +47,35 @@ class KpuFollowupsTest extends TestCase
         $this->assertSame($keys, $section->fields()->orderBy('order')->pluck('key')->all());
     }
 
+    public function test_moved_questions_keep_their_presentation_order_and_answer_namespace(): void
+    {
+        $this->seed(IntakeQuestionnaireSeeder::class);
+        $sections = IntakeQuestionnaire::where('slug', 'protocol-intake')->firstOrFail()->sections()->get()->keyBy('key');
+        $medical = $sections['medisch'];
+        $status = $medical->fields()->where('key', 'kpu-status')->firstOrFail();
+        $status->update(['section_id' => $sections['paard']->id, 'answer_section_key' => 'medisch', 'order' => 77]);
+        $date = $medical->fields()->where('key', 'kpu-onderzoek-datum')->firstOrFail();
+        $date->update(['section_id' => $sections['voer']->id, 'answer_section_key' => 'medisch', 'order' => 78, 'type' => 'text']);
+        // An admin can arrange questions in the opposite order to their database IDs.
+        [$lowId, $highId] = $sections['paard']->fields()->whereKeyNot($status->id)->reorder('id')->limit(2)->get()->all();
+        $lowId->update(['order' => 81]);
+        $highId->update(['order' => 76]);
+        $medical->fields()->where('key', 'kpu-indikan-waarde')->delete();
+        $migration = require database_path('migrations/2026_11_19_000001_expand_kpu_urine_followups.php');
+        $migration->up();
+        $migration->up();
+        $date->refresh();
+        $this->assertSame([$sections['voer']->id, 78, 'month_year'], [$date->section_id, $date->order, $date->type]);
+        $this->assertSame(1, IntakeField::where('key', $date->key)->count());
+        $this->assertContains($status->options[0], $date->show_if['medisch.kpu-status']);
+        $new = $sections['paard']->fields()->where('key', 'kpu-indikan-waarde')->firstOrFail();
+        $this->assertSame('medisch', $new->answer_section_key);
+        $this->assertSame($status->fresh()->order + 1, $new->order);
+        $this->assertSame($date->show_if, $new->show_if);
+        $this->assertLessThan($status->fresh()->order, $highId->fresh()->order);
+        $this->assertGreaterThan($new->order, $lowId->fresh()->order);
+    }
+
     public function test_the_shipped_local_snapshot_already_matches_the_migration_so_a_sync_does_not_undo_it(): void
     {
         $this->seed(IntakeQuestionnaireSeeder::class);

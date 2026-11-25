@@ -3,10 +3,11 @@ import assert from 'node:assert/strict';
 import { labelDefinitions, editIntakeLabel, submittedIntakeLabels } from '../../resources/js/lib/intakeLabels.js';
 
 test('current admin wording and nested answer options are used without a static catalog', () => {
-    const nodes = labelDefinitions({ type: 'repeater', label: 'Mijn actuele vraag', sub: [{ id: 'plaats', type: 'multi', label: 'Mijn subvraag', options: ['Binnen', 'Buiten'] }] });
+    const nodes = labelDefinitions({ type: 'repeater', label: 'Mijn actuele vraag', sub: [{ id: 'plaats', type: 'multi', label: 'Mijn subvraag', options: ['Ja', 'Ja ', { value: 'Ja' }, 'Ja'] }] });
     assert.equal(nodes[0].title, 'Mijn actuele vraag');
-    assert.deepEqual(nodes[1], { key: 'plaats', title: 'Mijn subvraag', options: ['Binnen', 'Buiten'] });
+    assert.deepEqual(nodes[1], { key: 'plaats', title: 'Mijn subvraag', options: ['Ja', 'Ja '] });
     assert.deepEqual(labelDefinitions({ type: 'sectionhead' }), []);
+    assert.deepEqual(labelDefinitions({ type: 'multi', options: ['Ja', ' Ja '] })[0].options, ['Ja']);
 });
 
 test('editing one answer preserves independent labels and does not mutate original data', () => {

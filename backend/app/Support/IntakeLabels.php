@@ -12,9 +12,14 @@ class IntakeLabels
     {
         $nodes = [];
         if (($field['type'] ?? '') !== 'sectionhead') {
-            $nodes[] = ['key' => $path, 'title' => $field['label'] ?? '', 'options' => $field['options'] ?? []];
+            // Older repeater JSON can contain non-text choices. Only exact answer strings have labels.
+            $options = is_array($field['options'] ?? null) ? $field['options'] : [];
+            $options = array_filter($options, static fn ($choice) => is_string($choice) && Str::trim($choice) !== '');
+            $nodes[] = ['key' => $path, 'title' => $field['label'] ?? '', 'options' => array_values(array_unique($options))];
         }
-        foreach ($field['repeater_sub'] ?? $field['sub'] ?? [] as $sub) {
+        $children = $field['repeater_sub'] ?? $field['sub'] ?? [];
+        foreach (is_array($children) ? $children : [] as $sub) {
+            if (! is_array($sub) || ! is_string($sub['id'] ?? null) || $sub['id'] === '') continue;
             $nodes = array_merge($nodes, $this->definitions($sub, $path === '' ? $sub['id'] : $path.'/'.$sub['id']));
         }
         return $nodes;
@@ -36,7 +41,7 @@ class IntakeLabels
                 $questionLabels[$key] = $previous['label'];
                 $used[$previous['label']] = true;
             }
-            $answers = collect($previous['answers'] ?? [])->pluck('label', 'answer');
+            $answers = collect($previous['answers'] ?? [])->uniqueStrict('answer')->pluck('label', 'answer');
             foreach ($node['options'] as $answer) {
                 if (isset($answers[$answer])) {
                     $answerLabels[$key][$answer] = $answers[$answer];

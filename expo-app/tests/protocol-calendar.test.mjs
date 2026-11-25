@@ -18,7 +18,9 @@ test('future phase markers group simultaneous starts and stay absent before owne
   assert.deepEqual(logic.nextPhaseStart(protocol,'2026-11-03').map(p=>p.id), ['b','c']);
   assert.equal(logic.phaseStarts(protocol,'2026-11-15').length,2);
   assert.deepEqual(logic.phaseStarts({...protocol,preparing:true},'2026-11-15'),[]);
-  assert.deepEqual(logic.nextPhaseStart({...protocol,preparing:true},'2026-11-03'),[]);
+  for (const status of ['preparing', 'paused', 'completed']) {
+    assert.deepEqual(logic.nextPhaseStart({ ...protocol, [status]: true }, '2026-11-03'), []);
+  }
 });
 test('future quantities contain only selected phases and never guess missing doses', () => {
   const row = {id:'herb',name:'Real herb',unit:'g',components:[{phaseId:'a',selectionId:'one',quantity:420},{phaseId:'b',selectionId:'two',quantity:1260}],purchaseOptions:[]};

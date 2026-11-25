@@ -52,7 +52,12 @@ class ProtocolEvaluationTest extends TestCase
         $this->getJson($home)->assertOk()->assertJsonPath('horseProtocols.0.id', $next->id)->assertJsonPath('evaluationDrafts.0.id', $plan->id);
         $this->postJson($url, [...$draft, 'revision' => 1, 'submit' => true,
             'answers' => array_fill_keys(array_keys(ProtocolEvaluation::QUESTIONS), 'Gereed')])->assertOk()->assertJsonPath('revision', 2);
-        $this->getJson($home)->assertOk()->assertJsonCount(0, 'evaluationDrafts');
+        $this->getJson($home)->assertOk()->assertJsonCount(0, 'evaluationDrafts')
+            ->assertJsonPath('submittedEvaluations.0.id', $plan->id)->assertJsonPath('submittedEvaluations.0.title', $plan->title);
+        $this->getJson('/api/home')->assertOk()->assertJsonCount(0, 'submittedEvaluations');
+        $otherHorse = Horse::create(['owner_id' => $plan->horse->owner_id, 'name' => 'Ander paard', 'status' => 'active']);
+        $this->getJson('/api/horses/'.$otherHorse->id.'/dashboard')->assertOk()->assertJsonCount(0, 'submittedEvaluations');
+        $this->getJson($url)->assertOk()->assertJsonPath('answers.'.$key, 'Gereed');
     }
 
     public function test_exact_evaluation_and_discount_boundaries_use_the_business_timezone(): void
@@ -211,6 +216,14 @@ class ProtocolEvaluationTest extends TestCase
         $this->getJson($url)->assertOk()->assertJsonPath('questions.c12e1000-0000-4000-8000-000000000001', 'Gewijzigde vraag');
         $this->postJson($url, ['answers' => $answers, 'submit' => true, 'question_version' => $current['questionVersion']])->assertOk();
         $this->assertSame('Gewijzigde vraag', app(ProtocolEvaluation::class)->admin($protocol)['questions']['c12e1000-0000-4000-8000-000000000001']);
+    }
+
+    public function test_deactivating_a_stale_question_preserves_the_latest_edit(): void
+    {
+        $question = \App\Models\ProtocolEvaluationQuestion::firstOrFail();
+        \App\Models\ProtocolEvaluationQuestion::whereKey($question->id)->update(['label' => 'Nieuwe tekst', 'order' => 23]);
+        app(\App\Http\Controllers\Admin\ProtocolEvaluationController::class)->destroy($question);
+        $this->assertDatabaseHas('protocol_evaluation_questions', ['id' => $question->id, 'label' => 'Nieuwe tekst', 'order' => 23, 'active' => false]);
     }
 
     public function test_admin_manages_questions_and_exports_only_the_evaluations_of_the_selected_horse(): void

@@ -43,7 +43,8 @@ import {
 
 import { ProtocolPhaseContent } from '@/components/protocol/ProtocolPhaseContent';
 import { ProtocolCalendar } from '@/components/protocol/ProtocolCalendar';
-import { phaseOrderItems, phaseSubtitle } from '@/lib/protocol-calendar';
+import { evaluationDate } from '@/lib/protocol-evaluation';
+import { phaseSubtitle } from '@/lib/protocol-calendar';
 import { ProtocolToday } from '@/components/protocol/ProtocolToday';
 import { ProtocolAnalysis } from "@/components/protocol/ProtocolAnalysis";
 import { ProtocolOrderList } from "@/components/protocol/ProtocolOrderList";
@@ -167,7 +168,8 @@ export default function ProtocolListScreen() {
     });
     onceDailySaves.current.set(planKey, save);
   };
-  const visibleOrders = scopeOrderItems(onceDailyOrderItems(protocol?.orderItems, onceDaily), orders);
+  const orderItems = onceDailyOrderItems(protocol?.orderItems, onceDaily) ?? [];
+  const visibleOrders = scopeOrderItems(orderItems, orders);
   // Ticks show at once; the server's answer (or a failure) settles them. A dashboard requested after the last
   // answer then takes over, also when another device changed the list (see shownOrderedKeys).
   const [overlays, setOverlays] = useState<Record<string, OrderOverlay>>({});
@@ -248,6 +250,13 @@ export default function ProtocolListScreen() {
     </Pressable>
   );
 
+  const evaluationLinks = data?.horse.id === horseId && data?.submittedEvaluations?.map(evaluation => (
+    <Pressable key={evaluation.id} accessibilityRole="link" className="mt-3 py-2"
+      onPress={() => router.push({ pathname: '/protocol-evaluation' as any, params: { protocolId: evaluation.id } })}>
+      <Text className="font-semi text-[14px] text-teal-600">Bekijk of wijzig je evaluatie · {evaluation.title} ({evaluationDate(evaluation.endsOn)})</Text>
+    </Pressable>
+  ));
+
   return (
     <View className="flex-1 bg-canvas">
       {!!error && <OfflineStrip message={error} stale={!!data} onRetry={() => void refresh()} />}
@@ -269,6 +278,7 @@ export default function ProtocolListScreen() {
             </View>
           )}
           {purchaseCard}
+          {evaluationLinks}
         </ScrollView>
       )}
       {protocol && (
@@ -297,6 +307,7 @@ export default function ProtocolListScreen() {
             {/* A completed plan stays readable; a later purchase's intake must still be reachable below it. */}
             {tab === "vandaag" && protocol.completed && <View className="mt-4"><PurchasedProtocols excludeProtocolIds={[protocol.id]} actionableOnly /></View>}
             {tab === "vandaag" && !!purchaseCard && <View className="mt-4">{purchaseCard}</View>}
+            {tab === "vandaag" && evaluationLinks}
             {tab === "kalender" && (
               <Calendar
                 key={`${horseId}:${protocol.id}`}
@@ -346,7 +357,7 @@ export default function ProtocolListScreen() {
                 {linkedPhases.map((item) => <Button key={item.id} variant={item.id === visiblePhase?.id ? "primary" : "ghost"} title={item.title} onPress={() => openPhase(item)} />)}
               </View>
             )}
-            {visiblePhase && <ProtocolPhaseContent key={visiblePhase.id} phase={visiblePhase} date={data.date} orderItems={protocol.orderItems} onRefresh={refresh} />}
+            {visiblePhase && <ProtocolPhaseContent key={visiblePhase.id} phase={visiblePhase} date={data.date} orderItems={orderItems} completed={protocol.completed} onRefresh={refresh} />}
           </Sheet>
           <WeeklySheet
             visible={weeklyOpen}

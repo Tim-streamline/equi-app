@@ -12,6 +12,7 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
@@ -362,9 +363,19 @@ class IntakeQuestionnaireController extends Controller
         }
 
         $labels = app(\App\Support\IntakeLabels::class);
-        $config = $request->exists('label_config') ? $data['label_config'] : $field?->label_config;
-        // Laravel converts the root node's empty path to null.
-        $config = array_map(fn ($node) => array_replace($node, ['key' => $node['key'] ?? '']), $config ?? []);
+        $submittedLabels = $request->exists('label_config');
+        $config = $submittedLabels ? $data['label_config'] : $field?->label_config;
+        $config = array_map(static function ($node) use ($submittedLabels) {
+            // Laravel converts the root node's empty path to null.
+            $node['key'] ??= '';
+            if ($submittedLabels && $node['key'] === '') {
+                // The top-level editor trims choices on save. Repeater options retain their exact text.
+                foreach ($node['answers'] as $i => $row) {
+                    $node['answers'][$i]['answer'] = Str::trim($row['answer']);
+                }
+            }
+            return $node;
+        }, $config ?? []);
         $data['label_config'] = $labels->complete($data, $section->key.'_'.$data['key'], $config);
         $labels->validate($data['label_config']);
 

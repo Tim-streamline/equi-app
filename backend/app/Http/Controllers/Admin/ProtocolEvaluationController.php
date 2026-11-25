@@ -35,6 +35,16 @@ class ProtocolEvaluationController extends Controller
     public function update(Request $request, ProtocolEvaluationQuestion $question)
     {
         $data = $request->validate(['label' => ['required', 'string', 'max:2000'], 'order' => ['required', 'integer', 'between:0,10000'], 'active' => ['required', 'boolean']]);
+        return $this->saveQuestion($question, $data);
+    }
+
+    public function destroy(ProtocolEvaluationQuestion $question)
+    {
+        return $this->saveQuestion($question, ['active' => false]);
+    }
+
+    private function saveQuestion(ProtocolEvaluationQuestion $question, array $data)
+    {
         DB::transaction(function () use ($question, $data) {
             ProtocolEvaluationQuestion::orderBy('id')->lockForUpdate()->get();
             $question->refresh();
@@ -46,12 +56,6 @@ class ProtocolEvaluationController extends Controller
             AuditLogger::log('updated', $question, $before, $question->only(['label', 'order', 'active']), label: Str::limit($question->label, 250));
         });
         return back()->with('success', 'Evaluatievraag opgeslagen.');
-    }
-
-    public function destroy(Request $request, ProtocolEvaluationQuestion $question)
-    {
-        $request->merge(['label' => $question->label, 'order' => $question->order, 'active' => false]);
-        return $this->update($request, $question);
     }
 
     public function pdf(Horse $horse, Protocol $protocol, ProtocolEvaluation $service)

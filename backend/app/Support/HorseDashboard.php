@@ -81,7 +81,7 @@ class HorseDashboard
             'plusOffer' => null,
             'seasonalTip' => $tip ? ['id' => $tip->id, 'intro' => Str::limit(trim(preg_replace('/\s+/u', ' ', strip_tags($tip->body))), 180), 'month' => $tip->month, 'title' => $tip->title ?: $tipItem?->title, 'body' => $tip->body, 'item' => $tipItem ? $itemData($tipItem) : null] : null,
             'recommendations' => $recommendations, 'protocol' => $data,
-            'evaluationDrafts' => app(ProtocolEvaluation::class)->draftNotices($user, $now),
+            ...app(ProtocolEvaluation::class)->dashboardLinks($user, $horse?->id, $now),
             'horseProtocols' => $this->horseProtocols($user, $horse, $now, $inactivePlans),
         ];
     }
@@ -110,7 +110,14 @@ class HorseDashboard
         return [
             'start' => $start, 'day' => $day, 'week' => $day > 0 ? (int) ceil($day / 7) : 0, 'totalWeeks' => $totalWeeks, 'running' => $running, 'progressKnown' => $progressKnown,
             'progressPercent' => $totalDays ? (int) round($day / $totalDays * 100) : 0,
-            'statusLabel' => $protocol->status === 'completed' ? 'Je protocol is afgerond' : (! $start ? 'Je protocol staat klaar' : ($elapsed > $totalDays ? 'Je protocol is afgerond' : ($running ? 'Je protocol is actief' : 'Je protocol start binnenkort'))),
+            'statusLabel' => match (true) {
+                $protocol->status === 'paused' => 'Je protocol is gepauzeerd',
+                $protocol->status === 'completed' => 'Je protocol is afgerond',
+                ! $start => 'Je protocol staat klaar',
+                $elapsed > $totalDays => 'Je protocol is afgerond',
+                $running => 'Je protocol is actief',
+                default => 'Je protocol start binnenkort',
+            },
         ];
     }
 

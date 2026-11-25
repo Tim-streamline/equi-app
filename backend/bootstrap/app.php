@@ -22,6 +22,7 @@ return Application::configure(basePath: dirname(__DIR__))
     )
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->validateCsrfTokens(except: ['api/*']);
+        $middleware->trimStrings(except: ['label_config.*.answers.*.answer']);
 
         // User-keyed API limits need the verified JWT identity before throttling.
         $middleware->prependToPriorityList(

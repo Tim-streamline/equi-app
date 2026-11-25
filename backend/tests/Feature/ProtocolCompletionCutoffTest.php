@@ -173,6 +173,9 @@ class ProtocolCompletionCutoffTest extends TestCase
         $this->assertSame(8, $protocol['currentDay']);
         $this->assertSame(2, $protocol['currentWeek']);
         $this->assertSame(29, $protocol['progressPercent']);
+        $this->assertSame('', $protocol['phaseLabel']);
+        $this->assertNotSame('active', $protocol['phases'][0]['state']);
+        $this->assertNotEmpty($protocol['phases'][0]['supplements']);
         $this->assertSame('complete', $this->cell($protocol, '2026-08-20')['state']);
         $this->assertSame('missed', $this->cell($protocol, '2026-08-21')['state'], 'a real missed plan day stays missed');
         $this->assertSame('complete', $this->cell($protocol, '2026-08-22')['state'], 'the close day keeps its recorded dose');
@@ -185,22 +188,24 @@ class ProtocolCompletionCutoffTest extends TestCase
         $this->getJson($this->dayUrl('2026-08-24'))->assertUnprocessable()->assertJsonPath('message', 'Het herstelplan was op deze dag al afgerond.');
         $home = $this->getJson('/api/home?timezone=Europe/Amsterdam')->assertOk()->json('horseProtocols.0');
         $this->assertSame([8, 29], [$home['currentDay'], $home['progressPercent']]);
+        $this->assertSame('', $home['phaseLabel']);
     }
 
     public function test_days_frozen_after_the_completion_before_this_fix_stay_stored_but_only_recorded_doses_show(): void
     {
         $this->protocol->update(['status' => 'completed']);
         $this->travelTo(now()->setDate(2026, 8, 28)->setTime(10, 0));
-        $item = fn (bool $done) => json_encode([['id' => 'gone', 'name' => 'Herb', 'dosage' => '20 g', 'administration' => 1, 'administrationsPerDay' => 1, 'done' => $done]]);
+        $item = fn (bool $done, int $number) => ['id' => 'gone', 'name' => 'Herb', 'dosage' => '20 g', 'administration' => $number, 'administrationsPerDay' => 2, 'done' => $done];
         DB::table('protocol_day_snapshots')->insert([
-            ['protocol_id' => $this->protocol->id, 'date' => '2026-08-24', 'items' => $item(false), 'created_at' => now(), 'updated_at' => now()],
-            ['protocol_id' => $this->protocol->id, 'date' => '2026-08-25', 'items' => $item(true), 'created_at' => now(), 'updated_at' => now()],
+            ['protocol_id' => $this->protocol->id, 'date' => '2026-08-24', 'items' => json_encode([$item(false, 1)]), 'created_at' => now(), 'updated_at' => now()],
+            ['protocol_id' => $this->protocol->id, 'date' => '2026-08-25', 'items' => json_encode([$item(false, 1), $item(true, 2)]), 'created_at' => now(), 'updated_at' => now()],
         ]);
         $protocol = $this->dashboard();
         $this->assertSame('default', $this->cell($protocol, '2026-08-24')['state']);
         $this->assertSame('complete', $this->cell($protocol, '2026-08-25')['state']);
         $this->getJson($this->dayUrl('2026-08-24'))->assertUnprocessable()->assertJsonPath('message', 'Het herstelplan was op deze dag al afgerond.');
-        $this->getJson($this->dayUrl('2026-08-25'))->assertOk();
+        $this->getJson($this->dayUrl('2026-08-25'))->assertOk()->assertJsonCount(1, 'items')
+            ->assertJsonPath('items.0.administration', 2)->assertJsonPath('items.0.done', true);
         $this->assertSame(2, DB::table('protocol_day_snapshots')->where('protocol_id', $this->protocol->id)->where('date', '>', '2026-08-22')->count(), 'nothing is deleted');
     }
 

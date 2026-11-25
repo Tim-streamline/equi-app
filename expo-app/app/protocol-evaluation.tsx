@@ -41,7 +41,8 @@ function EvaluationForm({ protocolId }: { protocolId: string }) {
     try {
       const result = await dashboardRequest(`/api/protocols/${protocolId}/evaluation`, { answers, submit, revision: data.revision, question_version: data.questionVersion });
       if (revision === accountSession.revision && current === generation.current) {
-        setData(result); setConflicts({}); setNotice(submit ? 'Je evaluatie is verstuurd naar je therapeut.' : 'Je concept is opgeslagen. Je kunt later verdergaan.');
+        setData(result); setAnswers(result.answers ?? {}); setConflicts({});
+        setNotice(submit ? 'Je evaluatie is verstuurd naar je therapeut.' : 'Je concept is opgeslagen. Je kunt later verdergaan.');
         if (submit) setOffer(true);
       }
     } catch (error) {

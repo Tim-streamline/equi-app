@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import test from 'node:test';
 import ts from 'typescript';
+import { onceDailyOrderItems, scopeOrderItems } from '../lib/protocol-order-scope.ts';
 import { protocolStyleGlobals } from './protocol-styles.mjs';
 
 const source = readFileSync(new URL('../app/(tabs)/(pager)/protocol.tsx', import.meta.url), 'utf8');
@@ -50,6 +51,38 @@ test('an eligible selected horse has a protocol purchase card opening the purcha
   assert.equal(screen.card(), undefined, 'do not show the previous horse offer while switching');
   screen.data = { horse: { id: 'nova', name: 'Nova' }, showPlusUpsell: true };
   assert.equal(screen.card().props.accessibilityLabel, 'Protocol kopen voor Nova');
+});
+
+test('the selected horse can reopen its submitted evaluation after a follow-up takes over', () => {
+  const screen = app({ evaluationDate: value => value });
+  screen.data = { horse: { id: 'rolo' }, protocol: { id: 'next', phases: [], orderItems: [] },
+    submittedEvaluations: [{ id: 'original', title: 'Eerste plan', endsOn: '2026-12-02' }] };
+  screen.card().props.onPress();
+  assert.deepEqual(screen.routes, [{ pathname: '/protocol-evaluation', params: { protocolId: 'original' } }]);
+  screen.horseId = 'nova';
+  assert.equal(screen.card(), undefined);
+});
+
+test('opening the order list from a phase keeps its once-daily quantities', () => {
+  let cursor = 0;
+  const state = [];
+  const screen = app({
+    onceDailyOrderItems, scopeOrderItems, ProtocolPhaseContent: 'PhaseContent', phaseSubtitle: phase => phase.title,
+    useState(initial) {
+      const i = cursor++;
+      if (!(i in state)) state[i] = initial;
+      return [state[i], value => { state[i] = value; }];
+    },
+  });
+  const phase = { id: 'phase', title: 'Fase' };
+  const item = { id: 'herb', unit: 'g', components: [{ phaseId: phase.id, selectionId: 'dose', quantity: 140, administrationsPerDay: 2 }] };
+  screen.data = { horse: { id: 'rolo' }, protocol: { id: 'plan', orderOnceDaily: true, phases: [phase], orderItems: [item] } };
+  const render = () => { cursor = 0; return screen.nodes(); };
+  render().find(node => node.type === 'Today').props.onPhase(phase);
+  const preview = render();
+  assert.equal(preview.find(node => node.type === 'PhaseContent').props.orderItems[0].components[0].quantity, 70);
+  preview.find(node => node.type === 'Sheet' && node.props.footer).props.footer.props.onPress();
+  assert.equal(render().find(node => node.type === 'ProtocolOrderList').props.items[0].quantityLabel, '70 g');
 });
 
 test('switching horses keeps unfinished ticks, replies and errors with their protocol', async () => {

@@ -10,7 +10,7 @@ use Illuminate\Mail\Mailables\Envelope;
 /** Tells the customer that the recovery plan (protocol) for their horse is ready in the app. */
 class RecoveryPlanPublished extends Mailable
 {
-    public function __construct(public string $name, public string $horseName, public string $appUrl) {}
+    public function __construct(public string $name, public string $horseName, public string $appUrl, public bool $hasSubscription) {}
 
     public function envelope(): Envelope
     {

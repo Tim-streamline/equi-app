@@ -1,7 +1,10 @@
 export function labelDefinitions(field, key = '') {
-    const nodes = field.type === 'sectionhead' ? [] : [{ key, title: field.label || 'Nieuwe vraag', options: Array.isArray(field.options) ? field.options.filter(x => typeof x === 'string' && x.trim()).map(x => x.trim()) : [] }];
+    // The top-level options editor trims on save. Repeater JSON keeps exact answer identities.
+    const options = Array.isArray(field.options) ? field.options.filter(x => typeof x === 'string' && x.trim()) : [];
+    const choices = [...new Set(key ? options : options.map(x => x.trim()))];
+    const nodes = field.type === 'sectionhead' ? [] : [{ key, title: field.label || 'Nieuwe vraag', options: choices }];
     for (const sub of Array.isArray(field.sub) ? field.sub : []) {
-        if (sub && typeof sub.id === 'string') nodes.push(...labelDefinitions(sub, key ? `${key}/${sub.id}` : sub.id));
+        if (sub && typeof sub.id === 'string' && sub.id !== '') nodes.push(...labelDefinitions(sub, key ? `${key}/${sub.id}` : sub.id));
     }
     return nodes;
 }

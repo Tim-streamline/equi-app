@@ -450,7 +450,7 @@ class IntakeSubmissionMailTest extends TestCase
 
     public function test_customer_receives_one_plain_text_confirmation_of_their_intake(): void
     {
-        $this->booking->answers()->create(['section_id' => 'paard', 'field_id' => 'naam', 'value' => json_encode('Rolo')]);
+        $this->booking->answers()->create(['section_id' => 'paard', 'field_id' => 'naam', 'value' => json_encode('Rolo & Co')]);
         $this->travelTo(Carbon::parse('2026-09-29T22:24:00Z'));
         $op = $this->submission();
         $this->upload([$op])->assertOk();
@@ -462,8 +462,8 @@ class IntakeSubmissionMailTest extends TestCase
         $this->assertCount(1, $this->messages());
         $message = $this->messages()->first()->getOriginalMessage();
         $this->assertSame('account@example.test', $message->getTo()[0]->getAddress());
-        $this->assertSame('Je intake voor Rolo is ontvangen | EquiApp', $message->getSubject());
-        foreach (['Hey Account,', 'De intake voor Rolo is goed ontvangen.', 'het herstelplan voor Rolo.', 'Binnen 5 werkdagen staat het herstelplan klaar in EquiApp.', 'Het EquiApp-team'] as $text) {
+        $this->assertSame('Je intake voor Rolo & Co is ontvangen | EquiApp', $message->getSubject());
+        foreach (['Hey Account,', 'De intake voor Rolo & Co is goed ontvangen.', 'het herstelplan voor Rolo & Co.', 'Binnen 5 werkdagen staat het herstelplan klaar in EquiApp.', 'Het EquiApp-team'] as $text) {
             $this->assertStringContainsString($text, $message->getTextBody());
         }
         $this->assertNull($message->getHtmlBody());

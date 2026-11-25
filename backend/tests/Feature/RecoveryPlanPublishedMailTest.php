@@ -13,11 +13,12 @@ use Illuminate\Mail\Events\MessageSending;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Mail;
 use RuntimeException;
+use Tests\Concerns\HasSubscription;
 use Tests\TestCase;
 
 class RecoveryPlanPublishedMailTest extends TestCase
 {
-    use RefreshDatabase;
+    use HasSubscription, RefreshDatabase;
 
     protected function setUp(): void
     {
@@ -45,6 +46,7 @@ class RecoveryPlanPublishedMailTest extends TestCase
     public function test_publishing_mails_the_owner_once_in_plain_text(): void
     {
         $protocol = $this->protocol();
+        $this->subscribe($protocol->horse->owner);
         $this->artisan('mail:send-customer-notifications')->assertSuccessful();
         $this->assertNull($protocol->fresh()->published_email_status);
         $this->assertCount(0, $this->messages());
@@ -76,6 +78,21 @@ class RecoveryPlanPublishedMailTest extends TestCase
         $protocol->fresh()->update(['published_at' => now()]);
         $this->artisan('mail:send-customer-notifications')->assertSuccessful();
         $this->assertCount(1, $this->messages());
+    }
+
+    public function test_expiry_before_delivery_changes_the_call_to_action_and_keeps_the_paid_plan_notice(): void
+    {
+        $protocol = $this->protocol();
+        $protocol->horse->update(['name' => "D'Artagnan & Co"]);
+        $this->subscribe($protocol->horse->owner)->update(['paid_through' => now()->addMinutes(15)]);
+        $protocol->update(['published_at' => now()]);
+        $this->travel(31)->minutes();
+        $this->artisan('mail:send-customer-notifications')->assertSuccessful();
+        $this->assertCount(1, $this->messages());
+        $body = $this->messages()->first()->getOriginalMessage()->getTextBody();
+        $this->assertStringContainsString("Verleng je abonnement in de app om het herstelplan van D'Artagnan & Co te bekijken:", $body);
+        $this->assertStringNotContainsString('👉 Bekijk', $body);
+        $this->assertSame('sent', $protocol->fresh()->published_email_status);
     }
 
     public function test_superseded_announcement_is_skipped_permanently(): void
