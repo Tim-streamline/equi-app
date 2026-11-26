@@ -63,15 +63,10 @@ class ProtocolEvaluationController extends Controller
         abort_unless($protocol->horse_id === $horse->id, 404);
         $evaluation = $service->admin($protocol);
         abort_unless($evaluation, 404, 'Er is nog geen verstuurde evaluatie.');
-        return $this->document('Evaluatie van '.$horse->name, $protocol->title.' | Ingediend op '.\Carbon\Carbon::parse($evaluation['submitted_at'])->timezone('Europe/Amsterdam')->format('d-m-Y'),
-            $evaluation['questions'], $evaluation['answers'], 'EquiBoost_evaluatie_'.Str::slug($horse->name).'_'.$protocol->id.'.pdf');
-    }
+        $title = 'Evaluatie van '.$horse->name;
+        $meta = $protocol->title.' | Ingediend op '.\Carbon\Carbon::parse($evaluation['submitted_at'])->timezone('Europe/Amsterdam')->format('d-m-Y');
+        $html = view('intake.evaluation-pdf', ['title' => $title, 'meta' => $meta, 'questions' => $evaluation['questions'], 'answers' => $evaluation['answers']])->render();
 
-    private function document(string $title, string $meta, array $questions, array $answers, string $filename)
-    {
-        $pdf = PdfDocument::render(view('intake.evaluation-pdf', compact('title', 'meta', 'questions', 'answers'))->render());
-        return response($pdf, 200, ['Content-Type' => 'application/pdf',
-            'Content-Disposition' => 'attachment; filename="'.$filename.'"',
-            'Cache-Control' => 'private, no-store', 'X-Content-Type-Options' => 'nosniff']);
+        return PdfDocument::download(PdfDocument::render($html), 'EquiBoost_evaluatie_'.Str::slug($horse->name).'_'.$protocol->id.'.pdf');
     }
 }

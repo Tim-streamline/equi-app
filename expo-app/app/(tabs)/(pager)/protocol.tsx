@@ -25,7 +25,7 @@ import {
   Leaf,
 } from "lucide-react-native";
 import { Button } from "@/components/ui/Button";
-import { createOrderTicks, shownOrderedKeys, type OrderOverlay } from "@/lib/protocol-order-ticks";
+import { createSerialSave, shownValue, toggleKeys, type Overlay, type SerialSave } from "@/lib/protocol-order-ticks";
 import { useTabBarPadding } from "@/hooks/useTabBarPadding";
 import {
   useHorseDashboard,
@@ -128,90 +128,66 @@ export default function ProtocolListScreen() {
   visibleOrdersView.current = { planKey, refresh };
 
   const [orderFailures, setOrderFailures] = useState<Record<string, boolean>>({});
-
-  // Save each plan's order setting in tap order. Only a dashboard requested after the last save can replace it.
-  const [onceDailyByProtocol, setOnceDailyByProtocol] = useState<Record<string, { value: boolean; settledAt: number | null }>>({});
-  const onceDailySaves = useRef(new Map<string, Promise<boolean>>());
-  const setting = onceDailyByProtocol[planKey];
-  const onceDaily = setting && (setting.settledAt === null || revision <= setting.settledAt)
-    ? setting.value : protocol?.orderOnceDaily ?? false;
-  useEffect(() => {
-    if (!setting || setting.settledAt === null || revision <= setting.settledAt) return;
-    setOnceDailyByProtocol(current => {
-      if (current[planKey] !== setting) return current;
-      const next = { ...current };
-      delete next[planKey];
-      return next;
-    });
-  }, [planKey, revision, setting]);
-  const setOnceDaily = (value: boolean) => {
-    if (!protocol || !horseId) return;
-    setOrderFailures(current => ({ ...current, [planKey]: false }));
-    setOnceDailyByProtocol(current => ({ ...current, [planKey]: { value, settledAt: null } }));
-    const previous = onceDailySaves.current.get(planKey) ?? Promise.resolve(onceDaily);
-    const save = previous.then(async confirmed => {
-      let failed = false;
-      try {
-        await dashboardRequest(`/api/horses/${horseId}/protocol-order-settings`, { protocol_id: protocol.id, once_daily: value });
-        confirmed = value;
-      } catch {
-        failed = true;
-      }
-      if (onceDailySaves.current.get(planKey) === save) {
-        onceDailySaves.current.delete(planKey);
-        const settledAt = latestDashboardRequest();
-        setOnceDailyByProtocol(current => ({ ...current, [planKey]: { value: confirmed, settledAt } }));
-        if (failed) setOrderFailures(current => ({ ...current, [planKey]: true }));
-        if (visibleOrdersView.current.planKey === planKey) void visibleOrdersView.current.refresh();
-      }
-      return confirmed;
-    });
-    onceDailySaves.current.set(planKey, save);
-  };
-  const orderItems = onceDailyOrderItems(protocol?.orderItems, onceDaily) ?? [];
-  const visibleOrders = scopeOrderItems(orderItems, orders);
-  // Ticks show at once; the server's answer (or a failure) settles them. A dashboard requested after the last
-  // answer then takes over, also when another device changed the list (see shownOrderedKeys).
-  const [overlays, setOverlays] = useState<Record<string, OrderOverlay>>({});
   const orderError = orderFailures[planKey]
     ? "Niet opgeslagen. Controleer je verbinding en probeer opnieuw." : null;
-  const ordered = overlays[planKey] ?? null;
-  const orderedKeys = shownOrderedKeys(ordered, horseId, protocol?.id, protocol?.orderedKeys ?? [], revision);
-  // Once acknowledged, a later offline dashboard must never revive the old local selection.
+
+  // Order ticks and the order setting show at once and are saved in tap order, per plan. The server's answer (or a
+  // failure) settles them; a dashboard requested after the last answer then takes over, also when another device
+  // changed them (see shownValue).
+  const [overlays, setOverlays] = useState<Record<string, Overlay<unknown>>>({});
+  const orderedOverlay = overlays[`${planKey}:ordered`] as Overlay<string[]> | undefined;
+  const onceDailyOverlay = overlays[`${planKey}:onceDaily`] as Overlay<boolean> | undefined;
+  const orderedKeys = shownValue(orderedOverlay, protocol?.orderedKeys ?? [], revision);
+  const onceDaily = shownValue(onceDailyOverlay, protocol?.orderOnceDaily ?? false, revision);
+  const orderItems = onceDailyOrderItems(protocol?.orderItems, onceDaily) ?? [];
+  const visibleOrders = scopeOrderItems(orderItems, orders);
+  // Once acknowledged, a later offline dashboard must never revive the old local value. Only this plan's
+  // overlays: the revision says nothing about another plan's data.
   useEffect(() => {
-    if (!ordered || ordered.settledAt === null || revision <= ordered.settledAt) return;
+    const retired = Object.entries(overlays).filter(([key, overlay]) =>
+      key.startsWith(`${planKey}:`) && overlay.settledAt !== null && revision > overlay.settledAt);
+    if (!retired.length) return;
     setOverlays(previous => {
-      if (previous[planKey] !== ordered) return previous;
       const next = { ...previous };
-      delete next[planKey];
+      for (const [key, overlay] of retired) if (next[key] === overlay) delete next[key];
       return next;
     });
-  }, [ordered, planKey, revision]);
+  }, [overlays, planKey, revision]);
 
-  // Keep the queue for its entire write, including when navigation temporarily unloads this plan.
-  const queuesRef = useRef<Map<string, ReturnType<typeof createOrderTicks>> | null>(null);
-  const queues = queuesRef.current ??= new Map<string, ReturnType<typeof createOrderTicks>>();
+  // Keep each queue for its entire write, including when navigation temporarily unloads this plan.
+  const queuesRef = useRef<Map<string, SerialSave<any>> | null>(null);
+  const queues = queuesRef.current ??= new Map<string, SerialSave<any>>();
+  function saveOverlay<T>(key: string, replaces: boolean, current: T, change: (shown: T) => T, send: () => Promise<T>) {
+    const plan = planKey;
+    let queue = queues.get(key) as SerialSave<T> | undefined;
+    if (!queue) {
+      queue = createSerialSave<T>({ replaces });
+      queues.set(key, queue);
+    }
+    setOrderFailures(previous => ({ ...previous, [plan]: false }));
+    queue.save(current, change, send, (value, failed, settled) => {
+      const overlay: Overlay<T> = { value, settledAt: settled ? latestDashboardRequest() : null };
+      setOverlays(previous => ({ ...previous, [key]: overlay }));
+      if (!settled) return;
+      queues.delete(key);
+      if (failed) setOrderFailures(previous => ({ ...previous, [plan]: true }));
+      if (visibleOrdersView.current.planKey === plan) void visibleOrdersView.current.refresh();
+    });
+  }
   const toggleOrdered = (keys: string[], done: boolean) => {
     if (!protocol || !horseId) return;
     const protocolId = protocol.id;
-    let queue = queues.get(planKey);
-    if (!queue) {
-      queue = createOrderTicks(async (keys, done) => {
-        const result = await dashboardRequest(`/api/horses/${horseId}/protocol-orders`, { protocol_id: protocolId, keys, ordered: done }) as { orderedKeys: string[] };
-        return result.orderedKeys;
-      });
-      queues.set(planKey, queue);
-    }
-    setOrderFailures(previous => ({ ...previous, [planKey]: false }));
-    queue.toggle(orderedKeys, keys, done, (next, failed, settled) => {
-      const overlay = { horseId, protocolId, keys: next, settledAt: settled ? latestDashboardRequest() : null };
-      setOverlays(previous => ({ ...previous, [planKey]: overlay }));
-      if (!settled) return;
-      queues.delete(planKey);
-      if (failed) setOrderFailures(previous => ({ ...previous, [planKey]: true }));
-      if (visibleOrdersView.current.planKey === planKey) {
-        void visibleOrdersView.current.refresh();
-      }
+    saveOverlay(`${planKey}:ordered`, false, orderedKeys, toggleKeys(keys, done), async () => {
+      const result = await dashboardRequest(`/api/horses/${horseId}/protocol-orders`, { protocol_id: protocolId, keys, ordered: done }) as { orderedKeys: string[] };
+      return result.orderedKeys;
+    });
+  };
+  const setOnceDaily = (value: boolean) => {
+    if (!protocol || !horseId) return;
+    const protocolId = protocol.id;
+    saveOverlay(`${planKey}:onceDaily`, true, onceDaily, () => value, async () => {
+      await dashboardRequest(`/api/horses/${horseId}/protocol-order-settings`, { protocol_id: protocolId, once_daily: value });
+      return value;
     });
   };
   const linkedPhases = protocol?.phases.filter((item) => item.accessible && requestedPhases?.split(',').includes(item.id)) ?? [];

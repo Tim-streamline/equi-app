@@ -16,6 +16,9 @@ use Illuminate\Support\Str;
 
 class HorseDashboard
 {
+    /** The fixed drinking-water article the Voeding tab links to, matched by its title's slug. */
+    private const WATER_ARTICLE_SLUG = 'drinkwater-onder-de-loep-wat-krijgt-je-paard-binnen';
+
     public function __construct(private ProtocolNutrition $nutrition) {}
 
     /**
@@ -24,7 +27,7 @@ class HorseDashboard
      */
     public function build(User $user, ?Horse $horse, CarbonImmutable $now, ?string $month = null, bool $inactivePlans = false): array
     {
-        $protocol = $horse ? Protocol::shownForHorses([$horse->id], $now, $inactivePlans)->first() : null;
+        $protocol = $horse?->protocols()->shownToOwner($now, $inactivePlans)->first();
         $answers = $this->nutrition->answers($protocol);
         $discovery = app(LibraryDiscovery::class);
         $access = $discovery->access($user);
@@ -106,15 +109,16 @@ class HorseDashboard
         $progressKnown = ! $completion->unknownEnd($protocol);
         if (! $progressKnown) $day = 0;
         $running = $protocol->status !== 'completed' && $elapsed > 0 && $elapsed <= $totalDays;
+        // Completed, or past its last scheduled day (a paused plan stays paused).
+        $finished = $protocol->status !== 'paused' && ($protocol->status === 'completed' || ($start && $elapsed > $totalDays));
 
         return [
             'start' => $start, 'day' => $day, 'week' => $day > 0 ? (int) ceil($day / 7) : 0, 'totalWeeks' => $totalWeeks, 'running' => $running, 'progressKnown' => $progressKnown,
-            'progressPercent' => $totalDays ? (int) round($day / $totalDays * 100) : 0,
+            'progressPercent' => $totalDays ? (int) round($day / $totalDays * 100) : 0, 'finished' => $finished,
             'statusLabel' => match (true) {
                 $protocol->status === 'paused' => 'Je protocol is gepauzeerd',
-                $protocol->status === 'completed' => 'Je protocol is afgerond',
+                $finished => 'Je protocol is afgerond',
                 ! $start => 'Je protocol staat klaar',
-                $elapsed > $totalDays => 'Je protocol is afgerond',
                 $running => 'Je protocol is actief',
                 default => 'Je protocol start binnenkort',
             },
@@ -130,7 +134,7 @@ class HorseDashboard
 
         return [
             'id' => $protocol->id, 'currentDay' => $progress['day'], 'currentWeek' => $progress['week'],
-            'preparing' => ! $progress['start'], 'startedAt' => $progress['start']?->toDateString(),
+            'preparing' => ! $progress['start'], 'paused' => $protocol->status === 'paused', 'finished' => $progress['finished'], 'startedAt' => $progress['start']?->toDateString(),
             'totalWeeks' => $progress['totalWeeks'], 'progressPercent' => $progress['progressPercent'], 'progressKnown' => $progress['progressKnown'],
             'statusLabel' => $progress['statusLabel'], 'phaseLabel' => $active->pluck('title')->implode(' · '),
             'evaluation' => app(ProtocolEvaluation::class)->timing($protocol, $now),
@@ -154,7 +158,7 @@ class HorseDashboard
             ->whereColumn('protocols.horse_id', 'horses.id')->limit(1);
         $winnerIds = Horse::whereKey($horses->modelKeys())->selectSub($winner, 'protocol_id');
         $latest = Protocol::whereIn('id', $winnerIds)->where('status', '!=', 'paused')
-            ->with('phases.weeks')->get()->keyBy('horse_id');
+            ->with('phases.weeks', 'horse')->get()->keyBy('horse_id');
 
         return $horses->filter(fn ($item) => $latest->has($item->id))
             ->sortBy(fn ($item) => Str::lower(Str::ascii((string) $item->name)))
@@ -166,7 +170,7 @@ class HorseDashboard
     {
         $answers ??= $this->nutrition->answers($protocol);
         $protocol->loadMissing(['phases.weeks', 'phases.supplements.weeks', 'phases.supplements.intakes', 'phases.supplements.supplement', 'analysis.advice', 'voedingAdviezen', 'managementAdviezen', 'bewegingAdviezen', 'manualAdviezen.phases']);
-        ['start' => $start, 'day' => $day, 'week' => $week, 'totalWeeks' => $totalWeeks, 'running' => $running, 'progressPercent' => $progressPercent, 'progressKnown' => $progressKnown, 'statusLabel' => $statusLabel] = $this->progress($protocol, $now);
+        ['start' => $start, 'day' => $day, 'week' => $week, 'totalWeeks' => $totalWeeks, 'running' => $running, 'progressPercent' => $progressPercent, 'progressKnown' => $progressKnown, 'statusLabel' => $statusLabel, 'finished' => $finished] = $this->progress($protocol, $now);
         $buildup = app(ProtocolDoseBuildup::class);
         $selections = $protocol->phases->flatMap->supplements->keyBy('id');
         $phases = $protocol->phases->map(function ($phase) use ($protocol, $now, $preview, $buildup) {
@@ -262,7 +266,7 @@ class HorseDashboard
 
         return [
             'id' => $protocol->id, 'title' => $protocol->title, 'currentDay' => $day, 'currentWeek' => $week,
-            'preparing' => ! $start, 'paused' => $protocol->status === 'paused', 'completed' => $protocol->status === 'completed', 'startedAt' => $start?->toDateString(),
+            'preparing' => ! $start, 'paused' => $protocol->status === 'paused', 'completed' => $protocol->status === 'completed', 'finished' => $finished, 'startedAt' => $start?->toDateString(),
             'totalWeeks' => $totalWeeks, 'progressPercent' => $progressPercent, 'progressKnown' => $progressKnown, 'statusLabel' => $statusLabel,
             'todayLabel' => ! $progressKnown ? $statusLabel : (! $start ? 'Je protocol staat klaar' : 'Week '.$week.' van '.$totalWeeks.' · '.$now->locale('nl')->translatedFormat('l j F')),
             'dateLabel' => $now->locale('nl')->translatedFormat('l j F'),
@@ -297,7 +301,7 @@ class HorseDashboard
         $hay = $items->firstWhere('id', $protocol->customer_settings['hay_library_item_id'] ?? null)
             ?? $items->first(fn ($item) => str_contains(mb_strtolower($item->slug.' '.$item->title), 'hooianalyse'))
             ?? $items->first(fn ($item) => preg_match('/hooi.*analy|analy.*hooi/isu', $item->title.' '.$item->description) === 1);
-        $water = $items->first(fn ($item) => Str::slug($item->title) === 'drinkwater-onder-de-loep-wat-krijgt-je-paard-binnen');
+        $water = $items->first(fn ($item) => Str::slug($item->title) === self::WATER_ARTICLE_SLUG);
 
         return ['hayLibraryItem' => $hay ? $itemData($hay) : null, 'waterLibraryItem' => $water ? $itemData($water) : null];
     }

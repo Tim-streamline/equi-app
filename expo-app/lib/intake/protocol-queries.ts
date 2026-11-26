@@ -8,7 +8,7 @@ const SELECT = `
     -- Same rule as the dashboard: a future publication date is not published yet.
     CASE WHEN p.published_at IS NOT NULL AND datetime(p.published_at) <= datetime('now') THEN 1 ELSE 0 END AS published,
     -- 1 when the Protocol tab shows exactly this plan for its horse, using the dashboard's order
-    -- (Protocol::shownForHorses): an active plan first, then the latest published paused plan,
+    -- (Protocol::scopeShownToOwner): an active plan first, then the latest published paused plan,
     -- with the lowest id first on equal publication times.
     -- Row values compare in that order: (not active, latest publication first, id).
     CASE WHEN p.published_at IS NOT NULL AND datetime(p.published_at) <= datetime('now') AND p.status IN ('active', 'paused')

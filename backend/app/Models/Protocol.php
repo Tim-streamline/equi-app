@@ -187,14 +187,9 @@ class Protocol extends Model
     }
 
     /**
-     * The plan each horse shows, best first: the active one, else the paused one, else the
+     * The plan a horse shows, best first: the active one, else the paused one, else the
      * latest completed one. Home's cards and the Protocol tab must agree on this.
      */
-    public static function shownForHorses(array $horseIds, CarbonImmutable $now, bool $inactivePlans): Builder
-    {
-        return static::whereIn('horse_id', $horseIds)->shownToOwner($now, $inactivePlans);
-    }
-
     public function scopeShownToOwner(Builder $query, CarbonImmutable $now, bool $inactivePlans): Builder
     {
         return $query->visibleToOwner($now, $inactivePlans)

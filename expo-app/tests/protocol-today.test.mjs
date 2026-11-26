@@ -41,6 +41,7 @@ function screen(phases = 2) {
     '@/db/hooks': { useSupplementIntakesForDate: () => local, useStoreMutations: () => ({ toggleSupplementIntake: async (...args) => mutations.push(args) }) },
     '@/lib/protocol-buildup': buildupLogic, './DoseBuildupSchedule': { DoseBuildupSchedule: 'DoseBuildupSchedule' }, './DoneCircle': { DoneCircle: 'DoneCircle' }, '@/lib/protocol-today': logic, '@/lib/haptics': { selectionHaptic() {} },
   };
+  modules['./doseGroupHeader'] = load('../components/protocol/doseGroupHeader.tsx', modules);
   const component = load('../components/protocol/ProtocolToday.tsx', modules).ProtocolToday;
   const props = { protocol: { id: 'protocol', currentWeek: 2, totalWeeks: 10, dateLabel: 'Actual date', weekLabel: 'Week 2 van 10', today: { items }, phases: [{ id: 'phase1', title: 'Phase A', state: 'active' }, { id: 'phase2', title: 'Phase B', state: phases === 2 ? 'active' : 'locked' }] }, date: '2026-11-03', horseId: 'horse', onPhase: p => opened.push(p.id), SheetComponent: 'Sheet' };
   const render = () => { cursor = 0; return flatten(component(props)); };

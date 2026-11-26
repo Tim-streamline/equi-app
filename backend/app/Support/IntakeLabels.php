@@ -67,6 +67,27 @@ class IntakeLabels
         return $result;
     }
 
+    /**
+     * Shape rules for `label_config`. The editor saves drafts with empty keys or labels; a published
+     * snapshot must be a complete list with distinct, strictly compared keys.
+     */
+    public static function rules(bool $snapshot): array
+    {
+        $list = $snapshot ? ['list'] : [];
+        $draft = $snapshot ? [] : ['nullable'];
+
+        return [
+            'label_config' => [...($snapshot ? [] : ['sometimes']), 'array', ...$list, 'max:500'],
+            'label_config.*' => ['array:key,label,answers'],
+            'label_config.*.key' => ['present', ...$draft, 'string', 'max:500', $snapshot ? 'distinct:strict' : 'distinct'],
+            'label_config.*.label' => [$snapshot ? 'required' : 'present', ...$draft, 'string', 'max:240'],
+            'label_config.*.answers' => ['present', 'array', ...$list, 'max:500'],
+            'label_config.*.answers.*' => ['array:answer,label'],
+            'label_config.*.answers.*.answer' => ['required', 'string'],
+            'label_config.*.answers.*.label' => ['required', 'string', 'max:240'],
+        ];
+    }
+
     public function validate(array $config): void
     {
         $seen = [];

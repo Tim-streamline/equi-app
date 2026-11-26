@@ -148,10 +148,11 @@ function protocolCards(data: HorseDashboard | null): HorseProtocolSummary[] {
 }
 
 /** A horse's protocol in progress; opens Protocol on that horse. */
-function ProtocolCard({ id, horseId, horseName, statusLabel, currentDay, currentWeek, phaseLabel, progressPercent, progressKnown, preparing, startedAt }: HorseProtocolSummary) {
+function ProtocolCard({ id, horseId, horseName, statusLabel, currentDay, currentWeek, phaseLabel, progressPercent, progressKnown, preparing, paused, finished: finishedFlag, startedAt }: HorseProtocolSummary) {
   const { selectHorse } = useDb();
-  const finished = /afgerond|voltooid/i.test(statusLabel ?? '');
-  const stopped = finished || /gepauzeerd/i.test(statusLabel ?? '');
+  // Cached responses from before the flags only have the status text.
+  const finished = finishedFlag ?? /afgerond|voltooid/i.test(statusLabel ?? '');
+  const stopped = finished || (paused ?? /gepauzeerd/i.test(statusLabel ?? ''));
   const readyToStart = !stopped && (preparing ?? (currentDay <= 0));
   const showProgress = progressKnown !== false && currentDay > 0;
   // A start date that is still ahead: there is nothing to tick off yet.

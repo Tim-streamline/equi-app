@@ -7,6 +7,7 @@ use App\Models\IntakeField;
 use App\Models\IntakeQuestionnaire;
 use App\Models\IntakeSection;
 use App\Support\AuditLogger;
+use App\Support\IntakeLabels;
 use App\Support\IntakeSignalPreparation;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -188,14 +189,7 @@ class IntakeQuestionnaireController extends Controller
                     ->ignore($field?->id),
             ],
             'label' => ['required', 'string', 'max:255'],
-            'label_config' => ['sometimes', 'array', 'max:500'],
-            'label_config.*' => ['array:key,label,answers'],
-            'label_config.*.key' => ['present', 'nullable', 'string', 'max:500', 'distinct'],
-            'label_config.*.label' => ['present', 'nullable', 'string', 'max:240'],
-            'label_config.*.answers' => ['present', 'array', 'max:500'],
-            'label_config.*.answers.*' => ['array:answer,label'],
-            'label_config.*.answers.*.answer' => ['required', 'string'],
-            'label_config.*.answers.*.label' => ['required', 'string', 'max:240'],
+            ...IntakeLabels::rules(snapshot: false),
             'type' => ['required', Rule::in(self::FIELD_TYPES)],
             'hint' => ['nullable', 'string', 'max:10000'],
             'required' => ['required', 'boolean'],

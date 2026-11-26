@@ -1,7 +1,9 @@
 <script>
+    import { formatDate } from '$lib/utils.js';
+
     let { evaluation = null } = $props();
     // The same calendar day as the PDF export, wherever the browser is.
-    const day = time => new Date(time).toLocaleDateString('nl-NL', { timeZone: 'Europe/Amsterdam' });
+    const day = time => formatDate(time, { timeZone: 'Europe/Amsterdam' });
 </script>
 
 {#if evaluation}

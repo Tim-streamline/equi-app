@@ -12,6 +12,7 @@ import { selectionHaptic } from '@/lib/haptics';
 import { EYEBROW } from '@/components/ui/styles';
 import { PROTOCOL_SCALE as S, PROTOCOL_TEXT as T } from './styles';
 import { DoneCircle } from './DoneCircle';
+import { doseGroupHeader } from './doseGroupHeader';
 
 type SheetProps = { visible: boolean; title: string; subtitle?: string; children: ReactNode; onClose: () => void; footer?: ReactNode };
 type ProtocolDay = { date: string; label: string; editable: boolean; editableUntil?: string; weekNumber?: number; items: DashboardSupplement[]; state: 'default' | 'complete' | 'partial' | 'missed' };
@@ -166,7 +167,7 @@ export function ProtocolCalendar({ protocol, today, horseId, onMonth, onPhase, o
         {!day && !busy && selected && <Button title="Opnieuw proberen" onPress={() => void openDay(selected)} />}
         {day?.items.length === 0 && <Text className={`py-4 ${T.body}`}>Op deze dag stond niets gepland.</Text>}
         {groups.map(group => <View key={group.label} className="mb-4">
-          {group.number === null ? <Text accessibilityRole="header" className={`${EYEBROW} text-ink-70`}>{group.label}</Text> : group.number > 1 && <View className="mb-1 flex-row items-center justify-between"><Text accessibilityRole="header" className={`${EYEBROW} text-ink-70`}>{group.label}<Text className="font-sans normal-case tracking-normal text-[12px] text-ink-50"> · bij voorkeur</Text></Text><Text className={T.meta}>{group.done} van {group.items.length}</Text></View>}
+          {doseGroupHeader(group)}
           {group.items.map(item => <View key={administrationKey(item)} className="flex-row items-center gap-2">
             <Pressable accessibilityRole="checkbox" accessibilityLabel={`${item.name}, ${administrationLabel(item)}, ${item.dosage ?? ''}`} accessibilityState={{ checked: !!item.done, disabled: busy || !canEditDay || !!item.recordedOnly }} disabled={busy || !canEditDay || !!item.recordedOnly} onPress={() => void toggle(item)} className="min-h-[48px] min-w-[44px] items-center justify-center">
               <DoneCircle done={!!item.done} />

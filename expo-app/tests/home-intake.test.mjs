@@ -145,7 +145,7 @@ test('a plan completed before the owner started opens read-only without an order
   const app = screen();
   app.addHorse('Moos');
   app.activeProtocols.push('Moos');
-  app.summaries.Moos = { statusLabel: 'Je protocol is afgerond', preparing: true, currentDay: 0, currentWeek: 0 };
+  app.summaries.Moos = { statusLabel: 'Je protocol is afgerond', finished: true, preparing: true, currentDay: 0, currentWeek: 0 };
   const card = app.render().find(node => node?.props?.accessibilityLabel === 'Protocol van Moos');
   assert.match(text(card), /Je protocol is afgerond/);
   assert.doesNotMatch(text(card), /Bestel|Dag 0|Week 0/);
@@ -172,7 +172,7 @@ test('a plan completed before day one says it is finished, not ready, and opens 
   const app = screen();
   app.addHorse('Moos');
   app.activeProtocols.push('Moos');
-  app.summaries.Moos = { statusLabel: 'Je protocol is afgerond', preparing: true, currentDay: 0, currentWeek: 0, progressPercent: 0, startedAt: null };
+  app.summaries.Moos = { statusLabel: 'Je protocol is afgerond', finished: true, preparing: true, currentDay: 0, currentWeek: 0, progressPercent: 0, startedAt: null };
   const card = app.render().find(n => n?.props?.accessibilityLabel === 'Protocol van Moos');
   assert.ok(text(card).includes('Je protocol is afgerond'));
   assert.ok(text(card).includes('Bekijk je herstelplan →'));

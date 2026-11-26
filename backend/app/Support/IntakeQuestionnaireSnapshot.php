@@ -114,16 +114,7 @@ class IntakeQuestionnaireSnapshot
         if ($config === null) {
             return;
         }
-        Validator::make(['label_config' => $config], [
-            'label_config' => ['array', 'list', 'max:500'],
-            'label_config.*' => ['array:key,label,answers'],
-            'label_config.*.key' => ['present', 'string', 'max:500', 'distinct:strict'],
-            'label_config.*.label' => ['required', 'string', 'max:240'],
-            'label_config.*.answers' => ['present', 'array', 'list', 'max:500'],
-            'label_config.*.answers.*' => ['array:answer,label'],
-            'label_config.*.answers.*.answer' => ['required', 'string'],
-            'label_config.*.answers.*.label' => ['required', 'string', 'max:240'],
-        ], [], ['label_config' => 'labels of '.$field['key']])->validate();
+        Validator::make(['label_config' => $config], IntakeLabels::rules(snapshot: true), [], ['label_config' => 'labels of '.$field['key']])->validate();
         app(IntakeLabels::class)->validate($config);
     }
 

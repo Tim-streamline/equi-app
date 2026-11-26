@@ -107,6 +107,8 @@ export type CareAdvice = Omit<DashboardAdvice, "action"> & {
 export type DashboardProtocol = {
   paused?: boolean;
   completed?: boolean;
+  /** Completed, or past its last day. */
+  finished?: boolean;
   preparing?: boolean;
   startedAt?: string | null;
   id: string;
@@ -189,6 +191,10 @@ export type HorseProtocolSummary = {
     completed?: boolean;
   };
   preparing?: boolean;
+  /** Paused by the therapist. Absent in responses from before this field. */
+  paused?: boolean;
+  /** Completed, or past its last day. Absent in responses from before this field. */
+  finished?: boolean;
   startedAt?: string | null;
   horseId: string;
   horseName: string;

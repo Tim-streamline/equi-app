@@ -40,8 +40,8 @@ class CustomerNotificationMail
         $shown = Protocol::from('protocols as candidate')->whereColumn('candidate.horse_id', 'protocols.horse_id')
             ->shownToOwner(CarbonImmutable::now(), true)->select('candidate.id')->limit(1);
 
-        return $query->whereIn('status', ['active', 'paused', 'completed'])->whereNotNull('published_at')
-            ->where('published_at', '<=', now()->subMinutes(self::PUBLISHED_DELAY_MINUTES))
+        // $shown already limits this to a visible status and a past publication.
+        return $query->where('published_at', '<=', now()->subMinutes(self::PUBLISHED_DELAY_MINUTES))
             ->where('id', '=', $shown)
             ->whereHas('horse', fn ($horse) => $horse->where('status', 'active'));
     }
@@ -70,11 +70,10 @@ class CustomerNotificationMail
         if (Mail::getFacadeRoot() instanceof MailFake) {
             return null;
         }
-        $default = (string) config('mail.default');
-        if ($default === 'smtp' && config('mail.mailers.smtp.host') === 'smtp.transip.email'
-            && (blank(config('mail.mailers.smtp.username')) || blank(config('mail.mailers.smtp.password')))) {
+        if (self::transipCredentialsMissing()) {
             return 'TransIP SMTP-wachtwoord of gebruikersnaam ontbreekt. Klantmails blijven in afwachting.';
         }
+        $default = (string) config('mail.default');
         $fakes = $this->nonDelivering($default);
         $testArray = $default === 'array' && config('mail.mailers.array.transport') === 'array' && app()->runningUnitTests();
         if ($fakes && ! $testArray) {
@@ -82,6 +81,13 @@ class CustomerNotificationMail
         }
 
         return null;
+    }
+
+    /** The TransIP mailbox is selected but not configured yet: all mail waits instead of failing. */
+    public static function transipCredentialsMissing(): bool
+    {
+        return config('mail.default') === 'smtp' && config('mail.mailers.smtp.host') === 'smtp.transip.email'
+            && (blank(config('mail.mailers.smtp.username')) || blank(config('mail.mailers.smtp.password')));
     }
 
     /** @return list<string> The parts of a mailer that do not deliver, including inside failover and round-robin mailers. */

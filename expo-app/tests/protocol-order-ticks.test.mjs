@@ -30,10 +30,15 @@ function server() {
   };
 }
 const settle = () => new Promise(resolve => setTimeout(resolve, 0));
+/** The order list's use of the queue: each tap ticks or unticks keys and sends just that change. */
+const orderTicks = send => {
+  const saves = exports.createSerialSave();
+  return { toggle: (current, keys, ordered, onUpdate) => saves.save(current, exports.toggleKeys(keys, ordered), () => send(keys, ordered), onUpdate) };
+};
 
 test('quick tick and untick are saved in tap order, so the server ends unticked', async () => {
   const fake = server();
-  const ticks = exports.createOrderTicks(fake.send);
+  const ticks = orderTicks(fake.send);
   const shown = [];
   ticks.toggle([], ['p:all'], true, (keys, failed) => shown.push([keys, failed]));
   ticks.toggle([], ['p:all'], false, (keys, failed) => shown.push([keys, failed]));
@@ -50,7 +55,7 @@ test('quick tick and untick are saved in tap order, so the server ends unticked'
 
 test('the list only switches to the server answer once the last request is answered', async () => {
   const fake = server();
-  const ticks = exports.createOrderTicks(fake.send);
+  const ticks = orderTicks(fake.send);
   const shown = [];
   const update = (keys, failed) => shown.push([keys, failed]);
   ticks.toggle([], ['a:all'], true, update);
@@ -63,7 +68,7 @@ test('the list only switches to the server answer once the last request is answe
 
 test('a tick that cannot be saved is undone and reported, and later taps still go through', async () => {
   const fake = server();
-  const ticks = exports.createOrderTicks(fake.send);
+  const ticks = orderTicks(fake.send);
   const shown = [];
   const update = (keys, failed) => shown.push([keys, failed]);
   ticks.toggle(['x:all'], ['a:all'], true, update);
@@ -77,7 +82,7 @@ test('a tick that cannot be saved is undone and reported, and later taps still g
 
 test('the last answer is marked as settled, also after a failure', async () => {
   const fake = server();
-  const ticks = exports.createOrderTicks(fake.send);
+  const ticks = orderTicks(fake.send);
   const shown = [];
   ticks.toggle([], ['a:all'], true, (...args) => shown.push(args));
   ticks.toggle([], ['b:all'], true, (...args) => shown.push(args));
@@ -87,21 +92,18 @@ test('the last answer is marked as settled, also after a failure', async () => {
 });
 
 test('another device undoing a tick shows once a dashboard requested after the last answer arrives', () => {
-  const show = exports.shownOrderedKeys;
+  const show = exports.shownValue;
   // This device ticked p:all; the server confirmed it after dashboard request 5 had started.
-  const pending = { horseId: 'h', protocolId: 'p', keys: ['p:all'], settledAt: null };
-  assert.deepEqual(show(pending, 'h', 'p', [], 9), ['p:all'], 'while saving the own taps stay, whatever polls return');
+  const pending = { value: ['p:all'], settledAt: null };
+  assert.deepEqual(show(pending, [], 9), ['p:all'], 'while saving the own taps stay, whatever polls return');
   const settled = { ...pending, settledAt: 5 };
   // The dashboard from before the tick still lists nothing, and a later one too after the other device unticked it:
   // equal key lists, so only the request number can tell them apart.
-  assert.deepEqual(show(settled, 'h', 'p', [], 0), ['p:all'], 'a cached response does not decide');
-  assert.deepEqual(show(settled, 'h', 'p', [], 5), ['p:all'], 'a poll already under way does not decide');
-  assert.deepEqual(show(settled, 'h', 'p', [], 6), [], 'a dashboard requested afterwards does');
-  assert.deepEqual(show(settled, 'h', 'p', ['p:all', 'q:all'], 6), ['p:all', 'q:all']);
-  // Another horse or protocol never shows these ticks.
-  assert.deepEqual(show(settled, 'other', 'p', ['x:all'], 0), ['x:all']);
-  assert.deepEqual(show(pending, 'h', 'other', ['x:all'], 0), ['x:all']);
-  assert.deepEqual(show(null, 'h', 'p', ['x:all'], 0), ['x:all']);
+  assert.deepEqual(show(settled, [], 0), ['p:all'], 'a cached response does not decide');
+  assert.deepEqual(show(settled, [], 5), ['p:all'], 'a poll already under way does not decide');
+  assert.deepEqual(show(settled, [], 6), [], 'a dashboard requested afterwards does');
+  assert.deepEqual(show(settled, ['p:all', 'q:all'], 6), ['p:all', 'q:all']);
+  assert.deepEqual(show(null, ['x:all'], 0), ['x:all']);
 });
 
 test('dashboard responses carry their request number; cached and superseded polls never look newer', async t => {
@@ -147,5 +149,23 @@ test('dashboard responses carry their request number; cached and superseded poll
   await flush();
   assert.deepEqual(render().data.orderedKeys, []);
   assert.equal(render().revision, mark + 1);
-  assert.deepEqual(exports.shownOrderedKeys({ horseId: 'horse', protocolId: 'p', keys: ['mine:all'], settledAt: mark }, 'horse', 'p', render().data.orderedKeys, render().revision), []);
+  assert.deepEqual(exports.shownValue({ value: ['mine:all'], settledAt: mark }, render().data.orderedKeys, render().revision), []);
+});
+
+test('a setting saves the whole value, so only the last request decides whether it failed', async () => {
+  const sends = [];
+  const send = value => () => new Promise((resolve, reject) => sends.push({ resolve: () => resolve(value), reject }));
+  const run = async replaces => {
+    sends.length = 0;
+    const saves = exports.createSerialSave({ replaces });
+    const shown = [];
+    saves.save(false, () => true, send(true), (...args) => shown.push(args));
+    saves.save(false, () => false, send(false), (...args) => shown.push(args));
+    await settle(); sends[0].reject(new Error('offline'));
+    await settle(); sends[1].resolve();
+    await settle();
+    return shown.at(-1);
+  };
+  assert.deepEqual(await run(true), [false, false, true], 'the later save stored the chosen value');
+  assert.deepEqual(await run(false), [false, true, true], 'without replaces an earlier lost change is reported');
 });

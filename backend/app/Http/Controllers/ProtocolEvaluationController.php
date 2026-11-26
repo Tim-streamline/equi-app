@@ -41,15 +41,15 @@ class ProtocolEvaluationController extends Controller
         $payload = DB::transaction(function () use ($protocol, $service, $request, $data) {
             $protocol = Protocol::whereKey($protocol->id)->lockForUpdate()->firstOrFail();
             $this->authorizeProtocol($request, $protocol);
-            abort_unless($service->timing($protocol, CarbonImmutable::now())['available'], 422);
-            $questions = $service->questions($protocol);
-            abort_unless(hash_equals($service->questionVersion($questions), $data['question_version']), 409, 'De evaluatievragen zijn aangepast. Heropen het formulier.');
             $old = $service->record($protocol);
+            abort_unless($service->timingFor($protocol, CarbonImmutable::now(), $old)['available'], 422);
+            $questions = $service->questionsFrom($old);
+            abort_unless(hash_equals($service->questionVersion($questions), $data['question_version']), 409, 'De evaluatievragen zijn aangepast. Heropen het formulier.');
             $revision = (int) ($old->revision ?? 0);
             abort_if(isset($data['revision']) && (int) $data['revision'] !== $revision, 412, 'Deze evaluatie is intussen op een ander apparaat opgeslagen.');
             abort_if($old?->submitted_at && ! $data['submit'], 422, 'Verstuur wijzigingen opnieuw om je ingestuurde evaluatie bij te werken.');
             DB::table('protocol_evaluations')->updateOrInsert(['protocol_id' => $protocol->id], [
-                // timing() above refuses another owner's evaluation, so this never changes the author.
+                // timingFor() above refuses another owner's evaluation, so this never changes the author.
                 'user_id' => $old?->user_id ?? $request->attributes->get('powersync_user_id'), 'answers' => json_encode((object) $data['answers']),
                 'questions' => json_encode($questions), 'revision' => $revision + 1,
                 'submitted_at' => $old?->submitted_at ?? ($data['submit'] ? now() : null),

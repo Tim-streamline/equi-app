@@ -1,9 +1,8 @@
 import { Alert, Linking, Pressable, Text, View } from 'react-native';
 import type { DashboardOrderItem } from '@/lib/horse-dashboard';
-import { splitDiscount } from '@/lib/protocol-order-scope';
+import { dropBottleAdvice, hasExtraGifts, splitDiscount } from '@/lib/protocol-order-scope';
 import { PLAIN_CARD } from '@/components/ui/styles';
 import { SwitchRow } from '@/components/ui/SwitchRow';
-import { dropBottleAdvice, hasExtraGifts } from '@/lib/protocol-order-scope';
 import { PROTOCOL_SCALE as S, PROTOCOL_TEXT as T } from './styles';
 import { DoneCircle } from './DoneCircle';
 

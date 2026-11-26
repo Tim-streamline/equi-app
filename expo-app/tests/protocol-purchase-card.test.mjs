@@ -27,8 +27,8 @@ function app(overrides = {}) {
     router: { push: route => routes.push(route) },
     scopeOrderItems: (items, scope) => scope === 'all' ? items : [],
     onceDailyOrderItems: items => items,
-    createOrderTicks: () => ({ toggle() {} }), dashboardRequest: async () => ({}),
-    shownOrderedKeys: (overlay, horse, protocol, server) => server, latestDashboardRequest: () => 0,
+    createSerialSave: () => ({ save() {} }), toggleKeys: () => keys => keys, dashboardRequest: async () => ({}),
+    shownValue: (overlay, server) => server, latestDashboardRequest: () => 0,
     ...protocolStyleGlobals, ...overrides,
   };
   const exports = {};
@@ -100,8 +100,7 @@ test('switching horses keeps unfinished ticks, replies and errors with their pro
       if (!(slot in hooks)) hooks[slot] = initial;
       return [hooks[slot], value => { hooks[slot] = typeof value === 'function' ? value(hooks[slot]) : value; }];
     },
-    shownOrderedKeys: tickExports.shownOrderedKeys,
-    createOrderTicks: tickExports.createOrderTicks,
+    ...tickExports,
     dashboardRequest: (url, body) => new Promise((resolve, reject) => requests.push({ url, body, resolve, reject })),
   });
   const render = horse => {

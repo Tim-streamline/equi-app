@@ -11,6 +11,7 @@ use App\Support\AuditLogger;
 use App\Support\IntakeAnswersPdf;
 use App\Support\IntakeReview;
 use App\Support\LibrarySyncLock;
+use App\Support\PdfDocument;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -102,12 +103,7 @@ class IntakeBookingController extends Controller
             return redirect()->route('admin.bookings.show', [$booking, 'print' => 1, 'pdf_fallback' => 1]);
         }
 
-        return response($document, 200, [
-            'Content-Type' => 'application/pdf',
-            'Content-Disposition' => 'attachment; filename="'.$pdf->filename($booking).'"',
-            'Cache-Control' => 'private, no-store',
-            'X-Content-Type-Options' => 'nosniff',
-        ]);
+        return PdfDocument::download($document, $pdf->filename($booking));
     }
 
     public function review(Request $request, IntakeBooking $booking): JsonResponse

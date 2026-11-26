@@ -36,7 +36,7 @@ class ProtocolCompletion
             return;
         }
         if ($to !== 'completed') {
-            if ($from === 'completed' || ($from === 'archived' && $protocol->getRawOriginal('archived_previous_status') === 'completed')) {
+            if ($this->endedAsCompleted($from, $protocol->getRawOriginal('archived_previous_status'))) {
                 $after = $protocol->completed_on?->toDateString();
                 $resume = CarbonImmutable::today($this->timezone($protocol));
                 if ($after === null || $after < $resume->subDay()->toDateString()) {
@@ -105,33 +105,31 @@ class ProtocolCompletion
     /** The last date (Y-m-d) that belongs to a completed plan, or null when it is not completed or the day is unknown. */
     public function lastPlanDay(Protocol $protocol): ?string
     {
-        if (! in_array($protocol->status, ['completed', 'archived'], true)) {
-            return null;
-        }
-        if ($protocol->status === 'archived' && $protocol->archived_previous_status !== 'completed') {
-            return null;
-        }
-
-        return $protocol->completed_on?->toDateString();
+        return $this->endedAsCompleted($protocol->status, $protocol->archived_previous_status)
+            ? $protocol->completed_on?->toDateString() : null;
     }
 
     /** A completed plan for which no last day is known: only already frozen days are shown. */
     public function unknownEnd(Protocol $protocol): bool
     {
-        return ($protocol->status === 'completed' || ($protocol->status === 'archived' && $protocol->archived_previous_status === 'completed'))
-            && ! $protocol->completed_on;
+        return $this->endedAsCompleted($protocol->status, $protocol->archived_previous_status) && ! $protocol->completed_on;
     }
 
     /** Open date intervals for which a schedule cannot be inferred, including previous closures. */
     public function closedPeriods(Protocol $protocol): array
     {
         $periods = $protocol->closed_periods ?? [];
-        $last = $this->lastPlanDay($protocol);
-        if ($last !== null || $this->unknownEnd($protocol)) {
-            $periods[] = ['after' => $last, 'before' => null];
+        if ($this->endedAsCompleted($protocol->status, $protocol->archived_previous_status)) {
+            $periods[] = ['after' => $protocol->completed_on?->toDateString(), 'before' => null];
         }
 
         return $periods;
+    }
+
+    /** Completed, or archived from completed. */
+    private function endedAsCompleted(?string $status, ?string $archivedPreviousStatus): bool
+    {
+        return $status === 'completed' || ($status === 'archived' && $archivedPreviousStatus === 'completed');
     }
 
     public function containsDate(array $periods, string $date): bool

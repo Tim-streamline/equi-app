@@ -69,10 +69,15 @@ export function onceDailyOrderItems(items: DashboardOrderItem[] | undefined, onc
         administrations: component.administrations === null ? null : Math.round(component.administrations / perDay),
       };
     });
-    const complete = components.every((component) => typeof component.quantity === "number" && Number.isFinite(component.quantity));
-    const quantity = complete ? Math.round(components.reduce((sum, component) => sum + (component.quantity as number), 0) * 1e9) / 1e9 : null;
-    return { ...item, components, quantity, calculationComplete: complete, quantityLabel: quantity === null ? null : orderQuantityLabel(quantity, item.unit) };
+    return withComponents(item, components);
   });
+}
+
+/** The item with these components, its total summed from them; unknown when one of them has no quantity. */
+function withComponents(item: DashboardOrderItem, components: Component[]): DashboardOrderItem {
+  const complete = components.every((component) => typeof component.quantity === "number" && Number.isFinite(component.quantity));
+  const quantity = complete ? Math.round(components.reduce((sum, component) => sum + (component.quantity as number), 0) * 1e9) / 1e9 : null;
+  return { ...item, components, quantity, calculationComplete: complete, quantityLabel: quantity === null ? null : orderQuantityLabel(quantity, item.unit) };
 }
 
 /**
@@ -104,17 +109,6 @@ export function scopeOrderItems(items: DashboardOrderItem[] | undefined, scope: 
       return true;
     });
     if (!components.length) return [];
-    const complete = components.every((component) => typeof component.quantity === "number" && Number.isFinite(component.quantity));
-    const quantity = complete
-      ? Math.round(components.reduce((sum, component) => sum + (component.quantity as number), 0) * 1e9) / 1e9
-      : null;
-    return [{
-      ...item,
-      components,
-      selectionIds: components.map((component) => component.selectionId),
-      quantity,
-      calculationComplete: complete,
-      quantityLabel: quantity === null ? null : orderQuantityLabel(quantity, item.unit),
-    }];
+    return [{ ...withComponents(item, components), selectionIds: components.map((component) => component.selectionId) }];
   });
 }

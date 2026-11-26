@@ -36,8 +36,13 @@ class ProtocolEvaluation
 
     public function questions(Protocol $protocol): array
     {
-        $snapshot = DB::table('protocol_evaluations')->where('protocol_id', $protocol->id)->value('questions');
-        return $snapshot ? json_decode($snapshot, true) : DB::table('protocol_evaluation_questions')
+        return $this->questionsFrom($this->record($protocol));
+    }
+
+    /** The questions frozen in a stored evaluation ($record from record()), else the active ones. */
+    public function questionsFrom(?object $record): array
+    {
+        return $record?->questions ? json_decode($record->questions, true) : DB::table('protocol_evaluation_questions')
             ->where('active', true)->orderBy('order')->orderBy('id')->pluck('label', 'id')->all();
     }
 
@@ -48,7 +53,12 @@ class ProtocolEvaluation
 
     public function timing(Protocol $protocol, CarbonImmutable $now): array
     {
-        $record = $this->record($protocol);
+        return $this->timingFor($protocol, $now, $this->record($protocol));
+    }
+
+    /** timing() for an already fetched record() of this protocol. */
+    public function timingFor(Protocol $protocol, CarbonImmutable $now, ?object $record): array
+    {
         return $this->evaluationTiming($protocol, $now, (bool) $record?->submitted_at, ! $this->writtenByAnotherOwner($protocol, $record));
     }
 
@@ -100,14 +110,14 @@ class ProtocolEvaluation
 
     public function payload(Protocol $protocol, CarbonImmutable $now): array
     {
-        $timing = $this->timing($protocol, $now);
         $record = $this->record($protocol);
+        $timing = $this->timingFor($protocol, $now, $record);
+        $questions = $this->questionsFrom($record);
         if ($this->writtenByAnotherOwner($protocol, $record)) {
             $record = null;
         }
         $base = (int) (PlusPage::current()->protocol_price_cents ?? 14700);
         $discount = $timing['discountEligible'] ? 10 : 0;
-        $questions = $this->questions($protocol);
         return $timing + ['protocolId' => $protocol->id, 'horseId' => $protocol->horse_id,
             'horseName' => $protocol->horse->name, 'questions' => $questions, 'questionVersion' => $this->questionVersion($questions),
             // An object also when empty, so the app always gets a map.
