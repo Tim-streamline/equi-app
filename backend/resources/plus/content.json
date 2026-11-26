@@ -92,5 +92,58 @@
   "confirmationProtocol": "Protocol op maat · 3 maanden",
   "confirmationButton": "Protocol kopen",
   "welcomeTitle": "Welkom bij een persoonlijk protocol",
-  "welcomeBody": "Je intake staat klaar. Vul hem in wanneer het jou uitkomt, daarna ga ik aan de slag met het protocol voor jouw paard."
+  "welcomeBody": "Je intake staat klaar. Vul hem in wanneer het jou uitkomt, daarna ga ik aan de slag met het protocol voor jouw paard.",
+  "memberFaqTitle": "Veelgestelde vragen tijdens EquiBoost",
+  "memberFaqBody": "Hier vind je antwoord op de vragen die ik het vaakst krijg tijdens een EquiBoost traject. Staat jouw vraag er niet bij? Shelby denkt elke dag met je mee.",
+  "memberFaqVideoTitle": "Veelgestelde vragen tijdens EquiBoost",
+  "memberFaqs": [
+    {
+      "question": "Wanneer begin ik met mijn herstelplan?",
+      "answer": "Zodra je herstelplan klaarstaat, zie je het onder Protocol. Bestel eerst alle producten van de bestellijst en begin pas als je alles voor fase 1 in huis hebt. Daarna tik je op ‘Ik start vandaag’. Die dag wordt dag 1 van je herstelplan en vanaf dan loopt de planning in de app met je mee."
+    },
+    {
+      "question": "Wat moet ik bestellen, en wanneer?",
+      "answer": "Alles wat je nodig hebt staat op de bestellijst. Je vindt hem onder Vandaag, en per fase in de Kalender. De fases volgen elkaar snel op, dus bestel bij voorkeur meteen alles voor het hele herstelplan. Zo hoef je nooit te wachten op een levering en kun je zonder onderbreking doorgaan."
+    },
+    {
+      "question": "Wat staat er in de verschillende tabbladen?",
+      "answer": "Vandaag laat zien wat je vandaag geeft en doet. In de Kalender zie je alle fases en welke dagen je al hebt afgerond. Voeding gaat over ruwvoer, krachtvoer en water. Zorg bevat de adviezen voor leefomgeving, beweging en verzorging. In Analyse lees je wat mij opviel in de intake en waar we samen op letten."
+    },
+    {
+      "question": "Ik ben vergeten af te vinken. Kan dat nog?",
+      "answer": "Ja. Je kunt een dag tot 7 dagen terug nog aanpassen. Open die dag in de Kalender en vink alsnog af wat je hebt gegeven."
+    },
+    {
+      "question": "Ik heb een gift gemist. Wat nu?",
+      "answer": "Dat kan gebeuren! Ga gewoon verder met het schema en verdubbel de volgende dosering niet om de gemiste gift in te halen.\n\nHet is wel belangrijk dat je ieder product minimaal vier dagen per week geeft. Heb je meerdere giften gemist? Verleng de betreffende stap dan indien nodig."
+    },
+    {
+      "question": "Waarom gaat de opbouw van een product niet verder?",
+      "answer": "Sommige producten bouw je langzaam op naar de volledige hoeveelheid. Die opbouw gaat alleen verder op dagen dat je de gift afvinkt. Vink je een dag niet af, dan blijft de opbouw op dezelfde stap staan. Zo bouw je nooit sneller op dan je paard daadwerkelijk krijgt."
+    },
+    {
+      "question": "Wat is de weekupdate en waarom is die belangrijk?",
+      "answer": "Elke week vraagt de app hoe het met je paard gaat. Ik lees je updates en gebruik ze om je herstelplan waar nodig bij te stellen. Schrijf ook kleine veranderingen op, in mest, vacht, gedrag, beweging of eetlust. Juist die details helpen me om te zien wat werkt."
+    },
+    {
+      "question": "Mijn paard reageert anders dan ik verwacht. Wat moet ik doen?",
+      "answer": "Zie je iets wat acuut voelt, zoals koliek, plotselinge kreupelheid of koorts? Neem dan direct contact op met je dierenarts en meld het ook in je weekupdate. Je herstelplan gaat dan tijdelijk op pauze, totdat het verantwoord is om weer verder te gaan. Gaat het om een verandering die niet acuut is, of verdraagt je paard een product niet goed? Beschrijf het in je weekupdate, dan beoordeel ik of een tussentijdse aanpassing nodig is. Uitslagen van de dierenarts nemen we daarna mee in je herstelplan."
+    },
+    {
+      "question": "Kan ik mijn herstelplan pauzeren?",
+      "answer": "Ja, als dat nodig is, bijvoorbeeld bij ziekte of een blessure. Geef het aan in je weekupdate. Tijdens een pauze kun je alle uitleg van je herstelplan blijven bekijken. Afvinken kan weer zodra je herstelplan is hervat. De EquiBoost-content in de bibliotheek staat samen met je herstelplan op pauze. De dagen van de pauze komen er na het hervatten weer bij, zodat je je volledige drie maanden EquiBoost houdt. Je Basic-abonnement loopt gewoon door, dus alles wat daarbij hoort kun je blijven gebruiken."
+    },
+    {
+      "question": "Welke bibliotheekitems horen bij EquiBoost?",
+      "answer": "Items met het label EquiBoost Only kun je tijdens je traject gratis bekijken. Sommige andere items zijn tijdens EquiBoost ook gratis, terwijl ze normaal credits kosten. Deze toegang geldt drie maanden vanaf de eerste publicatie van je persoonlijke herstelplan. Staat je herstelplan op pauze, dan staat deze toegang ook op pauze, en komen de pauzedagen er daarna weer bij."
+    },
+    {
+      "question": "Wat gebeurt er na drie maanden?",
+      "answer": "Twee weken voor het einde verschijnt op Home de evaluatie van je traject. Vul die in, zo zien we samen wat er is veranderd. Wil je verder bouwen op wat je hebt bereikt? Verleng je binnen een week na afloop, dan krijg je 10% korting op je volgende EquiBoost traject. Je afgeronde herstelplan blijft bij je paard bewaard."
+    },
+    {
+      "question": "Waar kan ik terecht met andere vragen?",
+      "answer": "Bij Shelby, je digitale assistent in de app. Zij helpt je met praktische vragen over je herstelplan, maakt je wegwijs in de app en verwijst je bij inhoudelijke vragen naar relevante informatie in de bibliotheek.\n\nIn de community wissel je ervaringen uit en spar je met andere paardeneigenaren die ook aan de gezondheid van hun paard werken.\n\nVia je weekupdates volg ik hoe het met je paard gaat. Je herstelplan is zorgvuldig samengesteld voor drie maanden, en het lichaam van je paard heeft die tijd ook echt nodig om te herstellen. Reageert je paard onverwacht, of verdraagt hij een aanbevolen product niet goed? Meld het dan in je weekupdate. Dan beoordeel ik of een tussentijdse aanpassing nodig is.\n\nHeeft je paard acute of ernstige klachten? Neem dan direct contact op met je dierenarts en meld het ook in je weekupdate. Je herstelplan gaat dan tijdelijk op pauze, totdat de acute situatie voorbij is en het verantwoord is om weer verder te gaan."
+    }
+  ]
 }

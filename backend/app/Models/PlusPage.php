@@ -27,9 +27,23 @@ class PlusPage extends Model
         $heroVersion = substr(hash('sha256', $this->hero_path ?? 'bundled-v1'), 0, 16);
         $portraitVersion = substr(hash('sha256', $this->portrait_path ?? ''), 0, 16);
         $priceCents = (int) ($this->protocol_price_cents ?? 14700);
+        $content = array_replace(static::defaults(), $this->content, ['price' => '€ '.number_format($priceCents / 100, $priceCents % 100 === 0 ? 0 : 2, ',', '.')]);
         return ['protocolPriceCents' => $priceCents,
-            'content' => array_replace(static::defaults(), $this->content, ['price' => '€ '.number_format($priceCents / 100, $priceCents % 100 === 0 ? 0 : 2, ',', '.')]),
+            'content' => $content,
+            'memberFaqVideo' => static::libraryItemTitled($content['memberFaqVideoTitle'] ?? null),
             'heroImageUrl' => '/api/protocol-page/images/hero?v='.$heroVersion,
             'portraitImageUrl' => $this->portrait_path ? '/api/protocol-page/images/portrait?v='.$portraitVersion : null];
+    }
+
+    /** The FAQ video is found by its library title, so the editor can swap it without a developer. */
+    private static function libraryItemTitled(?string $title): ?array
+    {
+        $title = mb_strtolower(trim((string) $title));
+        $item = $title === '' ? null : LibraryItem::query()
+            ->whereRaw('lower(trim(title)) = ?', [$title])
+            ->whereNotNull('published_at')->where('published_at', '<=', now())
+            ->orderByDesc('published_at')->first(['id', 'format', 'title']);
+
+        return $item ? ['id' => $item->id, 'format' => $item->format, 'title' => $item->title] : null;
     }
 }

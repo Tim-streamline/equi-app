@@ -10,5 +10,10 @@ export type PlusContent = {
   closingLabel: string; closingTitle: string; closingBody: string; closingButton: string;
   confirmationTitle: string; confirmationPlan: string; confirmationProtocol: string; confirmationButton: string;
   welcomeTitle: string; welcomeBody: string;
+  /** The FAQ for owners who are already in an EquiBoost traject. */
+  memberFaqTitle: string; memberFaqBody: string; memberFaqVideoTitle: string | null;
+  memberFaqs: { question: string; answer: string }[];
 };
-export type PlusPageData = { content: PlusContent; heroImageUrl: string; portraitImageUrl: string | null };
+/** The published library item whose title matches `memberFaqVideoTitle`, if any. */
+export type MemberFaqVideo = { id: string; format: string; title: string };
+export type PlusPageData = { content: PlusContent; heroImageUrl: string; portraitImageUrl: string | null; memberFaqVideo?: MemberFaqVideo | null };

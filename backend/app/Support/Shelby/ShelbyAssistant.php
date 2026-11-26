@@ -3,6 +3,7 @@
 namespace App\Support\Shelby;
 
 use App\Models\Horse;
+use App\Models\PlusPage;
 use Throwable;
 
 /** Builds Shelby's instructions and context, asks the AI and applies the safety and EquiBoost rules. */
@@ -71,8 +72,11 @@ class ShelbyAssistant
             $lines[] = 'Het gesprek gaat over het paard: '.implode(', ', $about).'.';
         }
         $lines[] = $hasPlus
-            ? 'Deze gebruiker heeft voor dit paard al EquiBoost. Raad EquiBoost niet aan; verwijs bij vragen over een plan naar het protocol in de app.'
+            ? 'Deze gebruiker heeft voor dit paard al EquiBoost. Raad EquiBoost niet aan. Je bent de vaste plek voor vragen over het EquiBoost traject: beantwoord ze vriendelijk en gebruik daarvoor de veelgestelde vragen hieronder. Je kent de inhoud van het persoonlijke herstelplan niet; verwijs voor producten, hoeveelheden en planning naar het protocol in de app. Wil de gebruiker iets aan het herstelplan laten aanpassen of pauzeren, verwijs dan naar de weekupdate, die Shelley leest. Wil de gebruiker ervaringen delen met andere eigenaren, verwijs dan naar de community in de app.'
             : 'Deze gebruiker heeft voor dit paard nog geen EquiBoost.';
+        if ($hasPlus) {
+            $lines[] = $this->memberFaqs();
+        }
         if ($plusMentioned) {
             $lines[] = 'Je hebt EquiBoost in dit gesprek al genoemd. Noem het niet opnieuw, tenzij de gebruiker er zelf naar vraagt.';
         }
@@ -81,6 +85,18 @@ class ShelbyAssistant
         }
 
         return implode("\n", $lines);
+    }
+
+    /** The same answers EquiBoost customers read on the FAQ page, so Shelby never contradicts them. */
+    private function memberFaqs(): string
+    {
+        $faqs = PlusPage::current()->content['memberFaqs'] ?? PlusPage::defaults()['memberFaqs'];
+        $lines = ['VEELGESTELDE VRAGEN TIJDENS EQUIBOOST (zoals ze in de app staan; de "ik" is Shelley)'];
+        foreach ($faqs as $faq) {
+            $lines[] = 'Vraag: '.$faq['question']."\nAntwoord: ".$faq['answer'];
+        }
+
+        return implode("\n\n", $lines);
     }
 
     /** Both providers require alternating turns that start with the owner. */

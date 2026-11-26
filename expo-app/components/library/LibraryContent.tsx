@@ -61,7 +61,7 @@ export function LibraryContent({ itemId, preview }: { itemId: string; preview?: 
         <Text className="text-ink-70">{isConnected ? 'Inhoud wordt gedownload…' : 'Deze inhoud is nog niet gedownload. Maak verbinding om het item offline te kunnen lezen.'}</Text>
       </View> : !data.canRead && data.item.equiboostAccess === 'only' ? <View className="mx-5 mt-5 gap-3 rounded-2xl bg-mint-50 p-5">
         <Text className="font-bold text-[20px] text-ink">EquiBoost Only</Text>
-        <Text className="text-[15px] text-ink-70">Dit item is inbegrepen tijdens je actieve EquiBoost-traject, tot drie maanden na de eerste publicatie en activatie van je persoonlijke protocol.</Text>
+        <Text className="text-[15px] text-ink-70">Dit item is inbegrepen tijdens je actieve EquiBoost-traject, tot drie maanden na de eerste publicatie en activatie van je persoonlijke protocol. Dagen waarop je protocol gepauzeerd is, komen er weer bij.</Text>
         <Button title="Bekijk EquiBoost" onPress={() => router.push('/(tabs)/(pager)/protocol')} />
       </View> : !data.canRead && data.item.isPlus ? <View className="mx-5 mt-5 gap-3 rounded-2xl bg-mint-50 p-5">
         <Text className="font-bold text-[20px] text-ink">Gratis voor alle abonnees</Text>

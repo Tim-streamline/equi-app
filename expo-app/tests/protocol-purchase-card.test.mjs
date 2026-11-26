@@ -22,7 +22,7 @@ function app(overrides = {}) {
     useHorseDashboard: () => ({ horseId, data, revision: 0, refresh() {} }),
     useTabBarPadding: () => 76,
     ...Object.fromEntries(['HorseSwitcher', 'OfflineStrip', 'IconButton', 'ShoppingBag', 'ProtocolTabs'].map(name => [name, name])),
-    ...Object.fromEntries(['Today', 'Calendar', 'Nutrition', 'CareAdvice', 'ProtocolAnalysis', 'Sheet', 'WeeklySheet', 'Supplement', 'Label', 'ProtocolOrderList'].map(name => [name, name])),
+    ...Object.fromEntries(['Today', 'Calendar', 'Nutrition', 'CareAdvice', 'ProtocolAnalysis', 'ProtocolQuestions', 'Sheet', 'WeeklySheet', 'Supplement', 'Label', 'ProtocolOrderList'].map(name => [name, name])),
     HEADER_ICON: '#466362', useHeaderAction: action => { header = action; },
     router: { push: route => routes.push(route) },
     scopeOrderItems: (items, scope) => scope === 'all' ? items : [],
@@ -240,4 +240,16 @@ test('an order save survives switching away and cannot replay over a later cache
   assert.equal(render().twiceDaily, false, 'the earlier dashboard cannot undo a saved setting');
   revision = 4;
   assert.equal(render().twiceDaily, true, 'a later dashboard supplies the current setting');
+});
+
+test('every protocol tab ends with where to go with questions: the FAQ or Shelby', () => {
+  const screen = app();
+  screen.data = { horse: { id: 'rolo', name: 'Rolo' }, protocol: { id: 'p1', orderItems: [], phases: [] } };
+  const questions = screen.nodes().filter(node => node.type === 'ProtocolQuestions');
+  assert.equal(questions.length, 1);
+  questions[0].props.onFaq();
+  questions[0].props.onShelby();
+  assert.deepEqual(screen.routes, ['/equiboost-faq', { pathname: '/nova-chat', params: { horseId: 'rolo', protocolId: 'p1' } }]);
+  screen.data = { horse: { id: 'rolo', name: 'Rolo' }, protocol: null };
+  assert.ok(!screen.nodes().some(node => node.type === 'ProtocolQuestions'), 'not without an EquiBoost protocol');
 });
