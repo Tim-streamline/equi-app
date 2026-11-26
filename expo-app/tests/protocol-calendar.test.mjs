@@ -18,7 +18,9 @@ test('future phase markers group simultaneous starts and stay absent before owne
   assert.deepEqual(logic.nextPhaseStart(protocol,'2026-11-03').map(p=>p.id), ['b','c']);
   assert.equal(logic.phaseStarts(protocol,'2026-11-15').length,2);
   assert.deepEqual(logic.phaseStarts({...protocol,preparing:true},'2026-11-15'),[]);
-  assert.deepEqual(logic.nextPhaseStart({...protocol,preparing:true},'2026-11-03'),[]);
+  for (const status of ['preparing', 'paused', 'completed']) {
+    assert.deepEqual(logic.nextPhaseStart({ ...protocol, [status]: true }, '2026-11-03'), []);
+  }
 });
 test('future quantities contain only selected phases and never guess missing doses', () => {
   const row = {id:'herb',name:'Real herb',unit:'g',components:[{phaseId:'a',selectionId:'one',quantity:420},{phaseId:'b',selectionId:'two',quantity:1260}],purchaseOptions:[]};
@@ -60,7 +62,8 @@ function screen(editable=true, requestDay) {
   const items=[{id:'herb',name:'Real herb',dosage:'15 g',instructions:'Real instructions',administration:1,administrationsPerDay:2,done:false},{id:'herb',name:'Real herb',dosage:'15 g',administration:2,administrationsPerDay:2,done:false}];
   const day={date:'2026-11-02',label:'Actual date',editable,items,state:'missed'};
   const jsx=(type,props)=>({type,props});
-  const modules={react,'react/jsx-runtime':{jsx,jsxs:jsx,Fragment:'Fragment'},...protocolStyleModules,'react-native':Object.fromEntries(['View','Text','Pressable','ActivityIndicator'].map(n=>[n,n])), 'react-native-svg':{default:'Svg',Circle:'Circle'}, 'lucide-react-native':Object.fromEntries(['Check','ChevronLeft','ChevronRight','ShoppingBag'].map(n=>[n,n])), '@/components/ui/Button':{Button:'Button'},'@/db/hooks':{useSupplementIntakesForDate:()=>local,useStoreMutations:()=>({toggleSupplementIntake:async(id,dose,date,horse,n)=>{local=[{protocolPhaseSupplementId:id,administration:n,done:1}];}})},'@/hooks/useHorseDashboard':{deviceTimezone:()=> 'Europe/Amsterdam',dashboardRequest:async(url,body)=>{calls.push({url,body});return requestDay ? requestDay(url,body) : body?{...day,state:'partial',items:items.map(item=>({...item,done:item.administration===body.administration}))}:day;}},'@/lib/protocol-today':daily,'./DoseBuildupSchedule':{DoseBuildupSchedule:'DoseBuildupSchedule'},'@/lib/protocol-calendar':logic,'@/lib/haptics':{selectionHaptic(){}}};
+  const modules={react,'react/jsx-runtime':{jsx,jsxs:jsx,Fragment:'Fragment'},...protocolStyleModules,'react-native':Object.fromEntries(['View','Text','Pressable','ActivityIndicator'].map(n=>[n,n])), 'react-native-svg':{default:'Svg',Circle:'Circle'}, 'lucide-react-native':Object.fromEntries(['Check','ChevronLeft','ChevronRight','ShoppingBag'].map(n=>[n,n])), '@/components/ui/Button':{Button:'Button'},'@/db/hooks':{useSupplementIntakesForDate:()=>local,useStoreMutations:()=>({toggleSupplementIntake:async(id,dose,date,horse,n)=>{local=[{protocolPhaseSupplementId:id,administration:n,done:1}];}})},'@/hooks/useHorseDashboard':{deviceTimezone:()=> 'Europe/Amsterdam',dashboardRequest:async(url,body)=>{calls.push({url,body});return requestDay ? requestDay(url,body) : body?{...day,state:'partial',items:items.map(item=>({...item,done:item.administration===body.administration}))}:day;}},'@/lib/protocol-today':daily,'./DoseBuildupSchedule':{DoseBuildupSchedule:'DoseBuildupSchedule'},'./DoneCircle':{DoneCircle:'DoneCircle'},'@/lib/protocol-calendar':logic,'@/lib/haptics':{selectionHaptic(){}}};
+  modules['./doseGroupHeader']=load('../components/protocol/doseGroupHeader.tsx',modules);
   const component=load('../components/protocol/ProtocolCalendar.tsx',modules).ProtocolCalendar;
   const props={protocol:{id:'p',phases,today:{items},calendar:{label:'Actual month',previousMonth:'2026-10',nextMonth:'2026-12',cells:[{date:'2026-11-02',day:2,available:true,state:'missed',total:2,done:0},{date:'2026-11-03',day:3,isToday:true,state:'default'},{date:'2026-11-15',day:15,state:'default'}]}},today:'2026-11-03',horseId:'h',onMonth:m=>opened.push(m),onPhase:p=>opened.push(p.id),onToday:()=>opened.push('today'),onOrder:ids=>opened.push(ids),onRefresh:async()=>{},SheetComponent:'Sheet'};
   const render=()=>{
@@ -79,8 +82,8 @@ test('midnight closes the checked Today sheet and reopening yesterday fetches it
   const app = screen(true, async () => ({ date:'2026-11-03', label:'Yesterday', editable:true, state:'complete',
     items:[{id:'herb',name:'Real herb',dosage:'15 g',administration:2,administrationsPerDay:2,done:true}] }));
   app.render().find(n=>n?.props?.accessibilityLabel?.startsWith('dinsdag 3')).props.onPress();
-  await app.render().find(n=>n?.props?.accessibilityLabel==='Real herb, Avond, 15 g').props.onPress();
-  assert.equal(app.render().find(n=>n?.props?.accessibilityRole==='checkbox' && n.props.accessibilityLabel.includes('Avond')).props.accessibilityState.checked,true);
+  await app.render().find(n=>n?.props?.accessibilityLabel==='Real herb, Tweede gift, 15 g').props.onPress();
+  assert.equal(app.render().find(n=>n?.props?.accessibilityRole==='checkbox' && n.props.accessibilityLabel.includes('Tweede gift')).props.accessibilityState.checked,true);
   app.props.today='2026-11-04'; app.setLocal([]);
   app.props.protocol.calendar={...app.props.protocol.calendar,cells:[{date:'2026-11-03',day:3,available:true,state:'complete',total:1,done:1}]};
   assert.ok(!app.render().some(n=>n?.type==='Sheet' && n.props.visible));
@@ -109,16 +112,32 @@ test('a historical response started before midnight cannot repopulate the closed
 });
 test('day sheet groups doses and Uitleg never changes a checkbox; historical evening saves separately', async()=>{
   const app=screen();await app.open();
-  let nodes=app.render();assert.ok(nodes.includes('Ochtend') && nodes.includes('Avond'));
-  nodes.find(n=>n?.props?.accessibilityLabel==='Uitleg over Real herb, Ochtend').props.onPress();
+  let nodes=app.render();assert.ok(nodes.includes('Tweede gift') && !nodes.includes('Elke dag'));
+  nodes.find(n=>n?.props?.accessibilityLabel==='Uitleg over Real herb, Elke dag').props.onPress();
   nodes=app.render();assert.ok(nodes.includes('Real instructions'));assert.equal(app.calls.length,1);
   nodes.find(n=>n?.props?.title==='Terug naar daglijst').props.onPress();
-  await app.render().find(n=>n?.props?.accessibilityLabel==='Real herb, Avond, 15 g').props.onPress();
+  await app.render().find(n=>n?.props?.accessibilityLabel==='Real herb, Tweede gift, 15 g').props.onPress();
   assert.equal(app.calls[1].body.administration,2);assert.equal(app.calls[1].body.date,'2026-11-02');
 });
+test('a recorded-only gift in the day sheet stays outside the scheduled count', async () => {
+  const app = screen(true, () => ({
+    date: '2026-11-02', label: 'Actual date', editable: true, state: 'missed',
+    items: [
+      { id: 'current', name: 'Scheduled herb', administration: 2, done: false },
+      { id: 'old', name: 'Recorded herb', administration: 2, done: true, recordedOnly: true },
+    ],
+  }));
+  await app.open();
+  const nodes = app.render();
+  assert.ok(nodes.indexOf('Eerder geregistreerd') > nodes.indexOf('Tweede gift'));
+  const count = nodes.find(node => node?.props?.children?.[1] === ' van ');
+  assert.deepEqual(count.props.children, [0, ' van ', 1]);
+  assert.equal(nodes.find(node => node?.props?.accessibilityLabel === 'Recorded herb, Gift 2, ').props.disabled, true);
+});
+
 test('readonly history cannot be checked and calendar navigation preserves month and Today actions',async()=>{
   const app=screen(false);await app.open();
-  const check=app.render().find(n=>n?.props?.accessibilityLabel==='Real herb, Ochtend, 15 g');assert.equal(check.props.disabled,true);
+  const check=app.render().find(n=>n?.props?.accessibilityLabel==='Real herb, Elke dag, 15 g');assert.equal(check.props.disabled,true);
   await check.props.onPress();assert.equal(app.calls.length,1);
   app.render().find(n=>n?.props?.accessibilityLabel==='Volgende maand').props.onPress();
   app.render().find(n=>n?.props?.accessibilityLabel?.startsWith('dinsdag 3')).props.onPress();
@@ -126,6 +145,30 @@ test('readonly history cannot be checked and calendar navigation preserves month
 });
 
 test('order reminder opens the grouped future phases without marking any day',()=>{const app=screen();app.render().find(n=>n?.props?.accessibilityLabel==='Bestellijst voor de volgende fases').props.onPress();assert.deepEqual(app.opened,[['b','c']]);assert.equal(app.calls.length,0);});
+
+for (const status of ['paused', 'completed']) {
+  test(`${status} calendar keeps Today and history read-only, including an already open day`, async () => {
+    const app = screen();
+    app.render().find(n => n?.props?.accessibilityLabel?.startsWith('dinsdag 3')).props.onPress();
+    app.props.protocol[status] = true;
+    let nodes = app.render();
+    let check = nodes.find(n => n?.props?.accessibilityLabel === 'Real herb, Tweede gift, 15 g');
+    assert.equal(check.props.disabled, true);
+    assert.ok(nodes.find(n => n?.type === 'Sheet' && n.props.visible).props.subtitle.includes('Alleen te bekijken'));
+    await check.props.onPress();
+    assert.equal(app.render().find(n => n?.props?.accessibilityLabel === 'Real herb, Tweede gift, 15 g').props.accessibilityState.checked, false);
+    assert.equal(app.calls.length, 0);
+    // Even a stale API response with editable=true must not enable a paused/completed plan.
+    await app.open();
+    check = app.render().find(n => n?.props?.accessibilityLabel === 'Real herb, Tweede gift, 15 g');
+    assert.equal(check.props.disabled, true);
+    await check.props.onPress();
+    assert.equal(app.calls.length, 1);
+    app.render().find(n => n?.type === 'Sheet' && n.props.visible).props.onClose();
+    app.render().find(n => n?.props?.accessibilityLabel?.startsWith('dinsdag 3')).props.onPress();
+    assert.equal(app.render().find(n => n?.props?.accessibilityLabel === 'Real herb, Tweede gift, 15 g').props.disabled, true);
+  });
+}
 
  test('order reminder starts exactly fourteen days before a phase',()=>{
    assert.deepEqual(logic.nextPhaseStart({phases:phases.slice(1)},'2026-10-31'),[]);
@@ -142,7 +185,7 @@ test('order reminder opens the grouped future phases without marking any day',()
  test('today opens the day sheet and checks a gift through local storage',async()=>{
    const app=screen();app.render().find(n=>n?.props?.accessibilityLabel?.startsWith('dinsdag 3')).props.onPress();
    assert.equal(app.calls.length,0);
-   await app.render().find(n=>n?.props?.accessibilityLabel==='Real herb, Avond, 15 g').props.onPress();
+   await app.render().find(n=>n?.props?.accessibilityLabel==='Real herb, Tweede gift, 15 g').props.onPress();
    const ring=app.render().find(n=>n?.props?.progress===.5);assert.ok(ring);
    assert.equal(app.calls.length,0);
  });

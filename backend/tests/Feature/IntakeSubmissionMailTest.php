@@ -354,6 +354,27 @@ class IntakeSubmissionMailTest extends TestCase
         $pdf->render($this->booking);
     }
 
+    public function test_failed_pdf_download_opens_authenticated_print_fallback(): void
+    {
+        Storage::fake('local');
+        $photo = IntakeAttachment::create(['booking_id' => $this->booking->id, 'section_key' => 'paard', 'field_key' => 'foto',
+            'name' => 'missing.jpg', 'path' => 'intake/missing.jpg', 'mime' => 'image/jpeg']);
+        $this->booking->answers()->create(['section_id' => 'paard', 'field_id' => 'foto', 'value' => json_encode(['attachment:'.$photo->id.':missing.jpg'])]);
+        IntakeField::where('key', 'klachten')->firstOrFail()->update(['critical_if' => ['Jeuk'], 'protocol_if' => ['Jeuk' => 'Internal recommendation']]);
+        $this->actingAs(AdminUser::create(['name' => 'Admin', 'email' => 'pdf-fallback@example.test', 'password' => 'password', 'role' => 'owner', 'active' => true]), 'admin');
+        $this->get('/admin/bookings/'.$this->booking->id.'/answers.pdf')
+            ->assertRedirect(route('admin.bookings.show', [$this->booking, 'print' => 1, 'pdf_fallback' => 1]));
+        $this->get(route('admin.bookings.show', [$this->booking, 'print' => 1, 'pdf_fallback' => 1]))
+            ->assertOk()->assertSeeText('Hidden stale answer')->assertSeeText('Blokkeert protocol')
+            ->assertSee(route('admin.intake-media', $photo))->assertSeeText('missing.jpg')
+            ->assertDontSee('Private therapist notes')->assertDontSee('Internal recommendation')->assertDontSee('file:///');
+        $this->get(route('admin.bookings.show', [$this->booking, 'print' => 1]))
+            ->assertInertia(fn (Assert $page) => $page->where('printMode', true)
+                ->where('review.notes', 'Private therapist notes')->where('review.triggers.0.protocol.0', 'Internal recommendation'));
+        $this->actingAsGuest('admin');
+        $this->get('/admin/bookings/'.$this->booking->id.'/answers.pdf')->assertRedirect('/admin/login');
+    }
+
     public function test_pdf_download_uses_the_requested_filename_from_the_submission_and_intake_name(): void
     {
         $this->travelTo(Carbon::parse('2026-09-29T21:00:00Z'));
@@ -427,6 +448,90 @@ class IntakeSubmissionMailTest extends TestCase
         $this->assertSame('done', $this->booking->fresh()->status);
         $this->assertSame('30-09-2026 00:24', $this->booking->fresh()->submitted_at_label);
         $this->assertNotSame('Later aangepast', $this->booking->fresh()->notes);
+    }
+
+    public function test_customer_receives_one_plain_text_confirmation_of_their_intake(): void
+    {
+        $this->booking->answers()->create(['section_id' => 'paard', 'field_id' => 'naam', 'value' => json_encode('Rolo & Co')]);
+        $this->travelTo(Carbon::parse('2026-09-29T22:24:00Z'));
+        $op = $this->submission();
+        $this->upload([$op])->assertOk();
+        $this->assertSame('pending', $this->booking->fresh()->confirmation_email_status);
+        $updatedAt = $this->booking->fresh()->updated_at;
+        $this->travel(5)->minutes();
+
+        $this->artisan('mail:send-customer-notifications')->assertSuccessful();
+        $this->assertCount(1, $this->messages());
+        $message = $this->messages()->first()->getOriginalMessage();
+        $this->assertSame('account@example.test', $message->getTo()[0]->getAddress());
+        $this->assertSame('Je intake voor Rolo & Co is ontvangen | EquiApp', $message->getSubject());
+        foreach (['Hey Account,', 'De intake voor Rolo & Co is goed ontvangen.', 'het herstelplan voor Rolo & Co.', 'Binnen 5 werkdagen staat het herstelplan klaar in EquiApp.', 'Het EquiApp-team'] as $text) {
+            $this->assertStringContainsString($text, $message->getTextBody());
+        }
+        $this->assertNull($message->getHtmlBody());
+        $this->assertStringNotContainsString('Private therapist notes', $message->getTextBody());
+        $this->assertSame('sent', $this->booking->fresh()->confirmation_email_status);
+        $this->assertEquals($updatedAt, $this->booking->fresh()->updated_at);
+
+        // A replayed submission or a second run never mails again; the therapist notification is separate.
+        $this->upload([$op])->assertOk();
+        $this->artisan('mail:send-customer-notifications')->assertSuccessful();
+        $this->assertCount(1, $this->messages());
+        $this->assertSame('pending', $this->booking->fresh()->submission_email_status);
+    }
+
+    public function test_customer_confirmation_cannot_be_forged_and_skips_disabled_accounts(): void
+    {
+        $this->upload([$this->submission(['confirmation_email_status' => 'sent'])])->assertOk();
+        $this->assertSame('pending', $this->booking->fresh()->confirmation_email_status);
+        $this->booking->user->forceFill(['disabled_at' => now()])->save();
+        $this->artisan('mail:send-customer-notifications')->assertSuccessful();
+        $this->assertSame('skipped', $this->booking->fresh()->confirmation_email_status);
+        $this->assertCount(0, $this->messages());
+    }
+
+    public function test_a_cancelled_intake_confirmation_is_retired_even_if_the_booking_is_reopened(): void
+    {
+        $this->upload([$this->submission()])->assertOk();
+        IntakeBooking::whereKey($this->booking->id)->toBase()->update(['status' => 'cancelled']);
+        $this->artisan('mail:send-customer-notifications')->assertSuccessful();
+        // The atomic claim checks the same eligibility as the scan.
+        app(\App\Support\CustomerNotificationMail::class)->sendIntakeReceived($this->booking->id);
+        $this->assertCount(0, $this->messages());
+        $this->assertSame('skipped', $this->booking->fresh()->confirmation_email_status);
+        $this->assertNull($this->booking->fresh()->confirmation_email_claimed_at);
+
+        IntakeBooking::whereKey($this->booking->id)->toBase()->update(['status' => 'pending']);
+        $this->artisan('mail:send-customer-notifications')->assertSuccessful();
+        $this->assertCount(0, $this->messages());
+    }
+
+    public function test_admin_cancellation_immediately_skips_only_an_unclaimed_confirmation(): void
+    {
+        $this->upload([$this->submission()])->assertOk();
+        $this->actingAs(AdminUser::create(['name' => 'Admin', 'email' => 'admin@example.test', 'password' => 'password', 'role' => 'owner', 'active' => true]), 'admin');
+        $url = '/admin/bookings/'.$this->booking->id.'/status';
+        $this->post($url, ['status' => 'cancelled'])->assertRedirect();
+        $this->assertSame('skipped', $this->booking->fresh()->confirmation_email_status);
+        $this->post($url, ['status' => 'pending'])->assertRedirect();
+        $this->artisan('mail:send-customer-notifications')->assertSuccessful();
+        $this->assertCount(0, $this->messages());
+
+        $this->booking->forceFill(['confirmation_email_status' => 'sending'])->save();
+        $this->post($url, ['status' => 'cancelled'])->assertRedirect();
+        $this->assertSame('sending', $this->booking->fresh()->confirmation_email_status);
+    }
+
+    public function test_customer_confirmation_failure_is_not_retried(): void
+    {
+        $this->upload([$this->submission()])->assertOk();
+        Event::listen(MessageSending::class, fn () => throw new RuntimeException('SMTP unavailable'));
+        $this->artisan('mail:send-customer-notifications')->assertFailed();
+        $this->assertSame('failed', $this->booking->fresh()->confirmation_email_status);
+        $this->assertSame('SMTP unavailable', $this->booking->fresh()->confirmation_email_error);
+        Event::forget(MessageSending::class);
+        $this->artisan('mail:send-customer-notifications')->assertSuccessful();
+        $this->assertCount(0, $this->messages());
     }
 
     public function test_notification_transport_failure_does_not_retry_uncertain_delivery(): void

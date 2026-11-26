@@ -20,7 +20,7 @@ class IntakeQuestionnaireSnapshot
 
     public const SECTION = ['key', 'order', 'title', 'intro', 'presentation', 'minutes', 'icon', 'subtitle', 'active'];
 
-    public const FIELD = ['key', 'order', 'answer_section_key', 'label', 'type', 'hint', 'required', 'optional', 'unit', 'step', 'tall', 'lines', 'placeholder', 'link', 'options', 'answer_aliases', 'submission_blocks', 'show_if', 'flag_if', 'critical_if', 'protocol_if', 'repeater_sub', 'photo_config', 'age_config', 'signal_config', 'date_config', 'active'];
+    public const FIELD = ['key', 'order', 'answer_section_key', 'label', 'type', 'hint', 'required', 'optional', 'unit', 'step', 'tall', 'lines', 'placeholder', 'link', 'options', 'answer_aliases', 'submission_blocks', 'show_if', 'flag_if', 'critical_if', 'protocol_if', 'repeater_sub', 'photo_config', 'age_config', 'signal_config', 'date_config', 'label_config', 'active'];
 
     public function assertSchema(): void
     {
@@ -88,7 +88,8 @@ class IntakeQuestionnaireSnapshot
             $this->requireColumns($section, self::SECTION);
             foreach ($section['fields'] as $field) {
                 // Older snapshots may omit this new optional setting; preserve it on import.
-                $this->requireColumns($field, array_diff(self::FIELD, ['signal_config', 'date_config', 'answer_aliases', 'submission_blocks']));
+                $this->requireColumns($field, array_diff(self::FIELD, ['signal_config', 'date_config', 'answer_aliases', 'submission_blocks', 'label_config']));
+                $this->validateLabels($field);
                 app(IntakeSafetySettings::class)->validateAliases($field['answer_aliases'] ?? null);
                 app(IntakeSubmissionBlocks::class)->validate($field['submission_blocks'] ?? null);
                 if (! app(IntakeConditions::class)->valid($field['show_if'] ?? null)) throw new RuntimeException('Invalid intake visibility rule.');
@@ -104,6 +105,45 @@ class IntakeQuestionnaireSnapshot
         if (! $fields) {
             throw new RuntimeException('Refusing an empty questionnaire snapshot.');
         }
+    }
+
+    /** Optional admin label metadata (see IntakeLabels); absent or null in snapshots from before labels. */
+    private function validateLabels(array $field): void
+    {
+        $config = $field['label_config'] ?? null;
+        if ($config === null) {
+            return;
+        }
+        Validator::make(['label_config' => $config], IntakeLabels::rules(snapshot: true), [], ['label_config' => 'labels of '.$field['key']])->validate();
+        app(IntakeLabels::class)->validate($config);
+    }
+
+    /**
+     * The labels a field gets on import. A snapshot without labels (older exports) keeps the destination's
+     * labels; a new field then gets defaults. Snapshot labels win per question and per answer; destination
+     * labels it does not mention are kept, and the result follows the snapshot's current answers.
+     */
+    private function labels(IntakeField $field, array $fieldData, string $sectionKey): ?array
+    {
+        $labels = app(IntakeLabels::class);
+        $snapshot = $fieldData['label_config'] ?? null;
+        if ($snapshot === null && $field->exists) {
+            $stored = array_column($labels->definitions($field->toArray()), 'options', 'key');
+            $incoming = array_column($labels->definitions($fieldData), 'options', 'key');
+            if ($stored === $incoming) {
+                return null;
+            }
+        }
+        $merged = collect($field->label_config ?? [])->keyBy('key');
+        foreach ($snapshot ?? [] as $node) {
+            $existing = $merged->get($node['key'], []);
+            $answers = collect($existing['answers'] ?? [])->keyBy('answer')->replace(collect($node['answers'])->keyBy('answer'));
+            $merged->put($node['key'], ['key' => $node['key'], 'label' => $node['label'], 'answers' => $answers->values()->all()]);
+        }
+        $config = $labels->complete($fieldData, $sectionKey.'_'.$fieldData['key'], $merged->values()->all());
+        $labels->validate($config);
+
+        return $config;
     }
 
     private function requireColumns(array $row, array $columns): void
@@ -190,14 +230,19 @@ class IntakeQuestionnaireSnapshot
                         if ($field->type !== $fieldData['type']) {
                             throw new RuntimeException("Field type would change for {$field->key}; an explicit answer migration is required.");
                         }
-                        if ($this->changes($field, $fieldData)) {
+                        // Label metadata never affects saved answers, so it does not warn about them.
+                        if ($this->changes($field, Arr::except($fieldData, ['label_config']))) {
                             $count = DB::table('intake_answers')->where('section_id', $oldAddress)->where('field_id', $field->key)->count();
                             if ($count) {
                                 $warnings[] = "{$field->key}: {$count} saved answer(s) retained verbatim; changed choices, visibility or requirements may need user review.";
                             }
                         }
                     }
-                    $plan($field, [...$fieldData, 'section_id' => $section->id], 'field/'.$fieldData['key']);
+                    $attributes = [...Arr::except($fieldData, ['label_config']), 'section_id' => $section->id];
+                    if (($labelConfig = $this->labels($field, $fieldData, $sectionData['key'])) !== null) {
+                        $attributes['label_config'] = $labelConfig;
+                    }
+                    $plan($field, $attributes, 'field/'.$fieldData['key']);
                 }
             }
             foreach ($fields as $key => $field) {

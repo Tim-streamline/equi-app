@@ -23,6 +23,7 @@ use App\Http\Controllers\Admin\PlanController;
 use App\Http\Controllers\Admin\PlusPageController;
 use App\Http\Controllers\Admin\ProductController;
 use App\Http\Controllers\Admin\ProtocolController;
+use App\Http\Controllers\Admin\ProtocolEvaluationController;
 use App\Http\Controllers\Admin\ProtocolMeasureController;
 use App\Http\Controllers\Admin\ProtocolSettingsController;
 use App\Http\Controllers\Admin\ScanResultController;
@@ -54,6 +55,13 @@ Route::middleware('auth:admin')->group(function () {
 
     Route::patch('bookings/{booking}/review', [IntakeBookingController::class, 'review'])->name('bookings.review');
     Route::get('intake-media/{attachment}', [IntakeAttachmentController::class, 'admin'])->whereUuid('attachment')->name('intake-media');
+    Route::get('horses/{horse}/evaluations/{protocol}.pdf', [ProtocolEvaluationController::class, 'pdf'])->name('horses.evaluation-pdf');
+    Route::middleware('admin.role:admin')->prefix('evaluation-questions')->group(function () {
+        Route::get('/', [ProtocolEvaluationController::class, 'index']);
+        Route::post('/', [ProtocolEvaluationController::class, 'store']);
+        Route::put('{question}', [ProtocolEvaluationController::class, 'update']);
+        Route::delete('{question}', [ProtocolEvaluationController::class, 'destroy']);
+    });
 
     // ---- Support console: users, horses ---------------------------------
     Route::controller(UserController::class)->prefix('users')->as('users.')->group(function () {
@@ -77,7 +85,6 @@ Route::middleware('auth:admin')->group(function () {
         Route::put('{horse}', 'update')->name('update');
         Route::post('{horse}/archive', 'archive')->name('archive');
         Route::post('{horse}/restore', 'restore')->name('restore');
-        Route::post('{horse}/transfer', 'transfer')->name('transfer');
     });
 
     // ---- Therapists ------------------------------------------------------

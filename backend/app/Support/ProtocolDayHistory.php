@@ -13,7 +13,7 @@ class ProtocolDayHistory
 {
     public function timezone(Protocol $protocol): string
     {
-        return $protocol->horse->owner?->notificationPreferences?->timezone ?: 'Europe/Amsterdam';
+        return app(ProtocolCompletion::class)->timezone($protocol);
     }
 
     /** Freeze elapsed days before a plan is edited, including days never opened in the app. */
@@ -27,33 +27,39 @@ class ProtocolDayHistory
             $protocol = Protocol::query()->lockForUpdate()->findOrFail($protocol->id);
             $protocol->load('phases.weeks', 'phases.supplements.weeks', 'phases.supplements.intakes', 'phases.supplements.supplement');
             $start = CarbonImmutable::parse($protocol->started_at->toDateString(), $now->timezone);
-            $weeks = max((int) $protocol->total_weeks, (int) $protocol->phases->flatMap->weeks->max('protocol_week_number'));
+            $weeks = $protocol->scheduledWeeks();
             $end = $now->startOfDay()->subDay()->min($start->addWeeks($weeks)->subDay());
+            // Days after an early completion are not plan days: never freeze them as missed. Without a known
+            // last day (an old completion) nothing new is frozen.
+            $completion = app(ProtocolCompletion::class);
+            if ($completion->unknownEnd($protocol)) {
+                return;
+            }
+            if ($last = $completion->lastPlanDay($protocol)) {
+                $end = $end->min(CarbonImmutable::parse($last, $now->timezone));
+            }
             if ($end->lt($start)) {
                 return;
             }
             $existing = DB::table('protocol_day_snapshots')->where('protocol_id', $protocol->id)->pluck('date')->flip();
+            $closedPeriods = $completion->closedPeriods($protocol);
             $intakes = $protocol->horse->supplementIntakes()->whereBetween('date', [$start->toDateString(), $end->toDateString()])->get()->groupBy(fn ($row) => $row->date->toDateString());
+            $selections = $protocol->phases->flatMap->supplements->keyBy('id');
             for ($day = $start; $day->lte($end); $day = $day->addDay()) {
                 $date = $day->toDateString();
-                if ($existing->has($date)) {
+                if ($existing->has($date) || $completion->containsDate($closedPeriods, $date)) {
                     continue;
                 }
                 $week = (int) floor($start->diffInDays($day) / 7) + 1;
-                $done = $intakes->get($date, collect())->keyBy(fn ($row) => $row->protocol_phase_supplement_id.':'.($row->administration ?? 1));
-                $items = $protocol->phases->flatMap(function ($phase) use ($week, $done, $date) {
+                $planned = $protocol->phases->flatMap(function ($phase) use ($week) {
                     $weekIds = $phase->weeks->where('protocol_week_number', $week)->pluck('id');
 
                     return $phase->supplements->filter(fn ($item) => $item->weeks->contains(fn ($link) => $weekIds->contains($link->protocol_phase_week_id)))
-                        ->flatMap(fn ($item) => collect(range(1, $item->administrationsPerDay()))->map(fn ($administration) => [
-                            'id' => $item->id, 'name' => $item->name,
-                            'dosage' => $done->get($item->id.':'.$administration)?->dosage ?? app(ProtocolDoseBuildup::class)->forDay($item, $date),
-                            'description' => $item->description, 'instructions' => $item->instructions,
-                            'phaseTitle' => $phase->title, 'phaseId' => $phase->id,
-                            'administration' => $administration, 'administrationsPerDay' => $item->administrationsPerDay(),
-                            'done' => (bool) ($done->get($item->id.':'.$administration)?->done ?? false),
-                        ]));
-                })->values()->all();
+                        ->map(fn ($item) => ['id' => $item->id, 'name' => $item->name, 'description' => $item->description,
+                            'instructions' => $item->instructions, 'phaseTitle' => $phase->title, 'phaseId' => $phase->id,
+                            'administrationsPerDay' => $item->administrationsPerDay()]);
+                });
+                $items = $this->plannedRows($planned, $selections, $intakes->get($date, collect()), $date)->all();
                 DB::table('protocol_day_snapshots')->insert([
                     'protocol_id' => $protocol->id, 'date' => $date, 'items' => json_encode($items),
                     'created_at' => now(), 'updated_at' => now(),
@@ -62,24 +68,126 @@ class ProtocolDayHistory
         });
     }
 
+    /** Expand the schedule in force on a date; prefer the amount actually given on that date. */
+    public function plannedRows(Collection $planned, Collection $selections, Collection $intakes, string $date): Collection
+    {
+        $records = $intakes->keyBy(fn ($row) => $row->protocol_phase_supplement_id.':'.$row->administration);
+        $buildup = app(ProtocolDoseBuildup::class);
+
+        return $planned->flatMap(function ($item) use ($records, $selections, $buildup, $date) {
+            $rows = [];
+            foreach (range(1, $item['administrationsPerDay']) as $number) {
+                $record = $records->get($item['id'].':'.$number);
+                $rows[] = array_replace($item, ['administration' => $number, 'done' => (bool) $record?->done,
+                    'dosage' => $record?->dosage ?? $buildup->forDay($selections->get($item['id']), $date)]);
+            }
+            return $rows;
+        })->values();
+    }
+
+    /** A frequency change may leave recorded doses outside the known schedule. Keep those facts read-only. */
+    public function withRecordedDoses(Collection $rows, Collection $doses): Collection
+    {
+        $keys = $rows->mapWithKeys(fn ($row) => [$row['id'].':'.($row['administration'] ?? 1) => true]);
+        foreach ($doses as $dose) {
+            if (! $dose->done || $keys->has($dose->protocol_phase_supplement_id.':'.$dose->administration)) continue;
+            $item = $dose->protocolPhaseSupplement;
+            $rows->push(['id' => $item->id, 'name' => $item->name, 'dosage' => $dose->dosage,
+                'description' => $item->description, 'instructions' => $item->instructions,
+                'phaseTitle' => $item->phase->title, 'phaseId' => $item->protocol_phase_id,
+                'administration' => $dose->administration, 'administrationsPerDay' => max($dose->administration, $item->administrationsPerDay()),
+                'done' => true, 'recordedOnly' => true]);
+        }
+        return $rows;
+    }
+
+    /** Called under the protocol write lock, immediately before deleting the selections and their intake rows. */
+    public function preserveRemovedDoses(string $protocolId, array $selectionIds): void
+    {
+        if (! $selectionIds) {
+            return;
+        }
+        $byDate = ProtocolSupplementIntake::whereIn('protocol_phase_supplement_id', $selectionIds)
+            ->where('done', true)->with('protocolPhaseSupplement.phase', 'protocolPhaseSupplement.supplement')
+            ->orderBy('protocol_phase_supplement_id')->orderBy('administration')->get()
+            ->groupBy(fn ($intake) => $intake->date->toDateString());
+        foreach ($byDate->chunk(500) as $chunk) {
+            $previous = DB::table('protocol_removed_doses')->where('protocol_id', $protocolId)
+                ->whereIn('date', $chunk->keys()->all())->pluck('items', 'date');
+            $rows = $chunk->map(fn ($doses, $date) => ['protocol_id' => $protocolId, 'date' => $date,
+                'items' => json_encode($this->withRecordedDoses(collect(json_decode($previous[$date] ?? '[]', true)), $doses)->all(), JSON_THROW_ON_ERROR)]);
+            DB::table('protocol_removed_doses')->upsert($rows->values()->all(), ['protocol_id', 'date'], ['items']);
+        }
+    }
+
+    public function removedDosesOn(Protocol $protocol, string $date): array
+    {
+        $items = DB::table('protocol_removed_doses')->where('protocol_id', $protocol->id)->where('date', $date)->value('items');
+
+        return json_decode($items ?? '[]', true);
+    }
+
     public function days(Protocol $protocol, string $month): Collection
     {
-        return DB::table('protocol_day_snapshots')->where('protocol_id', $protocol->id)
-            ->whereBetween('date', [$month.'-01', CarbonImmutable::parse($month.'-01')->endOfMonth()->toDateString()])
-            ->get()->mapWithKeys(fn ($row) => [$row->date => $this->displayItems(json_decode($row->items, true))]);
+        return $this->historyBetween($protocol, $month.'-01', CarbonImmutable::parse($month.'-01')->endOfMonth()->toDateString());
+    }
+
+    private function historyBetween(Protocol $protocol, string $from, string $to): Collection
+    {
+        $completion = app(ProtocolCompletion::class);
+        $closedPeriods = array_filter($completion->closedPeriods($protocol), fn ($period) =>
+            ($period['after'] === null || $period['after'] < $to) && ($period['before'] === null || $period['before'] > $from));
+        $knownClosures = array_filter($closedPeriods, fn ($period) => $period['after'] !== null);
+        $frozen = DB::table('protocol_day_snapshots')->where('protocol_id', $protocol->id)
+            ->whereBetween('date', [$from, $to])->get()
+            ->mapWithKeys(function ($row) use ($completion, $knownClosures) {
+                $items = $this->displayItems(json_decode($row->items, true));
+                if ($completion->containsDate($knownClosures, $row->date)) {
+                    $items = array_values(array_filter($items, fn ($item) => $item['done']));
+                }
+                return [$row->date => $items];
+            })
+            ->filter(fn ($items, $date) => ! $completion->containsDate($closedPeriods, $date) || collect($items)->contains('done', true));
+        $records = $this->recordedIntakes($protocol, $from, $to);
+        foreach ($records as $date => $doses) {
+            $rows = collect($frozen->get($date, []));
+            $combined = $this->withRecordedDoses($rows, $doses);
+            if ($combined->isNotEmpty()) $frozen->put($date, $combined->all());
+        }
+
+        $removed = DB::table('protocol_removed_doses')->where('protocol_id', $protocol->id)
+            ->whereBetween('date', [$from, $to])->pluck('items', 'date');
+        foreach ($removed as $date => $items) {
+            // A scheduled row keeps its original state and remains independently correctable.
+            $rows = collect($frozen->get($date, []))->concat(json_decode($items, true))
+                ->unique(fn ($row) => $row['id'].':'.($row['administration'] ?? 1))->values();
+            $frozen->put($date, $rows->all());
+        }
+
+        return $frozen;
+    }
+
+    public function recordedIntakes(Protocol $protocol, string $from, string $to): Collection
+    {
+        return ProtocolSupplementIntake::where('horse_id', $protocol->horse_id)->whereBetween('date', [$from, $to])
+            ->whereHas('protocolPhaseSupplement.phase', fn ($query) => $query->where('protocol_id', $protocol->id))
+            ->with('protocolPhaseSupplement.phase', 'protocolPhaseSupplement.supplement')
+            ->orderBy('protocol_phase_supplement_id')->orderBy('administration')->get()->groupBy(fn ($row) => $row->date->toDateString());
     }
 
     public function day(Protocol $protocol, string $date, CarbonImmutable $now): array
     {
         abort_unless($date < $now->toDateString(), 422, 'Open vandaag via Vandaag. Toekomstige dagen zijn niet beschikbaar.');
         $this->preserve($protocol, $now);
-        $row = DB::table('protocol_day_snapshots')->where('protocol_id', $protocol->id)->where('date', $date)->first();
-        abort_unless($row, 404, 'Op deze datum was er geen protocol gepland.');
-        $items = $this->displayItems(json_decode($row->items, true));
+        $items = $this->historyBetween($protocol, $date, $date)->get($date);
+        $lastDay = app(ProtocolCompletion::class)->lastPlanDay($protocol);
+        abort_if($items === null && $lastDay !== null && $date > $lastDay, 422, 'Het herstelplan was op deze dag al afgerond.');
+        abort_if($items === null, 404, 'Op deze datum was er geen protocol gepland.');
 
         return [
             'date' => $date, 'label' => CarbonImmutable::parse($date, $now->timezone)->locale('nl')->translatedFormat('l j F Y'),
-            'editable' => $date >= $now->subDays(7)->toDateString(),
+            'editable' => $protocol->status === 'active' && $date >= $now->subDays(7)->toDateString()
+                && ! app(ProtocolCompletion::class)->containsDate($protocol->closed_periods ?? [], $date),
             'editableUntil' => CarbonImmutable::parse($date, $now->timezone)->addDays(7)->toDateString(),
             'weekNumber' => $protocol->started_at ? (int) floor(CarbonImmutable::parse($protocol->started_at->toDateString(), $now->timezone)->diffInDays(CarbonImmutable::parse($date, $now->timezone)) / 7) + 1 : null,
             'items' => $items, 'state' => $this->state($items),
@@ -100,24 +208,36 @@ class ProtocolDayHistory
 
     public function state(array $items): string
     {
-        $done = count(array_filter($items, fn ($item) => $item['done']));
+        $items = self::scheduled($items);
+        $done = $items->filter(fn ($item) => $item['done'])->count();
 
-        return ! $items ? 'default' : ($done === count($items) ? 'complete' : ($done ? 'partial' : 'missed'));
+        return $items->isEmpty() ? 'default' : ($done === $items->count() ? 'complete' : ($done ? 'partial' : 'missed'));
+    }
+
+    /** The day's scheduled doses: recorded-only rows are shown but never count as planned or missed. */
+    public static function scheduled(iterable $rows): Collection
+    {
+        return collect($rows)->reject(fn ($row) => $row['recordedOnly'] ?? false);
     }
 
     /**
      * Check or uncheck one dose, or with $administration null every dose of the item on
      * that day: the whole-day checkbox of released apps (see LegacyProtocolClient).
      */
-    public function setDone(Protocol $protocol, string $date, string $itemId, bool $done, CarbonImmutable $now, bool $mirrorIntake = true, ?int $administration = 1): array
+    public function setDone(Protocol $protocol, string $date, string $itemId, bool $done, CarbonImmutable $now, bool $mirrorIntake = true, ?int $administration = 1, bool $allowOfflineUpload = false): array
     {
-        return DB::transaction(function () use ($protocol, $date, $itemId, $done, $now, $mirrorIntake, $administration) {
+        return DB::transaction(function () use ($protocol, $date, $itemId, $done, $now, $mirrorIntake, $administration, $allowOfflineUpload) {
             $protocol = Protocol::query()->lockForUpdate()->findOrFail($protocol->id);
             $day = $this->day($protocol, $date, $now);
-            abort_unless($day['editable'], 422, 'Je kunt alleen de afgelopen 7 dagen aanpassen.');
+            $lateUpload = $allowOfflineUpload
+                && (($protocol->status === 'completed' && $protocol->completed_on && $date <= $protocol->completed_on->toDateString())
+                    || app(ProtocolCompletion::class)->beforeKnownPause($protocol, $date))
+                && $date >= $now->subDays(7)->toDateString()
+                && ! app(ProtocolCompletion::class)->containsDate($protocol->closed_periods ?? [], $date);
+            abort_unless($day['editable'] || $lateUpload, 422, 'Je kunt alleen de afgelopen 7 dagen aanpassen.');
             // Mutate raw storage, never the response with recorded doses substituted.
             $items = json_decode(DB::table('protocol_day_snapshots')->where('protocol_id', $protocol->id)
-                ->where('date', $date)->value('items'), true);
+                ->where('date', $date)->value('items') ?? '[]', true);
             $doses = collect($items)->filter(fn ($item) => $item['id'] === $itemId);
             $targets = $doses->filter(fn ($item) => $administration === null || ($item['administration'] ?? 1) === $administration);
             abort_if($targets->isEmpty(), 422, 'Dit item stond niet op deze dag gepland.');
@@ -150,10 +270,7 @@ class ProtocolDayHistory
             }
             DB::table('protocol_day_snapshots')->where('protocol_id', $protocol->id)->where('date', $date)
                 ->update(['items' => json_encode($items), 'updated_at' => now()]);
-            $day['items'] = $this->displayItems($items);
-            $day['state'] = $this->state($day['items']);
-
-            return $day;
+            return $this->day($protocol, $date, $now);
         });
     }
 }

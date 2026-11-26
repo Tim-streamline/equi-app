@@ -168,7 +168,8 @@ class IntakeRefinementsTest extends TestCase
         $this->seed(IntakeQuestionnaireSeeder::class);
         $section = IntakeQuestionnaire::where('slug', 'protocol-intake')->firstOrFail()
             ->sections()->where('key', 'medisch')->firstOrFail();
-        $section->fields()->whereIn('key', ['kpu-onderzoek-datum', 'kpu-onderzoek-uitslag', 'kpu-vermoeden-toelichting', 'kpu-uitslag-beschikbaar'])->delete();
+        $section->fields()->whereIn('key', ['kpu-onderzoek-datum', 'kpu-onderzoek-uitslag', 'kpu-vermoeden-toelichting', 'kpu-uitslag-beschikbaar',
+            'kpu-indikan-waarde', 'kpu-kryptopyrrolurie-waarde', 'kpu-hertest', 'kpu-hertest-datum'])->delete();
         $section->fields()->where('key', 'kpu-attest')->firstOrFail()->update([
             'label' => 'Onderzoeksresultaten urine-/bloedonderzoek',
             'show_if' => ['kpu-status' => 'Aangetoond met urineonderzoek'],

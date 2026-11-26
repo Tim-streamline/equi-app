@@ -59,6 +59,7 @@ function harness(fetch, { legacy = null, reinstalled = false, saveFails = false 
     });
     return exports;
   }
+  modules['../lib/client-capabilities'] = load('../lib/client-capabilities.ts');
   const auth = load('../db/auth.ts');
   modules['./auth'] = modules['@/db/auth'] = auth;
   modules['@/lib/intake/attachments/sync'] = { uploadIntakeAttachments: async () => {} };
@@ -127,6 +128,23 @@ test('the same deadline covers reading the unregister response body', async () =
   assert.equal(app.timers.size, 0);
 });
 
+test('a paused weekly update displays the server explanation and releases its deadline', async () => {
+  const message = 'Je herstelplan is gepauzeerd. Je kunt weer een weekupdate versturen zodra je plan is hervat.';
+  const app = harness(async (url) => url.endsWith('/api/auth/token')
+    ? { ok: true, json: async () => ({ token: 'token', expires_in: 3600 }) }
+    : { ok: false, status: 422, json: async () => ({ message }) });
+  await assert.rejects(app.dashboardRequest('/api/horses/horse/weekly-update', { note: 'My update' }), { message });
+  assert.equal(app.timers.size, 0);
+});
+
+test('an unreadable validation response retains the normal request error', async () => {
+  const app = harness(async (url) => url.endsWith('/api/auth/token')
+    ? { ok: true, json: async () => ({ token: 'token', expires_in: 3600 }) }
+    : { ok: false, status: 422, json: async () => { throw new Error('Invalid JSON'); } });
+  await assert.rejects(app.dashboardRequest('/api/horses/horse/weekly-update', { note: 'My update' }), /Gegevens konden niet worden bijgewerkt \(422\)/);
+  assert.equal(app.timers.size, 0);
+});
+
 test('successful unregistration authenticates and clears its deadline', async () => {
   const calls = [];
   const app = harness(async (url, options) => {
@@ -136,7 +154,7 @@ test('successful unregistration authenticates and clears its deadline', async ()
   });
   const result = await app.dashboardRequest('/api/notifications/push-token', { token: null });
   assert.equal(result.saved, true);
-  assert.deepEqual(JSON.parse(calls[0].options.body), { device_token: '1|old-device', capabilities: ['protocol-doses'] });
+  assert.deepEqual(JSON.parse(calls[0].options.body), { device_token: '1|old-device', capabilities: ['protocol-doses', 'read-only-plans', 'read-only-doses'] });
   assert.equal(calls[1].options.headers.Authorization, 'Bearer token');
   assert.equal(calls[1].options.body, '{"token":null}');
   assert.equal(app.timers.size, 0);
@@ -151,11 +169,11 @@ test('a password stored by an older version is exchanged once for a device token
       : { token: 'token-2', expires_in: 3600, endpoint: 'https://sync.test' } };
   }, { legacy: { email: 'old@example.test', password: 'secret', userId: 'old', endpoint: 'https://sync.test' } });
   assert.equal(await app.connector.getOrMintToken(), 'token');
-  assert.deepEqual(calls[0], { url: 'http://localhost/api/auth/login', body: { email: 'old@example.test', password: 'secret', device_name: 'android 34', capabilities: ['protocol-doses'] } });
+  assert.deepEqual(calls[0], { url: 'http://localhost/api/auth/login', body: { email: 'old@example.test', password: 'secret', device_name: 'android 34', capabilities: ['protocol-doses', 'read-only-plans', 'read-only-doses'] } });
   assert.equal(app.stored.legacy, null);
   assert.deepEqual(JSON.parse(app.stored.secure), { email: 'old@example.test', userId: 'old', endpoint: 'https://sync.test', deviceToken: '3|device' });
   assert.equal(await app.connector.getOrMintToken(undefined, true), 'token-2');
-  assert.deepEqual(calls[1], { url: 'http://localhost/api/auth/token', body: { device_token: '3|device', capabilities: ['protocol-doses'] } });
+  assert.deepEqual(calls[1], { url: 'http://localhost/api/auth/token', body: { device_token: '3|device', capabilities: ['protocol-doses', 'read-only-plans', 'read-only-doses'] } });
 });
 
 test('an older stored password stays in use while the server cannot issue device tokens yet', async () => {
@@ -222,6 +240,6 @@ test('registration completion requests the same signed protocol capability as lo
     return { ok: true, json: async () => ({ token: 'jwt', expires_in: 3600 }) };
   });
   await app.auth.completeRegistration({ registration_token: 'proof' });
-  assert.deepEqual(calls[0].body.capabilities, ['protocol-doses']);
+  assert.deepEqual(calls[0].body.capabilities, ['protocol-doses', 'read-only-plans', 'read-only-doses']);
   assert.equal(calls[0].body.registration_token, 'proof');
 });

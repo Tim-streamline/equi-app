@@ -44,10 +44,17 @@ export async function dashboardRequest(path: string, body?: object) {
         ...(body ? { body: JSON.stringify(body) } : {}),
         signal: controller.signal,
       });
-      if (!response.ok)
+      if (!response.ok) {
+        if (response.status === 422) {
+          const problem = await response.json().catch(() => null);
+          checkSession();
+          if (typeof problem?.message === 'string' && problem.message.trim())
+            throw new Error(problem.message);
+        }
         throw new Error(
           `Gegevens konden niet worden bijgewerkt (${response.status}).`,
         );
+      }
       const result = await response.json();
       checkSession();
       return result;
@@ -57,6 +64,13 @@ export async function dashboardRequest(path: string, body?: object) {
   }
 }
 
+/**
+ * Dashboard requests are numbered as they start, across every screen. A response carries its number as `revision`
+ * (0 for a cached response), so a screen can tell whether it was requested after something else happened.
+ */
+let startedDashboardRequests = 0;
+export const latestDashboardRequest = () => startedDashboardRequests;
+
 export function useHorseDashboard(month?: string) {
   const horseId = useCurrentHorseId();
   const { currentUserId, syncStatus } = useDb();
@@ -64,6 +78,7 @@ export function useHorseDashboard(month?: string) {
   const [snapshot, setSnapshot] = useState<{
     key: string;
     data: HorseDashboard;
+    revision?: number;
   } | null>(null);
   const [error, setError] = useState<string | null>(null);
   const generation = useRef(0);
@@ -73,6 +88,7 @@ export function useHorseDashboard(month?: string) {
     setClock(new Date());
     if (!currentUserId || sessionRevision.current !== accountSession.revision) return;
     const request = ++generation.current;
+    const revision = ++startedDashboardRequests;
     try {
       const params = new URLSearchParams({
         timezone: deviceTimezone(),
@@ -82,7 +98,7 @@ export function useHorseDashboard(month?: string) {
         horseId ? `/api/horses/${horseId}/dashboard?${params}` : `/api/home?${params}`,
       )) as HorseDashboard;
       if (request !== generation.current || sessionRevision.current !== accountSession.revision) return;
-      setSnapshot({ key, data });
+      setSnapshot({ key, data, revision });
       setError(null);
       await AsyncStorage.setItem(key, JSON.stringify(data));
     } catch (err) {
@@ -141,5 +157,5 @@ export function useHorseDashboard(month?: string) {
   }, [syncStatus, refresh]);
   const data =
     snapshot?.key === key ? dashboardForHorse(dashboardAtTime(snapshot.data, clock), horseId) : null;
-  return { data, error, refresh, horseId, loading: !!currentUserId && !data && !error };
+  return { data, error, refresh, horseId, loading: !!currentUserId && !data && !error, revision: snapshot?.key === key ? snapshot.revision ?? 0 : 0 };
 }

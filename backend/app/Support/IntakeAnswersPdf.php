@@ -5,7 +5,6 @@ namespace App\Support;
 use App\Models\IntakeAttachment;
 use App\Models\IntakeBooking;
 use Dompdf\Dompdf;
-use Dompdf\Options;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
@@ -25,16 +24,27 @@ class IntakeAnswersPdf
         return 'EquiApp_protocolintake_'.$date.'_'.mb_substr($horse, 0, 80).'.pdf';
     }
 
-    public function html(IntakeBooking $booking): string
+    private function sections(IntakeBooking $booking, bool $requireQuestionnaire): array
     {
         $booking->loadMissing('horse', 'user');
         $review = app(IntakeReview::class)->forBooking($booking);
-        // Current answers first; answers to questions that are now hidden or archived follow under their own heading.
-        $sections = [...array_filter($review['sections'], fn ($section) => $section['rows']),
-            ...array_map(fn ($section) => [...$section, 'title' => 'Eerder ingevuld · '.$section['title']], $review['historical_sections'] ?? [])];
-        if (! $review['sections']) {
+        if ($requireQuestionnaire && ! $review['sections']) {
             throw new RuntimeException('De intakevragen zijn niet beschikbaar voor de PDF.');
         }
+        // Current answers first; answers to questions that are now hidden or archived follow under their own heading.
+        return [...array_filter($review['sections'], fn ($section) => $section['rows']),
+            ...array_map(fn ($section) => [...$section, 'title' => 'Eerder ingevuld · '.$section['title']], $review['historical_sections'] ?? [])];
+    }
+
+    public function browserPrint(IntakeBooking $booking): string
+    {
+        return view('intake.answers-pdf', ['booking' => $booking, 'sections' => $this->sections($booking, requireQuestionnaire: false),
+            'browserPrint' => true, 'images' => []])->render();
+    }
+
+    public function html(IntakeBooking $booking): string
+    {
+        $sections = $this->sections($booking, requireQuestionnaire: true);
         $images = [];
         $previews = app(IntakePhotoPreview::class);
         $files = IntakeAttachment::where('booking_id', $booking->id)->get()->keyBy('id');
@@ -81,19 +91,12 @@ class IntakeAnswersPdf
 
     public function render(IntakeBooking $booking): string
     {
-        $pdf = new Dompdf(new Options([
-            'isRemoteEnabled' => false, 'isPhpEnabled' => false, 'isJavascriptEnabled' => false,
-            'allowedProtocols' => ['file://'], 'chroot' => Storage::disk('local')->path(''), 'defaultFont' => 'DejaVu Sans',
-            'tempDir' => storage_path('framework/cache'), 'fontCache' => storage_path('framework/cache'),
-        ]));
-        $pdf->loadHtml($this->html($booking), 'UTF-8');
-        if (! $pdf->getDom()->getElementById('intake-document-complete')) {
-            throw new RuntimeException('De PDF is onvolledig opgebouwd. Probeer opnieuw of neem contact op met de beheerder.');
-        }
-        $pdf->setPaper('A4');
-        $pdf->render();
-        $pdf->getCanvas()->page_text(485, 805, '{PAGE_NUM} / {PAGE_COUNT}', null, 8, [0.4, 0.4, 0.4]);
-
-        return $pdf->output();
+        return PdfDocument::render($this->html($booking),
+            ['allowedProtocols' => ['file://'], 'chroot' => Storage::disk('local')->path('')],
+            function (Dompdf $pdf) {
+                if (! $pdf->getDom()->getElementById('intake-document-complete')) {
+                    throw new RuntimeException('De PDF is onvolledig opgebouwd. Probeer opnieuw of neem contact op met de beheerder.');
+                }
+            });
     }
 }

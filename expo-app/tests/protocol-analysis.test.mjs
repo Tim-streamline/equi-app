@@ -30,3 +30,14 @@ test('older cached analyses without the optional follow-up field still render', 
   assert.ok(tree.includes(base.summary));
   assert.ok(!tree.includes('Verwachting en vervolg'));
 });
+
+test('long texts read as articles with a real heading, one paragraph per blank line, and no focus section', () => {
+  const summary = 'Eerste alinea.\n\nTweede alinea.';
+  const tree = flatten(exports.ProtocolAnalysis({ analysis: { ...base, summary, priorities: [{ id: 'f', title: 'Oude focus', body: 'Niet tonen' }] } }));
+  assert.ok(tree.includes('Eerste alinea.'));
+  assert.ok(tree.includes('Tweede alinea.'));
+  const heading = tree.find(n => n?.props?.accessibilityRole === 'header' && n.props.children === 'Persoonlijke analyse');
+  assert.ok(heading, 'the analysis has its own heading');
+  assert.ok(!tree.includes('Focus van het protocol'));
+  assert.ok(!tree.includes('Oude focus'));
+});

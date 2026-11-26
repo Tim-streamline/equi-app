@@ -62,7 +62,7 @@ test('login uses CSRF and HttpOnly session transport; renewal never resends the 
   assert.deepEqual(requests.map(request => request.url), ['/web-session/csrf', '/web-session/login', '/web-session/csrf', '/web-session/token']);
   assert.equal(requests[1].options.headers['X-CSRF-TOKEN'], 'current-csrf');
   assert.equal(requests[1].options.credentials, 'same-origin');
-  assert.deepEqual(JSON.parse(requests[3].options.body), { capabilities: ['protocol-doses'] });
+  assert.deepEqual(JSON.parse(requests[3].options.body), { capabilities: ['protocol-doses', 'read-only-plans', 'read-only-doses'] });
   assert.equal((await getSession()).user.id, 'first');
   assert.equal(requests.length, 4, 'valid tokens are cached in memory');
 });
@@ -135,13 +135,75 @@ test('only email confirmation creates a renewable browser session using fresh CS
   assert.equal((await getSession()).user.id, 'new-user');
   const verify = requests.find(r=>r.url.endsWith('/complete'));
   assert.equal(verify.options.headers['X-CSRF-TOKEN'],'registration-csrf');
-  assert.deepEqual(JSON.parse(verify.options.body),{registration_token:'challenge',capabilities:['protocol-doses']});
+  assert.deepEqual(JSON.parse(verify.options.body),{registration_token:'challenge',capabilities:['protocol-doses', 'read-only-plans', 'read-only-doses']});
   assert.equal(requests[1].url, '/web-session/register');
   assert.equal(requests[1].options.headers['X-CSRF-TOKEN'], 'registration-csrf');
   assert.deepEqual(JSON.parse(requests[1].options.body), input);
   await getSession(undefined, true);
-  assert.deepEqual(JSON.parse(requests.at(-1).options.body), { capabilities: ['protocol-doses'] });
+  assert.deepEqual(JSON.parse(requests.at(-1).options.body), { capabilities: ['protocol-doses', 'read-only-plans', 'read-only-doses'] });
 });
+
+test('signing out before this tab holds a token still ends the scoped server session', async () => {
+  const requests = [];
+  let tokenStatus = 200;
+  globalThis.fetch = async (url, options) => {
+    if (url.endsWith('/csrf')) return response({ token: 'csrf' });
+    requests.push({ path: url.replace('/web-session/', ''), body: JSON.parse(options.body) });
+    if (url.endsWith('/token')) return response(tokenStatus === 200 ? session('reloaded') : {}, tokenStatus);
+    return response({ ok: true });
+  };
+  // After a reload no token is in memory, so logout() knows no logout_id yet.
+  await logout();
+  assert.equal(await retryPendingLogout(), true);
+  assert.deepEqual(requests.map(r => r.path), ['token', 'logout']);
+  assert.deepEqual(requests[1].body, { logout_id: 'login-reloaded' });
+  assert.equal(JSON.parse(localStorage.getItem(LOCAL_SIGNOUT_KEY)).pending, false);
+  assert.equal(await getSession(), null);
+
+  // A server session that already ended needs no logout request.
+  localStorage.removeItem(LOCAL_SIGNOUT_KEY);
+  requests.length = 0;
+  tokenStatus = 401;
+  await logout();
+  await retryPendingLogout();
+  assert.deepEqual(requests.map(r => r.path), ['token']);
+  assert.equal(JSON.parse(localStorage.getItem(LOCAL_SIGNOUT_KEY)).pending, false);
+});
+
+for (const interrupt of ['login', 'timeout']) {
+  test(`a stalled logout token body releases the auth lock on ${interrupt}`, async t => {
+    t.mock.timers.enable({ apis: ['setTimeout'] });
+    const bodyStarted = Promise.withResolvers();
+    const body = Promise.withResolvers();
+    let logoutRequests = 0, signal;
+    globalThis.fetch = async (url, options) => {
+      if (url.endsWith('/csrf')) return response({ token: 'csrf' });
+      if (url.endsWith('/token')) {
+        signal = options.signal;
+        return { ok: true, status: 200, json: () => { bodyStarted.resolve(); return body.promise; } };
+      }
+      if (url.endsWith('/logout')) logoutRequests++;
+      return response(session('new'));
+    };
+    logout();
+    const attempt = retryPendingLogout();
+    await bodyStarted.promise;
+    try {
+      if (interrupt === 'timeout') {
+        t.mock.timers.tick(20_000);
+        assert.equal(signal.aborted, true);
+      }
+      const nextLogin = login('owner@example.test', 'password');
+      assert.equal(signal.aborted, true);
+      assert.equal(await attempt, false);
+      assert.equal((await nextLogin).user.id, 'new');
+    } finally {
+      body.resolve(session('old'));
+    }
+    await new Promise(resolve => setImmediate(resolve));
+    assert.equal(logoutRequests, 0);
+  });
+}
 
 test('every request that mints a PowerSync token declares per-dose protocol support', async () => {
   const { register, completeRegistration, checkRegistration } = await import('../db/auth.ts');
@@ -174,7 +236,7 @@ test('every request that mints a PowerSync token declares per-dose protocol supp
   await requestPasswordReset('owner@example.test');
 
   assert.deepEqual(minted().map(r => r.path), ['token', 'token', 'token', 'login', 'register/complete']);
-  for (const r of minted()) assert.deepEqual(r.body.capabilities, ['protocol-doses'], r.path);
+  for (const r of minted()) assert.deepEqual(r.body.capabilities, ['protocol-doses', 'read-only-plans', 'read-only-doses'], r.path);
   assert.equal(requests.find(r => r.path === 'login').body.password, 'secret');
   assert.equal(requests.find(r => r.path === 'register/complete').body.registration_token, 'challenge');
   for (const r of requests.filter(r => !minted().includes(r))) assert.equal('capabilities' in r.body, false, r.path);

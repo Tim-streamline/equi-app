@@ -2422,35 +2422,94 @@
         },
         {
           "id": "kpu-onderzoek-datum",
-          "label": "Wanneer is het urineonderzoek uitgevoerd?",
+          "label": "Wanneer is het onderzoek uitgevoerd?",
           "type": "month_year",
           "required": true,
           "hint": "Vul de maand en het jaar in. Een schatting is goed.",
-          "showIf": {
-            "kpu-status": [
-              "aangetoond uit urine onderzoek",
-              "Aangetoond met urineonderzoek",
-              "Ja, positieve uitslag bij urineonderzoek"
-            ]
-          },
           "dateConfig": {
             "mode": "single",
             "allow_future": false,
-            "allow_year_only": true
-          }
-        },
-        {
-          "id": "kpu-onderzoek-uitslag",
-          "label": "Wat was de uitslag van het urineonderzoek?",
-          "type": "text",
-          "required": true,
-          "placeholder": "Vul de gemeten waarde(n), eenheid en eventuele referentiewaarden in.",
+            "allow_year_only": true,
+            "allow_unknown": true
+          },
           "showIf": {
             "kpu-status": [
+              "Ja, aangetoond met urineonderzoek",
               "aangetoond uit urine onderzoek",
               "Aangetoond met urineonderzoek",
               "Ja, positieve uitslag bij urineonderzoek"
             ]
+          }
+        },
+        {
+          "id": "kpu-indikan-waarde",
+          "label": "Wat was de Indikan waarde?",
+          "type": "text",
+          "required": true,
+          "placeholder": "Vul de gemeten waarde en eenheid in. Weet je dit niet? Vul dan ‘Weet ik niet’ in.",
+          "showIf": {
+            "kpu-status": [
+              "Ja, aangetoond met urineonderzoek",
+              "aangetoond uit urine onderzoek",
+              "Aangetoond met urineonderzoek",
+              "Ja, positieve uitslag bij urineonderzoek"
+            ]
+          }
+        },
+        {
+          "id": "kpu-kryptopyrrolurie-waarde",
+          "label": "Wat was de Kryptopyrrolurie waarde?",
+          "type": "text",
+          "required": true,
+          "placeholder": "Vul de gemeten waarde en eenheid in. Weet je dit niet? Vul dan ‘Weet ik niet’ in.",
+          "showIf": {
+            "kpu-status": [
+              "Ja, aangetoond met urineonderzoek",
+              "aangetoond uit urine onderzoek",
+              "Aangetoond met urineonderzoek",
+              "Ja, positieve uitslag bij urineonderzoek"
+            ]
+          }
+        },
+        {
+          "id": "kpu-hertest",
+          "label": "Is er daarna nog een hertest gedaan?",
+          "type": "radio",
+          "required": true,
+          "options": [
+            "Ja",
+            "Nee",
+            "Weet ik niet"
+          ],
+          "showIf": {
+            "kpu-status": [
+              "Ja, aangetoond met urineonderzoek",
+              "aangetoond uit urine onderzoek",
+              "Aangetoond met urineonderzoek",
+              "Ja, positieve uitslag bij urineonderzoek"
+            ]
+          }
+        },
+        {
+          "id": "kpu-hertest-datum",
+          "label": "Wanneer is de hertest uitgevoerd?",
+          "type": "month_year",
+          "required": true,
+          "hint": "Vul de maand en het jaar in. Een schatting is goed.",
+          "dateConfig": {
+            "mode": "single",
+            "allow_future": false,
+            "allow_year_only": true,
+            "allow_unknown": true
+          },
+          "showIf": {
+            "kpu-status": [
+              "Ja, aangetoond met urineonderzoek",
+              "aangetoond uit urine onderzoek",
+              "Aangetoond met urineonderzoek",
+              "Ja, positieve uitslag bij urineonderzoek"
+            ],
+            "kpu-hertest": "Ja"
           }
         },
         {
@@ -2464,6 +2523,7 @@
           ],
           "showIf": {
             "kpu-status": [
+              "Ja, aangetoond met urineonderzoek",
               "aangetoond uit urine onderzoek",
               "Aangetoond met urineonderzoek",
               "Ja, positieve uitslag bij urineonderzoek"
@@ -2478,6 +2538,7 @@
           "hint": "Upload minimaal één PDF of afbeelding.",
           "showIf": {
             "kpu-status": [
+              "Ja, aangetoond met urineonderzoek",
               "aangetoond uit urine onderzoek",
               "Aangetoond met urineonderzoek",
               "Ja, positieve uitslag bij urineonderzoek"
@@ -4977,7 +5038,11 @@
           "label": "Anders, namelijk",
           "type": "text",
           "showIf": {
-            "komt-op-weide": ["Ja, seizoensgebonden","Ja, het hele jaar door","Anders, namelijk"],
+            "komt-op-weide": [
+              "Ja, seizoensgebonden",
+              "Ja, het hele jaar door",
+              "Anders, namelijk"
+            ],
             "weide-omschrijving": "Anders, namelijk"
           }
         },
@@ -5123,7 +5188,11 @@
             "Windbeschutting / bosrand / haag"
           ],
           "showIf": {
-            "komt-op-weide": ["Ja, seizoensgebonden","Ja, het hele jaar door","Anders, namelijk"],
+            "komt-op-weide": [
+              "Ja, seizoensgebonden",
+              "Ja, het hele jaar door",
+              "Anders, namelijk"
+            ],
             "weide-schuil": [
               "Ja, altijd",
               "Meestal wel",
@@ -5165,7 +5234,11 @@
           "label": "Anders, namelijk",
           "type": "text",
           "showIf": {
-            "komt-op-weide": ["Ja, seizoensgebonden","Ja, het hele jaar door","Anders, namelijk"],
+            "komt-op-weide": [
+              "Ja, seizoensgebonden",
+              "Ja, het hele jaar door",
+              "Anders, namelijk"
+            ],
             "weide-bodem": "Anders, namelijk"
           }
         },

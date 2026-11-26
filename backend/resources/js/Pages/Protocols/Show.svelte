@@ -1,4 +1,5 @@
 <script>
+    import ProtocolEvaluationReview from '$lib/components/ProtocolEvaluationReview.svelte';
     import AdminLayout from '../../Layouts/AdminLayout.svelte';
     import PageHeader from '$lib/components/PageHeader.svelte';
     import CopyProtocolDialog from '$lib/components/CopyProtocolDialog.svelte';
@@ -8,7 +9,7 @@
     import { snapshotInstruction } from '$lib/protocolAdvice.js';
     import { ArrowLeft, Check, Dumbbell, Leaf, PenLine, Pencil, Settings2 } from '@lucide/svelte';
 
-    let { protocol } = $props();
+    let { protocol, evaluation = null } = $props();
     const adviceCategories = $derived([
         {
             id: 'voeding',
@@ -148,4 +149,5 @@
             </CardContent>
         </Card>
     </div>
+    <ProtocolEvaluationReview {evaluation} />
 </AdminLayout>

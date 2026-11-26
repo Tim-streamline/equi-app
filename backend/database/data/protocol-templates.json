@@ -21,7 +21,7 @@
                 "supplements": [
                     {
                         "name": "Gekookt (bio) lijnzaad",
-                        "administrations_per_day": 2,
+                        "administrations_per_day": 1,
                         "description": "Ondersteunt en beschermt het maagslijmvlies.",
                         "supplement_type": "kruid",
                         "add_by_default": true,
@@ -31,7 +31,7 @@
                         "dosis_type": "per_600_kg",
                         "dosis": 100,
                         "unit": "g",
-                        "instructions": "Kook met ruim water tot een slijmerige massa en laat afkoelen tot kamertemp. Geef de dosering bij voorkeur 2× daags. Bij 2× daags geef je dus tweemaal de volledige hoeveelheid. Steeds vers bereiden en max. 8–12u gekoeld bewaren.",
+                        "instructions": "Kook met ruim water tot een slijmerige massa en laat afkoelen tot kamertemp. Geef de volledige berekende dosering 1× per dag. Steeds vers bereiden en max. 8–12u gekoeld bewaren.",
                         "weeks": [
                             1,
                             2,
@@ -75,7 +75,7 @@
                         "dosis_type": "per_600_kg",
                         "dosis": 15,
                         "unit": "g",
-                        "instructions": "Laat de berekende hoeveelheid 20–30 minuten trekken in circa 200 ml heet, niet-kokend water. Regelmatig roeren en alles door het voer mengen. Geef de dosering bij voorkeur 2× daags. Bij 2× daags geef je dus tweemaal de volledige hoeveelheid.",
+                        "instructions": "Laat de berekende hoeveelheid 20–30 minuten trekken in circa 200 ml heet, niet-kokend water. Regelmatig roeren en alles door het voer mengen. Geef de volledige berekende dosering 1× per dag.",
                         "weeks": [
                             1,
                             2,
@@ -87,7 +87,7 @@
                     },
                     {
                         "name": "Psyliumzaad (bio)",
-                        "administrations_per_day": 2,
+                        "administrations_per_day": 1,
                         "description": "Ondersteunt en beschermt het maagslijmvlies en heeft een stabiliserend effect op de bloedsuikerspiegel.",
                         "supplement_type": "kruid",
                         "add_by_default": false,
@@ -97,7 +97,7 @@
                         "dosis_type": "per_600_kg",
                         "dosis": 200,
                         "unit": "g",
-                        "instructions": "De laatste 5-10 min laten mee weken in geweekte bijvoeding zodat slijmvorming geactiveerd wordt. Geef de dosering bij voorkeur 2× daags. Bij 2× daags geef je dus tweemaal de volledige hoeveelheid.",
+                        "instructions": "De laatste 5-10 min laten mee weken in geweekte bijvoeding zodat slijmvorming geactiveerd wordt. Geef de volledige berekende dosering 1× per dag.",
                         "weeks": [
                             1,
                             2,
@@ -452,7 +452,7 @@
                         "dosis_type": "per_600_kg",
                         "dosis": 20,
                         "unit": "g",
-                        "instructions": "Bij voorkeur 2x daags de helft van de aanbevolen dosering door de bijvoeding mengen.\nAnders 1x daags de aanbevolen dosering door de bijvoeding mengen.",
+                        "instructions": "1× daags de berekende dosering door de bijvoeding mengen.",
                         "weeks": [
                             1,
                             2,

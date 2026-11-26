@@ -22,6 +22,7 @@ export type DoseBuildupDisplay = {
   schedule: { day: number; dosage: string | null }[];
 };
 export type DashboardSupplement = {
+  recordedOnly?: boolean;
   buildup?: DoseBuildupDisplay | null;
   buildupLabel?: string | null;
   administration?: number;
@@ -104,6 +105,10 @@ export type CareAdvice = Omit<DashboardAdvice, "action"> & {
   action?: DashboardAdvice["action"];
 };
 export type DashboardProtocol = {
+  paused?: boolean;
+  completed?: boolean;
+  /** Completed, or past its last day. */
+  finished?: boolean;
   preparing?: boolean;
   startedAt?: string | null;
   id: string;
@@ -112,6 +117,7 @@ export type DashboardProtocol = {
   currentWeek: number;
   totalWeeks: number;
   progressPercent: number;
+  progressKnown?: boolean;
   statusLabel: string;
   todayLabel: string;
   dateLabel?: string;
@@ -120,6 +126,10 @@ export type DashboardProtocol = {
   phases: DashboardPhase[];
   orderItems: DashboardOrderItem[];
   orderDiscount?: string;
+  /** Order-list products the customer ticked off, as "productKey:phaseId". */
+  orderedKeys?: string[];
+  /** The customer gives only one gift a day; the order list then counts one gift for every product. */
+  orderOnceDaily?: boolean;
   notifications: DashboardNotification[];
   today: {
     items: DashboardSupplement[];
@@ -140,6 +150,7 @@ export type DashboardProtocol = {
       available?: boolean;
       total?: number;
       done?: number;
+      recordedOnly?: boolean;
     } | null)[];
   };
   nutrition: {
@@ -172,7 +183,18 @@ export type DashboardProtocol = {
 };
 /** A protocol card on Home: the server's summary of one horse's protocol in progress. */
 export type HorseProtocolSummary = {
+  evaluation?: {
+    available: boolean; endsOn: string | null; daysRemaining: number | null; discountUntil: string | null; discountEligible: boolean;
+    /** The owner has sent the evaluation; it can still be amended. */
+    submitted?: boolean;
+    /** The therapist closed the plan, possibly before its scheduled end. */
+    completed?: boolean;
+  };
   preparing?: boolean;
+  /** Paused by the therapist. Absent in responses from before this field. */
+  paused?: boolean;
+  /** Completed, or past its last day. Absent in responses from before this field. */
+  finished?: boolean;
   startedAt?: string | null;
   horseId: string;
   horseName: string;
@@ -181,6 +203,7 @@ export type HorseProtocolSummary = {
   currentDay: number;
   currentWeek: number;
   progressPercent: number;
+  progressKnown?: boolean;
   phaseLabel?: string;
 };
 
@@ -214,6 +237,8 @@ export type HorseDashboard = {
   protocol: DashboardProtocol | null;
   /** Per horse with a protocol in progress, sorted by name (absent in older cached responses). */
   horseProtocols?: HorseProtocolSummary[];
+  submittedEvaluations?: { id: string; title: string; endsOn: string }[];
+  evaluationDrafts?: Pick<HorseProtocolSummary, 'id' | 'horseId' | 'horseName' | 'evaluation'>[];
 };
 
 // A response/cache from a previous selection must never appear under the new horse.
@@ -240,13 +265,14 @@ export function libraryPath(
 export function dashboardAtTime(data: HorseDashboard, now: Date): HorseDashboard {
   if (!data.protocol) return data;
   if (data.protocol.preparing) return data;
+  const completed = data.protocol.completed;
   const phases = data.protocol.phases.map((phase): DashboardPhase => {
     const available = Date.parse(phase.availableAt ?? '');
     const start = Date.parse(phase.startsAt ?? '');
     const end = Date.parse(phase.endsAt ?? '');
     const time = now.getTime();
     const state = !Number.isFinite(available) || time < available ? 'locked'
-      : time < start ? 'preview' : time < end ? 'active' : 'done';
+      : time < start ? 'preview' : time < end && !completed ? 'active' : 'done';
     const durationWeeks = Math.max(0, phase.weekEnd - phase.weekStart + 1);
     // Count calendar dates in the response timezone, not 24-hour periods across DST.
     const dateParts = new Intl.DateTimeFormat('en-CA', {
@@ -260,7 +286,7 @@ export function dashboardAtTime(data: HorseDashboard, now: Date): HorseDashboard
       ? Math.min(durationWeeks, Math.max(1, Math.floor((dayNumber(now) - dayNumber(new Date(start))) / 7) + 1)) : null;
     return { ...phase, state, durationWeeks, currentPhaseWeek,
       durationLabel: phase.weekStart > 0 ? `Duur: ${durationWeeks} ${durationWeeks === 1 ? 'week' : 'weken'}` : 'Nog niet ingepland', accessible: state !== 'locked',
-      statusLabel: state === 'active' ? `Actief · week ${currentPhaseWeek} van ${durationWeeks}`
+      statusLabel: completed ? 'Herstelplan afgerond' : state === 'active' ? `Actief · week ${currentPhaseWeek} van ${durationWeeks}`
         : state === 'preview' ? 'Start volgende week' : state === 'done' ? 'Afgerond'
           : phase.weekStart ? `Start in protocolweek ${phase.weekStart}` : 'Nog niet ingepland',
       description: phase.description,

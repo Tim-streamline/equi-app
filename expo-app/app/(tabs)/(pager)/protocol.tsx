@@ -1,6 +1,7 @@
 import { PurchasedProtocols } from '@/components/intake/PurchasedProtocols';
 import { KeyboardTextInput as TextInput, KeyboardViewport as KeyboardAvoidingView, KeyboardScrollView } from '@/components/ui/KeyboardForm';
 import { LibraryThumbnail } from "@/components/library/LibraryThumbnail";
+import { Image } from 'expo-image';
 import { useEffect, useMemo, useRef, useState, type ReactNode, type ComponentProps } from "react";
 import {
   View,
@@ -24,9 +25,11 @@ import {
   Leaf,
 } from "lucide-react-native";
 import { Button } from "@/components/ui/Button";
+import { createSerialSave, shownValue, toggleKeys, type Overlay, type SerialSave } from "@/lib/protocol-order-ticks";
 import { useTabBarPadding } from "@/hooks/useTabBarPadding";
 import {
   useHorseDashboard,
+  latestDashboardRequest,
   dashboardRequest,
   deviceTimezone,
 } from "@/hooks/useHorseDashboard";
@@ -40,11 +43,12 @@ import {
 
 import { ProtocolPhaseContent } from '@/components/protocol/ProtocolPhaseContent';
 import { ProtocolCalendar } from '@/components/protocol/ProtocolCalendar';
-import { phaseOrderItems, phaseSubtitle } from '@/lib/protocol-calendar';
+import { evaluationDate } from '@/lib/protocol-evaluation';
+import { phaseSubtitle } from '@/lib/protocol-calendar';
 import { ProtocolToday } from '@/components/protocol/ProtocolToday';
 import { ProtocolAnalysis } from "@/components/protocol/ProtocolAnalysis";
 import { ProtocolOrderList } from "@/components/protocol/ProtocolOrderList";
-import { scopeOrderItems, type OrderScope } from "@/lib/protocol-order-scope";
+import { onceDailyOrderItems, scopeOrderItems, type OrderScope } from "@/lib/protocol-order-scope";
 import { CareAdvice } from "@/components/protocol/CareAdvice";
 import { ProtocolTabs } from "@/components/protocol/ProtocolTabs";
 import { PROTOCOL_SCALE as S, PROTOCOL_TEXT as T } from "@/components/protocol/styles";
@@ -73,7 +77,7 @@ export default function ProtocolListScreen() {
   const handledLink = useRef<string | null>(null);
   const handledOrderLink = useRef<string | null>(null);
   const [month, setMonth] = useState<string>();
-  const { data, error, refresh, horseId } = useHorseDashboard(month);
+  const { data, error, refresh, horseId, revision } = useHorseDashboard(month);
   // 'all' is the protocol's full order list; otherwise only a phase's or notice's share of it.
   const [orders, setOrders] = useState<OrderScope | null>(null);
   const orderSelections = (items: DashboardSupplement[], label?: string): OrderScope =>
@@ -119,8 +123,73 @@ export default function ProtocolListScreen() {
   // Keep an open sheet in sync when a therapist changes the schedule or content.
   const visiblePhase = phase ? protocol?.phases.find((item) => item.id === phase.id) : null;
 
-  const visibleOrders = scopeOrderItems(protocol?.orderItems, orders);
-  const firstPhase = protocol?.phases[0];
+  const planKey = protocol && horseId ? `${horseId}:${protocol.id}` : '';
+  const visibleOrdersView = useRef({ planKey, refresh });
+  visibleOrdersView.current = { planKey, refresh };
+
+  const [orderFailures, setOrderFailures] = useState<Record<string, boolean>>({});
+  const orderError = orderFailures[planKey]
+    ? "Niet opgeslagen. Controleer je verbinding en probeer opnieuw." : null;
+
+  // Order ticks and the order setting show at once and are saved in tap order, per plan. The server's answer (or a
+  // failure) settles them; a dashboard requested after the last answer then takes over, also when another device
+  // changed them (see shownValue).
+  const [overlays, setOverlays] = useState<Record<string, Overlay<unknown>>>({});
+  const orderedOverlay = overlays[`${planKey}:ordered`] as Overlay<string[]> | undefined;
+  const onceDailyOverlay = overlays[`${planKey}:onceDaily`] as Overlay<boolean> | undefined;
+  const orderedKeys = shownValue(orderedOverlay, protocol?.orderedKeys ?? [], revision);
+  const onceDaily = shownValue(onceDailyOverlay, protocol?.orderOnceDaily ?? false, revision);
+  const orderItems = onceDailyOrderItems(protocol?.orderItems, onceDaily) ?? [];
+  const visibleOrders = scopeOrderItems(orderItems, orders);
+  // Once acknowledged, a later offline dashboard must never revive the old local value. Only this plan's
+  // overlays: the revision says nothing about another plan's data.
+  useEffect(() => {
+    const retired = Object.entries(overlays).filter(([key, overlay]) =>
+      key.startsWith(`${planKey}:`) && overlay.settledAt !== null && revision > overlay.settledAt);
+    if (!retired.length) return;
+    setOverlays(previous => {
+      const next = { ...previous };
+      for (const [key, overlay] of retired) if (next[key] === overlay) delete next[key];
+      return next;
+    });
+  }, [overlays, planKey, revision]);
+
+  // Keep each queue for its entire write, including when navigation temporarily unloads this plan.
+  const queuesRef = useRef<Map<string, SerialSave<any>> | null>(null);
+  const queues = queuesRef.current ??= new Map<string, SerialSave<any>>();
+  function saveOverlay<T>(key: string, replaces: boolean, current: T, change: (shown: T) => T, send: () => Promise<T>) {
+    const plan = planKey;
+    let queue = queues.get(key) as SerialSave<T> | undefined;
+    if (!queue) {
+      queue = createSerialSave<T>({ replaces });
+      queues.set(key, queue);
+    }
+    setOrderFailures(previous => ({ ...previous, [plan]: false }));
+    queue.save(current, change, send, (value, failed, settled) => {
+      const overlay: Overlay<T> = { value, settledAt: settled ? latestDashboardRequest() : null };
+      setOverlays(previous => ({ ...previous, [key]: overlay }));
+      if (!settled) return;
+      queues.delete(key);
+      if (failed) setOrderFailures(previous => ({ ...previous, [plan]: true }));
+      if (visibleOrdersView.current.planKey === plan) void visibleOrdersView.current.refresh();
+    });
+  }
+  const toggleOrdered = (keys: string[], done: boolean) => {
+    if (!protocol || !horseId) return;
+    const protocolId = protocol.id;
+    saveOverlay(`${planKey}:ordered`, false, orderedKeys, toggleKeys(keys, done), async () => {
+      const result = await dashboardRequest(`/api/horses/${horseId}/protocol-orders`, { protocol_id: protocolId, keys, ordered: done }) as { orderedKeys: string[] };
+      return result.orderedKeys;
+    });
+  };
+  const setOnceDaily = (value: boolean) => {
+    if (!protocol || !horseId) return;
+    const protocolId = protocol.id;
+    saveOverlay(`${planKey}:onceDaily`, true, onceDaily, () => value, async () => {
+      await dashboardRequest(`/api/horses/${horseId}/protocol-order-settings`, { protocol_id: protocolId, once_daily: value });
+      return value;
+    });
+  };
   const linkedPhases = protocol?.phases.filter((item) => item.accessible && requestedPhases?.split(',').includes(item.id)) ?? [];
 
   // The selected horse and the order list live in the shared header, only while Protocol is visible.
@@ -136,6 +205,33 @@ export default function ProtocolListScreen() {
     </View>
   ), [horsePicker, hasOrders]);
   useHeaderAction(headerAction);
+
+  // Also below a completed plan: the owner can buy the next protocol while the old one stays readable.
+  const purchaseCard = !!horseId && data?.horse.id === horseId && data.showPlusUpsell && (
+    <Pressable
+      accessibilityRole="link"
+      accessibilityLabel={`Protocol kopen voor ${data.horse.name}`}
+      onPress={() => router.push('/protocol-purchase')}
+      className="rounded-[22px] bg-[#FFF0EC] p-5"
+    >
+      <Text className="font-semi text-[17px] leading-[23px] text-ink">
+        Een persoonlijk protocol voor {data.horse.name}
+      </Text>
+      <Text className="mt-2 text-[14px] leading-[22px] text-ink-70">
+        Koop een persoonlijk protocol voor je paard, afgestemd op jouw paard, zijn klachten en jullie doelen.
+      </Text>
+      <Text className="mt-3 font-semi text-[14px] text-teal-600">
+        Protocol kopen →
+      </Text>
+    </Pressable>
+  );
+
+  const evaluationLinks = data?.horse.id === horseId && data?.submittedEvaluations?.map(evaluation => (
+    <Pressable key={evaluation.id} accessibilityRole="link" className="mt-3 py-2"
+      onPress={() => router.push({ pathname: '/protocol-evaluation' as any, params: { protocolId: evaluation.id } })}>
+      <Text className="font-semi text-[14px] text-teal-600">Bekijk of wijzig je evaluatie · {evaluation.title} ({evaluationDate(evaluation.endsOn)})</Text>
+    </Pressable>
+  ));
 
   return (
     <View className="flex-1 bg-canvas">
@@ -157,24 +253,8 @@ export default function ProtocolListScreen() {
               <Button title="Paard toevoegen" onPress={() => router.push('/onboarding/add-horse')} />
             </View>
           )}
-          {!!horseId && data?.horse.id === horseId && data.showPlusUpsell && (
-            <Pressable
-              accessibilityRole="link"
-              accessibilityLabel={`Protocol kopen voor ${data.horse.name}`}
-              onPress={() => router.push('/protocol-purchase')}
-              className="rounded-[22px] bg-[#FFF0EC] p-5"
-            >
-              <Text className="font-semi text-[17px] leading-[23px] text-ink">
-                Een persoonlijk protocol voor {data.horse.name}
-              </Text>
-              <Text className="mt-2 text-[14px] leading-[22px] text-ink-70">
-                Koop een persoonlijk protocol voor je paard, afgestemd op jouw paard, zijn klachten en jullie doelen.
-              </Text>
-              <Text className="mt-3 font-semi text-[14px] text-teal-600">
-                Protocol kopen →
-              </Text>
-            </Pressable>
-          )}
+          {purchaseCard}
+          {evaluationLinks}
         </ScrollView>
       )}
       {protocol && (
@@ -191,7 +271,7 @@ export default function ProtocolListScreen() {
             {tab === "vandaag" && (
               protocol.preparing ? <ProtocolPreparation key={`${horseId}:${protocol.id}`}
                 protocol={protocol} horseId={horseId} horseName={data.horse.name}
-                onOrder={() => setOrders(firstPhase ? { phaseId: firstPhase.id, label: firstPhase.title } : 'all')} onRefresh={refresh} /> : <Today
+                onOrder={() => setOrders('all')} onRefresh={refresh} /> : <Today
                 protocol={protocol}
                 date={data.date}
                 horseId={horseId}
@@ -200,6 +280,10 @@ export default function ProtocolListScreen() {
                 onWeekly={() => setWeeklyOpen(true)}
               />
             )}
+            {/* A completed plan stays readable; a later purchase's intake must still be reachable below it. */}
+            {tab === "vandaag" && protocol.completed && <View className="mt-4"><PurchasedProtocols excludeProtocolIds={[protocol.id]} actionableOnly /></View>}
+            {tab === "vandaag" && !!purchaseCard && <View className="mt-4">{purchaseCard}</View>}
+            {tab === "vandaag" && evaluationLinks}
             {tab === "kalender" && (
               <Calendar
                 key={`${horseId}:${protocol.id}`}
@@ -225,9 +309,14 @@ export default function ProtocolListScreen() {
             visible={orders !== null}
             title="Bestellijst"
             subtitle={orders && orders !== 'all' && orders.label ? `Voor ${orders.label}` : undefined}
-            onClose={() => setOrders(null)}
+            onClose={() => {
+              setOrders(null);
+              if (orderFailures[planKey]) setOrderFailures(previous => ({ ...previous, [planKey]: false }));
+            }}
           >
-            <ProtocolOrderList items={visibleOrders} discount={protocol.orderDiscount} />
+            {!!orderError && <Text className="mb-3 text-[13px] text-danger">{orderError}</Text>}
+            <ProtocolOrderList items={visibleOrders} discount={protocol.orderDiscount} orderedKeys={orderedKeys} onToggle={toggleOrdered}
+              twiceDaily={!onceDaily} onTwiceDailyChange={value => setOnceDaily(!value)} />
             {orders !== null && orders !== 'all' && (
               <Button variant="ghost" title="Bekijk volledige bestellijst" className="mt-4" onPress={() => setOrders('all')} />
             )}
@@ -244,7 +333,7 @@ export default function ProtocolListScreen() {
                 {linkedPhases.map((item) => <Button key={item.id} variant={item.id === visiblePhase?.id ? "primary" : "ghost"} title={item.title} onPress={() => openPhase(item)} />)}
               </View>
             )}
-            {visiblePhase && <ProtocolPhaseContent key={visiblePhase.id} phase={visiblePhase} date={data.date} orderItems={protocol.orderItems} onRefresh={refresh} />}
+            {visiblePhase && <ProtocolPhaseContent key={visiblePhase.id} phase={visiblePhase} date={data.date} orderItems={orderItems} completed={protocol.completed} onRefresh={refresh} />}
           </Sheet>
           <WeeklySheet
             visible={weeklyOpen}
@@ -288,24 +377,38 @@ function ProtocolPreparation({ protocol, horseId, horseName, onOrder, onRefresh 
       setStarting(false);
     }
   };
+  const orderLink = (
+    <Pressable accessibilityRole="button" accessibilityLabel="Open de volledige bestellijst" onPress={onOrder} className="min-h-[44px] justify-center">
+      <Text className={T.link}>Bekijk de volledige bestellijst →</Text>
+    </Pressable>
+  );
+  if (protocol.completed) return <View className="gap-5">
+    <Text accessibilityRole="header" className={T.title}>Afgerond herstelplan{horseName ? ` voor ${horseName}` : ''}</Text>
+    <Text className={T.lead}>Dit herstelplan is afgerond en kan niet meer worden gestart.</Text>
+    {orderLink}
+  </View>;
   return <View className="gap-5">
-    <Text accessibilityRole="header" className={T.title}>Je herstelplan{horseName ? ` voor ${horseName}` : ''} staat klaar</Text>
-    <View className="gap-4">
-      <Text className={T.lead}>Je herstelplan bestaat uit adviezen over <Text className="font-semi text-ink">voeding, beweging, huisvesting en management</Text>, plus een <Text className="font-semi text-ink">herstelprotocol</Text> waarmee je het lichaam stap voor stap ondersteunt bij herstel van binnenuit.</Text>
-      <Text className={T.lead}>De verschillende onderdelen zijn <Text className="font-semi text-ink">bewust op elkaar afgestemd</Text>. Het resultaat hangt daarom af van hoe consequent je <Text className="font-semi text-ink">álle adviezen opvolgt</Text>.</Text>
-      <Text className={T.lead}>Bekijk eerst welke kruiden en andere producten je voor de <Text className="font-semi text-ink">eerste fase</Text> nodig hebt en zorg dat je die <Text className="font-semi text-ink">in huis hebt voordat je begint</Text>. Daarna kun je het protocol starten.</Text>
+    <View className="gap-3">
+      <Text accessibilityRole="header" className={T.title}>Het herstelplan{horseName ? ` voor ${horseName}` : ''} staat klaar</Text>
+      <Text className={T.lead}>Je herstelplan combineert adviezen over voeding, beweging, huisvesting en management met een herstelprotocol. Alle onderdelen zijn op elkaar afgestemd, dus volg ze zo goed mogelijk allemaal op.</Text>
     </View>
-    <View className={PLAIN_CARD}>
-      <Text className={`mb-2 ${T.cardTitle}`}>Wat heb je nodig voor fase 1?</Text>
-      <Text className={`mb-4 ${T.lead}`}>Bekijk welke producten en hoeveelheden je voor de eerste fase nodig hebt.</Text>
-      <Pressable accessibilityRole="button" accessibilityLabel="Open bestellijst voor fase 1" onPress={onOrder} className="min-h-[44px] justify-center">
-        <Text className={T.link}>Bekijk bestellijst voor fase 1 →</Text>
-      </Pressable>
-    </View>
-    <View className="gap-4 rounded-[22px] bg-mint-50 p-5">
-      <Text className={T.cardTitle}>Heb je alles in huis?</Text>
-      <Text className={T.lead}>Start je protocol op de dag dat je daadwerkelijk met alle producten uit de eerste fase begint. Klik die dag op de button hieronder.</Text>
-      <Button title="Ik start vandaag" className="mt-1" onPress={() => { setError(null); setConfirm(true); }} />
+    <View className="gap-3">
+      <Text accessibilityRole="header" className={`${EYEBROW} text-teal-700`}>Zo begin je</Text>
+      <View className="rounded-[22px] bg-white px-5 py-1">
+        <PreparationStep n={1} title="Bestel de producten voor je herstelplan">
+          <Text className={T.secondary}>De fases volgen elkaar snel op. Bestel daarom meteen alles wat je voor het hele herstelplan nodig hebt.</Text>
+          {orderLink}
+        </PreparationStep>
+        <PreparationStep n={2} title="Zorg dat alles in huis is voor fase 1">
+          <Text className={T.secondary}>Begin pas als je alle producten voor de eerste fase binnen hebt.</Text>
+        </PreparationStep>
+        <PreparationStep n={3} last title={protocol.paused ? 'Je herstelplan is gepauzeerd' : 'Klaar om te starten?'}>
+          {!protocol.paused ? <>
+            <Text className={T.secondary}>Klik hieronder op de button. Vandaag wordt dan dag 1 van je herstelplan.</Text>
+            <Button title="Ik start vandaag" className="mt-3" onPress={() => { setError(null); setConfirm(true); }} />
+          </> : <Text className={T.secondary}>Je herstelplan is gepauzeerd. Je kunt starten zodra je plan is hervat.</Text>}
+        </PreparationStep>
+      </View>
     </View>
     <Sheet visible={confirm} title="Vandaag wordt dag 1 van je protocol" onClose={() => { if (!busy.current) setConfirm(false); }}>
       <Text className={`mb-5 ${T.body}`}>Weet je zeker dat je vandaag wilt beginnen?</Text>
@@ -315,6 +418,17 @@ function ProtocolPreparation({ protocol, horseId, horseName, onOrder, onRefresh 
         <Button title="Nog niet" variant="ghost" disabled={starting} onPress={() => setConfirm(false)} />
       </View>
     </Sheet>
+  </View>;
+}
+
+/** One numbered step of the "Zo begin je" list on the preparation screen. */
+function PreparationStep({ n, title, last, children }: { n: number; title: string; last?: boolean; children: ReactNode }) {
+  return <View className={`flex-row gap-3.5 py-4 ${last ? '' : 'border-b border-ink-8'}`}>
+    <View className="h-7 w-7 items-center justify-center rounded-full bg-mint-50"><Text className={`${S.label} text-teal-700`}>{n}</Text></View>
+    <View className="flex-1 gap-1">
+      <Text className={T.section}>{title}</Text>
+      {children}
+    </View>
   </View>;
 }
 
@@ -402,6 +516,7 @@ function LibraryLink({
   search,
   selection,
   nested,
+  thumbnailSource,
 }: {
   title: string;
   description: string;
@@ -410,6 +525,7 @@ function LibraryLink({
   selection?: boolean;
   /** Inside a white card: outlined, since a white tile would have no visible edge. */
   nested?: boolean;
+  thumbnailSource?: number;
 }) {
   return (
     <Pressable
@@ -428,7 +544,11 @@ function LibraryLink({
       }
       className={`flex-row items-center gap-3 p-4 ${nested ? 'rounded-2xl border border-ink-8' : 'rounded-[22px] bg-white'}`}
     >
-      <LibraryThumbnail uri={item?.heroImageUrl} format={item?.format} style={{ width: 64 }} />
+      {thumbnailSource ? (
+        <Image source={thumbnailSource} contentFit="cover" style={{ width: 64, height: 48, borderRadius: 12 }} />
+      ) : (
+        <LibraryThumbnail uri={item?.heroImageUrl} format={item?.format} style={{ width: 64 }} />
+      )}
       <View className="flex-1">
         <Text className={T.section}>{title}</Text>
         <Text className={`mt-1 ${T.meta}`}>
@@ -532,27 +652,18 @@ function Nutrition({
       <View className={PLAIN_CARD}>
         <Text className={T.cardTitle}>Water</Text>
         <Text className={`mt-2 ${T.body}`}>
-          {nutrition.water.types.join(" · ") ||
-            "Nog geen drinkwater ingevuld in de intake."}
+          Weet jij hoe schoon het water is dat je paard dagelijks drinkt? Ook helder water kan ongewenste stoffen bevatten. De kwaliteit en samenstelling zijn niet altijd met het blote oog te beoordelen.
         </Text>
-        {nutrition.water.needsAnalysis && (
-          <>
-            <Text className={`mb-3 mt-3 ${T.body}`}>
-              {nutrition.water.advice}
-            </Text>
+        <View className="mt-3">
             <LibraryLink
-              title="Water laten analyseren"
-              description={
-                hasPlus
-                  ? "Bekijk de uitleg met je abonnement."
-                  : "Bekijk de uitleg in de bibliotheek."
-              }
+              title="Drinkwater onder de loep: wat krijgt je paard binnen?"
+              description="Gratis te lezen met EquiBoost."
               item={nutrition.waterLibraryItem}
-              search="Wateranalyse"
+              search="Drinkwater onder de loep"
+              thumbnailSource={require('@/assets/images/drinkwater-foto-4x3.png')}
               nested
             />
-          </>
-        )}
+        </View>
       </View>
     </View>
   );

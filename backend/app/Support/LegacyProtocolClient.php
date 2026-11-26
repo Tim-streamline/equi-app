@@ -41,6 +41,7 @@ class LegacyProtocolClient
     {
         $rows = [];
         foreach ($items as $item) {
+            if ($item['recordedOnly'] ?? false) continue;
             if (isset($rows[$item['id']])) {
                 $rows[$item['id']]['done'] = $rows[$item['id']]['done'] && $item['done'];
 

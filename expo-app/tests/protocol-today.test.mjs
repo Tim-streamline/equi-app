@@ -19,7 +19,7 @@ const items = [
 ];
 test('morning and evening completion stay independent across overlapping phases', () => {
   const groups = logic.todayGroups(items, [{ protocolPhaseSupplementId: 'two', administration: 2, done: 1 }]);
-  assert.deepEqual(groups.map(g => [g.label, g.items.length, g.done]), [['Ochtend', 2, 0], ['Avond', 1, 1]]);
+  assert.deepEqual(groups.map(g => [g.label, g.items.length, g.done]), [['Elke dag', 2, 0], ['Tweede gift', 1, 1]]);
   assert.equal(logic.administrationKey(items[1]), 'two:1');
   assert.equal(logic.administrationKey(items[2]), 'two:2');
   const old = logic.todayGroups([{ ...items[0], administration: undefined }], [{ protocolPhaseSupplementId: 'one', done: true }]);
@@ -39,8 +39,9 @@ function screen(phases = 2) {
     'expo-router': { router: { push: r => opened.push(r) } },
     '@/components/ui/Button': { Button: 'Button' },
     '@/db/hooks': { useSupplementIntakesForDate: () => local, useStoreMutations: () => ({ toggleSupplementIntake: async (...args) => mutations.push(args) }) },
-    '@/lib/protocol-buildup': buildupLogic, './DoseBuildupSchedule': { DoseBuildupSchedule: 'DoseBuildupSchedule' }, '@/lib/protocol-today': logic, '@/lib/haptics': { selectionHaptic() {} },
+    '@/lib/protocol-buildup': buildupLogic, './DoseBuildupSchedule': { DoseBuildupSchedule: 'DoseBuildupSchedule' }, './DoneCircle': { DoneCircle: 'DoneCircle' }, '@/lib/protocol-today': logic, '@/lib/haptics': { selectionHaptic() {} },
   };
+  modules['./doseGroupHeader'] = load('../components/protocol/doseGroupHeader.tsx', modules);
   const component = load('../components/protocol/ProtocolToday.tsx', modules).ProtocolToday;
   const props = { protocol: { id: 'protocol', currentWeek: 2, totalWeeks: 10, dateLabel: 'Actual date', weekLabel: 'Week 2 van 10', today: { items }, phases: [{ id: 'phase1', title: 'Phase A', state: 'active' }, { id: 'phase2', title: 'Phase B', state: phases === 2 ? 'active' : 'locked' }] }, date: '2026-11-03', horseId: 'horse', onPhase: p => opened.push(p.id), SheetComponent: 'Sheet' };
   const render = () => { cursor = 0; return flatten(component(props)); };
@@ -75,15 +76,38 @@ test('all active phases are accessible and each row uses the actual name and dos
   assert.ok(!single.some(n => n?.props?.accessibilityLabel === 'Bekijk Phase B'));
 });
 
+test('product list precedes phase explanations; only multi-dose rows show their moment inline', () => {
+  const app = screen();
+  const nodes = app.render();
+  const rowText = name => nodes.filter(n => n?.props?.className?.includes?.('text-ink') && copy(flatten(n.props.children)).startsWith(name)).map(n => copy(flatten(n.props.children)));
+  assert.deepEqual(rowText('Actual A'), ['Actual A  12 g']);
+  assert.deepEqual(rowText('Actual B'), ['Actual B  8 ml · Elke dag', 'Actual B  8 ml · Tweede gift']);
+  // A twice-daily product: only the second gift has a heading, marked as preferred; no time of day.
+  assert.ok(nodes.some(n => n?.props?.accessibilityRole === 'header' && copy(flatten(n)).includes('Tweede gift')));
+  assert.ok(nodes.includes(' · bij voorkeur'));
+  assert.ok(nodes.includes('Geef deze kruiden, als het lukt, op een ander moment van de dag nog een keer.'));
+  assert.ok(nodes.indexOf('Tweede gift') > nodes.findIndex(n => n?.props?.accessibilityLabel === 'Uitleg over Actual A, Elke dag'));
+  assert.ok(!nodes.includes('Ochtend') && !nodes.includes('Avond'));
+  // Only once-daily products: one group, no headings.
+  const once = screen(); once.props.protocol.today.items = items.filter(item => item.administrationsPerDay === 1);
+  const single = once.render();
+  assert.ok(!single.includes('Elke dag') && !single.includes('Tweede gift') && !single.includes(' · bij voorkeur'));
+  const products = nodes.map((node, index) => node?.props?.accessibilityRole === 'checkbox' ? index : -1);
+  const phase = nodes.findIndex(node => node?.props?.accessibilityLabel === 'Bekijk Phase A');
+  assert.ok(phase > Math.max(...products));
+  const progress = nodes.findIndex(node => node?.props?.accessibilityRole === 'progressbar');
+  assert.ok(progress < nodes.indexOf('Meng alles door de geweekte bijvoeding'));
+});
+
 test('Uitleg opens authored instructions without toggling, then marks the selected gift', async () => {
   const app = screen();
-  app.render().find(n => n?.props?.accessibilityLabel === 'Uitleg over Actual A, Ochtend').props.onPress();
+  app.render().find(n => n?.props?.accessibilityLabel === 'Uitleg over Actual A, Elke dag').props.onPress();
   let sheet = app.render().find(n => n?.type === 'Sheet');
   assert.equal(sheet.props.visible, true);
   assert.ok(copy(flatten(sheet)).includes('Instructions from admin.'));
   assert.ok(copy(flatten(sheet)).includes('Description from admin.'));
   assert.equal(app.mutations.length, 0);
-  app.render().find(n => n?.props?.accessibilityLabel === 'Uitleg over Actual B, Avond').props.onPress();
+  app.render().find(n => n?.props?.accessibilityLabel === 'Uitleg over Actual B, Tweede gift').props.onPress();
   sheet = app.render().find(n => n?.type === 'Sheet');
   flatten(sheet.props.footer).find(n => n?.props?.title === 'Markeer als gegeven').props.onPress();
   await new Promise(resolve => setImmediate(resolve));
@@ -120,7 +144,7 @@ test('recorded local buildup doses survive refreshed server amounts and fix othe
   const nodes = app.render();
   assert.ok(copy(nodes).includes('2 ml'));
   assert.ok(!copy(nodes).includes('8 ml'));
-  nodes.find(n => n?.props?.accessibilityLabel === 'Uitleg over Actual B, Avond').props.onPress();
+  nodes.find(n => n?.props?.accessibilityLabel === 'Uitleg over Actual B, Tweede gift').props.onPress();
   const sheet = app.render().find(n => n?.type === 'Sheet');
   flatten(sheet.props.footer).find(n => n?.props?.title === 'Markeer als gegeven').props.onPress();
   await new Promise(resolve => setImmediate(resolve));
@@ -134,7 +158,7 @@ test('one compact buildup reminder stays visible after completing all gifts',()=
   assert.equal(nodes.filter(n=>n==='Vandaag een nieuwe opbouwdag').length,1);
   assert.ok(copy(nodes).includes('Opbouwdosering'));
   assert.ok(!nodes.some(n=>n?.props?.accessibilityLabel?.startsWith('Bekijk nieuwe dosering')));
-  nodes.find(n=>n?.props?.accessibilityLabel==='Uitleg over Actual B, Ochtend').props.onPress();
+  nodes.find(n=>n?.props?.accessibilityLabel==='Uitleg over Actual B, Elke dag').props.onPress();
   const detail=app.render().find(n=>n?.type==='DoseBuildupSchedule');assert.equal(detail.props.item.id,'two');assert.equal(detail.props.date,'2026-11-03');
 });
 test('local recorded amount wins, and stale schedules never predict a new dose',()=>{
@@ -153,4 +177,35 @@ test('the actual schedule groups equal doses and highlights the present step',()
   assert.ok(text.includes('Dag 1–2'));assert.ok(text.includes('Huidige stap'));assert.ok(text.includes('Vandaag: 10 g'));
   assert.equal(component({item:items[0]}),null);
   assert.equal(buildupLogic.buildupState({...items[0],dosage:'5.0 g',buildup},'2026-11-03').changed,false);
+});
+
+test('a completed plan shows its server tick and the checkbox is read-only', async () => {
+  const app = screen();
+  app.props.protocol.completed = true;
+  app.props.protocol.today = { items: [{ ...items[2], done: true }] };
+  app.setLocal([{ protocolPhaseSupplementId: 'two', administration: 2, done: false }]);
+  const row = app.render().find(node => node?.props?.accessibilityRole === 'checkbox');
+  assert.deepEqual(row.props.accessibilityState, { checked: true, disabled: true });
+  await row.props.onPress();
+  assert.deepEqual(app.mutations, []);
+});
+
+test('historical gifts stay readable below the schedule and never count towards a further gift', () => {
+  const app = screen();
+  const history = { ...items[2], id: 'old', name: 'Archived herb', recordedOnly: true, done: true };
+  app.props.protocol.today.items = [history];
+  const historical = app.render();
+  assert.ok(historical.includes('Eerder geregistreerd'));
+  assert.ok(!historical.includes(' · bij voorkeur'));
+  assert.ok(!historical.includes('Meng alles door de geweekte bijvoeding'));
+  historical.find(n => n?.props?.accessibilityLabel === 'Uitleg over Archived herb, Gift 2').props.onPress();
+  assert.equal(app.render().find(n => n?.type === 'Sheet').props.visible, true);
+
+  app.props.protocol.today.items = [history, items[2]];
+  const mixed = app.render();
+  assert.ok(mixed.indexOf('Eerder geregistreerd') > mixed.indexOf('Tweede gift'));
+  assert.deepEqual(logic.todayGroups(app.props.protocol.today.items, [])[0].items, [{ ...items[2], done: false }]);
+  assert.equal(mixed.find(n => n?.props?.accessibilityRole === 'progressbar').props.accessibilityValue.max, 1);
+  assert.deepEqual(mixed.filter(n => n?.props?.accessibilityRole === 'checkbox').map(n => n.props.accessibilityState),
+    [{ checked: false, disabled: false }, { checked: true, disabled: true }]);
 });

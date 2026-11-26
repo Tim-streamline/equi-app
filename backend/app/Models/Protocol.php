@@ -3,8 +3,10 @@
 namespace App\Models;
 
 use App\Support\IntakePhotoPreview;
+use Carbon\CarbonImmutable;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -34,6 +36,8 @@ class Protocol extends Model
 {
     use HasUuids;
 
+    protected $hidden = ['intake_active_periods'];
+
     /** Internal creation path used while an intake is creating its draft protocol. */
     public bool $creatingForIntake = false;
 
@@ -54,6 +58,12 @@ class Protocol extends Model
             // Only an unpublished-to-published transition completes intake review; later saves of a
             // published protocol (title edits, timing, repeated editor saves) must keep a reopened review.
             $publishing = $this->published_at !== null && ($new || $this->getRawOriginal('published_at') === null);
+            if ($publishing && $this->published_email_status === null) {
+                // The customer hears once that the plan is ready; unpublishing and republishing does not mail again.
+                $this->published_email_status = 'pending';
+            }
+            // One place for every status transition: completing records the last plan day, reopening clears it.
+            app(\App\Support\ProtocolCompletion::class)->apply($this);
             $saved = parent::save($options);
             // A new protocol gets its own intake, unless it was given the intake of another protocol to use
             // (a copy, see ProtocolCopier) or an intake is creating it (IntakeBooking::save links the two).
@@ -166,9 +176,45 @@ class Protocol extends Model
     {
         return [
             'customer_settings' => 'array',
+            'ordered_product_keys' => 'array',
+            'order_once_daily' => 'boolean',
             'started_at' => 'date',
+            'completed_on' => 'date',
+            'closed_periods' => 'array',
+            'intake_active_periods' => 'array',
             'published_at' => 'datetime',
         ];
+    }
+
+    /**
+     * The plan a horse shows, best first: the active one, else the paused one, else the
+     * latest completed one. Home's cards and the Protocol tab must agree on this.
+     */
+    public function scopeShownToOwner(Builder $query, CarbonImmutable $now, bool $inactivePlans): Builder
+    {
+        return $query->visibleToOwner($now, $inactivePlans)
+            // The id settles equal publication times, so Home's paused-plan link (protocol-queries.ts) can tell
+            // exactly which plan the Protocol tab shows.
+            ->orderByRaw("CASE WHEN status = 'active' THEN 0 WHEN status = 'paused' THEN 1 ELSE 2 END")->orderByDesc('published_at')->orderBy('id');
+    }
+
+    /** Weeks the plan runs: its stated length, or longer when a phase schedules later weeks. */
+    public function scheduledWeeks(): int
+    {
+        return max((int) $this->total_weeks, (int) $this->phases->flatMap->weeks->max('protocol_week_number'));
+    }
+
+    /** Plans the owner may see: published by now; paused and completed ones only when $inactivePlans. */
+    public function scopeVisibleToOwner(Builder $query, \DateTimeInterface $now, bool $inactivePlans): Builder
+    {
+        return $query->whereIn('status', $inactivePlans ? ['active', 'paused', 'completed'] : ['active'])
+            ->publishedBy($now);
+    }
+
+    public function scopePublishedBy(Builder $query, \DateTimeInterface $now): Builder
+    {
+        // Publication timestamps are stored in UTC. The caller also uses its local clock for plan dates.
+        return $query->where('published_at', '<=', CarbonImmutable::instance($now)->utc());
     }
 
     public function horse(): BelongsTo

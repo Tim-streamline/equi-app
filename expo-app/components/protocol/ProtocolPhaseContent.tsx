@@ -9,8 +9,8 @@ import { todayGroups } from '@/lib/protocol-today';
 import { DoseBuildupSchedule } from './DoseBuildupSchedule';
 import { PROTOCOL_SCALE as S, PROTOCOL_TEXT as T } from './styles';
 
-export function ProtocolPhaseContent({ phase, date, orderItems, onRefresh }: {
-  phase: DashboardPhase; date: string; orderItems: DashboardOrderItem[]; onRefresh: () => Promise<void>;
+export function ProtocolPhaseContent({ phase, date, orderItems, completed, onRefresh }: {
+  phase: DashboardPhase; date: string; orderItems: DashboardOrderItem[]; completed?: boolean; onRefresh: () => Promise<void>;
 }) {
   const [detail, setDetail] = useState<string | null>(null);
   const local = useSupplementIntakesForDate(date);
@@ -39,7 +39,7 @@ export function ProtocolPhaseContent({ phase, date, orderItems, onRefresh }: {
     </> : <>
       <View className="flex-row items-center justify-between gap-3"><Text accessibilityRole="header" className={T.section}>Wat je nodig hebt</Text><Text className={T.meta}>{phase.durationLabel}</Text></View>
       {phaseOrderItems(orderItems, [phase.id]).map(item => <View key={item.id} className="flex-row items-center justify-between gap-3 border-b border-ink-8 py-3"><Text className={`flex-1 ${T.section}`}>{item.name}</Text><Text className={T.secondary}>{item.quantityLabel ?? 'Hoeveelheid nog te bepalen'}</Text></View>)}
-      <View className="rounded-[22px] bg-mint-50 p-4"><Text className={`${S.secondary} text-teal-700`}>Deze producten zijn voor een volgende fase. De dosering per gift en gebruiksinstructies zie je zodra deze fase actief is.</Text></View>
+      {!completed && <View className="rounded-[22px] bg-mint-50 p-4"><Text className={`${S.secondary} text-teal-700`}>Deze producten zijn voor een volgende fase. De dosering per gift en gebruiksinstructies zie je zodra deze fase actief is.</Text></View>}
     </>}
   </View>;
 }

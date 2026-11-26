@@ -15,13 +15,16 @@ export function FieldLabel({ n, label, hint, required, link, photo }: Props) {
   // When a link is present, split the label around its text so the matched
   // phrase renders as a tappable hyperlink (e.g. "privacyverklaring").
   const parts = link && label.includes(link.text) ? label.split(link.text) : null;
+  // Only the unnumbered questions of the photo section are set large; a numbered photo question
+  // reads like every other question in its section.
+  const large = photo && n === 0;
   return (
     <View className="mb-2">
       <View className="flex-row items-baseline gap-2">
         {n > 0 && <Text className="font-bold text-[11px] tracking-display text-ink-70">
           {String(n).padStart(2, '0')}
         </Text>}
-        <Text className={photo ? `flex-1 font-bold ${n === 0 ? 'text-[21px] leading-[28px]' : 'text-[18px] leading-[24px]'} text-ink` : "flex-1 font-semi text-[14.5px] leading-[20px] text-ink"}>
+        <Text className={large ? 'flex-1 font-bold text-[21px] leading-[28px] text-ink' : "flex-1 font-semi text-[14.5px] leading-[20px] text-ink"}>
           {parts ? (
             <>
               {parts[0]}
@@ -40,7 +43,7 @@ export function FieldLabel({ n, label, hint, required, link, photo }: Props) {
         </Text>
       </View>
       {hint && (
-        <Text className={photo ? "mt-2 text-[16px] leading-[23px] text-ink-70" : "mt-0.5 pl-[22px] text-[12px] text-ink-70 leading-[16px]"}>
+        <Text className={large ? "mt-2 text-[16px] leading-[23px] text-ink-70" : "mt-0.5 pl-[22px] text-[12px] text-ink-70 leading-[16px]"}>
           {hint}
         </Text>
       )}

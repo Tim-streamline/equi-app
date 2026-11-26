@@ -16,18 +16,24 @@ use Illuminate\Support\Str;
 
 class HorseDashboard
 {
+    /** The fixed drinking-water article the Voeding tab links to, matched by its title's slug. */
+    private const WATER_ARTICLE_SLUG = 'drinkwater-onder-de-loep-wat-krijgt-je-paard-binnen';
+
     public function __construct(private ProtocolNutrition $nutrition) {}
 
-    public function build(User $user, ?Horse $horse, CarbonImmutable $now, ?string $month = null): array
+    /**
+     * @param  bool  $inactivePlans  Whether the app keeps paused and completed plans read-only
+     *                               (ClientCapabilities::READ_ONLY_PLANS). Other apps only get a running plan.
+     */
+    public function build(User $user, ?Horse $horse, CarbonImmutable $now, ?string $month = null, bool $inactivePlans = false): array
     {
-        $protocol = $horse?->protocols()->where('status', 'active')->whereNotNull('published_at')
-            ->where('published_at', '<=', $now)->orderByDesc('published_at')->first();
+        $protocol = $horse?->protocols()->shownToOwner($now, $inactivePlans)->first();
         $answers = $this->nutrition->answers($protocol);
         $discovery = app(LibraryDiscovery::class);
         $access = $discovery->access($user);
         $hasPlus = $access['hasPlus'];
         $data = $protocol ? $this->protocol($protocol, $now, $month, $answers) : null;
-        $items = LibraryItem::query()->whereNotNull('published_at')->where('published_at', '<=', $now)->with('categories')->get();
+        $items = LibraryItem::query()->where('published_at', '<=', $now->utc())->with('categories')->get();
         $unlocked = $access['unlockedIds'];
         $itemData = fn ($item) => [
             'id' => $item->id, 'title' => $item->title, 'format' => $item->format, 'heroImageUrl' => $item->hero_image_url,
@@ -69,14 +75,17 @@ class HorseDashboard
             'timezone' => $now->timezoneName, 'generatedAt' => $now->toIso8601String(), 'date' => $now->toDateString(),
             'greeting' => ($now->hour < 12 ? 'Goedemorgen' : ($now->hour < 18 ? 'Goedemiddag' : 'Goedenavond')).', '.explode(' ', trim($user->name))[0],
             'horse' => ['id' => $horse?->id ?? '', 'name' => $horse?->name ?? ''],
-            'hasPlus' => $hasPlus, 'showPlusUpsell' => $horse && $horse->owner_id === $user->id && ! app(ProtocolAccess::class)->existingForHorse($user->id, $horse->id) && ! $protocol,
+            'hasPlus' => $hasPlus, 'showPlusUpsell' => $horse && $horse->owner_id === $user->id && ! app(ProtocolAccess::class)->existingForHorse($user->id, $horse->id)
+                // A finished plan stays readable, and the owner can buy the next one beside it.
+                && (! $protocol || $protocol->status === 'completed'),
             'homeUpsell' => ['title' => $pageContent['homeTitle'], 'body' => $pageContent['homeBody'], 'button' => $pageContent['homeButton']],
             'variant' => $horse ? ($hasPlus || $protocol ? 'plus' : 'basic') : 'without-horse',
             'credits' => app(CreditLedger::class)->summary($user)['balance'],
             'plusOffer' => null,
             'seasonalTip' => $tip ? ['id' => $tip->id, 'intro' => Str::limit(trim(preg_replace('/\s+/u', ' ', strip_tags($tip->body))), 180), 'month' => $tip->month, 'title' => $tip->title ?: $tipItem?->title, 'body' => $tip->body, 'item' => $tipItem ? $itemData($tipItem) : null] : null,
             'recommendations' => $recommendations, 'protocol' => $data,
-            'horseProtocols' => $this->horseProtocols($user, $horse, $now),
+            ...app(ProtocolEvaluation::class)->dashboardLinks($user, $horse?->id, $now),
+            'horseProtocols' => $this->horseProtocols($user, $horse, $now, $inactivePlans),
         ];
     }
 
@@ -88,16 +97,31 @@ class HorseDashboard
     {
         $protocol->loadMissing('phases.weeks');
         $start = $protocol->started_at ? CarbonImmutable::parse($protocol->started_at->toDateString(), $now->timezone)->startOfDay() : null;
-        $totalWeeks = max((int) $protocol->total_weeks, (int) $protocol->phases->flatMap->weeks->max('protocol_week_number'));
+        $totalWeeks = $protocol->scheduledWeeks();
         $totalDays = $totalWeeks * 7;
         $elapsed = $start ? (int) $start->diffInDays($now->startOfDay(), false) + 1 : 0;
         $day = max(0, min($totalDays, $elapsed));
-        $running = $elapsed > 0 && $elapsed <= $totalDays;
+        $completion = app(ProtocolCompletion::class);
+        // An early completion ends progress on its last plan day, not on today.
+        if ($start && ($last = $completion->lastPlanDay($protocol))) {
+            $day = max(0, min($day, (int) $start->diffInDays(CarbonImmutable::parse($last, $now->timezone), false) + 1));
+        }
+        $progressKnown = ! $completion->unknownEnd($protocol);
+        if (! $progressKnown) $day = 0;
+        $running = $protocol->status !== 'completed' && $elapsed > 0 && $elapsed <= $totalDays;
+        // Completed, or past its last scheduled day (a paused plan stays paused).
+        $finished = $protocol->status !== 'paused' && ($protocol->status === 'completed' || ($start && $elapsed > $totalDays));
 
         return [
-            'start' => $start, 'day' => $day, 'week' => $day > 0 ? (int) ceil($day / 7) : 0, 'totalWeeks' => $totalWeeks, 'running' => $running,
-            'progressPercent' => $totalDays ? (int) round($day / $totalDays * 100) : 0,
-            'statusLabel' => ! $start ? 'Je protocol staat klaar' : ($elapsed > $totalDays ? 'Je protocol is afgerond' : ($running ? 'Je protocol is actief' : 'Je protocol start binnenkort')),
+            'start' => $start, 'day' => $day, 'week' => $day > 0 ? (int) ceil($day / 7) : 0, 'totalWeeks' => $totalWeeks, 'running' => $running, 'progressKnown' => $progressKnown,
+            'progressPercent' => $totalDays ? (int) round($day / $totalDays * 100) : 0, 'finished' => $finished,
+            'statusLabel' => match (true) {
+                $protocol->status === 'paused' => 'Je protocol is gepauzeerd',
+                $finished => 'Je protocol is afgerond',
+                ! $start => 'Je protocol staat klaar',
+                $running => 'Je protocol is actief',
+                default => 'Je protocol start binnenkort',
+            },
         ];
     }
 
@@ -110,9 +134,10 @@ class HorseDashboard
 
         return [
             'id' => $protocol->id, 'currentDay' => $progress['day'], 'currentWeek' => $progress['week'],
-            'preparing' => ! $progress['start'], 'startedAt' => $progress['start']?->toDateString(),
-            'totalWeeks' => $progress['totalWeeks'], 'progressPercent' => $progress['progressPercent'],
+            'preparing' => ! $progress['start'], 'paused' => $protocol->status === 'paused', 'finished' => $progress['finished'], 'startedAt' => $progress['start']?->toDateString(),
+            'totalWeeks' => $progress['totalWeeks'], 'progressPercent' => $progress['progressPercent'], 'progressKnown' => $progress['progressKnown'],
             'statusLabel' => $progress['statusLabel'], 'phaseLabel' => $active->pluck('title')->implode(' · '),
+            'evaluation' => app(ProtocolEvaluation::class)->timing($protocol, $now),
         ];
     }
 
@@ -121,15 +146,19 @@ class HorseDashboard
      * the user's active horses plus the selected one, sorted by name, so Home can
      * show a card for each from this one response.
      */
-    private function horseProtocols(User $user, ?Horse $horse, CarbonImmutable $now): array
+    private function horseProtocols(User $user, ?Horse $horse, CarbonImmutable $now, bool $inactivePlans): array
     {
         $horses = $user->horses()->where('status', 'active')->get();
         if ($horse && ! $horses->contains('id', $horse->id)) {
             $horses->push($horse);
         }
-        $latest = Protocol::query()->whereIn('horse_id', $horses->pluck('id'))->where('status', 'active')
-            ->whereNotNull('published_at')->where('published_at', '<=', $now)
-            ->orderByDesc('published_at')->with('phases.weeks')->get()->unique('horse_id')->keyBy('horse_id');
+        // A paused plan has its own notice on Home (PurchasedProtocols), so it gets no card here,
+        // and neither does an older completed plan of that horse.
+        $winner = Protocol::shownToOwner($now, $inactivePlans)->select('id')
+            ->whereColumn('protocols.horse_id', 'horses.id')->limit(1);
+        $winnerIds = Horse::whereKey($horses->modelKeys())->selectSub($winner, 'protocol_id');
+        $latest = Protocol::whereIn('id', $winnerIds)->where('status', '!=', 'paused')
+            ->with('phases.weeks', 'horse')->get()->keyBy('horse_id');
 
         return $horses->filter(fn ($item) => $latest->has($item->id))
             ->sortBy(fn ($item) => Str::lower(Str::ascii((string) $item->name)))
@@ -141,7 +170,7 @@ class HorseDashboard
     {
         $answers ??= $this->nutrition->answers($protocol);
         $protocol->loadMissing(['phases.weeks', 'phases.supplements.weeks', 'phases.supplements.intakes', 'phases.supplements.supplement', 'analysis.advice', 'voedingAdviezen', 'managementAdviezen', 'bewegingAdviezen', 'manualAdviezen.phases']);
-        ['start' => $start, 'day' => $day, 'week' => $week, 'totalWeeks' => $totalWeeks, 'running' => $running, 'progressPercent' => $progressPercent, 'statusLabel' => $statusLabel] = $this->progress($protocol, $now);
+        ['start' => $start, 'day' => $day, 'week' => $week, 'totalWeeks' => $totalWeeks, 'running' => $running, 'progressPercent' => $progressPercent, 'progressKnown' => $progressKnown, 'statusLabel' => $statusLabel, 'finished' => $finished] = $this->progress($protocol, $now);
         $buildup = app(ProtocolDoseBuildup::class);
         $selections = $protocol->phases->flatMap->supplements->keyBy('id');
         $phases = $protocol->phases->map(function ($phase) use ($protocol, $now, $preview, $buildup) {
@@ -171,28 +200,33 @@ class HorseDashboard
             $history->preserve($protocol, $now);
         }
         $historicalDays = $preview ? collect() : $history->days($protocol, $monthDate->format('Y-m'));
-        $intakes = $preview ? collect() : $protocol->horse->supplementIntakes()->whereBetween('date', [min($monthDate->startOfMonth()->toDateString(), $now->toDateString()), max($monthDate->endOfMonth()->toDateString(), $now->toDateString())])->get()->groupBy(fn ($i) => $i->date->toDateString());
-        $rowsFor = function (int $number, string $date) use ($allSupplements, $intakes, $selections, $buildup) {
-            $records = $intakes->get($date, collect())->keyBy(fn ($record) => $record->protocol_phase_supplement_id.':'.($record->administration ?? 1));
-
-            return $allSupplements->filter(fn ($s) => in_array($number, $s['weekNumbers'], true))
-                ->flatMap(fn ($s) => collect(range(1, $s['administrationsPerDay']))->map(fn ($administration) => array_replace($s, [
-                    'dosage' => $records->get($s['id'].':'.$administration)?->dosage ?? $buildup->forDay($selections->get($s['id']), $date),
-                    'administration' => $administration,
-                    'done' => (bool) ($records->get($s['id'].':'.$administration)?->done ?? false),
-                ])))->values();
+        $todayDate = $now->toDateString();
+        $intakes = $preview ? collect() : $history->recordedIntakes($protocol, min($monthDate->startOfMonth()->toDateString(), $todayDate), max($monthDate->endOfMonth()->toDateString(), $todayDate));
+        $rowsFor = function (int $number, string $date) use ($allSupplements, $intakes, $selections, $history) {
+            $records = $intakes->get($date, collect());
+            $planned = $allSupplements->filter(fn ($s) => in_array($number, $s['weekNumbers'], true));
+            return $history->withRecordedDoses($history->plannedRows($planned, $selections, $records, $date), $records);
         };
-        $today = $running ? $rowsFor($week, $now->toDateString()) : collect();
-        $done = $today->where('done', true)->count();
+        $completion = app(ProtocolCompletion::class);
+        $closedPeriods = $completion->closedPeriods($protocol);
+        $withinSchedule = $running || ($week > 0 && $protocol->completed_on && $start
+            && $todayDate < $start->addWeeks($totalWeeks)->toDateString());
+        $today = $withinSchedule && ! $completion->containsDate($closedPeriods, $todayDate)
+            ? $rowsFor($week, $todayDate) : $history->withRecordedDoses(collect(), $intakes->get($todayDate, collect()));
+        if (! $preview) {
+            $today = $today->concat($history->removedDosesOn($protocol, $todayDate));
+        }
+        $scheduledToday = ProtocolDayHistory::scheduled($today);
+        $done = $scheduledToday->where('done', true)->count();
         $notifications = [];
         $reminderDay = (int) ($protocol->customer_settings['weekly_update_day'] ?? 7);
-        $weeklyDue = ! $preview && $running && (($day - 1) % 7 + 1) >= $reminderDay
+        $weeklyDue = ! $preview && $protocol->status === 'active' && $running && (($day - 1) % 7 + 1) >= $reminderDay
             && ! DB::table('protocol_weekly_updates')->where('protocol_id', $protocol->id)->where('week_number', $week)->exists();
         if ($weeklyDue) {
             $notifications[] = ['id' => 'weekly-'.$week, 'type' => 'weekly_update', 'title' => 'Weekupdate invullen', 'body' => 'Hoe gaat het met '.$protocol->horse->name.' in week '.$week.'?', 'items' => []];
         }
         foreach ($phases as $phase) {
-            if ($phase['state'] === 'preview') {
+            if ($protocol->status === 'active' && $phase['state'] === 'preview') {
                 $notifications[] = ['id' => $phase['id'], 'type' => 'next_phase', 'title' => 'Je volgende fase staat klaar 🌿',
                     'body' => 'Over een week start '.$phase['title'].'. Bekijk alvast wat er verandert en welke kruiden of supplementen je nodig hebt.', 'phaseId' => $phase['id'],
                     'items' => array_values(array_filter($phase['supplements'], fn ($s) => in_array($phase['weekStart'], $s['weekNumbers'], true))),
@@ -204,19 +238,25 @@ class HorseDashboard
             $date = $monthDate->setDay($dayNumber);
             $iso = $date->toDateString();
             $n = $start ? (int) floor($start->diffInDays($date->startOfDay(), false) / 7) + 1 : 0;
-            $rows = $rowsFor($n, $iso);
-            $completed = $rows->where('done', true)->count();
+            // After an early completion (or for a completed plan whose last day is unknown), a day that was
+            // never frozen is no plan day: the live fallback must not show it as missed or count it.
+            $afterPlan = ! $preview && $completion->containsDate($closedPeriods, $iso);
+            $rows = $iso === $todayDate ? $today : ($afterPlan ? collect() : $rowsFor($n, $iso));
+            $scheduled = ProtocolDayHistory::scheduled($rows);
+            $completed = $scheduled->where('done', true)->count();
             $state = 'default';
-            if ($rows->isNotEmpty() && $iso <= $now->toDateString()) {
-                $state = $completed === $rows->count() ? 'complete' : ($completed ? 'partial' : ($iso < $now->toDateString() ? 'missed' : 'default'));
+            if ($scheduled->isNotEmpty() && $iso <= $now->toDateString()) {
+                $state = $completed === $scheduled->count() ? 'complete' : ($completed ? 'partial' : ($iso < $now->toDateString() ? 'missed' : 'default'));
             }
             if ($iso < $now->toDateString() && $historicalDays->has($iso)) {
                 $rows = collect($historicalDays->get($iso));
-                $completed = $rows->where('done', true)->count();
+                $scheduled = ProtocolDayHistory::scheduled($rows);
+                $completed = $scheduled->where('done', true)->count();
                 $state = $history->state($rows->all());
             }
-            $cells[] = ['available' => (bool) $start && $iso < $now->toDateString() && $historicalDays->has($iso), 'date' => $iso, 'day' => $dayNumber, 'state' => $state, 'isToday' => (bool) $start && $iso === $now->toDateString(),
-                'total' => $iso <= $now->toDateString() ? $rows->count() : 0, 'done' => $iso <= $now->toDateString() ? $completed : 0];
+            $cells[] = ['available' => (bool) $start && $iso < $now->toDateString() && $historicalDays->has($iso), 'date' => $iso, 'day' => $dayNumber, 'state' => $state, 'isToday' => (bool) $start && ! $afterPlan && $iso === $now->toDateString(),
+                'total' => $iso <= $now->toDateString() ? $scheduled->count() : 0, 'done' => $iso <= $now->toDateString() ? $completed : 0,
+                'recordedOnly' => $rows->isNotEmpty() && $rows->every(fn ($row) => $row['recordedOnly'] ?? false)];
         }
         while (count($cells) % 7) {
             $cells[] = null;
@@ -226,16 +266,18 @@ class HorseDashboard
 
         return [
             'id' => $protocol->id, 'title' => $protocol->title, 'currentDay' => $day, 'currentWeek' => $week,
-            'preparing' => ! $start, 'startedAt' => $start?->toDateString(),
-            'totalWeeks' => $totalWeeks, 'progressPercent' => $progressPercent, 'statusLabel' => $statusLabel,
-            'todayLabel' => ! $start ? 'Je protocol staat klaar' : 'Week '.$week.' van '.$totalWeeks.' · '.$now->locale('nl')->translatedFormat('l j F'),
+            'preparing' => ! $start, 'paused' => $protocol->status === 'paused', 'completed' => $protocol->status === 'completed', 'finished' => $finished, 'startedAt' => $start?->toDateString(),
+            'totalWeeks' => $totalWeeks, 'progressPercent' => $progressPercent, 'progressKnown' => $progressKnown, 'statusLabel' => $statusLabel,
+            'todayLabel' => ! $progressKnown ? $statusLabel : (! $start ? 'Je protocol staat klaar' : 'Week '.$week.' van '.$totalWeeks.' · '.$now->locale('nl')->translatedFormat('l j F')),
             'dateLabel' => $now->locale('nl')->translatedFormat('l j F'),
-            'weekLabel' => 'Week '.$week.' van '.$totalWeeks,
+            'weekLabel' => $progressKnown ? 'Week '.$week.' van '.$totalWeeks : $statusLabel,
             'phaseLabel' => implode(' · ', array_column(array_filter($phases, fn ($p) => $p['state'] === 'active'), 'title')),
-            'phases' => $phases, 'today' => ['items' => $today->all(), 'done' => $done, 'total' => $today->count(), 'percentage' => $today->isEmpty() ? 0 : (int) round($done / $today->count() * 100)],
+            'phases' => $phases, 'today' => ['items' => $today->all(), 'done' => $done, 'total' => $scheduledToday->count(), 'percentage' => $scheduledToday->isEmpty() ? 0 : (int) round($done / $scheduledToday->count() * 100)],
             'notifications' => $notifications,
             'orderItems' => app(ProtocolOrderList::class)->forProtocol($protocol),
             'orderDiscount' => ProtocolOrderList::DISCOUNT,
+            'orderedKeys' => array_values($protocol->ordered_product_keys ?? []),
+            'orderOnceDaily' => (bool) $protocol->order_once_daily,
             'calendar' => ['month' => $monthDate->format('Y-m'), 'label' => $monthDate->locale('nl')->translatedFormat('F Y'), 'previousMonth' => $monthDate->subMonth()->format('Y-m'), 'nextMonth' => $monthDate->addMonth()->format('Y-m'), 'cells' => $cells],
             'nutrition' => $this->nutrition->forProtocol($protocol, $answers) + ['advice' => $this->nutritionAdvice($protocol, $manual)],
             'management' => $this->management($protocol, $manual),
@@ -250,21 +292,18 @@ class HorseDashboard
         ];
     }
 
+    /**
+     * The library items the Voeding tab links to. Hay: the configured item, else one about hay analysis.
+     * Water: always the fixed drinking-water article (included in EquiBoost), never another item.
+     */
     public function nutritionLinks(Protocol $protocol, $items, callable $itemData): array
     {
-        $links = [];
-        $topic = fn ($term) => $items->first(fn ($item) => str_contains(mb_strtolower($item->slug.' '.$item->title), $term));
-        foreach (['hayLibraryItem' => 'hooianalyse', 'waterLibraryItem' => 'wateranalyse'] as $key => $term) {
-            $configuredId = $protocol->customer_settings[$key === 'hayLibraryItem' ? 'hay_library_item_id' : 'water_library_item_id'] ?? null;
-            $item = $items->firstWhere('id', $configuredId) ?? $topic($term);
-            if (! $item) {
-                $subject = $key === 'hayLibraryItem' ? 'hooi' : 'water';
-                $item = $items->first(fn ($item) => preg_match('/'.$subject.'.*analy|analy.*'.$subject.'/isu', $item->title.' '.$item->description) === 1);
-            }
-            $links[$key] = $item ? $itemData($item) : null;
-        }
+        $hay = $items->firstWhere('id', $protocol->customer_settings['hay_library_item_id'] ?? null)
+            ?? $items->first(fn ($item) => str_contains(mb_strtolower($item->slug.' '.$item->title), 'hooianalyse'))
+            ?? $items->first(fn ($item) => preg_match('/hooi.*analy|analy.*hooi/isu', $item->title.' '.$item->description) === 1);
+        $water = $items->first(fn ($item) => Str::slug($item->title) === self::WATER_ARTICLE_SLUG);
 
-        return $links;
+        return ['hayLibraryItem' => $hay ? $itemData($hay) : null, 'waterLibraryItem' => $water ? $itemData($water) : null];
     }
 
     /**

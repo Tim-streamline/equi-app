@@ -1,4 +1,5 @@
 <script>
+    import ProtocolEvaluationReview from '$lib/components/ProtocolEvaluationReview.svelte';
     import ProtocolCustomerPreview from '$lib/components/ProtocolCustomerPreview.svelte';
     import CopyProtocolDialog from '$lib/components/CopyProtocolDialog.svelte';
     import AdminLayout from '../../Layouts/AdminLayout.svelte';
@@ -65,6 +66,7 @@
         intakeFeeds = {},
         intakeWeights = {},
         weeklyUpdates = [],
+        evaluation = null,
         libraryItems = [],
     } = $props();
 
@@ -253,7 +255,6 @@
         published: Boolean(initialProtocol?.published_at),
         customer_settings: {
             hay_library_item_id: initialProtocol?.customer_settings?.hay_library_item_id ?? '',
-            water_library_item_id: initialProtocol?.customer_settings?.water_library_item_id ?? '',
             weight_kg: initialWeight,
             use_target_weight: initialProtocol?.customer_settings?.use_target_weight ?? Boolean(initialProtocol?.customer_settings?.target_weight_kg),
             target_weight_kg: initialProtocol?.customer_settings?.target_weight_kg ?? '',
@@ -1176,7 +1177,6 @@
                                     <div class="grid gap-4 md:grid-cols-2">
                                         <div class="space-y-2"><Field label="Afbeelding bij hooianalyse"><Select bind:value={$form.customer_settings.hay_library_item_id} placeholder="Automatisch zoeken" options={libraryItems.map((item) => ({ value: item.id, label: item.title }))} /></Field>
                                         <p class="text-xs text-muted-foreground">Dit item bepaalt alleen de afbeelding van de CTA. De knop opent altijd de vaste selectie met het artikel en de video over hooianalyse.</p></div>
-                                        <Field label="Wateranalyse in de bibliotheek"><Select bind:value={$form.customer_settings.water_library_item_id} placeholder="Automatisch zoeken" options={libraryItems.map((item) => ({ value: item.id, label: item.title }))} /></Field>
                                     </div>
                                     <h3 class="font-bold">Actuele voerproducten uit de intake</h3>
                                     {#each intakeFeeds[$form.horse_id] ?? [] as feed (feed.id)}
@@ -1509,4 +1509,5 @@
             </div>
         {/if}
     </div>
+    <ProtocolEvaluationReview {evaluation} />
 </AdminLayout>

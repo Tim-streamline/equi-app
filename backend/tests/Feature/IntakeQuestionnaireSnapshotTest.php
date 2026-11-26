@@ -228,6 +228,98 @@ class IntakeQuestionnaireSnapshotTest extends TestCase
         $this->assertEmpty($this->snapshots->sync($source, true, $this->directory)['changes']);
     }
 
+    public function test_label_config_round_trips_and_older_snapshots_keep_destination_labels(): void
+    {
+        $labels = app(\App\Support\IntakeLabels::class);
+        [$field, $other] = IntakeField::where('type', 'radio')->orderBy('key')->get()->filter(fn ($f) => count($f->options ?? []) >= 2)->take(2)->values()->all();
+        $defaults = fn (IntakeField $f) => $labels->complete($f->toArray(), IntakeSection::find($f->section_id)->key.'_'.$f->key, null);
+        $custom = $defaults($field);
+        $custom[0]['label'] = 'eigen_vraag';
+        $custom[0]['answers'][0]['label'] = 'eigen_antwoord';
+        $field->update(['label_config' => $custom]);
+        $otherLabels = $defaults($other);
+        $otherLabels[0]['label'] = 'andere_vraag';
+        $other->update(['label_config' => $otherLabels]);
+        $source = $this->snapshots->export();
+        $exported = collect($source['sections'])->flatMap(fn ($section) => $section['fields'])->keyBy('key');
+        $this->assertSame($custom, $exported[$field->key]['label_config']);
+
+        // A fresh import (the field is new on the destination) keeps the snapshot's custom labels.
+        IntakeField::whereKey($field->id)->delete();
+        $this->snapshots->sync($source, true, $this->directory);
+        $this->assertSame($custom, IntakeField::where('key', $field->key)->sole()->label_config);
+        $this->assertEmpty($this->snapshots->sync($source)['changes']);
+
+        // An older snapshot without labels keeps labels edited on the destination since.
+        $old = $source;
+        foreach ($old['sections'] as &$section) {
+            foreach ($section['fields'] as &$definition) {
+                unset($definition['label_config']);
+            }
+        }
+        unset($section, $definition);
+        $otherLabels[0]['label'] = 'later_aangepast';
+        $other->fresh()->update(['label_config' => $otherLabels]);
+        $this->assertEmpty($this->snapshots->sync($old, true, $this->directory)['changes']);
+        $this->assertSame($otherLabels, $other->fresh()->label_config);
+
+        // Labels for one field change only what they mention: other answers and other fields keep theirs.
+        $current = IntakeField::where('key', $field->key)->sole();
+        $kept = $current->label_config;
+        $kept[0]['answers'][1]['label'] = 'eigen_tweede';
+        $current->update(['label_config' => $kept]);
+        $partial = $old;
+        foreach ($partial['sections'] as &$section) {
+            foreach ($section['fields'] as &$definition) {
+                if ($definition['key'] === $field->key) {
+                    $definition['label_config'] = [['key' => '', 'label' => 'nieuwe_vraag', 'answers' => [['answer' => $field->options[0], 'label' => 'nieuw_antwoord']]]];
+                }
+            }
+        }
+        unset($section, $definition);
+        $result = $this->snapshots->sync($partial, true, $this->directory);
+        $this->assertSame([['update', 'field/'.$field->key, ['label_config']]], array_map(fn ($c) => [$c['action'], $c['name'], $c['settings']], $result['changes']));
+        $saved = $current->fresh()->label_config;
+        $this->assertSame(['nieuwe_vraag', 'nieuw_antwoord', 'eigen_tweede'], [$saved[0]['label'], $saved[0]['answers'][0]['label'], $saved[0]['answers'][1]['label']]);
+        $this->assertSame($otherLabels, $other->fresh()->label_config);
+
+        // Invalid labels are refused before any write.
+        $before = $this->databaseState();
+        $partial['sections'][0]['fields'][0]['label_config'] = [['key' => '', 'label' => 'ONGELDIG LABEL', 'answers' => []]];
+        try {
+            $this->snapshots->sync($partial, true, $this->directory);
+            $this->fail('Expected invalid labels to be refused');
+        } catch (ValidationException) {
+        }
+        $this->assertSame($before, $this->databaseState());
+    }
+
+    public function test_old_snapshot_reconciles_changed_choices_and_repeater_fields_only_on_apply(): void
+    {
+        $field = IntakeField::where('type', 'repeater')->firstOrFail();
+        $field->update(['repeater_sub' => [['id' => 'kind', 'label' => 'Soort', 'options' => ['A', 'B']]],
+            'label_config' => [['key' => 'kind', 'label' => 'soort', 'answers' => [
+                ['answer' => 'A', 'label' => 'bewaar_a'], ['answer' => 'B', 'label' => 'oud_b']]]]]);
+        $source = $this->snapshots->export();
+        foreach ($source['sections'] as &$section) {
+            foreach ($section['fields'] as &$definition) {
+                if ($definition['key'] === $field->key) {
+                    unset($definition['label_config']);
+                    $definition['repeater_sub'][0]['options'] = ['A', 'C'];
+                    $definition['repeater_sub'][] = ['id' => 'amount', 'label' => 'Hoeveelheid'];
+                }
+            }
+        }
+        unset($definition, $section);
+        $this->assertNotEmpty($this->snapshots->sync($source)['changes']);
+        $this->assertSame($field->label_config, $field->fresh()->label_config);
+        $this->snapshots->sync($source, true, $this->directory);
+        $nodes = collect($field->fresh()->label_config)->keyBy('key');
+        $this->assertSame([['answer' => 'A', 'label' => 'bewaar_a'], ['answer' => 'C', 'label' => 'soort_c']], $nodes['kind']['answers']);
+        $this->assertNotEmpty($nodes['amount']['label']);
+        $this->assertEmpty($this->snapshots->sync($source)['changes']);
+    }
+
     public function test_backup_failure_rolls_back_all_definition_changes(): void
     {
         $source = $this->snapshots->export();

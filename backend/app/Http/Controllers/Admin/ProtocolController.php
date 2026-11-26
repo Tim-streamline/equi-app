@@ -185,6 +185,7 @@ class ProtocolController extends Controller
         return Inertia::render('Protocols/Edit', [
             'protocol' => $protocol,
             'weeklyUpdates' => DB::table('protocol_weekly_updates')->where('protocol_id', $protocol->id)->orderByDesc('week_number')->get(),
+            'evaluation' => app(\App\Support\ProtocolEvaluation::class)->admin($protocol),
             ...$this->editorOptions($protocol->horse_id, $protocol->therapist_id, $protocol),
         ]);
     }
@@ -243,7 +244,7 @@ class ProtocolController extends Controller
             'manualAdviezen.phases:id,title,order',
         ]);
 
-        return Inertia::render('Protocols/Show', ['protocol' => $protocol]);
+        return Inertia::render('Protocols/Show', ['protocol' => $protocol, 'evaluation' => app(\App\Support\ProtocolEvaluation::class)->admin($protocol)]);
     }
 
     public function updateStatus(Request $request, Protocol $protocol): RedirectResponse
@@ -559,7 +560,10 @@ class ProtocolController extends Controller
             $this->syncPhaseSupplements($phase, $phaseData['supplements']);
         }
 
-        $protocol->phases()->whereNotIn('id', $phaseIds)->delete();
+        $removedPhases = $protocol->phases()->whereNotIn('id', $phaseIds);
+        $removedSelections = ProtocolPhaseSupplement::whereIn('protocol_phase_id', (clone $removedPhases)->select('id'))->pluck('id');
+        app(ProtocolDayHistory::class)->preserveRemovedDoses($protocol->id, $removedSelections->all());
+        $removedPhases->delete();
         $this->syncAnalysis($protocol, $data['analysis'] ?? [], $data['advice']);
         $this->syncAdviceSelections($protocol, $data['voeding_advies_ids'], 'voedingAdviezen', VoedingAdvies::class, 'voeding_advies_id');
         $this->syncAdviceSelections($protocol, $data['management_advies_ids'], 'managementAdviezen', ManagementAdvies::class, 'management_advies_id');
@@ -704,10 +708,9 @@ class ProtocolController extends Controller
             $this->syncProtocolSupplementWeeks($selection, $phase, $supplementData['week_numbers']);
         }
 
-        $phase->supplements()->when($selectionIds, fn ($query) => $query->whereNotIn('id', $selectionIds))->delete();
-        if ($selectionIds === []) {
-            $phase->supplements()->delete();
-        }
+        $removed = $phase->supplements()->whereNotIn('id', $selectionIds);
+        app(ProtocolDayHistory::class)->preserveRemovedDoses($protocol->id, $removed->pluck('id')->all());
+        $removed->delete();
     }
 
     /** @param array<int, int> $weekNumbers */

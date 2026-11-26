@@ -1,3 +1,4 @@
+import { CLIENT_CAPABILITIES } from '../../expo-app/lib/client-capabilities.ts';
 import { syncRequest, SyncRequestError } from '../../expo-app/lib/sync-request.ts';
 
 export type LoginResponse = {
@@ -12,9 +13,6 @@ let session: Session | null = null;
 let revision = 0;
 let pending: Promise<LoginResponse | null> | null = null;
 export const getApiBaseUrl = () => '';
-// Signed into each token this browser receives, so the API and PowerSync serve the shared
-// protocol screens the per-dose format. Without it the server keeps the legacy format.
-const CLIENT_CAPABILITIES = ['protocol-doses'];
 
 export const LOCAL_SIGNOUT_KEY = 'equinova:signed-out';
 type LocalSignout = { id: string; logoutId?: string; pending: boolean };
@@ -75,15 +73,35 @@ export function retryPendingLogout(): Promise<boolean> {
   if (!saved) return Promise.resolve(false);
   let state: LocalSignout;
   try { state = JSON.parse(saved); } catch { return Promise.resolve(false); }
-  // Never send an unscoped deferred logout to an older backend.
-  if (!state.pending || !state.logoutId) return Promise.resolve(false);
+  if (!state.pending) return Promise.resolve(false);
   const controller = new AbortController();
   logoutController = controller;
+  let current: string = saved;
   const check = () => {
-    if (controller.signal.aborted || authenticating || readSignout() !== saved) throw new Error('Logout superseded');
+    if (controller.signal.aborted || authenticating || readSignout() !== current) throw new Error('Logout superseded');
   };
   const attempt = withAuthLock(async () => {
     check();
+    if (!state.logoutId) {
+      // Signed out before this tab held a token (after a reload or an expiry). The session
+      // cookie may still be valid, so ask the server which login it belongs to first.
+      const { status, logoutId } = await syncRequest(20_000, async signal => {
+        const minted = await request('token', { capabilities: CLIENT_CAPABILITIES }, signal, check);
+        const token: Partial<LoginResponse> | null = minted.ok ? await minted.json() : null;
+        return { status: minted.status, logoutId: token?.logout_id };
+      }, controller.signal);
+      check();
+      if (status === 401) {
+        // Nothing is signed in on the server any more.
+        writeSignout(JSON.stringify({ ...state, pending: false }));
+        return true;
+      }
+      // Never send an unscoped deferred logout to an older backend.
+      if (!logoutId) return false;
+      state = { ...state, logoutId };
+      current = JSON.stringify(state);
+      writeSignout(current);
+    }
     const response = await syncRequest(20_000, signal => request('logout', { logout_id: state.logoutId }, signal, check), controller.signal);
     check();
     if (!response.ok) return false;

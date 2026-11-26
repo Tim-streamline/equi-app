@@ -184,6 +184,7 @@
                     <Field label="Reeksnaam" hint="Gebruik bij alle delen exact dezelfde naam. Dit bepaalt welke delen samen op de homepage verschijnen." error={$form.errors.series_name}><Input bind:value={$form.series_name} placeholder="Bijv. Artrose" /></Field>
                     <Field label="Deelnummer" hint="De homepage toont het eerste nog niet ontgrendelde deel van deze reeks." error={$form.errors.series_part}><Input type="number" min="1" max="999" step="1" bind:value={$form.series_part} placeholder="1" /></Field>
                     <label class="flex items-center gap-2 text-sm"><input type="checkbox" bind:checked={$form.is_featured} class="size-4 rounded border-input" /> Featured</label>
+                    <p class="text-sm text-muted-foreground">Verschijnt bovenaan het bibliotheekoverzicht. Binnen de uitgelichte artikelen bepaalt ‘Volgorde’ de positie.</p>
                     <Field label="Toegang" error={$form.errors.equiboost_access}>
                         <select class="w-full rounded-lg border border-input bg-background px-3 py-2" value={accessMode} onchange={event => setAccessMode(event.currentTarget.value)}>
                             <option value="free">Gratis voor alle abonnees</option>

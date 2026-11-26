@@ -7,6 +7,7 @@ use App\Support\IntakeSubmission;
 use App\Support\ProtocolAccess;
 use App\Support\ClientCapabilities;
 use App\Support\LegacyProtocolClient;
+use App\Support\ProtocolCompletion;
 use App\Support\ProtocolDayHistory;
 use App\Support\SyncAccessPolicy;
 use Carbon\CarbonImmutable;
@@ -15,6 +16,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Str;
 
 /**
  * Applies a batch of PowerSync CRUD operations to the Postgres database.
@@ -125,6 +127,16 @@ class SyncController extends Controller
                     // Resolve previously accepted IDs before the ordinary ownership/identity checks.
                     $op['id'] = DB::table('protocol_intake_client_ids')->where('user_id', $userId)
                         ->where('client_id', $op['id'])->value('intake_id') ?? $op['id'];
+                    // Deleting a selection cascades its intake rows. A queued write cannot recreate it.
+                    $selectionId = $op['data']['protocol_phase_supplement_id'] ?? null;
+                    $horseId = $op['data']['horse_id'] ?? null;
+                    if (! Models\ProtocolSupplementIntake::whereKey($op['id'])->exists()
+                        && ($op['op'] !== 'PUT' || (Str::isUuid($selectionId) && Str::isUuid($horseId)
+                            && ! Models\ProtocolPhaseSupplement::whereKey($selectionId)->exists()
+                            && Models\Horse::whereKey($horseId)->where('owner_id', $userId)->exists()))) {
+                        $skipped[] = 'protocol_supplement_intakes:removed';
+                        continue;
+                    }
                 }
                 abort_if(in_array($op['type'], ['library_item_access', 'library_contents'], true), 403, 'Library access and content are server-managed.');
                 abort_if($op['type'] === 'intake_responses', 409, 'Werk de app bij om de intake te synchroniseren.');
@@ -266,6 +278,10 @@ class SyncController extends Controller
                 }
                 $intakeDay = $op['type'] === 'protocol_supplement_intakes' ? $this->intakeDay($op) : null;
                 $historical = $intakeDay ? $this->validateIntake($op, $payload['timezone'] ?? null) : null;
+                if (isset($historical['skip'])) {
+                    $skipped[] = 'protocol_supplement_intakes:'.$historical['skip'];
+                    continue;
+                }
                 if ($intakeDay && $op['op'] === 'PUT'
                     && ! Models\ProtocolSupplementIntake::whereKey($op['id'])->exists()) {
                     // validateIntake holds the protocol lock, so concurrent devices converge on
@@ -305,7 +321,7 @@ class SyncController extends Controller
                 if ($historical) {
                     if ($historical['scheduled']) {
                         app(ProtocolDayHistory::class)->setDone($historical['protocol'], $historical['date'], $historical['item_id'],
-                            $historical['done'], $historical['now'], false, $historical['administration']);
+                            $historical['done'], $historical['now'], false, $historical['administration'], allowOfflineUpload: true);
                     } else {
                         // Retain the offline record without adding a dose to a frozen day.
                         app(LegacyProtocolClient::class)->refreshDayDone($historical['item_id'], $historical['date'], $historical['dose_count']);
@@ -404,7 +420,7 @@ class SyncController extends Controller
                 'administration' => 1, 'done' => $done, 'taken_at' => $takenAt]);
         }
         if ($historical) {
-            app(ProtocolDayHistory::class)->setDone($historical['protocol'], $date, $itemId, $done, $historical['now'], true, null);
+            app(ProtocolDayHistory::class)->setDone($historical['protocol'], $date, $itemId, $done, $historical['now'], true, null, allowOfflineUpload: true);
 
             return;
         }
@@ -422,7 +438,7 @@ class SyncController extends Controller
     /**
      * Valid offline records survive frequency changes; daily frequency controls display, not storage.
      *
-     * @return array{protocol: Models\Protocol, date: string, item_id: string, done: bool, now: CarbonImmutable, administration: int, scheduled: bool, dose_count: int}|null
+     * @return array{protocol: Models\Protocol, date: string, item_id: string, done: bool, now: CarbonImmutable, administration: int, scheduled: bool, dose_count: int}|array{skip: string}|null
      */
     private function validateIntake(array $op, ?string $timezone): ?array
     {
@@ -441,21 +457,49 @@ class SyncController extends Controller
         $item = Models\ProtocolPhaseSupplement::findOrFail($data['protocol_phase_supplement_id']);
         $history = app(ProtocolDayHistory::class);
         $protocol = Models\Protocol::query()->lockForUpdate()->findOrFail($item->phase->protocol_id);
+        if ($protocol->status === 'paused') {
+            // Pause boundaries are dates in the owner's timezone, even when the device is travelling.
+            $timezone = $history->timezone($protocol);
+        }
         $now = CarbonImmutable::now($timezone ?? $history->timezone($protocol));
-        abort_unless($protocol->published_at && $protocol->published_at->lte($now) && $protocol->status === 'active', 422);
-        abort_unless($data['date'] >= $now->subDays(7)->toDateString() && $data['date'] <= $now->toDateString(), 422, 'Alleen vandaag en de afgelopen 7 dagen kunnen worden aangepast.');
+        $date = $data['date'];
+        $completion = app(ProtocolCompletion::class);
+        if ($date < $now->subDays(7)->toDateString()) return ['skip' => 'expired'];
+        $beforePause = $date < $now->toDateString() && $completion->beforeKnownPause($protocol, $date);
+        if ((! in_array($protocol->status, ['active', 'completed'], true) && ! $beforePause)
+            || ! $protocol->published_at || $protocol->published_at->gt($now)) {
+            return ['skip' => 'inactive'];
+        }
+        if ($completion->containsDate($completion->closedPeriods($protocol), $date)) {
+            return ['skip' => 'closed-day'];
+        }
+        // A future date on an otherwise eligible day can become valid when the device clock catches up.
+        abort_if($date > $now->toDateString(), 422, 'Alleen vandaag en de afgelopen 7 dagen kunnen worden aangepast.');
         if ($data['date'] < $now->toDateString()) {
-            $day = $history->day($protocol, $data['date'], $now);
-            $doses = collect($day['items'])->where('id', $item->id);
+            if ($protocol->status === 'completed') {
+                $history->preserve($protocol, $now);
+            }
+            // Pausing already froze the schedule. A later plan edit cannot establish a missing dose.
+            if (($protocol->status === 'completed' || $beforePause) && ! DB::table('protocol_day_snapshots')
+                ->where('protocol_id', $protocol->id)->where('date', $date)->exists()) {
+                return ['skip' => 'unplanned'];
+            }
+            $day = $history->day($protocol, $date, $now);
+            $doses = ProtocolDayHistory::scheduled($day['items'])->where('id', $item->id);
+            $scheduled = $doses->contains(fn ($row) => ($row['administration'] ?? 1) === (int) $data['administration']);
+            if ($beforePause && ! $scheduled) return ['skip' => 'unplanned'];
+            if ($doses->isEmpty() && $protocol->status === 'completed') return ['skip' => 'unplanned'];
             abort_if($doses->isEmpty(), 422, 'Deze gift stond niet op deze dag gepland.');
             return ['protocol' => $protocol, 'date' => $data['date'], 'item_id' => $item->id,
                 'done' => $op['op'] === 'DELETE' ? false : (bool) $data['done'], 'now' => $now,
                 'administration' => (int) $data['administration'], 'dose_count' => $doses->count(),
-                'scheduled' => $doses->contains(fn ($row) => ($row['administration'] ?? 1) === (int) $data['administration'])];
+                'scheduled' => $scheduled];
         }
         $start = $protocol->started_at ? CarbonImmutable::parse($protocol->started_at->toDateString(), $now->timezone) : null;
         $week = $start ? (int) floor($start->diffInDays($now->startOfDay(), false) / 7) + 1 : 0;
-        abort_unless($week > 0 && $item->weeks()->whereHas('protocolPhaseWeek', fn ($query) => $query->where('protocol_week_number', $week))->exists(), 422, 'Dit item staat vandaag niet gepland.');
+        $scheduled = $week > 0 && $item->weeks()->whereHas('protocolPhaseWeek', fn ($query) => $query->where('protocol_week_number', $week))->exists();
+        if (! $scheduled && $protocol->status === 'completed') return ['skip' => 'unplanned'];
+        abort_unless($scheduled, 422, 'Dit item staat vandaag niet gepland.');
 
         return null;
     }

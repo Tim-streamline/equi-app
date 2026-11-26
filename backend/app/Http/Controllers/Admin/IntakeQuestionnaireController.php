@@ -7,11 +7,13 @@ use App\Models\IntakeField;
 use App\Models\IntakeQuestionnaire;
 use App\Models\IntakeSection;
 use App\Support\AuditLogger;
+use App\Support\IntakeLabels;
 use App\Support\IntakeSignalPreparation;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
@@ -40,6 +42,12 @@ class IntakeQuestionnaireController extends Controller
             ->with(['sections' => fn ($query) => $query->orderBy('order'), 'sections.fields' => fn ($query) => $query->orderBy('order')])
             ->where('active', true)
             ->firstOrFail();
+
+        foreach ($questionnaire->sections as $section) {
+            foreach ($section->fields as $field) {
+                $field->label_config = app(\App\Support\IntakeLabels::class)->complete($field->toArray(), $section->key.'_'.$field->key, $field->label_config);
+            }
+        }
 
         return Inertia::render('IntakeQuestionnaire/Index', [
             'questionnaire' => $questionnaire,
@@ -181,6 +189,7 @@ class IntakeQuestionnaireController extends Controller
                     ->ignore($field?->id),
             ],
             'label' => ['required', 'string', 'max:255'],
+            ...IntakeLabels::rules(snapshot: false),
             'type' => ['required', Rule::in(self::FIELD_TYPES)],
             'hint' => ['nullable', 'string', 'max:10000'],
             'required' => ['required', 'boolean'],
@@ -346,6 +355,23 @@ class IntakeQuestionnaireController extends Controller
                 ->orWhere(fn ($q) => $q->whereNull('answer_section_key')->whereHas('section', fn ($q) => $q->where('key', $answerSection))))->exists()) {
             throw ValidationException::withMessages(['age_config_json' => 'Deze geboortedatum-sleutel is al gekoppeld aan een actieve vraag.']);
         }
+
+        $labels = app(\App\Support\IntakeLabels::class);
+        $submittedLabels = $request->exists('label_config');
+        $config = $submittedLabels ? $data['label_config'] : $field?->label_config;
+        $config = array_map(static function ($node) use ($submittedLabels) {
+            // Laravel converts the root node's empty path to null.
+            $node['key'] ??= '';
+            if ($submittedLabels && $node['key'] === '') {
+                // The top-level editor trims choices on save. Repeater options retain their exact text.
+                foreach ($node['answers'] as $i => $row) {
+                    $node['answers'][$i]['answer'] = Str::trim($row['answer']);
+                }
+            }
+            return $node;
+        }, $config ?? []);
+        $data['label_config'] = $labels->complete($data, $section->key.'_'.$data['key'], $config);
+        $labels->validate($data['label_config']);
 
         return $data;
     }

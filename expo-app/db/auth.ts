@@ -3,6 +3,7 @@
 // short-lived PowerSync JWT whenever PowerSync asks for fresh credentials
 // (see POWERSYNC_TOKEN_TTL on the Laravel side).
 
+import { CLIENT_CAPABILITIES } from '../lib/client-capabilities';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as SecureStore from 'expo-secure-store';
 import { Platform } from 'react-native';
@@ -95,8 +96,6 @@ export function deviceCredentials(res: LoginResponse): DeviceCredentials {
 }
 
 const DEVICE_NAME = `${Platform.OS} ${Platform.Version}`;
-// Signed into each fresh JWT so the API and PowerSync agree on the protocol format.
-const CLIENT_CAPABILITIES = ['protocol-doses'];
 
 async function authRequest(path: string, body: object, signal?: AbortSignal): Promise<LoginResponse> {
   const res = await fetch(`${apiBaseUrl}/api/auth/${path}`, {

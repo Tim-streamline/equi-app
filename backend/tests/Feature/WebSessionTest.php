@@ -87,6 +87,12 @@ class WebSessionTest extends TestCase
         $this->csrf();
         $this->assertFalse(property_exists($claims($this->postJson('/web-session/token')), 'protocol_doses'));
         $this->assertSame(1, $claims($this->postJson('/web-session/token', ['capabilities' => ['protocol-doses']]))->protocol_doses);
+        // The app that shows paused and completed plans read-only declares that separately.
+        $this->assertFalse(property_exists($claims($this->postJson('/web-session/token', ['capabilities' => ['protocol-doses']])), 'read_only_plans'));
+        $readOnly = $claims($this->postJson('/web-session/token', ['capabilities' => ['protocol-doses', 'read-only-plans']]));
+        $this->assertSame([1, 1], [$readOnly->protocol_doses, $readOnly->read_only_plans]);
+        $this->assertFalse(property_exists($readOnly, 'read_only_doses'));
+        $this->assertSame(1, $claims($this->postJson('/web-session/token', ['capabilities' => ['read-only-doses']]))->read_only_doses);
         // Each token carries only its own request's declaration, never the session's history.
         $this->assertFalse(property_exists($claims($this->postJson('/web-session/token', ['capabilities' => ['unknown']])), 'protocol_doses'));
         $this->postJson('/web-session/logout')->assertOk();

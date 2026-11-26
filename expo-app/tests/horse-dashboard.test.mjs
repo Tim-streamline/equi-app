@@ -55,3 +55,16 @@ test('cached cards calculate each overlapping phase week across daylight-saving 
   assert.equal(cards[1].statusLabel, 'Actief · week 2 van 6');
   assert.equal(cards[1].durationLabel, 'Duur: 6 weken');
 });
+
+test('a completed cached plan never announces an active phase or opens dose details during preview', async () => {
+  const { dashboardAtTime } = await import('../lib/horse-dashboard.ts');
+  const phase = { id: 'late', weekStart: 3, weekEnd: 4, availableAt: '2026-04-01T00:00:00Z',
+    startsAt: '2026-04-08T00:00:00Z', endsAt: '2026-04-22T00:00:00Z', supplements: [] };
+  const data = { protocol: { completed: true, phases: [phase], notifications: [], orderItems: [] } };
+  const preview = dashboardAtTime(data, new Date('2026-04-06T12:00:00Z')).protocol.phases[0];
+  assert.equal(preview.state, 'preview');
+  assert.doesNotMatch(preview.statusLabel, /volgende week/i);
+  const later = dashboardAtTime(data, new Date('2026-04-12T12:00:00Z')).protocol.phases[0];
+  assert.notEqual(later.state, 'active');
+  assert.equal(later.accessible, true);
+});

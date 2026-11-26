@@ -57,11 +57,11 @@ export function MandatoryRefresh({ children }: { children: ReactNode }) {
   };
 
   return <>
-    {/* Keep providers, forms and file selections mounted while blocking interaction. */}
-    <div inert={blocked} aria-hidden={blocked || undefined} style={{ display: 'flex', flex: 1, minHeight: 0 }}>{children}</div>
-    {required && reason && <div role="status" style={{ position: 'fixed', top: 0, left: 0, right: 0, zIndex: 10000, padding: '16px 24px', background: '#E8F4F2', color: '#174B49', boxShadow: '0 2px 8px #0002' }}>
+    {required && reason && <div role="status" style={{ flexShrink: 0, padding: '16px 24px', background: '#E8F4F2', color: '#174B49', boxShadow: '0 2px 8px #0002' }}>
       <strong>Er staat een update klaar.</strong> {reason} Daarna vernieuwen we de app.
     </div>}
+    {/* Keep providers, forms and file selections mounted while blocking interaction. */}
+    <div inert={blocked} aria-hidden={blocked || undefined} style={{ display: 'flex', flex: 1, minHeight: 0 }}>{children}</div>
     {blocked && <div role="dialog" aria-modal="true" aria-labelledby="refresh-title" aria-describedby="refresh-description"
       onKeyDown={event => { if (event.key === 'Tab') { event.preventDefault(); button.current?.focus(); } }}
       style={{ position: 'fixed', inset: 0, zIndex: 10001, display: 'flex', flexDirection: 'column', alignItems: 'center', overflowY: 'auto', padding: 24, background: '#FBF8F3', color: '#1B2A2A', fontFamily: 'SourceSans3_400Regular, sans-serif' }}>

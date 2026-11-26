@@ -83,9 +83,8 @@ class SaveProtocolRequest extends FormRequest
             'status' => ['required', $this->route('protocol')?->status === 'archived' ? 'in:archived' : 'in:draft,active,paused,completed'],
             'published' => ['required', 'boolean'],
 
-            'customer_settings' => ['sometimes', 'array:weight_kg,use_target_weight,target_weight_kg,sugar,protein,weekly_update_day,feed_overrides,management,movement,nutrition_advice,hay_library_item_id,water_library_item_id'],
+            'customer_settings' => ['sometimes', 'array:weight_kg,use_target_weight,target_weight_kg,sugar,protein,weekly_update_day,feed_overrides,management,movement,nutrition_advice,hay_library_item_id'],
             'customer_settings.hay_library_item_id' => ['nullable', 'uuid', 'exists:library_items,id'],
-            'customer_settings.water_library_item_id' => ['nullable', 'uuid', 'exists:library_items,id'],
             'customer_settings.weight_kg' => ['nullable', 'numeric', 'gt:0', 'max:2000'],
             'customer_settings.use_target_weight' => ['sometimes', 'boolean'],
             'customer_settings.target_weight_kg' => ['required_if:customer_settings.use_target_weight,true', 'nullable', 'numeric', 'gt:0', 'max:2000'],

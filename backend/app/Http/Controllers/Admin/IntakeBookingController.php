@@ -11,6 +11,7 @@ use App\Support\AuditLogger;
 use App\Support\IntakeAnswersPdf;
 use App\Support\IntakeReview;
 use App\Support\LibrarySyncLock;
+use App\Support\PdfDocument;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -49,8 +50,12 @@ class IntakeBookingController extends Controller
         ]);
     }
 
-    public function show(Request $request, IntakeBooking $booking): Response
+    public function show(Request $request, IntakeBooking $booking): Response|\Illuminate\Http\Response
     {
+        if ($request->boolean('print') && $request->boolean('pdf_fallback')) {
+            return response(app(IntakeAnswersPdf::class)->browserPrint($booking))
+                ->header('Cache-Control', 'private, no-store');
+        }
         $booking->load('user:id,name,email', 'horse:id,name,breed,status', 'therapist:id,name,title');
 
         return Inertia::render('Bookings/Show', ['booking' => $booking, 'printMode' => $request->boolean('print'), 'review' => app(IntakeReview::class)->forBooking($booking),
@@ -88,14 +93,17 @@ class IntakeBookingController extends Controller
         return to_route('admin.protocols.edit', $protocol)->with('success', 'Nieuw concept aangemaakt op de bestaande intake. Je kunt het hier opstellen.');
     }
 
-    public function answersPdf(IntakeBooking $booking, IntakeAnswersPdf $pdf): \Illuminate\Http\Response
+    public function answersPdf(IntakeBooking $booking, IntakeAnswersPdf $pdf): \Symfony\Component\HttpFoundation\Response
     {
-        return response($pdf->render($booking), 200, [
-            'Content-Type' => 'application/pdf',
-            'Content-Disposition' => 'attachment; filename="'.$pdf->filename($booking).'"',
-            'Cache-Control' => 'private, no-store',
-            'X-Content-Type-Options' => 'nosniff',
-        ]);
+        try {
+            $document = $pdf->render($booking);
+        } catch (Throwable $exception) {
+            report($exception);
+
+            return redirect()->route('admin.bookings.show', [$booking, 'print' => 1, 'pdf_fallback' => 1]);
+        }
+
+        return PdfDocument::download($document, $pdf->filename($booking));
     }
 
     public function review(Request $request, IntakeBooking $booking): JsonResponse
@@ -145,9 +153,18 @@ class IntakeBookingController extends Controller
     public function updateStatus(Request $request, IntakeBooking $booking): RedirectResponse
     {
         $status = $request->validate(['status' => ['required', 'in:pending,confirmed,done,cancelled']])['status'];
-        $before = $booking->only('status');
-        $booking->update(['status' => $status]);
-        AuditLogger::updated($booking, $before, $request->input('reason'));
+        $booking = DB::transaction(function () use ($booking, $status, $request) {
+            $booking = IntakeBooking::whereKey($booking->id)->lockForUpdate()->firstOrFail();
+            $before = $booking->only('status');
+            // Retire older pending confirmations even when an admin immediately reopens a cancelled booking.
+            if (($booking->status === 'cancelled' || $status === 'cancelled') && $booking->confirmation_email_status === 'pending') {
+                $booking->confirmation_email_status = 'skipped';
+            }
+            $booking->update(['status' => $status]);
+            AuditLogger::updated($booking, $before, $request->input('reason'));
+
+            return $booking;
+        });
 
         return back()->with('success', "Booking: {$booking->status_label}.");
     }

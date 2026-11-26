@@ -7399,7 +7399,7 @@
                 },
                 {
                     "key": "gasserig",
-                    "order": 96,
+                    "order": 97,
                     "answer_section_key": null,
                     "label": "Is je paard gasserig / opgeblazen?",
                     "type": "radio",
@@ -7433,7 +7433,7 @@
                 },
                 {
                     "key": "hoefbevangenheid",
-                    "order": 65,
+                    "order": 69,
                     "answer_section_key": null,
                     "label": "Is je paard hoefbevangen (geweest) of heeft het een verhoogd risico?",
                     "type": "radio",
@@ -7481,7 +7481,7 @@
                 },
                 {
                     "key": "hoefbevangenheid-aanhoudend",
-                    "order": 74,
+                    "order": 78,
                     "answer_section_key": null,
                     "label": "Veterinaire beoordeling nodig",
                     "type": "sectionhead",
@@ -7514,7 +7514,7 @@
                 },
                 {
                     "key": "hoefbevangenheid-aantal",
-                    "order": 70,
+                    "order": 74,
                     "answer_section_key": null,
                     "label": "Hoe vaak is je paard hoefbevangen geweest?",
                     "type": "radio",
@@ -7548,7 +7548,7 @@
                 },
                 {
                     "key": "hoefbevangenheid-acute-fase-voorbij",
-                    "order": 77,
+                    "order": 81,
                     "answer_section_key": null,
                     "label": "Is de acute fase inmiddels voorbij?",
                     "type": "radio",
@@ -7580,7 +7580,7 @@
                 },
                 {
                     "key": "hoefbevangenheid-begonnen",
-                    "order": 68,
+                    "order": 72,
                     "answer_section_key": null,
                     "label": "Wanneer zijn de klachten begonnen?",
                     "type": "month_year",
@@ -7613,7 +7613,7 @@
                 },
                 {
                     "key": "hoefbevangenheid-bevindingen",
-                    "order": 84,
+                    "order": 85,
                     "answer_section_key": null,
                     "label": "Is er volgens de dierenarts of op de röntgenfoto sprake van één of meer van onderstaande?",
                     "type": "multi",
@@ -7659,7 +7659,7 @@
                 },
                 {
                     "key": "hoefbevangenheid-dierenarts",
-                    "order": 67,
+                    "order": 71,
                     "answer_section_key": null,
                     "label": "Is je paard hiervoor onder behandeling van een dierenarts?",
                     "type": "radio",
@@ -7691,7 +7691,7 @@
                 },
                 {
                     "key": "hoefbevangenheid-eerste",
-                    "order": 80,
+                    "order": 83,
                     "answer_section_key": null,
                     "label": "Wanneer was de eerste episode van hoefbevangenheid?",
                     "type": "text",
@@ -7724,7 +7724,7 @@
                 },
                 {
                     "key": "hoefbevangenheid-gevolgen",
-                    "order": 85,
+                    "order": 86,
                     "answer_section_key": null,
                     "label": "Merk je momenteel nog gevolgen van de hoefbevangenheid?",
                     "type": "multi",
@@ -7769,7 +7769,7 @@
                 },
                 {
                     "key": "hoefbevangenheid-gevolgen-anders",
-                    "order": 86,
+                    "order": 87,
                     "answer_section_key": null,
                     "label": "Anders, namelijk",
                     "type": "text",
@@ -7798,7 +7798,7 @@
                 },
                 {
                     "key": "hoefbevangenheid-herstel-uitleg",
-                    "order": 76,
+                    "order": 80,
                     "answer_section_key": null,
                     "label": "Herstelstatus bijwerken",
                     "type": "sectionhead",
@@ -7827,7 +7827,7 @@
                 },
                 {
                     "key": "hoefbevangenheid-hersteld",
-                    "order": 72,
+                    "order": 76,
                     "answer_section_key": null,
                     "label": "Is je paard inmiddels volledig hersteld?",
                     "type": "radio",
@@ -7882,7 +7882,7 @@
                 },
                 {
                     "key": "hoefbevangenheid-oorzaak",
-                    "order": 71,
+                    "order": 75,
                     "answer_section_key": null,
                     "label": "Is de oorzaak bekend?",
                     "type": "textarea",
@@ -7911,7 +7911,7 @@
                 },
                 {
                     "key": "hoefbevangenheid-recent",
-                    "order": 69,
+                    "order": 73,
                     "answer_section_key": null,
                     "label": "Wanneer was de laatste episode?",
                     "type": "month_year",
@@ -7944,7 +7944,7 @@
                 },
                 {
                     "key": "hoefbevangenheid-restklachten",
-                    "order": 73,
+                    "order": 77,
                     "answer_section_key": null,
                     "label": "Welke klachten zijn nog aanwezig?",
                     "type": "textarea",
@@ -7974,7 +7974,7 @@
                 },
                 {
                     "key": "hoefbevangenheid-risico-toelichting",
-                    "order": 75,
+                    "order": 79,
                     "answer_section_key": null,
                     "label": "Waarom denk je dat je paard een verhoogd risico heeft?",
                     "type": "textarea",
@@ -8003,7 +8003,7 @@
                 },
                 {
                     "key": "hoefbevangenheid-rontgen",
-                    "order": 83,
+                    "order": 84,
                     "answer_section_key": null,
                     "label": "Zijn er röntgenfoto's gemaakt?",
                     "type": "radio",
@@ -8040,7 +8040,7 @@
                 },
                 {
                     "key": "hoefbevangenheid-stabiel",
-                    "order": 78,
+                    "order": 82,
                     "answer_section_key": null,
                     "label": "Heeft de dierenarts bevestigd dat je paard voldoende stabiel is?",
                     "type": "radio",
@@ -8072,7 +8072,7 @@
                 },
                 {
                     "key": "hoefbevangenheid-waarschuwing",
-                    "order": 66,
+                    "order": 70,
                     "answer_section_key": null,
                     "label": "Belangrijk bij acute hoefbevangenheid",
                     "type": "sectionhead",
@@ -8864,7 +8864,7 @@
                 },
                 {
                     "key": "kpu-attest",
-                    "order": 63,
+                    "order": 67,
                     "answer_section_key": null,
                     "label": "Upload de uitslag van het onderzoek",
                     "type": "file",
@@ -8880,6 +8880,7 @@
                     "options": null,
                     "show_if": {
                         "kpu-status": [
+                            "Ja, aangetoond met urineonderzoek",
                             "aangetoond uit urine onderzoek",
                             "Aangetoond met urineonderzoek",
                             "Ja, positieve uitslag bij urineonderzoek"
@@ -8897,10 +8898,48 @@
                     "active": true
                 },
                 {
-                    "key": "kpu-onderzoek-datum",
-                    "order": 60,
+                    "key": "kpu-hertest",
+                    "order": 63,
                     "answer_section_key": null,
-                    "label": "Wanneer is het urineonderzoek uitgevoerd?",
+                    "label": "Is er daarna nog een hertest gedaan?",
+                    "type": "radio",
+                    "hint": null,
+                    "required": true,
+                    "optional": false,
+                    "unit": null,
+                    "step": null,
+                    "tall": false,
+                    "lines": null,
+                    "placeholder": null,
+                    "link": null,
+                    "options": [
+                        "Ja",
+                        "Nee",
+                        "Weet ik niet"
+                    ],
+                    "show_if": {
+                        "kpu-status": [
+                            "Ja, aangetoond met urineonderzoek",
+                            "aangetoond uit urine onderzoek",
+                            "Aangetoond met urineonderzoek",
+                            "Ja, positieve uitslag bij urineonderzoek"
+                        ]
+                    },
+                    "flag_if": null,
+                    "critical_if": null,
+                    "protocol_if": null,
+                    "repeater_sub": null,
+                    "photo_config": null,
+                    "age_config": null,
+                    "signal_config": null,
+                    "date_config": null,
+                    "active": true
+                },
+                {
+                    "key": "kpu-hertest-datum",
+                    "order": 64,
+                    "answer_section_key": null,
+                    "label": "Wanneer is de hertest uitgevoerd?",
                     "type": "month_year",
                     "hint": "Vul de maand en het jaar in. Een schatting is goed.",
                     "required": true,
@@ -8914,6 +8953,115 @@
                     "options": null,
                     "show_if": {
                         "kpu-status": [
+                            "Ja, aangetoond met urineonderzoek",
+                            "aangetoond uit urine onderzoek",
+                            "Aangetoond met urineonderzoek",
+                            "Ja, positieve uitslag bij urineonderzoek"
+                        ],
+                        "kpu-hertest": "Ja"
+                    },
+                    "flag_if": null,
+                    "critical_if": null,
+                    "protocol_if": null,
+                    "repeater_sub": null,
+                    "photo_config": null,
+                    "age_config": null,
+                    "signal_config": null,
+                    "date_config": {
+                        "mode": "single",
+                        "allow_future": false,
+                        "allow_year_only": true,
+                        "allow_unknown": true
+                    },
+                    "active": true
+                },
+                {
+                    "key": "kpu-indikan-waarde",
+                    "order": 61,
+                    "answer_section_key": null,
+                    "label": "Wat was de Indikan waarde?",
+                    "type": "text",
+                    "hint": null,
+                    "required": true,
+                    "optional": false,
+                    "unit": null,
+                    "step": null,
+                    "tall": false,
+                    "lines": null,
+                    "placeholder": "Vul de gemeten waarde en eenheid in. Weet je dit niet? Vul dan ‘Weet ik niet’ in.",
+                    "link": null,
+                    "options": null,
+                    "show_if": {
+                        "kpu-status": [
+                            "Ja, aangetoond met urineonderzoek",
+                            "aangetoond uit urine onderzoek",
+                            "Aangetoond met urineonderzoek",
+                            "Ja, positieve uitslag bij urineonderzoek"
+                        ]
+                    },
+                    "flag_if": null,
+                    "critical_if": null,
+                    "protocol_if": null,
+                    "repeater_sub": null,
+                    "photo_config": null,
+                    "age_config": null,
+                    "signal_config": null,
+                    "date_config": null,
+                    "active": true
+                },
+                {
+                    "key": "kpu-kryptopyrrolurie-waarde",
+                    "order": 62,
+                    "answer_section_key": null,
+                    "label": "Wat was de Kryptopyrrolurie waarde?",
+                    "type": "text",
+                    "hint": null,
+                    "required": true,
+                    "optional": false,
+                    "unit": null,
+                    "step": null,
+                    "tall": false,
+                    "lines": null,
+                    "placeholder": "Vul de gemeten waarde en eenheid in. Weet je dit niet? Vul dan ‘Weet ik niet’ in.",
+                    "link": null,
+                    "options": null,
+                    "show_if": {
+                        "kpu-status": [
+                            "Ja, aangetoond met urineonderzoek",
+                            "aangetoond uit urine onderzoek",
+                            "Aangetoond met urineonderzoek",
+                            "Ja, positieve uitslag bij urineonderzoek"
+                        ]
+                    },
+                    "flag_if": null,
+                    "critical_if": null,
+                    "protocol_if": null,
+                    "repeater_sub": null,
+                    "photo_config": null,
+                    "age_config": null,
+                    "signal_config": null,
+                    "date_config": null,
+                    "active": true
+                },
+                {
+                    "key": "kpu-onderzoek-datum",
+                    "order": 60,
+                    "answer_section_key": null,
+                    "label": "Wanneer is het onderzoek uitgevoerd?",
+                    "type": "month_year",
+                    "hint": "Vul de maand en het jaar in. Een schatting is goed.",
+                    "required": true,
+                    "optional": false,
+                    "unit": null,
+                    "step": null,
+                    "tall": false,
+                    "lines": null,
+                    "placeholder": null,
+                    "link": null,
+                    "options": null,
+                    "show_if": {
+                        "kpu-status": [
+                            "Ja, aangetoond met urineonderzoek",
                             "aangetoond uit urine onderzoek",
                             "Aangetoond met urineonderzoek",
                             "Ja, positieve uitslag bij urineonderzoek"
@@ -8929,13 +9077,14 @@
                     "date_config": {
                         "mode": "single",
                         "allow_future": false,
-                        "allow_year_only": true
+                        "allow_year_only": true,
+                        "allow_unknown": true
                     },
                     "active": true
                 },
                 {
                     "key": "kpu-onderzoek-uitslag",
-                    "order": 61,
+                    "order": 65,
                     "answer_section_key": null,
                     "label": "Wat was de uitslag van het urineonderzoek?",
                     "type": "text",
@@ -8964,7 +9113,7 @@
                     "age_config": null,
                     "signal_config": null,
                     "date_config": null,
-                    "active": true
+                    "active": false
                 },
                 {
                     "key": "kpu-status",
@@ -9005,7 +9154,7 @@
                 },
                 {
                     "key": "kpu-uitslag-beschikbaar",
-                    "order": 62,
+                    "order": 66,
                     "answer_section_key": null,
                     "label": "Heb je de uitslag beschikbaar?",
                     "type": "radio",
@@ -9024,6 +9173,7 @@
                     ],
                     "show_if": {
                         "kpu-status": [
+                            "Ja, aangetoond met urineonderzoek",
                             "aangetoond uit urine onderzoek",
                             "Aangetoond met urineonderzoek",
                             "Ja, positieve uitslag bij urineonderzoek"
@@ -9041,7 +9191,7 @@
                 },
                 {
                     "key": "kpu-vermoeden-toelichting",
-                    "order": 64,
+                    "order": 68,
                     "answer_section_key": null,
                     "label": "Waarom vermoed je dat je paard KPU heeft?",
                     "type": "textarea",
@@ -9083,7 +9233,7 @@
                 },
                 {
                     "key": "maag-med-effect",
-                    "order": 94,
+                    "order": 95,
                     "answer_section_key": null,
                     "label": "Zag je effect van de medicatie? Omschrijf wat je zag indien ja.",
                     "type": "textarea",
@@ -9112,7 +9262,7 @@
                 },
                 {
                     "key": "maag-med-hoelang",
-                    "order": 92,
+                    "order": 93,
                     "answer_section_key": null,
                     "label": "Hoe lang heb je dit gegeven?",
                     "type": "text",
@@ -9141,7 +9291,7 @@
                 },
                 {
                     "key": "maag-med-opbouw",
-                    "order": 93,
+                    "order": 94,
                     "answer_section_key": null,
                     "label": "Heb je op- en afgebouwd?",
                     "type": "text",
@@ -9170,7 +9320,7 @@
                 },
                 {
                     "key": "maag-med-wanneer",
-                    "order": 91,
+                    "order": 92,
                     "answer_section_key": null,
                     "label": "Wanneer was dit precies?",
                     "type": "month_year",
@@ -9203,7 +9353,7 @@
                 },
                 {
                     "key": "maag-med-welke",
-                    "order": 90,
+                    "order": 91,
                     "answer_section_key": null,
                     "label": "Welke maagmedicatie?",
                     "type": "text",
@@ -9232,7 +9382,7 @@
                 },
                 {
                     "key": "maag-medicatie",
-                    "order": 89,
+                    "order": 90,
                     "answer_section_key": null,
                     "label": "Heeft je paard ooit maagmedicatie gehad?",
                     "type": "radio",
@@ -9264,7 +9414,7 @@
                 },
                 {
                     "key": "maag-symptomen",
-                    "order": 88,
+                    "order": 89,
                     "answer_section_key": null,
                     "label": "Herken je één of meerdere van onderstaande signalen bij jouw paard?",
                     "type": "multi",
@@ -9307,7 +9457,7 @@
                 },
                 {
                     "key": "medicatie-nu",
-                    "order": 103,
+                    "order": 104,
                     "answer_section_key": null,
                     "label": "Gebruikt jouw paard momenteel medicatie?",
                     "type": "radio",
@@ -9339,7 +9489,7 @@
                 },
                 {
                     "key": "medicatie-nu-details",
-                    "order": 104,
+                    "order": 105,
                     "answer_section_key": null,
                     "label": "Welke medicatie gebruikt jouw paard momenteel?",
                     "type": "repeater",
@@ -9395,7 +9545,7 @@
                 },
                 {
                     "key": "medicatie-ooit-anders",
-                    "order": 107,
+                    "order": 108,
                     "answer_section_key": null,
                     "label": "Anders, namelijk",
                     "type": "text",
@@ -9428,7 +9578,7 @@
                 },
                 {
                     "key": "medicatie-ooit-details",
-                    "order": 108,
+                    "order": 109,
                     "answer_section_key": null,
                     "label": "Indien bekend, vertel hieronder meer over de medicatie die je paard heeft gehad.",
                     "type": "repeater",
@@ -9498,7 +9648,7 @@
                 },
                 {
                     "key": "medicatie-ooit-welke",
-                    "order": 106,
+                    "order": 107,
                     "answer_section_key": null,
                     "label": "Welke medicatie heeft jouw paard ooit gekregen?",
                     "type": "multi",
@@ -9542,7 +9692,7 @@
                 },
                 {
                     "key": "medicatie-recent",
-                    "order": 105,
+                    "order": 106,
                     "answer_section_key": null,
                     "label": "Heeft jouw paard in de afgelopen 2-5 jaar medicatie gekregen?",
                     "type": "radio",
@@ -9976,7 +10126,7 @@
                 },
                 {
                     "key": "probiotica-geschiedenis",
-                    "order": 97,
+                    "order": 98,
                     "answer_section_key": null,
                     "label": "Heeft jouw paard probiotica gekregen of producten met gist / yeast / Yeasacc / Saccharomyces cerevisiae?",
                     "type": "radio",
@@ -10009,7 +10159,7 @@
                 },
                 {
                     "key": "probiotica-hoelang",
-                    "order": 100,
+                    "order": 101,
                     "answer_section_key": null,
                     "label": "Hoe lang kreeg jouw paard dit ongeveer?",
                     "type": "radio",
@@ -10046,7 +10196,7 @@
                 },
                 {
                     "key": "probiotica-toelichting",
-                    "order": 101,
+                    "order": 102,
                     "answer_section_key": null,
                     "label": "Eventuele toelichting (dosering, reden van gebruik)",
                     "type": "textarea",
@@ -10075,7 +10225,7 @@
                 },
                 {
                     "key": "probiotica-wanneer",
-                    "order": 99,
+                    "order": 100,
                     "answer_section_key": null,
                     "label": "Wanneer kreeg jouw paard dit?",
                     "type": "radio",
@@ -10110,7 +10260,7 @@
                 },
                 {
                     "key": "probiotica-welke",
-                    "order": 98,
+                    "order": 99,
                     "answer_section_key": null,
                     "label": "Welk product / welke producten?",
                     "type": "text",
@@ -10166,7 +10316,7 @@
                 },
                 {
                     "key": "sec-darm",
-                    "order": 95,
+                    "order": 96,
                     "answer_section_key": null,
                     "label": "Darmen",
                     "type": "sectionhead",
@@ -10220,7 +10370,7 @@
                 },
                 {
                     "key": "sec-maag",
-                    "order": 87,
+                    "order": 88,
                     "answer_section_key": null,
                     "label": "Maag",
                     "type": "sectionhead",
@@ -10247,7 +10397,7 @@
                 },
                 {
                     "key": "sec-medicatie",
-                    "order": 102,
+                    "order": 103,
                     "answer_section_key": null,
                     "label": "Medicatie",
                     "type": "sectionhead",

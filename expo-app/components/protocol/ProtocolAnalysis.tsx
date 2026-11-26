@@ -1,7 +1,24 @@
 import { Text, View } from "react-native";
 import type { DashboardProtocol } from "@/lib/horse-dashboard";
-import { EYEBROW, PLAIN_CARD } from "@/components/ui/styles";
+import { EYEBROW } from "@/components/ui/styles";
 import { PROTOCOL_TEXT as T } from "./styles";
+
+/** Long texts read as an article on the page background: softer than full ink, with room between lines. */
+const ARTICLE_TEXT = { color: "rgba(27, 42, 42, 0.82)" };
+
+/** The therapist's own paragraphs: a blank line in the admin starts a new one. */
+function article(title: string, text: string) {
+  return (
+    <View className="gap-3.5" style={{ width: "100%", maxWidth: 720 }}>
+      <Text accessibilityRole="header" className={T.title}>{title}</Text>
+      {text.trim().split(/\r?\n\s*\r?\n/).map((paragraph, index) => (
+        <Text key={index} selectable className="text-[16px] leading-[27px]" style={ARTICLE_TEXT}>
+          {paragraph}
+        </Text>
+      ))}
+    </View>
+  );
+}
 
 export function ProtocolAnalysis({ analysis }: {
   analysis: DashboardProtocol["analysis"];
@@ -16,44 +33,17 @@ export function ProtocolAnalysis({ analysis }: {
   }
 
   return (
-    <View className="gap-6">
-      <View className="rounded-[22px] bg-mint-50 p-5">
-        <Text accessibilityRole="header" className={`${EYEBROW} text-mint-800`}>
-          Persoonlijke analyse
-        </Text>
-        <View className="mt-3 gap-4" style={{ width: '100%', maxWidth: 720 }}>
-          {analysis.summary.trim().split(/\r?\n\s*\r?\n/).map((paragraph, index) => (
-            <Text key={index} selectable className="text-[16px] leading-[26px] text-ink">
-              {paragraph}
-            </Text>
-          ))}
-        </View>
-      </View>
-
-      {analysis.priorities.length > 0 && (
-        <View>
-          <Text accessibilityRole="header" className={`mb-3 ${EYEBROW} text-ink-70`}>
-            Focus van het protocol
-          </Text>
-          <View className="gap-3">
-            {analysis.priorities.slice(0, 4).map((point) => (
-              <View key={point.id} className={PLAIN_CARD}>
-                <Text className={T.section}>{point.title}</Text>
-                <Text className={`mt-1 ${T.secondary}`}>{point.body}</Text>
-              </View>
-            ))}
-          </View>
-        </View>
-      )}
+    <View className="gap-8">
+      {article("Persoonlijke analyse", analysis.summary)}
 
       {analysis.observations.length > 0 && (
-        <View>
-          <Text accessibilityRole="header" className={`mb-3 ${EYEBROW} text-ink-70`}>
+        <View className="gap-3">
+          <Text accessibilityRole="header" className={`${EYEBROW} text-ink-70`}>
             Waar letten we op?
           </Text>
-          <View className="gap-2">
+          <View className="rounded-[22px] bg-white px-5 py-1">
             {analysis.observations.map((observation, index) => (
-              <View key={index} className="flex-row items-start gap-2.5">
+              <View key={index} className={`flex-row items-start gap-3 py-3.5 ${index < analysis.observations.length - 1 ? "border-b border-ink-8" : ""}`}>
                 <View className="mt-[9px] h-1.5 w-1.5 rounded-full bg-mint-500" />
                 <Text className={`flex-1 ${T.body}`}>{observation}</Text>
               </View>
@@ -61,12 +51,11 @@ export function ProtocolAnalysis({ analysis }: {
           </View>
         </View>
       )}
+
       {!!analysis.expectationFollowUp?.trim() && (
-        <View className="rounded-[22px] bg-mint-50 p-5">
-          <Text accessibilityRole="header" className={`${EYEBROW} text-mint-800`}>
-            Verwachting en vervolg
-          </Text>
-          <Text selectable className="mt-3 text-[16px] leading-[26px] text-ink">{analysis.expectationFollowUp}</Text>
+        <View className="gap-8">
+          <View className="h-px bg-ink-8" />
+          {article("Verwachting en vervolg", analysis.expectationFollowUp)}
         </View>
       )}
     </View>

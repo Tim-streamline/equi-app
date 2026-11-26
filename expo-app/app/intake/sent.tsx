@@ -11,18 +11,19 @@ import { Check } from 'lucide-react-native';
 import { Button } from '@/components/ui/Button';
 import { useCurrentUser } from '@/db/hooks';
 import { useIntake } from '@/lib/intake/store';
+import { BRAND_NAME } from '@/constants/brand';
 
 function formatSubmittedLabel(iso: string | null): string {
-  if (!iso) return 'zojuist';
+  if (!iso) return 'Zojuist';
   const d = new Date(iso);
-  if (Number.isNaN(d.getTime())) return 'zojuist';
+  if (Number.isNaN(d.getTime())) return 'Zojuist';
   const today = new Date();
   const sameDay =
     d.getFullYear() === today.getFullYear() &&
     d.getMonth() === today.getMonth() &&
     d.getDate() === today.getDate();
   const hhmm = `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
-  return sameDay ? `vandaag · ${hhmm}` : `${d.toLocaleDateString('nl-NL')} · ${hhmm}`;
+  return sameDay ? `Vandaag · ${hhmm}` : `${d.toLocaleDateString('nl-NL')} · ${hhmm}`;
 }
 
 export default function IntakeSent() {
@@ -55,40 +56,31 @@ export default function IntakeSent() {
             className="mb-2 font-semi-italic text-teal-600"
             style={{ fontSize: 13, letterSpacing: 0.2 }}
           >
-            Dankjewel, {firstName}.
+            Dankjewel, {firstName}!
           </Text>
           <Text
             className="mb-3 text-center font-bold text-ink"
             style={{ fontSize: 28, lineHeight: 32 }}
           >
-            Verzonden. Ik ga ermee aan de slag.
+            Je intake is verzonden!
           </Text>
           <Text
             className="mb-7 max-w-[280px] text-center text-[14px] leading-[20px] text-ink-70"
           >
-            Binnen 5 werkdagen krijg je een notificatie zodra de eerste fase van je protocol
-            klaarstaat in de app.
+            We nemen je antwoorden zorgvuldig door en gaan aan de slag met je persoonlijke herstelplan.
+            {'\n\n'}
+            Binnen 5 werkdagen staat de eerste fase voor je klaar in {BRAND_NAME}. Je ontvangt een melding via de mail
+            zodra je kunt beginnen.
           </Text>
 
-          <Text className="mb-4 text-center text-ink">Ingestuurd op {formatIntakeDate(state.submittedAt)}</Text>
+          <Text className="mb-4 text-center text-ink">Verzonden op {formatIntakeDate(state.submittedAt)}</Text>
           <Button title="Intake bekijken" onPress={() => router.replace('/intake/overview')} />
           <View className="mt-4 w-full gap-4 rounded-2xl border border-ink-8 bg-white p-4">
-            <TimelineStep when={submittedLabel} what="Intake verzonden naar Shelley" state="done" />
-            <TimelineStep
-              when="verwacht binnen 24u"
-              what="Shelley leest jouw intake door"
-              state="now"
-            />
-            <TimelineStep
-              when="binnen 5 werkdagen"
-              what="Eerste fase van je protocol staat klaar in de app"
-              state="todo"
-            />
-            <TimelineStep
-              when="vanaf publicatie"
-              what="Je gaat aan de slag met je protocol"
-              state="todo"
-            />
+            <Text className="font-semi text-[13.5px] text-ink">Wat gebeurt er nu?</Text>
+            <TimelineStep when={submittedLabel} what="Je intake is succesvol verzonden" state="done" />
+            <TimelineStep when="Binnen 24 uur" what="We nemen je intake door" state="now" />
+            <TimelineStep when="Binnen 5 werkdagen" what="De eerste fase van je herstelplan staat klaar" state="todo" />
+            <TimelineStep when="Zodra je herstelplan klaarstaat" what="Je kunt aan de slag met de eerste fase" state="todo" />
           </View>
         </ScrollView>
 

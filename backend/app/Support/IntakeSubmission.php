@@ -38,7 +38,8 @@ class IntakeSubmission
         }
         $now = now()->startOfSecond();
         $booking->forceFill(['completed_at' => $now, 'submitted_at' => $now, 'intake_status' => 'submitted',
-            'status' => 'pending', 'submission_email_status' => $booking->submission_email_status ?? 'pending'])->save();
+            'status' => 'pending', 'submission_email_status' => $booking->submission_email_status ?? 'pending',
+            'confirmation_email_status' => $booking->confirmation_email_status ?? 'pending'])->save();
 
         return $booking;
     }

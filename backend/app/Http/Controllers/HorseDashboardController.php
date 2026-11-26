@@ -19,7 +19,7 @@ class HorseDashboardController extends Controller
         $user = User::query()->whereNull('disabled_at')->findOrFail($request->attributes->get('powersync_user_id'));
         $data = $request->validate(['timezone' => ['sometimes', 'timezone']]);
 
-        return response()->json($this->forClient($request, $dashboard->build($user, null, CarbonImmutable::now($data['timezone'] ?? config('app.timezone')))));
+        return response()->json($this->forClient($request, $dashboard->build($user, null, CarbonImmutable::now($data['timezone'] ?? config('app.timezone')), null, ClientCapabilities::readOnlyPlans($request))));
     }
 
     public function show(Request $request, Horse $horse, HorseDashboard $dashboard)
@@ -27,7 +27,7 @@ class HorseDashboardController extends Controller
         $user = $this->owner($request, $horse);
         $data = $request->validate(['timezone' => ['sometimes', 'timezone'], 'month' => ['sometimes', 'date_format:Y-m']]);
 
-        return response()->json($this->forClient($request, $dashboard->build($user, $horse, CarbonImmutable::now($data['timezone'] ?? config('app.timezone')), $data['month'] ?? null)));
+        return response()->json($this->forClient($request, $dashboard->build($user, $horse, CarbonImmutable::now($data['timezone'] ?? config('app.timezone')), $data['month'] ?? null, ClientCapabilities::readOnlyPlans($request))));
     }
 
     public function weeklyUpdate(Request $request, Horse $horse, HorseDashboard $dashboard)
@@ -35,12 +35,18 @@ class HorseDashboardController extends Controller
         $user = $this->owner($request, $horse);
         $data = $request->validate(['protocol_id' => ['required', 'uuid'], 'note' => ['required', 'string', 'max:10000'], 'mood' => ['nullable', 'integer', 'between:1,5'], 'timezone' => ['sometimes', 'timezone']]);
         $now = CarbonImmutable::now($data['timezone'] ?? config('app.timezone'));
-        $protocol = $horse->protocols()->whereKey($data['protocol_id'])->where('status', 'active')->whereNotNull('published_at')->where('published_at', '<=', $now)->firstOrFail();
-        $presentation = $dashboard->protocol($protocol, $now);
-        abort_unless(collect($presentation['notifications'])->contains('type', 'weekly_update'), 422, 'Er staat geen weekupdate open.');
-        DB::table('protocol_weekly_updates')->updateOrInsert(['protocol_id' => $protocol->id, 'week_number' => $presentation['currentWeek']], [
-            'user_id' => $user->id, 'note' => $data['note'], 'mood' => $data['mood'] ?? null, 'created_at' => now(), 'updated_at' => now(),
-        ]);
+        DB::transaction(function () use ($horse, $data, $now, $dashboard, $user) {
+            // Serialize saving with admin pause/resume, including forms opened before a pause.
+            \App\Support\LibrarySyncLock::acquire();
+            $protocol = $horse->protocols()->whereKey($data['protocol_id'])->whereIn('status', ['active', 'paused'])
+                ->publishedBy($now)->lockForUpdate()->firstOrFail();
+            abort_if($protocol->status === 'paused', 422, 'Je herstelplan is gepauzeerd. Je kunt weer een weekupdate versturen zodra je plan is hervat.');
+            $presentation = $dashboard->protocol($protocol, $now);
+            abort_unless(collect($presentation['notifications'])->contains('type', 'weekly_update'), 422, 'Er staat geen weekupdate open.');
+            DB::table('protocol_weekly_updates')->updateOrInsert(['protocol_id' => $protocol->id, 'week_number' => $presentation['currentWeek']], [
+                'user_id' => $user->id, 'note' => $data['note'], 'mood' => $data['mood'] ?? null, 'created_at' => now(), 'updated_at' => now(),
+            ]);
+        });
 
         return response()->json(['saved' => true]);
     }
@@ -56,20 +62,33 @@ class HorseDashboardController extends Controller
             // Match the protocol editor's lock order and serialize competing starts.
             \App\Support\LibrarySyncLock::acquire();
             $protocol = $horse->protocols()->whereKey($data['protocol_id'])->where('status', 'active')
-                ->whereNotNull('published_at')->where('published_at', '<=', $now)->lockForUpdate()->firstOrFail();
+                ->publishedBy($now)->lockForUpdate()->firstOrFail();
             if (! $protocol->started_at) {
                 $protocol->update(['started_at' => $now->toDateString(), 'current_week' => 1]);
             }
             app(\App\Support\ProtocolTiming::class)->synchronize($protocol, $now);
         });
 
-        return response()->json($this->forClient($request, $dashboard->build($user, $horse, $now)));
+        return response()->json($this->forClient($request, $dashboard->build($user, $horse, $now, null, ClientCapabilities::readOnlyPlans($request))));
     }
 
     /** Released apps keep their original payload; see LegacyProtocolClient. */
     private function forClient(Request $request, array $dashboard): array
     {
-        return ClientCapabilities::protocolDoses($request) ? $dashboard : app(LegacyProtocolClient::class)->dashboard($dashboard);
+        if (! ClientCapabilities::protocolDoses($request)) return app(LegacyProtocolClient::class)->dashboard($dashboard);
+        if (! ClientCapabilities::readOnlyDoses($request) && isset($dashboard['protocol']['today'])) {
+            $dashboard['protocol']['today'] = $dashboard['protocol']['completed']
+                ? ['items' => [], 'total' => 0, 'done' => 0, 'percentage' => 0]
+                : $this->scheduledItemsOnly($dashboard['protocol']['today']);
+        }
+        return $dashboard;
+    }
+
+    /** Earlier dose-aware clients render every row as an editable scheduled dose. */
+    private function scheduledItemsOnly(array $day): array
+    {
+        $day['items'] = ProtocolDayHistory::scheduled($day['items'])->values()->all();
+        return $day;
     }
 
     public function day(Request $request, Horse $horse, ProtocolDayHistory $history)
@@ -83,8 +102,8 @@ class HorseDashboardController extends Controller
             'administration' => ['sometimes', 'integer', 'between:1,24'],
         ]);
         $now = CarbonImmutable::now($data['timezone'] ?? 'Europe/Amsterdam');
-        $protocol = $horse->protocols()->whereKey($data['protocol_id'])->where('status', 'active')
-            ->whereNotNull('published_at')->where('published_at', '<=', $now)->firstOrFail();
+        $protocol = $horse->protocols()->whereKey($data['protocol_id'])
+            ->visibleToOwner($now, ! $request->isMethod('POST'))->firstOrFail();
 
         if (! ClientCapabilities::protocolDoses($request)) {
             // A released app's single checkbox stands for every dose of that product on that day.
@@ -93,9 +112,55 @@ class HorseDashboardController extends Controller
                 : $history->day($protocol, $data['date'], $now)));
         }
 
-        return response()->json($request->isMethod('POST')
+        $day = $request->isMethod('POST')
             ? $history->setDone($protocol, $data['date'], $data['item_id'], (bool) $data['done'], $now, true, $data['administration'] ?? 1)
-            : $history->day($protocol, $data['date'], $now));
+            : $history->day($protocol, $data['date'], $now);
+        return response()->json(ClientCapabilities::readOnlyDoses($request) ? $day : $this->scheduledItemsOnly($day));
+    }
+
+    /** Ticks products off (or back on) in the customer's order list; one key per product and phase. */
+    public function orders(Request $request, Horse $horse)
+    {
+        $this->owner($request, $horse);
+        $data = $request->validate([
+            'protocol_id' => ['required', 'uuid'],
+            'keys' => ['required', 'array', 'min:1', 'max:100'],
+            'keys.*' => ['string', 'max:200', 'regex:/^[^:\s]+:[^:\s]+$/'],
+            'ordered' => ['required', 'boolean'],
+        ]);
+
+        $keys = DB::transaction(function () use ($horse, $data) {
+            // Only a plan the owner can see (as in HorseDashboard): no drafts, future publications or archived plans.
+            // Paused and completed plans stay readable, with their order list.
+            $protocol = $horse->protocols()->whereKey($data['protocol_id'])->visibleToOwner(now(), true)
+                ->lockForUpdate()->firstOrFail();
+            $current = $protocol->ordered_product_keys ?? [];
+            $next = $data['ordered'] ? array_unique([...$current, ...$data['keys']]) : array_diff($current, $data['keys']);
+            abort_if(count($next) > 1000, 422, 'Te veel producten afgevinkt.');
+            $next = array_values($next);
+            // A plain column write: ticking a product is not a protocol edit and must not run its save rules.
+            \App\Models\Protocol::whereKey($protocol->id)->toBase()->update(['ordered_product_keys' => json_encode($next)]);
+
+            return $next;
+        });
+
+        return response()->json(['orderedKeys' => $keys]);
+    }
+
+    /** Whether the customer can give a second gift a day; when not, the order list counts one gift. */
+    public function orderSettings(Request $request, Horse $horse)
+    {
+        $this->owner($request, $horse);
+        $data = $request->validate(['protocol_id' => ['required', 'uuid'], 'once_daily' => ['required', 'boolean']]);
+        DB::transaction(function () use ($horse, $data) {
+            // Only a plan the customer can already see, locked like the order ticks.
+            $protocol = $horse->protocols()->whereKey($data['protocol_id'])->visibleToOwner(now(), true)
+                ->lockForUpdate()->firstOrFail();
+            // A plain column write: this is the customer's own setting, not a protocol edit.
+            \App\Models\Protocol::whereKey($protocol->id)->toBase()->update(['order_once_daily' => (bool) $data['once_daily']]);
+        });
+
+        return response()->json(['orderOnceDaily' => (bool) $data['once_daily']]);
     }
 
     private function owner(Request $request, Horse $horse): User
