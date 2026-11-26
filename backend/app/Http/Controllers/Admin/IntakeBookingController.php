@@ -49,11 +49,15 @@ class IntakeBookingController extends Controller
         ]);
     }
 
-    public function show(Request $request, IntakeBooking $booking): Response
+    public function show(Request $request, IntakeBooking $booking): Response|\Illuminate\Http\Response
     {
+        if ($request->boolean('print') && $request->boolean('pdf_fallback')) {
+            return response(app(IntakeAnswersPdf::class)->browserPrint($booking))
+                ->header('Cache-Control', 'private, no-store');
+        }
         $booking->load('user:id,name,email', 'horse:id,name,breed,status', 'therapist:id,name,title');
 
-        return Inertia::render('Bookings/Show', ['booking' => $booking, 'printMode' => $request->boolean('print'), 'pdfFallback' => $request->boolean('pdf_fallback'), 'review' => app(IntakeReview::class)->forBooking($booking),
+        return Inertia::render('Bookings/Show', ['booking' => $booking, 'printMode' => $request->boolean('print'), 'review' => app(IntakeReview::class)->forBooking($booking),
             // Several protocols can use one intake; on another horse only for a test user's copy.
             'protocols' => $booking->protocols()->with('horse:id,name')->oldest()->orderBy('id')->get(['id', 'horse_id', 'title', 'status', 'protocol_template_id', 'published_at'])
                 ->map(fn (Protocol $protocol): array => $protocol->only(['id', 'title', 'status']) + [

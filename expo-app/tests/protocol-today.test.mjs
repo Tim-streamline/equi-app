@@ -188,3 +188,23 @@ test('a completed plan shows its server tick and the checkbox is read-only', asy
   await row.props.onPress();
   assert.deepEqual(app.mutations, []);
 });
+
+test('historical gifts stay readable below the schedule and never count towards a further gift', () => {
+  const app = screen();
+  const history = { ...items[2], id: 'old', name: 'Archived herb', recordedOnly: true, done: true };
+  app.props.protocol.today.items = [history];
+  const historical = app.render();
+  assert.ok(historical.includes('Eerder geregistreerd'));
+  assert.ok(!historical.includes(' · bij voorkeur'));
+  assert.ok(!historical.includes('Meng alles door de geweekte bijvoeding'));
+  historical.find(n => n?.props?.accessibilityLabel === 'Uitleg over Archived herb, Gift 2').props.onPress();
+  assert.equal(app.render().find(n => n?.type === 'Sheet').props.visible, true);
+
+  app.props.protocol.today.items = [history, items[2]];
+  const mixed = app.render();
+  assert.ok(mixed.indexOf('Eerder geregistreerd') > mixed.indexOf('Tweede gift'));
+  assert.deepEqual(logic.todayGroups(app.props.protocol.today.items, [])[0].items, [{ ...items[2], done: false }]);
+  assert.equal(mixed.find(n => n?.props?.accessibilityRole === 'progressbar').props.accessibilityValue.max, 1);
+  assert.deepEqual(mixed.filter(n => n?.props?.accessibilityRole === 'checkbox').map(n => n.props.accessibilityState),
+    [{ checked: false, disabled: false }, { checked: true, disabled: true }]);
+});

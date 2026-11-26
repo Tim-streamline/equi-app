@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/Button';
 import { useSupplementIntakesForDate, useStoreMutations } from '@/db/hooks';
 import { dashboardRequest, deviceTimezone } from '@/hooks/useHorseDashboard';
 import type { DashboardPhase, DashboardProtocol, DashboardSupplement } from '@/lib/horse-dashboard';
-import { administrationKey, todayGroups, PHASE_COLORS } from '@/lib/protocol-today';
+import { administrationKey, administrationLabel, todayGroups, PHASE_COLORS } from '@/lib/protocol-today';
 import { calendarDate, dayProgress, nextPhaseStart, phaseStarts, shortDate, weekPhaseLines } from '@/lib/protocol-calendar';
 import { selectionHaptic } from '@/lib/haptics';
 import { EYEBROW } from '@/components/ui/styles';
@@ -166,12 +166,12 @@ export function ProtocolCalendar({ protocol, today, horseId, onMonth, onPhase, o
         {!day && !busy && selected && <Button title="Opnieuw proberen" onPress={() => void openDay(selected)} />}
         {day?.items.length === 0 && <Text className={`py-4 ${T.body}`}>Op deze dag stond niets gepland.</Text>}
         {groups.map(group => <View key={group.label} className="mb-4">
-          {group.number > 1 && <View className="mb-1 flex-row items-center justify-between"><Text accessibilityRole="header" className={`${EYEBROW} text-ink-70`}>{group.label}<Text className="font-sans normal-case tracking-normal text-[12px] text-ink-50"> · bij voorkeur</Text></Text><Text className={T.meta}>{group.done} van {group.items.length}</Text></View>}
+          {group.number === null ? <Text accessibilityRole="header" className={`${EYEBROW} text-ink-70`}>{group.label}</Text> : group.number > 1 && <View className="mb-1 flex-row items-center justify-between"><Text accessibilityRole="header" className={`${EYEBROW} text-ink-70`}>{group.label}<Text className="font-sans normal-case tracking-normal text-[12px] text-ink-50"> · bij voorkeur</Text></Text><Text className={T.meta}>{group.done} van {group.items.length}</Text></View>}
           {group.items.map(item => <View key={administrationKey(item)} className="flex-row items-center gap-2">
-            <Pressable accessibilityRole="checkbox" accessibilityLabel={`${item.name}, ${group.label}, ${item.dosage ?? ''}`} accessibilityState={{ checked: !!item.done, disabled: busy || !canEditDay || !!item.recordedOnly }} disabled={busy || !canEditDay || !!item.recordedOnly} onPress={() => void toggle(item)} className="min-h-[48px] min-w-[44px] items-center justify-center">
+            <Pressable accessibilityRole="checkbox" accessibilityLabel={`${item.name}, ${administrationLabel(item)}, ${item.dosage ?? ''}`} accessibilityState={{ checked: !!item.done, disabled: busy || !canEditDay || !!item.recordedOnly }} disabled={busy || !canEditDay || !!item.recordedOnly} onPress={() => void toggle(item)} className="min-h-[48px] min-w-[44px] items-center justify-center">
               <DoneCircle done={!!item.done} />
             </Pressable>
-            <View className="flex-1 flex-row items-center gap-2 border-b border-ink-8 py-3"><Text className={`flex-1 ${S.row} text-ink`}><Text className={S.rowTitle}>{item.name}</Text>{'  '}<Text className="text-ink-70">{item.dosage}</Text>{item.recordedOnly && <Text> · Eerder geregistreerd</Text>}</Text><Pressable accessibilityRole="button" accessibilityLabel={`Uitleg over ${item.name}, ${group.label}`} onPress={() => setDetail(administrationKey(item))} className="min-h-[44px] flex-row items-center gap-1"><Text className={T.link}>Uitleg</Text><ChevronRight size={17} color="#106E6D" /></Pressable></View>
+            <View className="flex-1 flex-row items-center gap-2 border-b border-ink-8 py-3"><Text className={`flex-1 ${S.row} text-ink`}><Text className={S.rowTitle}>{item.name}</Text>{'  '}<Text className="text-ink-70">{item.dosage}</Text>{item.recordedOnly && <Text> · {administrationLabel(item)}</Text>}</Text><Pressable accessibilityRole="button" accessibilityLabel={`Uitleg over ${item.name}, ${administrationLabel(item)}`} onPress={() => setDetail(administrationKey(item))} className="min-h-[44px] flex-row items-center gap-1"><Text className={T.link}>Uitleg</Text><ChevronRight size={17} color="#106E6D" /></Pressable></View>
           </View>)}
         </View>)}
       </>}

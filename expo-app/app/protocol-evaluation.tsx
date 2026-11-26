@@ -8,6 +8,7 @@ import { SubHeader } from '@/components/ui/SubHeader';
 import { Button } from '@/components/ui/Button';
 import { dashboardRequest } from '@/hooks/useHorseDashboard';
 import { accountSession } from '@/lib/account-session';
+import { registerRefreshProtection } from '@/lib/refresh-safety';
 import { reconcileEvaluation, evaluationComplete, evaluationDate, evaluationMoney, horsePossessive, type ProtocolEvaluationData } from '@/lib/protocol-evaluation';
 import { HOME_NOTICE_BODY, HOME_NOTICE_LINK, HOME_NOTICE_LABEL, PLAIN_CARD } from '@/components/ui/styles';
 
@@ -24,6 +25,12 @@ function EvaluationForm({ protocolId }: { protocolId: string }) {
   const [error, setError] = useState(''), [notice, setNotice] = useState(''), [retry, setRetry] = useState(0);
   const pending = useRef(false), generation = useRef(0);
   usePreventRemove(busy, () => {});
+  const dirty = data && Object.keys(data.questions).some(key => (answers[key] ?? '') !== (data.answers[key] ?? ''));
+  const refreshReason = busy ? 'Wacht tot je evaluatie is opgeslagen.'
+    : dirty ? 'Bewaar je wijzigingen in de evaluatie of ga terug om ze te verwerpen.' : null;
+  useEffect(() => {
+    if (refreshReason) return registerRefreshProtection({ reason: () => refreshReason });
+  }, [refreshReason]);
   useEffect(() => {
     const current = ++generation.current;
     setError(''); setNotice(''); setData(null); setAnswers({}); setOffer(false);

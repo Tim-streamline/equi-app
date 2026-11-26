@@ -118,6 +118,22 @@ test('day sheet groups doses and Uitleg never changes a checkbox; historical eve
   await app.render().find(n=>n?.props?.accessibilityLabel==='Real herb, Tweede gift, 15 g').props.onPress();
   assert.equal(app.calls[1].body.administration,2);assert.equal(app.calls[1].body.date,'2026-11-02');
 });
+test('a recorded-only gift in the day sheet stays outside the scheduled count', async () => {
+  const app = screen(true, () => ({
+    date: '2026-11-02', label: 'Actual date', editable: true, state: 'missed',
+    items: [
+      { id: 'current', name: 'Scheduled herb', administration: 2, done: false },
+      { id: 'old', name: 'Recorded herb', administration: 2, done: true, recordedOnly: true },
+    ],
+  }));
+  await app.open();
+  const nodes = app.render();
+  assert.ok(nodes.indexOf('Eerder geregistreerd') > nodes.indexOf('Tweede gift'));
+  const count = nodes.find(node => node?.props?.children?.[1] === ' van ');
+  assert.deepEqual(count.props.children, [0, ' van ', 1]);
+  assert.equal(nodes.find(node => node?.props?.accessibilityLabel === 'Recorded herb, Gift 2, ').props.disabled, true);
+});
+
 test('readonly history cannot be checked and calendar navigation preserves month and Today actions',async()=>{
   const app=screen(false);await app.open();
   const check=app.render().find(n=>n?.props?.accessibilityLabel==='Real herb, Elke dag, 15 g');assert.equal(check.props.disabled,true);

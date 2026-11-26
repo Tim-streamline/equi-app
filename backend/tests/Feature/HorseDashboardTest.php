@@ -77,6 +77,27 @@ class HorseDashboardTest extends TestCase
         ]);
     }
 
+    public function test_publication_uses_the_same_instant_in_every_timezone_and_start_uses_the_local_date(): void
+    {
+        $this->travelTo(now()->setTime(1, 0));
+        $url = '/api/horses/'.$this->horse->id;
+        $this->protocol->update(['published_at' => now(), 'started_at' => null]);
+        $future = LibraryItem::create(['slug' => 'soon', 'title' => 'Soon', 'format' => 'article', 'published_at' => now()->addHour()]);
+
+        foreach (['America/New_York', 'Pacific/Kiritimati'] as $timezone) {
+            $dashboard = $this->getJson($url.'/dashboard?timezone='.$timezone)->assertOk()
+                ->assertJsonPath('protocol.id', $this->protocol->id);
+            $this->assertNotContains($future->id, array_column($dashboard->json('recommendations'), 'id'));
+        }
+        $this->postJson($url.'/protocol-start', ['protocol_id' => $this->protocol->id, 'timezone' => 'America/New_York',
+            'confirmed' => true])->assertOk()->assertJsonPath('protocol.startedAt', '2026-08-27');
+        $this->protocol->refresh()->update(['status' => 'paused']);
+        $this->horse->protocols()->create(['title' => 'Future paused plan', 'status' => 'paused', 'published_at' => now()->addHour()]);
+        foreach (['America/New_York', 'Pacific/Kiritimati'] as $timezone) {
+            $this->getJson($url.'/dashboard?timezone='.$timezone)->assertOk()->assertJsonPath('protocol.id', $this->protocol->id);
+        }
+    }
+
     public function test_published_unstarted_protocol_has_preparation_and_order_list_without_active_days_or_phases(): void
     {
         $this->protocol->update(['started_at' => null]);
@@ -217,6 +238,77 @@ class HorseDashboardTest extends TestCase
         $this->assertDatabaseMissing('protocol_supplement_intakes', ['id' => $dose['id']]);
     }
 
+    public function test_pre_pause_uploads_survive_retries_but_only_for_scheduled_doses_outside_pauses(): void
+    {
+        $this->protocol->update(['started_at' => '2026-08-27']);
+        $this->travelTo(now()->addDays(2));
+        [$item] = $this->twiceDailyCatalogItem();
+        $this->protocol->update(['status' => 'paused']);
+        $dose = $this->intakeOperation($item->id, '2026-08-29', 2);
+        $legacy = $this->intakeOperation($item->id, '2026-08-28', 1);
+        unset($legacy['data']['administration']);
+        $invalid = $this->intakeOperation($item->id, '2026-08-29', 3);
+        $expired = $this->intakeOperation($item->id, '2026-08-20', 1);
+        foreach ([1, 2] as $attempt) {
+            $this->postJson('/api/sync/upload', ['operations' => [$dose, $legacy, $invalid, $expired]])
+                ->assertOk()->assertJson(['applied' => 2, 'skipped' => 2]);
+        }
+        $this->assertDatabaseHas('protocol_supplement_intakes', ['id' => $dose['id'], 'done' => true]);
+        $this->assertDatabaseMissing('protocol_supplement_intakes', ['id' => $invalid['id']]);
+        foreach ([1, 2] as $administration) {
+            $this->assertDatabaseHas('protocol_supplement_intakes', ['protocol_phase_supplement_id' => $item->id,
+                'date' => '2026-08-28', 'administration' => $administration, 'day_done' => true]);
+        }
+        $this->getJson($this->dayUrl('2026-08-28'))->assertOk()->assertJsonPath('editable', false)->assertJsonPath('state', 'complete');
+
+        $this->travelTo(now()->addDay());
+        $this->protocol->update(['status' => 'active']);
+        $this->travelTo(now()->addDay());
+        $this->protocol->update(['status' => 'paused']);
+        $duringFirstPause = $this->intakeOperation($item->id, '2026-08-30', 1);
+        $this->postJson('/api/sync/upload', ['operations' => [$dose, $duringFirstPause]])
+            ->assertOk()->assertJson(['applied' => 1, 'skipped' => 1]);
+        $this->assertDatabaseMissing('protocol_supplement_intakes', ['id' => $duringFirstPause['id']]);
+
+        // Resume on the second pause day. Only a date entirely before a pause is recoverable.
+        $this->protocol->update(['status' => 'active']);
+        $this->travelTo(now()->addDay());
+        $this->protocol->update(['status' => 'paused']);
+        $ambiguous = $this->intakeOperation($item->id, '2026-09-01', 1);
+        $resumed = $this->intakeOperation($item->id, '2026-08-31', 1);
+        $this->postJson('/api/sync/upload', ['operations' => [$ambiguous, $resumed]])
+            ->assertOk()->assertJson(['applied' => 1, 'skipped' => 1]);
+        $this->assertDatabaseHas('protocol_supplement_intakes', ['id' => $resumed['id'], 'done' => true]);
+    }
+
+    public function test_pausing_a_legacy_active_plan_uses_the_owners_date_and_last_known_active_state(): void
+    {
+        $item = $this->protocol->phases()->first()->supplements()->first();
+        DB::table('protocols')->where('id', $this->protocol->id)->update([
+            'intake_active_periods' => null, 'updated_at' => '2026-08-26 12:00:00', 'published_at' => '2026-08-22 12:00:00',
+        ]);
+        $this->travelTo(\Carbon\CarbonImmutable::parse('2026-08-27 22:30:00', 'UTC'));
+        $this->protocol->refresh()->update(['status' => 'paused']);
+        $this->protocol->update(['status' => 'archived', 'archived_previous_status' => 'paused']);
+        $this->protocol->update(['status' => 'paused', 'archived_previous_status' => null]);
+        $operations = array_map(fn ($date) => $this->intakeOperation($item->id, $date, 1),
+            ['2026-08-25', '2026-08-27', '2026-08-28']);
+        $this->postJson('/api/sync/upload', ['timezone' => 'America/New_York', 'operations' => $operations])
+            ->assertOk()->assertJson(['applied' => 1, 'skipped' => 2]);
+        $this->assertDatabaseHas('protocol_supplement_intakes', ['id' => $operations[1]['id'], 'done' => true]);
+    }
+
+    public function test_unknown_pause_start_is_not_inferred_from_later_edits_or_restores(): void
+    {
+        $item = $this->protocol->phases()->first()->supplements()->first();
+        DB::table('protocols')->where('id', $this->protocol->id)->update(['status' => 'paused', 'intake_active_periods' => null]);
+        $this->protocol->refresh()->update(['status' => 'archived', 'archived_previous_status' => 'paused']);
+        $this->protocol->update(['status' => 'paused', 'archived_previous_status' => null]);
+        $dose = $this->intakeOperation($item->id, '2026-08-27', 1);
+        $this->postJson('/api/sync/upload', ['operations' => [$dose]])->assertOk()->assertJson(['applied' => 0, 'skipped' => 1]);
+        $this->assertDatabaseMissing('protocol_supplement_intakes', ['id' => $dose['id']]);
+    }
+
     public function test_paused_and_completed_protocol_days_remain_readable_but_cannot_be_changed(): void
     {
         $item = $this->protocol->phases()->first()->supplements()->first();
@@ -285,8 +377,15 @@ class HorseDashboardTest extends TestCase
         $url = '/api/horses/'.$this->horse->id.'/dashboard';
         $older = $this->horse->protocols()->create(['title' => 'Earlier plan', 'status' => 'completed',
             'published_at' => now()->subMonths(6), 'started_at' => '2026-02-01', 'total_weeks' => 4]);
+        $loadedPhases = [];
+        \App\Models\ProtocolPhase::retrieved(function ($phase) use (&$loadedPhases) {
+            $loadedPhases[] = $phase->protocol_id;
+        });
+        $older->phases()->create(['protocol_template_phase_id' => $this->protocol->phases()->value('protocol_template_phase_id'),
+            'title' => 'Historical phase', 'order' => 1, 'state' => 'upcoming']);
         $this->getJson($url)->assertOk()->assertJsonPath('protocol.id', $this->protocol->id)
             ->assertJsonPath('horseProtocols.0.id', $this->protocol->id);
+        $this->assertNotContains($older->id, $loadedPhases);
         // The paused plan is the one the Protocol tab opens; Home must not offer the older one as a card.
         $this->protocol->update(['status' => 'paused']);
         $this->getJson($url)->assertOk()->assertJsonPath('protocol.id', $this->protocol->id)->assertJsonPath('horseProtocols', []);
@@ -885,7 +984,8 @@ class HorseDashboardTest extends TestCase
     public function test_weekly_update_persists_and_clears_only_its_protocol_reminder(): void
     {
         $url = '/api/horses/'.$this->horse->id;
-        $this->postJson($url.'/weekly-update', ['protocol_id' => $this->protocol->id, 'note' => 'Going well', 'mood' => 4])->assertOk();
+        $this->protocol->update(['published_at' => now()]);
+        $this->postJson($url.'/weekly-update', ['protocol_id' => $this->protocol->id, 'note' => 'Going well', 'mood' => 4, 'timezone' => 'America/New_York'])->assertOk();
         $this->getJson($url.'/dashboard')->assertOk()->assertJsonCount(1, 'protocol.notifications')
             ->assertJsonPath('protocol.notifications.0.type', 'next_phase');
         $this->assertDatabaseHas('protocol_weekly_updates', ['protocol_id' => $this->protocol->id, 'week_number' => 2, 'note' => 'Going well']);

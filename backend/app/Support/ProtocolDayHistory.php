@@ -224,13 +224,15 @@ class ProtocolDayHistory
      * Check or uncheck one dose, or with $administration null every dose of the item on
      * that day: the whole-day checkbox of released apps (see LegacyProtocolClient).
      */
-    public function setDone(Protocol $protocol, string $date, string $itemId, bool $done, CarbonImmutable $now, bool $mirrorIntake = true, ?int $administration = 1, bool $allowCompletedUpload = false): array
+    public function setDone(Protocol $protocol, string $date, string $itemId, bool $done, CarbonImmutable $now, bool $mirrorIntake = true, ?int $administration = 1, bool $allowOfflineUpload = false): array
     {
-        return DB::transaction(function () use ($protocol, $date, $itemId, $done, $now, $mirrorIntake, $administration, $allowCompletedUpload) {
+        return DB::transaction(function () use ($protocol, $date, $itemId, $done, $now, $mirrorIntake, $administration, $allowOfflineUpload) {
             $protocol = Protocol::query()->lockForUpdate()->findOrFail($protocol->id);
             $day = $this->day($protocol, $date, $now);
-            $lateUpload = $allowCompletedUpload && $protocol->status === 'completed' && $protocol->completed_on
-                && $date <= $protocol->completed_on->toDateString() && $date >= $now->subDays(7)->toDateString()
+            $lateUpload = $allowOfflineUpload
+                && (($protocol->status === 'completed' && $protocol->completed_on && $date <= $protocol->completed_on->toDateString())
+                    || app(ProtocolCompletion::class)->beforeKnownPause($protocol, $date))
+                && $date >= $now->subDays(7)->toDateString()
                 && ! app(ProtocolCompletion::class)->containsDate($protocol->closed_periods ?? [], $date);
             abort_unless($day['editable'] || $lateUpload, 422, 'Je kunt alleen de afgelopen 7 dagen aanpassen.');
             // Mutate raw storage, never the response with recorded doses substituted.

@@ -30,7 +30,7 @@ class HorseDashboard
         $access = $discovery->access($user);
         $hasPlus = $access['hasPlus'];
         $data = $protocol ? $this->protocol($protocol, $now, $month, $answers) : null;
-        $items = LibraryItem::query()->whereNotNull('published_at')->where('published_at', '<=', $now)->with('categories')->get();
+        $items = LibraryItem::query()->where('published_at', '<=', $now->utc())->with('categories')->get();
         $unlocked = $access['unlockedIds'];
         $itemData = fn ($item) => [
             'id' => $item->id, 'title' => $item->title, 'format' => $item->format, 'heroImageUrl' => $item->hero_image_url,
@@ -150,8 +150,11 @@ class HorseDashboard
         }
         // A paused plan has its own notice on Home (PurchasedProtocols), so it gets no card here,
         // and neither does an older completed plan of that horse.
-        $latest = Protocol::shownForHorses($horses->pluck('id')->all(), $now, $inactivePlans)->with('phases.weeks')->get()
-            ->unique('horse_id')->reject(fn (Protocol $protocol) => $protocol->status === 'paused')->keyBy('horse_id');
+        $winner = Protocol::shownToOwner($now, $inactivePlans)->select('id')
+            ->whereColumn('protocols.horse_id', 'horses.id')->limit(1);
+        $winnerIds = Horse::whereKey($horses->modelKeys())->selectSub($winner, 'protocol_id');
+        $latest = Protocol::whereIn('id', $winnerIds)->where('status', '!=', 'paused')
+            ->with('phases.weeks')->get()->keyBy('horse_id');
 
         return $horses->filter(fn ($item) => $latest->has($item->id))
             ->sortBy(fn ($item) => Str::lower(Str::ascii((string) $item->name)))

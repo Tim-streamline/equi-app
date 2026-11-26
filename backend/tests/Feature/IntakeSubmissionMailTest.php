@@ -356,19 +356,21 @@ class IntakeSubmissionMailTest extends TestCase
 
     public function test_failed_pdf_download_opens_authenticated_print_fallback(): void
     {
-        $this->instance(IntakeAnswersPdf::class, new class extends IntakeAnswersPdf
-        {
-            public function render(IntakeBooking $booking): string
-            {
-                throw new RuntimeException('PDF renderer unavailable');
-            }
-        });
+        Storage::fake('local');
+        $photo = IntakeAttachment::create(['booking_id' => $this->booking->id, 'section_key' => 'paard', 'field_key' => 'foto',
+            'name' => 'missing.jpg', 'path' => 'intake/missing.jpg', 'mime' => 'image/jpeg']);
+        $this->booking->answers()->create(['section_id' => 'paard', 'field_id' => 'foto', 'value' => json_encode(['attachment:'.$photo->id.':missing.jpg'])]);
+        IntakeField::where('key', 'klachten')->firstOrFail()->update(['critical_if' => ['Jeuk'], 'protocol_if' => ['Jeuk' => 'Internal recommendation']]);
         $this->actingAs(AdminUser::create(['name' => 'Admin', 'email' => 'pdf-fallback@example.test', 'password' => 'password', 'role' => 'owner', 'active' => true]), 'admin');
         $this->get('/admin/bookings/'.$this->booking->id.'/answers.pdf')
             ->assertRedirect(route('admin.bookings.show', [$this->booking, 'print' => 1, 'pdf_fallback' => 1]));
         $this->get(route('admin.bookings.show', [$this->booking, 'print' => 1, 'pdf_fallback' => 1]))
-            ->assertOk()->assertInertia(fn (\Inertia\Testing\AssertableInertia $page) => $page
-                ->component('Bookings/Show')->where('printMode', true)->where('pdfFallback', true));
+            ->assertOk()->assertSeeText('Hidden stale answer')->assertSeeText('Blokkeert protocol')
+            ->assertSee(route('admin.intake-media', $photo))->assertSeeText('missing.jpg')
+            ->assertDontSee('Private therapist notes')->assertDontSee('Internal recommendation')->assertDontSee('file:///');
+        $this->get(route('admin.bookings.show', [$this->booking, 'print' => 1]))
+            ->assertInertia(fn (Assert $page) => $page->where('printMode', true)
+                ->where('review.notes', 'Private therapist notes')->where('review.triggers.0.protocol.0', 'Internal recommendation'));
         $this->actingAsGuest('admin');
         $this->get('/admin/bookings/'.$this->booking->id.'/answers.pdf')->assertRedirect('/admin/login');
     }

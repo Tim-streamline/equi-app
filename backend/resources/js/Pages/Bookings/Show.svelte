@@ -10,7 +10,7 @@
     import { statusVariant } from '$lib/badges.js';
     import { ArrowLeft } from '@lucide/svelte';
 
-    let { booking, review, protocols = [], printMode = false, pdfFallback = false } = $props();
+    let { booking, review, protocols = [], printMode = false } = $props();
     let tab = $state('intake');
     let reviewComponent;
     async function exportPdf() {
@@ -51,11 +51,6 @@
 
 {#if printMode}
     <main class="mx-auto max-w-5xl p-8 print:p-0">
-        {#if pdfFallback}
-            <div role="status" class="mb-5 rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm print:hidden">
-                De automatische PDF-export is niet gelukt. Je kunt deze volledige intake alsnog opslaan via het afdrukvenster: kies ‘Opslaan als PDF’. Controleer of alle foto’s zichtbaar zijn voordat je opslaat.
-            </div>
-        {/if}
         <h1 class="mb-2 text-2xl font-semibold">Intake · {booking.horse?.name || 'Paard niet gekoppeld'}</h1>
         <p class="mb-6">{booking.user?.name} · {`Ingediend op: ${booking.submitted_at_label}`} · {booking.id}</p>
         <a href={`/admin/bookings/${booking.id}`} class="mb-4 mr-6 inline-block text-primary underline print:hidden">Terug naar intake</a>

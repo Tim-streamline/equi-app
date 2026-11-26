@@ -39,7 +39,7 @@ class HorseDashboardController extends Controller
             // Serialize saving with admin pause/resume, including forms opened before a pause.
             \App\Support\LibrarySyncLock::acquire();
             $protocol = $horse->protocols()->whereKey($data['protocol_id'])->whereIn('status', ['active', 'paused'])
-                ->whereNotNull('published_at')->where('published_at', '<=', $now)->lockForUpdate()->firstOrFail();
+                ->publishedBy($now)->lockForUpdate()->firstOrFail();
             abort_if($protocol->status === 'paused', 422, 'Je herstelplan is gepauzeerd. Je kunt weer een weekupdate versturen zodra je plan is hervat.');
             $presentation = $dashboard->protocol($protocol, $now);
             abort_unless(collect($presentation['notifications'])->contains('type', 'weekly_update'), 422, 'Er staat geen weekupdate open.');
@@ -62,7 +62,7 @@ class HorseDashboardController extends Controller
             // Match the protocol editor's lock order and serialize competing starts.
             \App\Support\LibrarySyncLock::acquire();
             $protocol = $horse->protocols()->whereKey($data['protocol_id'])->where('status', 'active')
-                ->whereNotNull('published_at')->where('published_at', '<=', $now)->lockForUpdate()->firstOrFail();
+                ->publishedBy($now)->lockForUpdate()->firstOrFail();
             if (! $protocol->started_at) {
                 $protocol->update(['started_at' => $now->toDateString(), 'current_week' => 1]);
             }

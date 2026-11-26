@@ -136,11 +136,15 @@ class IntakeQuestionnaireSnapshot
     {
         $labels = app(IntakeLabels::class);
         $snapshot = $fieldData['label_config'] ?? null;
-        if ($snapshot === null) {
-            return $field->exists ? null : $labels->complete($fieldData, $sectionKey.'_'.$fieldData['key'], null);
+        if ($snapshot === null && $field->exists) {
+            $stored = array_column($labels->definitions($field->toArray()), 'options', 'key');
+            $incoming = array_column($labels->definitions($fieldData), 'options', 'key');
+            if ($stored === $incoming) {
+                return null;
+            }
         }
-        $merged = collect($field->exists ? ($field->label_config ?? []) : [])->keyBy('key');
-        foreach ($snapshot as $node) {
+        $merged = collect($field->label_config ?? [])->keyBy('key');
+        foreach ($snapshot ?? [] as $node) {
             $existing = $merged->get($node['key'], []);
             $answers = collect($existing['answers'] ?? [])->keyBy('answer')->replace(collect($node['answers'])->keyBy('answer'));
             $merged->put($node['key'], ['key' => $node['key'], 'label' => $node['label'], 'answers' => $answers->values()->all()]);

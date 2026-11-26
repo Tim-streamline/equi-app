@@ -29,6 +29,9 @@ class ProtocolCompletion
         }
         $from = $protocol->exists ? $protocol->getRawOriginal('status') : null;
         $to = $protocol->status;
+        if (($from === 'active' || $to === 'active') && Schema::hasColumn('protocols', 'intake_active_periods')) {
+            $this->recordActivePeriod($protocol);
+        }
         if ($to === 'archived') {
             return;
         }
@@ -51,6 +54,47 @@ class ProtocolCompletion
             return;
         }
         $protocol->completed_on = CarbonImmutable::now($this->timezone($protocol))->toDateString();
+    }
+
+    /** Delayed uploads to a paused plan are allowed only for dates in its recent active periods. */
+    private function recordActivePeriod(Protocol $protocol): void
+    {
+        $now = CarbonImmutable::now($this->timezone($protocol));
+        $today = $now->toDateString();
+        $oldest = $now->subDays(7)->toDateString();
+        $periods = $protocol->intake_active_periods ?? [];
+        $last = array_key_last($periods);
+        if ($protocol->status === 'active') {
+            // Date-only ticks cannot distinguish the two sides of a pause and resume on the same day.
+            $from = $last !== null && $periods[$last]['until'] === $today ? $now->addDay()->toDateString() : $today;
+            $periods[] = ['from' => $from, 'until' => null];
+        } else {
+            if ($protocol->status === 'paused') {
+                app(ProtocolDayHistory::class)->preserve($protocol, $now);
+            }
+            if ($last !== null && $periods[$last]['until'] === null) {
+                $periods[$last]['until'] = $today;
+            } elseif ($lastSaved = $protocol->getOriginal('updated_at')) {
+                // An active plan predating this column was already active at its last persisted edit.
+                // Earlier dates may belong to an unrecorded pause.
+                $periods[] = ['from' => $lastSaved->copy()->setTimezone($now->timezone)->toDateString(), 'until' => $today];
+            }
+        }
+        $protocol->intake_active_periods = array_values(array_filter($periods, fn ($period) =>
+            $period['until'] === null || $period['until'] > $oldest));
+    }
+
+    public function beforeKnownPause(Protocol $protocol, string $date): bool
+    {
+        if ($protocol->status === 'paused') {
+            foreach ($protocol->intake_active_periods ?? [] as $period) {
+                if ($period['until'] !== null && $period['from'] <= $date && $date < $period['until']) {
+                    return true;
+                }
+            }
+        }
+
+        return false;
     }
 
     public function timezone(Protocol $protocol): string

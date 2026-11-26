@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
+import { RefreshSafety } from '../lib/refresh-safety-core.ts';
 import { reconcileEvaluation, evaluationComplete, evaluationMoney, horsePossessive } from '../lib/protocol-evaluation.ts';
 
 test('evaluation requires every current question and rejects whitespace-only answers', () => {
@@ -28,12 +29,18 @@ test('an evaluation stays open through a pending save and conflict refetch', asy
   const jsx = (type, props) => ({ type, props });
   const state = [], effects = [], stored = { horseName: 'Nova', revision: 0, questions: { a: 'Hoe gaat het?', b: 'Wat viel op?' }, answers: {}, questionVersion: 'v' };
   let cursor = 0, guard, destination, back = 0, fetches = 0, saves = 0, rejectSave, finishRefresh;
+  const safety = new RefreshSafety();
   const modules = {
     react: {
       useState(value) { const i = cursor++; if (!(i in state)) state[i] = value;
         return [state[i], next => { state[i] = typeof next === 'function' ? next(state[i]) : next; }]; },
       useRef(value) { const i = cursor++; return state[i] ??= { current: value }; },
-      useEffect(fn) { const i = cursor++; if (!state[i]) { state[i] = true; effects.push(fn); } },
+      useEffect(fn, deps) {
+        const i = cursor++;
+        if (!state[i] || deps.some((value, j) => value !== state[i].deps[j])) {
+          effects.push(() => { state[i]?.cleanup?.(); state[i] = { deps, cleanup: fn() }; });
+        }
+      },
     },
     'react/jsx-runtime': { jsx, jsxs: jsx }, 'react-native': { View: 'View', Text: 'Text' },
     '@react-navigation/native': { usePreventRemove: value => { guard = value; } },
@@ -41,6 +48,7 @@ test('an evaluation stays open through a pending save and conflict refetch', asy
     'expo-router': { useLocalSearchParams: () => ({ protocolId: 'p' }), router: { canGoBack: () => true, back: () => back++, replace: path => { destination = path; } } },
     '@/components/ui/KeyboardForm': { KeyboardTextInput: 'Input', KeyboardScrollView: 'Scroll', KeyboardViewport: 'Viewport' },
     '@/components/ui/SubHeader': { SubHeader: 'Header' }, '@/components/ui/Button': { Button: 'Button' },
+    '@/lib/refresh-safety': { registerRefreshProtection: safety.register },
     '@/lib/account-session': { accountSession: { revision: 0 } }, '@/lib/protocol-evaluation': helpers, '@/components/ui/styles': {},
     '@/hooks/useHorseDashboard': { dashboardRequest: (_url, body) => {
       if (body && ++saves === 1) return Promise.resolve({ ...stored, revision: 1, answers: { b: body.answers.b.trim() } });
@@ -55,12 +63,23 @@ test('an evaluation stays open through a pending save and conflict refetch', asy
   new Function('require', 'exports', code)(key => { assert.ok(key in modules, key); return modules[key]; }, exports);
   const form = exports.default();
   const flatten = n => Array.isArray(n) ? n.flatMap(flatten) : n?.props ? [n, ...flatten(n.props.children)] : [];
-  const render = () => { cursor = 0; return flatten(form.type(form.props)); };
-  render(); effects.shift()(); await Promise.resolve();
+  const render = () => {
+    cursor = 0;
+    const nodes = flatten(form.type(form.props));
+    for (const effect of effects.splice(0)) effect();
+    return nodes;
+  };
+  render(); await Promise.resolve();
   render().find(x => x.props.accessibilityLabel === stored.questions.b).props.onChangeText('Goed ');
-  render().find(x => x.props.title === 'Concept opslaan').props.onPress();
+  const dirty = render();
+  await assert.rejects(safety.prepare(), /wijzigingen/);
+  dirty.find(x => x.props.title === 'Concept opslaan').props.onPress();
+  render();
+  await assert.rejects(safety.prepare(), /Wacht/);
   await Promise.resolve();
-  render().find(x => x.type === 'Input').props.onChangeText('Mijn antwoord');
+  const clean = render();
+  await safety.prepare();
+  clean.find(x => x.type === 'Input').props.onChangeText('Mijn antwoord');
   const nodes = render();
   nodes.find(x => x.props.title === 'Concept opslaan').props.onPress();
   nodes.find(x => x.type === 'Header').props.onBack();
@@ -72,9 +91,17 @@ test('an evaluation stays open through a pending save and conflict refetch', asy
   assert.equal(after.find(x => x.type === 'Input').props.value, 'Mijn antwoord');
   assert.equal(after.find(x => x.props.accessibilityLabel === stored.questions.b).props.value, 'Nieuwe observatie');
   assert.equal(guard, false);
+  await assert.rejects(safety.prepare(), /wijzigingen/);
+  after.find(x => x.props.title === 'Evaluatie opnieuw versturen').props.onPress();
+  rejectSave(new Error('(409)')); await Promise.resolve();
+  assert.equal(render().find(x => x.type === 'Input').props.value, 'Mijn antwoord');
+  await assert.rejects(safety.prepare(), /wijzigingen/);
   after.find(x => x.type === 'Header').props.onBack();
   assert.equal(back, 1);
   after.find(x => x.props.children?.props?.children === 'Bekijk de mogelijkheden voor een vervolg →').props.onPress();
   render().find(x => x.props.title === 'Terug naar Home').props.onPress();
   assert.equal(destination, '/(tabs)/(pager)/home');
+  for (const hook of state) hook?.cleanup?.();
+  await safety.prepare();
+  assert.equal(saves, 3);
 });

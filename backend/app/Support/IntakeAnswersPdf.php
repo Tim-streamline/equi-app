@@ -24,16 +24,27 @@ class IntakeAnswersPdf
         return 'EquiApp_protocolintake_'.$date.'_'.mb_substr($horse, 0, 80).'.pdf';
     }
 
-    public function html(IntakeBooking $booking): string
+    private function sections(IntakeBooking $booking, bool $requireQuestionnaire): array
     {
         $booking->loadMissing('horse', 'user');
         $review = app(IntakeReview::class)->forBooking($booking);
-        // Current answers first; answers to questions that are now hidden or archived follow under their own heading.
-        $sections = [...array_filter($review['sections'], fn ($section) => $section['rows']),
-            ...array_map(fn ($section) => [...$section, 'title' => 'Eerder ingevuld · '.$section['title']], $review['historical_sections'] ?? [])];
-        if (! $review['sections']) {
+        if ($requireQuestionnaire && ! $review['sections']) {
             throw new RuntimeException('De intakevragen zijn niet beschikbaar voor de PDF.');
         }
+        // Current answers first; answers to questions that are now hidden or archived follow under their own heading.
+        return [...array_filter($review['sections'], fn ($section) => $section['rows']),
+            ...array_map(fn ($section) => [...$section, 'title' => 'Eerder ingevuld · '.$section['title']], $review['historical_sections'] ?? [])];
+    }
+
+    public function browserPrint(IntakeBooking $booking): string
+    {
+        return view('intake.answers-pdf', ['booking' => $booking, 'sections' => $this->sections($booking, requireQuestionnaire: false),
+            'browserPrint' => true, 'images' => []])->render();
+    }
+
+    public function html(IntakeBooking $booking): string
+    {
+        $sections = $this->sections($booking, requireQuestionnaire: true);
         $images = [];
         $previews = app(IntakePhotoPreview::class);
         $files = IntakeAttachment::where('booking_id', $booking->id)->get()->keyBy('id');

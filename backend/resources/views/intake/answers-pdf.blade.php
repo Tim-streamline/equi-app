@@ -26,9 +26,22 @@
     .photo { page-break-inside: avoid; margin-bottom: 10px; }
     .photo.overview img { max-width: 640px; max-height: 760px; }
     ul { margin: 0 0 12px; padding-left: 18px; }
+    @media print { .print-controls { display: none; } }
 </style>
 </head>
 <body>
+@if($browserPrint ?? false)
+<div class="print-controls">
+<p>De automatische PDF-export is niet gelukt. Controleer of alle antwoorden en foto’s zichtbaar zijn voordat je deze kopie opslaat.</p>
+<a href="{{ route('admin.bookings.show', $booking) }}">Terug naar intake</a>
+@if($sections)
+<button type="button" onclick="window.print()">Afdrukken / opslaan als PDF</button>
+<script>window.addEventListener('load', () => window.print(), { once: true });</script>
+@else
+<p>De intakevragen zijn niet beschikbaar.</p>
+@endif
+</div>
+@endif
 <p class="brand">{{ config('app.brand_name') }}</p>
 <h1>Jouw protocolintake</h1>
 <p class="meta">{{ $booking->horse?->name ?? 'Paard niet gekoppeld' }}<br>
@@ -54,7 +67,8 @@
 @elseif (in_array($row['type'], ['photo', 'file'], true))
 @foreach ($row['attachments'] as $file)
 <div class="photo{{ !empty($row['large_attachments']) ? ' overview' : '' }}">
-@if (isset($images[$file['id']]))<img src="{{ $images[$file['id']] }}" alt="{{ $file['name'] }}"><br>
+@if (($browserPrint ?? false) && $file['image'])<img src="{{ $file['url'] }}" alt="{{ $file['name'] }}"><br>
+@elseif (isset($images[$file['id']]))<img src="{{ $images[$file['id']] }}" alt="{{ $file['name'] }}"><br>
 @elseif (array_key_exists($file['id'], $images))<span class="empty">Deze foto kon niet in de PDF worden opgenomen. Bekijk het origineel in de intake.</span><br>@endif
 {{ $file['name'] }}
 @if(!empty($file['year']))<br>Jaartal: {{ $file['year'] }}@endif

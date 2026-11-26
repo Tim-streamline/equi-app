@@ -10,6 +10,7 @@ export const administrationKey = (item: DashboardSupplement) => `${item.id}:${it
  */
 export function administrationLabel(item: DashboardSupplement): string {
   const number = item.administration ?? 1;
+  if (item.recordedOnly) return `Gift ${number}`;
   return number === 1 ? 'Elke dag' : number === 2 ? 'Tweede gift' : number === 3 ? 'Derde gift' : `Gift ${number}`;
 }
 
@@ -29,13 +30,19 @@ export function todayGroups(items: DashboardSupplement[], records: {
     }
   }
   const groups = new Map<string, DashboardSupplement[]>();
+  const history: DashboardSupplement[] = [];
   for (const item of items) {
-    const record = item.recordedOnly ? undefined : local.get(administrationKey(item));
+    if (item.recordedOnly) {
+      history.push(item);
+      continue;
+    }
+    const record = local.get(administrationKey(item));
     const label = administrationLabel(item);
     const rows = groups.get(label) ?? [];
-    rows.push({ ...item, dosage: item.recordedOnly ? item.dosage : record?.dosage !== undefined ? record.dosage : dailyDosages.has(item.id) ? dailyDosages.get(item.id)! : item.dosage, done: record ? !!record.done : !!item.done });
+    rows.push({ ...item, dosage: record?.dosage !== undefined ? record.dosage : dailyDosages.has(item.id) ? dailyDosages.get(item.id)! : item.dosage, done: record ? !!record.done : !!item.done });
     groups.set(label, rows);
   }
-  return [...groups].map(([label, rows]) => ({ label, number: rows[0]?.administration ?? 1, items: rows, done: rows.filter(row => row.done).length }))
+  const scheduled = [...groups].map(([label, rows]) => ({ label, number: rows[0]?.administration ?? 1, items: rows, done: rows.filter(row => row.done).length }))
     .sort((a, b) => a.number - b.number);
+  return history.length ? [...scheduled, { label: 'Eerder geregistreerd', number: null, items: history, done: null }] : scheduled;
 }

@@ -36,6 +36,8 @@ class Protocol extends Model
 {
     use HasUuids;
 
+    protected $hidden = ['intake_active_periods'];
+
     /** Internal creation path used while an intake is creating its draft protocol. */
     public bool $creatingForIntake = false;
 
@@ -179,6 +181,7 @@ class Protocol extends Model
             'started_at' => 'date',
             'completed_on' => 'date',
             'closed_periods' => 'array',
+            'intake_active_periods' => 'array',
             'published_at' => 'datetime',
         ];
     }
@@ -210,7 +213,13 @@ class Protocol extends Model
     public function scopeVisibleToOwner(Builder $query, \DateTimeInterface $now, bool $inactivePlans): Builder
     {
         return $query->whereIn('status', $inactivePlans ? ['active', 'paused', 'completed'] : ['active'])
-            ->whereNotNull('published_at')->where('published_at', '<=', $now);
+            ->publishedBy($now);
+    }
+
+    public function scopePublishedBy(Builder $query, \DateTimeInterface $now): Builder
+    {
+        // Publication timestamps are stored in UTC. The caller also uses its local clock for plan dates.
+        return $query->where('published_at', '<=', CarbonImmutable::instance($now)->utc());
     }
 
     public function horse(): BelongsTo

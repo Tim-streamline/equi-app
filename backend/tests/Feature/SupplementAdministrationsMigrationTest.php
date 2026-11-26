@@ -25,12 +25,27 @@ class SupplementAdministrationsMigrationTest extends TestCase
         $selection = $phase->supplements()->create(['supplement_id' => $catalog->id, 'name' => $catalog->name, 'dosage' => '15 g', 'administrations_per_day' => 2]);
         $salt = $definition->supplements()->create(['name' => 'Schüsslerzout nr. 10 – Natrium sulfuricum', 'supplement_type' => 'supplement', 'administrations_per_day' => 2]);
         // The protocol snapshot can have a custom display name; its catalog link still identifies the salt.
-        $saltSelection = $phase->supplements()->create(['supplement_id' => $salt->id, 'name' => 'Persoonlijk celzout', 'dosage' => '8 tabletten', 'administrations_per_day' => 2]);
+        $saltSelection = $phase->supplements()->create(['supplement_id' => $salt->id, 'name' => 'Persoonlijk celzout', 'dosage' => '8 tabletten', 'administrations_per_day' => 1]);
+
+        // A catalog change affects today's whole-day checkbox even if the selection already says once daily.
+        $unaffected = $phase->supplements()->create(['name' => 'Already once daily', 'administrations_per_day' => 1]);
+        $today = now('Europe/Amsterdam')->toDateString();
+        foreach ([$selection, $saltSelection] as $item) {
+            $item->intakes()->create(['horse_id' => $horse->id, 'date' => $today, 'administration' => 1, 'done' => true]);
+        }
+        $loaded = [];
+        \App\Models\ProtocolPhaseSupplement::retrieved(function ($selection) use (&$loaded) {
+            $loaded[] = $selection->id;
+        });
 
         $migration = require database_path('migrations/2026_11_18_000003_set_protocol_products_once_daily.php');
         $migration->up();
         $migration->up();
 
+        $this->assertNotContains($unaffected->id, $loaded);
+        foreach ([$selection, $saltSelection] as $item) {
+            $this->assertTrue($item->intakes()->sole()->day_done);
+        }
         $this->assertSame(1, $catalog->fresh()->administrations_per_day);
         $this->assertSame(1, $selection->fresh()->administrationsPerDay());
         $this->assertSame('15 g', $selection->fresh()->dosage);

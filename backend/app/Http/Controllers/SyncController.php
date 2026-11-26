@@ -321,7 +321,7 @@ class SyncController extends Controller
                 if ($historical) {
                     if ($historical['scheduled']) {
                         app(ProtocolDayHistory::class)->setDone($historical['protocol'], $historical['date'], $historical['item_id'],
-                            $historical['done'], $historical['now'], false, $historical['administration'], allowCompletedUpload: true);
+                            $historical['done'], $historical['now'], false, $historical['administration'], allowOfflineUpload: true);
                     } else {
                         // Retain the offline record without adding a dose to a frozen day.
                         app(LegacyProtocolClient::class)->refreshDayDone($historical['item_id'], $historical['date'], $historical['dose_count']);
@@ -420,7 +420,7 @@ class SyncController extends Controller
                 'administration' => 1, 'done' => $done, 'taken_at' => $takenAt]);
         }
         if ($historical) {
-            app(ProtocolDayHistory::class)->setDone($historical['protocol'], $date, $itemId, $done, $historical['now'], true, null, allowCompletedUpload: true);
+            app(ProtocolDayHistory::class)->setDone($historical['protocol'], $date, $itemId, $done, $historical['now'], true, null, allowOfflineUpload: true);
 
             return;
         }
@@ -457,11 +457,16 @@ class SyncController extends Controller
         $item = Models\ProtocolPhaseSupplement::findOrFail($data['protocol_phase_supplement_id']);
         $history = app(ProtocolDayHistory::class);
         $protocol = Models\Protocol::query()->lockForUpdate()->findOrFail($item->phase->protocol_id);
+        if ($protocol->status === 'paused') {
+            // Pause boundaries are dates in the owner's timezone, even when the device is travelling.
+            $timezone = $history->timezone($protocol);
+        }
         $now = CarbonImmutable::now($timezone ?? $history->timezone($protocol));
         $date = $data['date'];
         $completion = app(ProtocolCompletion::class);
         if ($date < $now->subDays(7)->toDateString()) return ['skip' => 'expired'];
-        if (! in_array($protocol->status, ['active', 'completed'], true)
+        $beforePause = $date < $now->toDateString() && $completion->beforeKnownPause($protocol, $date);
+        if ((! in_array($protocol->status, ['active', 'completed'], true) && ! $beforePause)
             || ! $protocol->published_at || $protocol->published_at->gt($now)) {
             return ['skip' => 'inactive'];
         }
@@ -473,16 +478,22 @@ class SyncController extends Controller
         if ($data['date'] < $now->toDateString()) {
             if ($protocol->status === 'completed') {
                 $history->preserve($protocol, $now);
-                if (! DB::table('protocol_day_snapshots')->where('protocol_id', $protocol->id)->where('date', $date)->exists()) return ['skip' => 'unplanned'];
+            }
+            // Pausing already froze the schedule. A later plan edit cannot establish a missing dose.
+            if (($protocol->status === 'completed' || $beforePause) && ! DB::table('protocol_day_snapshots')
+                ->where('protocol_id', $protocol->id)->where('date', $date)->exists()) {
+                return ['skip' => 'unplanned'];
             }
             $day = $history->day($protocol, $date, $now);
             $doses = ProtocolDayHistory::scheduled($day['items'])->where('id', $item->id);
+            $scheduled = $doses->contains(fn ($row) => ($row['administration'] ?? 1) === (int) $data['administration']);
+            if ($beforePause && ! $scheduled) return ['skip' => 'unplanned'];
             if ($doses->isEmpty() && $protocol->status === 'completed') return ['skip' => 'unplanned'];
             abort_if($doses->isEmpty(), 422, 'Deze gift stond niet op deze dag gepland.');
             return ['protocol' => $protocol, 'date' => $data['date'], 'item_id' => $item->id,
                 'done' => $op['op'] === 'DELETE' ? false : (bool) $data['done'], 'now' => $now,
                 'administration' => (int) $data['administration'], 'dose_count' => $doses->count(),
-                'scheduled' => $doses->contains(fn ($row) => ($row['administration'] ?? 1) === (int) $data['administration'])];
+                'scheduled' => $scheduled];
         }
         $start = $protocol->started_at ? CarbonImmutable::parse($protocol->started_at->toDateString(), $now->timezone) : null;
         $week = $start ? (int) floor($start->diffInDays($now->startOfDay(), false) / 7) + 1 : 0;

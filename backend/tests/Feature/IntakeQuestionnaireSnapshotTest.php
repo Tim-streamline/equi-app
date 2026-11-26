@@ -294,6 +294,32 @@ class IntakeQuestionnaireSnapshotTest extends TestCase
         $this->assertSame($before, $this->databaseState());
     }
 
+    public function test_old_snapshot_reconciles_changed_choices_and_repeater_fields_only_on_apply(): void
+    {
+        $field = IntakeField::where('type', 'repeater')->firstOrFail();
+        $field->update(['repeater_sub' => [['id' => 'kind', 'label' => 'Soort', 'options' => ['A', 'B']]],
+            'label_config' => [['key' => 'kind', 'label' => 'soort', 'answers' => [
+                ['answer' => 'A', 'label' => 'bewaar_a'], ['answer' => 'B', 'label' => 'oud_b']]]]]);
+        $source = $this->snapshots->export();
+        foreach ($source['sections'] as &$section) {
+            foreach ($section['fields'] as &$definition) {
+                if ($definition['key'] === $field->key) {
+                    unset($definition['label_config']);
+                    $definition['repeater_sub'][0]['options'] = ['A', 'C'];
+                    $definition['repeater_sub'][] = ['id' => 'amount', 'label' => 'Hoeveelheid'];
+                }
+            }
+        }
+        unset($definition, $section);
+        $this->assertNotEmpty($this->snapshots->sync($source)['changes']);
+        $this->assertSame($field->label_config, $field->fresh()->label_config);
+        $this->snapshots->sync($source, true, $this->directory);
+        $nodes = collect($field->fresh()->label_config)->keyBy('key');
+        $this->assertSame([['answer' => 'A', 'label' => 'bewaar_a'], ['answer' => 'C', 'label' => 'soort_c']], $nodes['kind']['answers']);
+        $this->assertNotEmpty($nodes['amount']['label']);
+        $this->assertEmpty($this->snapshots->sync($source)['changes']);
+    }
+
     public function test_backup_failure_rolls_back_all_definition_changes(): void
     {
         $source = $this->snapshots->export();
