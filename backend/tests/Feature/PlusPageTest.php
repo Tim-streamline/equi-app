@@ -71,7 +71,7 @@ class PlusPageTest extends TestCase
     }
     public function test_equiboost_faq_links_the_published_library_video_with_that_title(): void
     {
-        $this->getJson('/api/protocol-page')->assertOk()->assertJsonCount(12, 'content.memberFaqs')
+        $this->getJson('/api/protocol-page')->assertOk()->assertJsonCount(count(PlusPage::defaults()['memberFaqs']), 'content.memberFaqs')
             ->assertJsonPath('content.memberFaqVideoTitle', 'Veelgestelde vragen tijdens EquiBoost')->assertJsonPath('memberFaqVideo', null);
         LibraryItem::create(['title' => 'Veelgestelde vragen tijdens EquiBoost', 'slug' => 'faq-concept', 'format' => 'video']);
         LibraryItem::create(['title' => 'Veelgestelde vragen tijdens EquiBoost', 'slug' => 'faq-later', 'format' => 'video', 'published_at' => now()->addDay()]);
@@ -94,7 +94,7 @@ class PlusPageTest extends TestCase
         $content['faqs'] = [['question' => 'Zijn er naast de prijs nog andere kosten?', 'answer' => 'Eigen antwoord.'], ['question' => 'Tweede eigen vraag?', 'answer' => 'Ook eigen.']];
         PlusPage::create(['id' => PlusPage::PAGE_ID, 'content' => $content]);
 
-        $page = $this->getJson('/api/protocol-page')->assertOk()->assertJsonCount(2, 'content.faqs')->assertJsonCount(12, 'content.memberFaqs')
+        $page = $this->getJson('/api/protocol-page')->assertOk()->assertJsonCount(2, 'content.faqs')->assertJsonCount(count(PlusPage::defaults()['memberFaqs']), 'content.memberFaqs')
             ->assertJsonPath('content.faqs.0.question', 'Zijn er naast de prijs nog andere kosten?')->json();
 
         // The admin form sends back what it loaded, now including the EquiBoost FAQ.
@@ -102,7 +102,7 @@ class PlusPageTest extends TestCase
         $this->post('/admin/plus-page', ['content' => json_encode($page['content'])])->assertSessionHasNoErrors();
         $saved = PlusPage::current()->content;
         $this->assertSame($content['faqs'], $saved['faqs']);
-        $this->assertCount(12, $saved['memberFaqs']);
+        $this->assertCount(count(PlusPage::defaults()['memberFaqs']), $saved['memberFaqs']);
     }
     public function test_content_management_requires_editor_role(): void
     {
