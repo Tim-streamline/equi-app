@@ -151,7 +151,8 @@ class AdminProtocolManagementTest extends TestCase
         $payload = [...$this->payload(), 'published' => true, 'status' => 'active'];
         $this->actingAs($this->admin, 'admin')->post('/admin/protocols', $payload)->assertSessionHasNoErrors();
         $protocol = Protocol::firstOrFail();
-        $protocol->update(['started_at' => $removePhase ? '2026-08-18' : '2026-09-15']);
+        // Not about the minimum per week: every day counts as given.
+        $protocol->update(['started_at' => $removePhase ? '2026-08-18' : '2026-09-15', 'minimum_gifts_from' => '2027-01-01']);
         $update = $this->storedPayload($protocol);
         $id = $update['phases'][$removePhase ? 1 : 0]['supplements'][0]['id'];
         $history = app(\App\Support\ProtocolDayHistory::class);

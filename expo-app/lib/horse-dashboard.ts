@@ -122,6 +122,8 @@ export type DashboardProtocol = {
   todayLabel: string;
   dateLabel?: string;
   weekLabel?: string;
+  /** Set while the last week of a phase is extended until the products still short are caught up. */
+  extension?: DashboardExtension | null;
   phaseLabel: string;
   phases: DashboardPhase[];
   orderItems: DashboardOrderItem[];
@@ -302,3 +304,13 @@ export function dashboardAtTime(data: HorseDashboard, now: Date): HorseDashboard
       || phases.some((phase) => phase.id === notice.phaseId && phase.state === 'preview')),
   } };
 }
+
+/** An extended last week of a phase: only the products still short of their days stay on the schedule. */
+export type DashboardExtension = {
+  /** Every running phase is catching up: the week shown waits for these products. */
+  extended?: boolean;
+  /** While extended, the week that starts once they are caught up; null when the plan ends then. */
+  nextWeek: number | null;
+  /** remaining: days each still has to be given, today's tick not counted. */
+  items: { id: string; name: string; remaining: number }[];
+};

@@ -7,6 +7,7 @@ use App\Support\IntakeSubmission;
 use App\Support\ProtocolAccess;
 use App\Support\ClientCapabilities;
 use App\Support\LegacyProtocolClient;
+use App\Support\ProtocolClock;
 use App\Support\ProtocolCompletion;
 use App\Support\ProtocolDayHistory;
 use App\Support\SyncAccessPolicy;
@@ -496,8 +497,9 @@ class SyncController extends Controller
                 'scheduled' => $scheduled];
         }
         $start = $protocol->started_at ? CarbonImmutable::parse($protocol->started_at->toDateString(), $now->timezone) : null;
-        $week = $start ? (int) floor($start->diffInDays($now->startOfDay(), false) / 7) + 1 : 0;
-        $scheduled = $week > 0 && $item->weeks()->whereHas('protocolPhaseWeek', fn ($query) => $query->where('protocol_week_number', $week))->exists();
+        // Today's schedule is per product on the plan clock; while paused, the one the plan resumes with.
+        $clock = ProtocolClock::for($protocol, $now);
+        $scheduled = $start !== null && in_array($item->id, $clock->activeOn($now->toDateString()) ?? $clock->activeNow(), true);
         if (! $scheduled && $protocol->status === 'completed') return ['skip' => 'unplanned'];
         abort_unless($scheduled, 422, 'Dit item staat vandaag niet gepland.');
 

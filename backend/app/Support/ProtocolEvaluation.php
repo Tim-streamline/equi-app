@@ -68,8 +68,9 @@ class ProtocolEvaluation
         $today = $now->setTimezone('Europe/Amsterdam')->startOfDay();
         $protocol->loadMissing('phases.weeks');
         $weeks = $protocol->scheduledWeeks();
-        $end = $protocol->started_at && $weeks > 0
-            ? CarbonImmutable::parse($protocol->started_at->toDateString(), 'Europe/Amsterdam')->addWeeks($weeks)->subDay() : null;
+        // The last plan day on the plan clock: pauses and catching up move the end.
+        $after = $protocol->started_at && $weeks > 0 ? ProtocolClock::for($protocol, $today)->planEnd() : null;
+        $end = $after ? CarbonImmutable::parse($after, 'Europe/Amsterdam')->subDay() : null;
         $available = $end && $protocol->published_at && $protocol->published_at->lte($now)
             && in_array($protocol->status, ['active', 'completed'], true) && $today->gte($end->subDays(14))
             && $ownerMatches;

@@ -209,3 +209,19 @@ test('historical gifts stay readable below the schedule and never count towards 
   assert.deepEqual(mixed.filter(n => n?.props?.accessibilityRole === 'checkbox').map(n => n.props.accessibilityState),
     [{ checked: false, disabled: false }, { checked: true, disabled: true }]);
 });
+
+test('an extended phase week names the products still short and counts down with today\'s ticks', () => {
+  const extension = { nextWeek: 7, items: [{ id: 'one', name: 'Brandnetel', remaining: 5 }] };
+  assert.equal(logic.extensionText(extension, []), 'Brandnetel is in deze fase minder vaak gegeven. Geef het nog 5 dagen, daarna start week 7.');
+  assert.equal(logic.extensionText(extension, [{ id: 'one', done: true }]), 'Brandnetel is in deze fase minder vaak gegeven. Geef het nog 4 dagen, daarna start week 7.');
+  assert.equal(logic.extensionText({ ...extension, items: [{ id: 'one', name: 'Brandnetel', remaining: 2 }] }, []), 'Brandnetel is in deze fase minder vaak gegeven. Geef het nog 2 dagen, daarna start week 7.');
+  assert.equal(logic.extensionText({ ...extension, items: [{ id: 'one', name: 'Brandnetel', remaining: 1 }] }, [{ id: 'one', done: true }]), 'Morgen start week 7.');
+  assert.equal(logic.extensionText({ nextWeek: null, items: [{ id: 'one', name: 'Brandnetel', remaining: 2 }, { id: 'two', name: 'Kurkuma', remaining: 1 }] }, [{ id: 'one', done: true }]),
+    'Brandnetel is in deze fase minder vaak gegeven. Geef het nog 1 dag. Kurkuma is in deze fase minder vaak gegeven. Geef het nog 1 dag, daarna is je herstelplan rond.');
+  assert.equal(logic.extensionText({ nextWeek: 7, items: [{ id: 'one', name: 'Brandnetel', remaining: 3 }] }, [{ id: 'one', done: true, recordedOnly: true }]), 'Brandnetel is in deze fase minder vaak gegeven. Geef het nog 3 dagen, daarna start week 7.');
+  assert.equal(logic.extensionText(null, []), null);
+  // Another phase still runs: nothing waits, so no next week is named.
+  const alongside = { extended: false, nextWeek: null, items: [{ id: 'one', name: 'Heemstwortel', remaining: 3 }] };
+  assert.equal(logic.extensionText(alongside, []), 'Heemstwortel is in deze fase minder vaak gegeven. Geef het nog 3 dagen.');
+  assert.equal(logic.extensionText({ ...alongside, items: [{ id: 'one', name: 'Heemstwortel', remaining: 1 }] }, [{ id: 'one', done: true }]), null);
+});

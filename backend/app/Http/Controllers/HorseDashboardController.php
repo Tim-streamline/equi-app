@@ -42,8 +42,10 @@ class HorseDashboardController extends Controller
                 ->publishedBy($now)->lockForUpdate()->firstOrFail();
             abort_if($protocol->status === 'paused', 422, 'Je herstelplan is gepauzeerd. Je kunt weer een weekupdate versturen zodra je plan is hervat.');
             $presentation = $dashboard->protocol($protocol, $now);
-            abort_unless(collect($presentation['notifications'])->contains('type', 'weekly_update'), 422, 'Er staat geen weekupdate open.');
-            DB::table('protocol_weekly_updates')->updateOrInsert(['protocol_id' => $protocol->id, 'week_number' => $presentation['currentWeek']], [
+            $due = collect($presentation['notifications'])->firstWhere('type', 'weekly_update');
+            abort_unless($due, 422, 'Er staat geen weekupdate open.');
+            // Numbered per 7 plan days (ProtocolClock::updateWeek), so an extended week can get a second update.
+            DB::table('protocol_weekly_updates')->updateOrInsert(['protocol_id' => $protocol->id, 'week_number' => $due['updateWeek']], [
                 'user_id' => $user->id, 'note' => $data['note'], 'mood' => $data['mood'] ?? null, 'created_at' => now(), 'updated_at' => now(),
             ]);
         });

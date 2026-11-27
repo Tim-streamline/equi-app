@@ -14,8 +14,9 @@ class ProtocolPhaseReminders
     {
         $timezone = $protocol->horse->owner?->notificationPreferences?->timezone ?: 'Europe/Amsterdam';
         $dates = [];
+        $clock = ProtocolClock::for($protocol, $now->setTimezone($timezone));
         foreach ($protocol->phases()->with('weeks')->get() as $phase) {
-            $availability = app(ProtocolPhaseAvailability::class)->forPhase($protocol, $phase, $now->setTimezone($timezone));
+            $availability = app(ProtocolPhaseAvailability::class)->forPhase($protocol, $phase, $now->setTimezone($timezone), $clock);
             if ($availability['state'] === 'preview') {
                 $dates[] = CarbonImmutable::parse($availability['availableAt'])->toDateString();
             }
@@ -48,8 +49,9 @@ class ProtocolPhaseReminders
             }
             $now = $now->setTimezone($preferences->timezone ?: 'Europe/Amsterdam');
             $groups = [];
+            $clock = ProtocolClock::for($protocol, $now);
             foreach ($protocol->phases()->with('weeks')->get() as $phase) {
-                $availability = app(ProtocolPhaseAvailability::class)->forPhase($protocol, $phase, $now);
+                $availability = app(ProtocolPhaseAvailability::class)->forPhase($protocol, $phase, $now, $clock);
                 if ($availability['state'] !== 'preview') {
                     continue;
                 }

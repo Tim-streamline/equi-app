@@ -32,6 +32,9 @@ class ProtocolCompletion
         if (($from === 'active' || $to === 'active') && Schema::hasColumn('protocols', 'intake_active_periods')) {
             $this->recordActivePeriod($protocol);
         }
+        if ($protocol->exists && $protocol->started_at && ($from === 'active') !== ($to === 'active') && Schema::hasColumn('protocols', 'paused_periods')) {
+            $this->recordPause($protocol, $from === 'active');
+        }
         if ($to === 'archived') {
             return;
         }
@@ -54,6 +57,29 @@ class ProtocolCompletion
             return;
         }
         $protocol->completed_on = CarbonImmutable::now($this->timezone($protocol))->toDateString();
+    }
+
+    /**
+     * The plan clock (ProtocolClock) skips the days a plan did not run: the dates strictly between the day it
+     * stopped (paused, completed, archived or back to draft) and the day it runs again. Those two days stay plan
+     * days, so pausing in the evening and resuming the next morning skips nothing.
+     */
+    private function recordPause(Protocol $protocol, bool $stopping): void
+    {
+        $today = CarbonImmutable::now($this->timezone($protocol))->toDateString();
+        $periods = $protocol->paused_periods ?? [];
+        $last = array_key_last($periods);
+        if ($stopping) {
+            if ($last === null || $periods[$last]['before'] !== null) {
+                $periods[] = ['after' => $today, 'before' => null];
+            }
+        } elseif ($last !== null && $periods[$last]['before'] === null) {
+            $periods[$last]['before'] = $today;
+            if (CarbonImmutable::parse($periods[$last]['after'])->addDay()->toDateString() >= $today) {
+                array_pop($periods);
+            }
+        }
+        $protocol->paused_periods = array_values($periods);
     }
 
     /** Delayed uploads to a paused plan are allowed only for dates in its recent active periods. */

@@ -90,30 +90,26 @@ class HorseDashboard
     }
 
     /**
-     * Where a protocol stands on $now: day, week and progress since its start,
-     * and whether it starts soon, runs or has finished.
+     * Where a protocol stands on $now on the plan clock (ProtocolClock): day, week and progress in plan days,
+     * and whether it starts soon, runs or has finished. An extended last week of a phase keeps its week number.
      */
-    private function progress(Protocol $protocol, CarbonImmutable $now): array
+    private function progress(Protocol $protocol, CarbonImmutable $now, ?ProtocolClock $clock = null): array
     {
-        $protocol->loadMissing('phases.weeks');
-        $start = $protocol->started_at ? CarbonImmutable::parse($protocol->started_at->toDateString(), $now->timezone)->startOfDay() : null;
-        $totalWeeks = $protocol->scheduledWeeks();
+        $clock ??= ProtocolClock::for($protocol, $now);
+        $start = $clock->start;
+        $totalWeeks = $clock->totalWeeks;
         $totalDays = $totalWeeks * 7;
-        $elapsed = $start ? (int) $start->diffInDays($now->startOfDay(), false) + 1 : 0;
-        $day = max(0, min($totalDays, $elapsed));
+        $week = min($clock->currentWeek(), max(1, $totalWeeks));
+        $day = $clock->started() ? max(0, min($totalDays, min($week * 7, max(($week - 1) * 7 + 1, $clock->planDays())))) : 0;
         $completion = app(ProtocolCompletion::class);
-        // An early completion ends progress on its last plan day, not on today.
-        if ($start && ($last = $completion->lastPlanDay($protocol))) {
-            $day = max(0, min($day, (int) $start->diffInDays(CarbonImmutable::parse($last, $now->timezone), false) + 1));
-        }
         $progressKnown = ! $completion->unknownEnd($protocol);
         if (! $progressKnown) $day = 0;
-        $running = $protocol->status !== 'completed' && $elapsed > 0 && $elapsed <= $totalDays;
-        // Completed, or past its last scheduled day (a paused plan stays paused).
-        $finished = $protocol->status !== 'paused' && ($protocol->status === 'completed' || ($start && $elapsed > $totalDays));
+        $running = $protocol->status !== 'completed' && $clock->started() && ! $clock->finished();
+        // Completed, or past its last scheduled week (a paused plan stays paused).
+        $finished = $protocol->status !== 'paused' && ($protocol->status === 'completed' || $clock->finished());
 
         return [
-            'start' => $start, 'day' => $day, 'week' => $day > 0 ? (int) ceil($day / 7) : 0, 'totalWeeks' => $totalWeeks, 'running' => $running, 'progressKnown' => $progressKnown,
+            'start' => $start, 'day' => $day, 'week' => $day > 0 ? (int) ceil($day / 7) : 0, 'extended' => $running && $clock->extended(), 'totalWeeks' => $totalWeeks, 'running' => $running, 'progressKnown' => $progressKnown,
             'progressPercent' => $totalDays ? (int) round($day / $totalDays * 100) : 0, 'finished' => $finished,
             'statusLabel' => match (true) {
                 $protocol->status === 'paused' => 'Je protocol is gepauzeerd',
@@ -128,9 +124,10 @@ class HorseDashboard
     /** The light version of protocol() for a card: progress, status and the active phases. */
     public function summary(Protocol $protocol, CarbonImmutable $now): array
     {
-        $progress = $this->progress($protocol, $now);
+        $clock = ProtocolClock::for($protocol, $now);
+        $progress = $this->progress($protocol, $now, $clock);
         $availability = app(ProtocolPhaseAvailability::class);
-        $active = $protocol->phases->filter(fn ($phase) => $availability->forPhase($protocol, $phase, $now)['state'] === 'active');
+        $active = $protocol->phases->filter(fn ($phase) => $availability->forPhase($protocol, $phase, $now, $clock)['state'] === 'active');
 
         return [
             'id' => $protocol->id, 'currentDay' => $progress['day'], 'currentWeek' => $progress['week'],
@@ -170,11 +167,11 @@ class HorseDashboard
     {
         $answers ??= $this->nutrition->answers($protocol);
         $protocol->loadMissing(['phases.weeks', 'phases.supplements.weeks', 'phases.supplements.intakes', 'phases.supplements.supplement', 'analysis.advice', 'voedingAdviezen', 'managementAdviezen', 'bewegingAdviezen', 'manualAdviezen.phases']);
-        ['start' => $start, 'day' => $day, 'week' => $week, 'totalWeeks' => $totalWeeks, 'running' => $running, 'progressPercent' => $progressPercent, 'progressKnown' => $progressKnown, 'statusLabel' => $statusLabel, 'finished' => $finished] = $this->progress($protocol, $now);
+        ['start' => $start, 'day' => $day, 'week' => $week, 'totalWeeks' => $totalWeeks, 'running' => $running, 'progressPercent' => $progressPercent, 'progressKnown' => $progressKnown, 'statusLabel' => $statusLabel, 'finished' => $finished, 'extended' => $extended] = $this->progress($protocol, $now, $clock = ProtocolClock::for($protocol, $now, $preview));
         $buildup = app(ProtocolDoseBuildup::class);
         $selections = $protocol->phases->flatMap->supplements->keyBy('id');
-        $phases = $protocol->phases->map(function ($phase) use ($protocol, $now, $preview, $buildup) {
-            $availability = app(ProtocolPhaseAvailability::class)->forPhase($protocol, $phase, $now);
+        $phases = $protocol->phases->map(function ($phase) use ($protocol, $now, $preview, $buildup, $clock) {
+            $availability = app(ProtocolPhaseAvailability::class)->forPhase($protocol, $phase, $now, $clock);
             $weeks = $phase->weeks->pluck('protocol_week_number', 'id');
 
             return $availability + [
@@ -202,17 +199,18 @@ class HorseDashboard
         $historicalDays = $preview ? collect() : $history->days($protocol, $monthDate->format('Y-m'));
         $todayDate = $now->toDateString();
         $intakes = $preview ? collect() : $history->recordedIntakes($protocol, min($monthDate->startOfMonth()->toDateString(), $todayDate), max($monthDate->endOfMonth()->toDateString(), $todayDate));
-        $rowsFor = function (int $number, string $date) use ($allSupplements, $intakes, $selections, $history) {
+        // The products on the schedule of a date come from the plan clock: per product, not per week number.
+        $rowsFor = function (array $ids, string $date) use ($allSupplements, $intakes, $selections, $history) {
             $records = $intakes->get($date, collect());
-            $planned = $allSupplements->filter(fn ($s) => in_array($number, $s['weekNumbers'], true));
+            $planned = $allSupplements->filter(fn ($s) => in_array($s['id'], $ids, true));
             return $history->withRecordedDoses($history->plannedRows($planned, $selections, $records, $date), $records);
         };
         $completion = app(ProtocolCompletion::class);
         $closedPeriods = $completion->closedPeriods($protocol);
         $withinSchedule = $running || ($week > 0 && $protocol->completed_on && $start
-            && $todayDate < $start->addWeeks($totalWeeks)->toDateString());
+            && ($clock->weekOn($todayDate) ?? PHP_INT_MAX) <= $totalWeeks);
         $today = $withinSchedule && ! $completion->containsDate($closedPeriods, $todayDate)
-            ? $rowsFor($week, $todayDate) : $history->withRecordedDoses(collect(), $intakes->get($todayDate, collect()));
+            ? $rowsFor($clock->activeOn($todayDate) ?? $clock->activeNow(), $todayDate) : $history->withRecordedDoses(collect(), $intakes->get($todayDate, collect()));
         if (! $preview) {
             $today = $today->concat($history->removedDosesOn($protocol, $todayDate));
         }
@@ -220,10 +218,12 @@ class HorseDashboard
         $done = $scheduledToday->where('done', true)->count();
         $notifications = [];
         $reminderDay = (int) ($protocol->customer_settings['weekly_update_day'] ?? 7);
-        $weeklyDue = ! $preview && $protocol->status === 'active' && $running && (($day - 1) % 7 + 1) >= $reminderDay
-            && ! DB::table('protocol_weekly_updates')->where('protocol_id', $protocol->id)->where('week_number', $week)->exists();
+        // Every 7 plan days, also while a week is extended: numbered by those periods, not by the week shown.
+        $updateWeek = $clock->updateWeek();
+        $weeklyDue = ! $preview && $protocol->status === 'active' && $running && $clock->updateDay() >= $reminderDay
+            && ! DB::table('protocol_weekly_updates')->where('protocol_id', $protocol->id)->where('week_number', $updateWeek)->exists();
         if ($weeklyDue) {
-            $notifications[] = ['id' => 'weekly-'.$week, 'type' => 'weekly_update', 'title' => 'Weekupdate invullen', 'body' => 'Hoe gaat het met '.$protocol->horse->name.' in week '.$week.'?', 'items' => []];
+            $notifications[] = ['id' => 'weekly-'.$updateWeek, 'updateWeek' => $updateWeek, 'type' => 'weekly_update', 'title' => 'Weekupdate invullen', 'body' => 'Hoe gaat het met '.$protocol->horse->name.' in week '.$week.'?', 'items' => []];
         }
         foreach ($phases as $phase) {
             if ($protocol->status === 'active' && $phase['state'] === 'preview') {
@@ -237,11 +237,11 @@ class HorseDashboard
         foreach (range(1, $monthDate->daysInMonth) as $dayNumber) {
             $date = $monthDate->setDay($dayNumber);
             $iso = $date->toDateString();
-            $n = $start ? (int) floor($start->diffInDays($date->startOfDay(), false) / 7) + 1 : 0;
+            $ids = $clock->activeOn($iso) ?? [];
             // After an early completion (or for a completed plan whose last day is unknown), a day that was
             // never frozen is no plan day: the live fallback must not show it as missed or count it.
             $afterPlan = ! $preview && $completion->containsDate($closedPeriods, $iso);
-            $rows = $iso === $todayDate ? $today : ($afterPlan ? collect() : $rowsFor($n, $iso));
+            $rows = $iso === $todayDate ? $today : ($afterPlan ? collect() : $rowsFor($ids, $iso));
             $scheduled = ProtocolDayHistory::scheduled($rows);
             $completed = $scheduled->where('done', true)->count();
             $state = 'default';
@@ -268,9 +268,12 @@ class HorseDashboard
             'id' => $protocol->id, 'title' => $protocol->title, 'currentDay' => $day, 'currentWeek' => $week,
             'preparing' => ! $start, 'paused' => $protocol->status === 'paused', 'completed' => $protocol->status === 'completed', 'finished' => $finished, 'startedAt' => $start?->toDateString(),
             'totalWeeks' => $totalWeeks, 'progressPercent' => $progressPercent, 'progressKnown' => $progressKnown, 'statusLabel' => $statusLabel,
-            'todayLabel' => ! $progressKnown ? $statusLabel : (! $start ? 'Je protocol staat klaar' : 'Week '.$week.' van '.$totalWeeks.' · '.$now->locale('nl')->translatedFormat('l j F')),
+            'todayLabel' => ! $progressKnown ? $statusLabel : (! $start ? 'Je protocol staat klaar' : 'Week '.$week.' van '.$totalWeeks.($extended ? ' · verlengd' : '').' · '.$now->locale('nl')->translatedFormat('l j F')),
             'dateLabel' => $now->locale('nl')->translatedFormat('l j F'),
-            'weekLabel' => $progressKnown ? 'Week '.$week.' van '.$totalWeeks : $statusLabel,
+            'weekLabel' => $progressKnown ? 'Week '.$week.' van '.$totalWeeks.($extended ? ' · verlengd' : '') : $statusLabel,
+            // Products still short catch up at the end of their phase (ProtocolClock). Extended: every running phase does.
+            'extension' => ! $preview && $running && $protocol->status === 'active' && ($catchingUp = $clock->extensions())
+                ? ['extended' => $extended, 'nextWeek' => $extended && $week < $totalWeeks ? $week + 1 : null, 'items' => $catchingUp] : null,
             'phaseLabel' => implode(' · ', array_column(array_filter($phases, fn ($p) => $p['state'] === 'active'), 'title')),
             'phases' => $phases, 'today' => ['items' => $today->all(), 'done' => $done, 'total' => $scheduledToday->count(), 'percentage' => $scheduledToday->isEmpty() ? 0 : (int) round($done / $scheduledToday->count() * 100)],
             'notifications' => $notifications,

@@ -38,6 +38,8 @@ class HorseDashboardTest extends TestCase
         $this->protocol = $this->horse->protocols()->create([
             'protocol_template_id' => $template->id, 'title' => 'Personal protocol',
             'status' => 'active', 'published_at' => now()->subDay(), 'started_at' => '2026-08-15',
+            // These tests are not about the minimum per week (ProtocolPlanClockTest): every day counts as given.
+            'minimum_gifts_from' => '2027-01-01',
             'total_weeks' => 4, 'current_week' => 1,
         ]);
         foreach ([[1, 2], [3, 4]] as $index => [$start, $end]) {

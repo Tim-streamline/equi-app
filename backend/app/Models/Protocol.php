@@ -31,12 +31,13 @@ use Illuminate\Validation\ValidationException;
     'status',
     'archived_previous_status',
     'published_at',
+    'minimum_gifts_from',
 ])]
 class Protocol extends Model
 {
     use HasUuids;
 
-    protected $hidden = ['intake_active_periods'];
+    protected $hidden = ['intake_active_periods', 'paused_periods'];
 
     /** Internal creation path used while an intake is creating its draft protocol. */
     public bool $creatingForIntake = false;
@@ -181,6 +182,8 @@ class Protocol extends Model
             'started_at' => 'date',
             'completed_on' => 'date',
             'closed_periods' => 'array',
+            'paused_periods' => 'array',
+            'minimum_gifts_from' => 'date',
             'intake_active_periods' => 'array',
             'published_at' => 'datetime',
         ];

@@ -27,8 +27,9 @@ class BrowserReminders
             }
             $now = $now->setTimezone($owner->notificationPreferences->timezone ?: 'Europe/Amsterdam');
             $groups = [];
+            $clock = ProtocolClock::for($protocol, $now);
             foreach ($protocol->phases()->with('weeks')->get() as $phase) {
-                $availability = app(ProtocolPhaseAvailability::class)->forPhase($protocol, $phase, $now);
+                $availability = app(ProtocolPhaseAvailability::class)->forPhase($protocol, $phase, $now, $clock);
                 if ($availability['state'] === 'preview') {
                     $groups[CarbonImmutable::parse($availability['availableAt'])->toDateString()][] = $phase;
                 }
