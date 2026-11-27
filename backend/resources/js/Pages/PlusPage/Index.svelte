@@ -5,7 +5,7 @@
     import { Button, Input, Textarea } from '$lib/components/ui';
     import { useForm } from '@inertiajs/svelte';
     import { prepareHeroPhoto } from '$lib/hero-photo.js';
-    let { content, heroImageUrl, portraitImageUrl, protocolPriceCents } = $props();
+    let { content, heroImageUrl, portraitImageUrl, protocolPriceCents, memberFaqVideo } = $props();
     const form = useForm({ protocol_price_cents: protocolPriceCents, content: structuredClone(content), hero: null, portrait: null, remove_portrait: false });
     let preparingHero = $state(false);
     let heroPreview = $state(null);
@@ -39,10 +39,12 @@
         ['Reviews en prijsblok', ['reviewsTitle', 'pricePeriod', 'priceButton', 'priceNote']],
         ['Afsluitend EquiBoost-blok onder de Q&A', ['closingLabel', 'closingTitle', 'closingBody', 'closingButton']],
         ['Bevestiging en welkom', ['confirmationTitle', 'confirmationPlan', 'confirmationProtocol', 'confirmationButton', 'welcomeTitle', 'welcomeBody']],
+        ['Veelgestelde vragen tijdens EquiBoost (voor klanten met een protocol)', ['memberFaqTitle', 'memberFaqBody', 'memberFaqVideoTitle']],
     ];
     const labels = { heroTitle: 'Kop', heroBody: 'Introductie', price: 'Prijs', period: 'Periode', heroButton: 'Eerste knop', stepsTitle: 'Titel stappen', stepsButton: 'Knop na stappen', guideTitle: 'Titel begeleider', guideBody: 'Over Shelley', guideSignature: 'Ondertekening', reviewsTitle: 'Titel reviews', priceButton: 'Knop prijsblok', priceNote: 'Regel onder prijs', closingTitle: 'Afsluitende kop', confirmationTitle: 'Titel bevestiging', confirmationPlan: 'Aankoopregel', confirmationProtocol: 'Protocolregel', confirmationButton: 'Bevestigingsknop', welcomeTitle: 'Titel welkom', welcomeBody: 'Welkomsttekst' };
     Object.assign(labels, { pageTitle: 'Paginatitel in de app', heroLabel: 'Label boven de introductie en het prijsblok', heroTitle: 'Kop introductie', heroBody: 'Body introductie', period: 'Omschrijving naast de prijs bovenaan', pricePeriod: 'Omschrijving naast de prijs onderaan' });
-    const lists = { steps: { label: 'Stappen', fields: { title: 'Titel', body: 'Tekst' } }, reviews: { label: 'Reviews', fields: { title: 'Kop', quote: 'Citaat', name: 'Naam' } }, faqs: { label: 'Veelgestelde vragen', fields: { question: 'Vraag', answer: 'Antwoord' } } };
+    const lists = { steps: { label: 'Stappen', fields: { title: 'Titel', body: 'Tekst' } }, reviews: { label: 'Reviews', fields: { title: 'Kop', quote: 'Citaat', name: 'Naam' } }, faqs: { label: 'Veelgestelde vragen', fields: { question: 'Vraag', answer: 'Antwoord' } }, memberFaqs: { label: 'Vragen tijdens EquiBoost (voor klanten met een protocol)', fields: { question: 'Vraag', answer: 'Antwoord' } } };
+    Object.assign(labels, { memberFaqTitle: 'Titel van de pagina', memberFaqBody: 'Introductie', memberFaqVideoTitle: 'Titel van de video in de bibliotheek' });
     Object.assign(labels, { homeTitle: 'Kop roze homeblok', homeBody: 'Omschrijving roze homeblok', homeButton: 'Knoptekst roze homeblok' });
     Object.assign(labels, { closingLabel: 'Label boven de kop', closingBody: 'Tekst afsluitend blok', closingButton: 'Knoptekst afsluitend blok' });
     function move(key, index, delta) {
@@ -71,7 +73,7 @@
             <div class="space-y-3"><h2 class="font-semibold">Portret Shelley</h2>{#if portraitImageUrl}<img src={portraitImageUrl} alt="Huidig portret Shelley" class="size-24 rounded-full object-cover" />{:else}<p class="text-sm text-muted-foreground">Nog geen portret aangeleverd. De app toont tot die tijd een initiaal.</p>{/if}<label class="block text-sm">Portret uploaden<input class="mt-2 block w-full" type="file" accept="image/jpeg,image/png,image/webp" onchange={e => $form.portrait = e.currentTarget.files?.[0] ?? null} /></label>{#if portraitImageUrl}<label class="flex gap-2 text-sm"><input type="checkbox" bind:checked={$form.remove_portrait} /> Portret verwijderen</label>{/if}</div>
         </section>
         {#each sections as [title, keys]}
-            <section class="space-y-4 border-t pt-5"><h2 class="font-semibold">{title}</h2>{#each keys as key}<Field label={labels[key]} error={$form.errors[`content.${key}`]}>{#if key.endsWith('Body')}<Textarea rows={5} bind:value={$form.content[key]} />{:else}<Input bind:value={$form.content[key]} />{/if}</Field>{/each}</section>
+            <section class="space-y-4 border-t pt-5"><h2 class="font-semibold">{title}</h2>{#each keys as key}<Field label={labels[key]} error={$form.errors[`content.${key}`]}>{#if key.endsWith('Body')}<Textarea rows={5} bind:value={$form.content[key]} />{:else}<Input bind:value={$form.content[key]} />{/if}</Field>{#if key === 'memberFaqVideoTitle'}<p class="text-sm text-muted-foreground">{memberFaqVideo ? `Gekoppeld: ${memberFaqVideo.title}` : 'Geen gepubliceerd bibliotheekitem met deze titel gevonden. De pagina toont dan geen video.'} Na het opslaan wordt de koppeling opnieuw gecontroleerd.</p>{/if}{/each}</section>
         {/each}
         {#each Object.entries(lists) as [key, list]}
             <section class="space-y-4 border-t pt-5"><h2 class="font-semibold">{list.label}</h2>

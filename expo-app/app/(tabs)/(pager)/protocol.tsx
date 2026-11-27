@@ -51,6 +51,7 @@ import { ProtocolOrderList } from "@/components/protocol/ProtocolOrderList";
 import { onceDailyOrderItems, scopeOrderItems, type OrderScope } from "@/lib/protocol-order-scope";
 import { CareAdvice } from "@/components/protocol/CareAdvice";
 import { ProtocolTabs } from "@/components/protocol/ProtocolTabs";
+import { ProtocolQuestions } from "@/components/protocol/ProtocolQuestions";
 import { PROTOCOL_SCALE as S, PROTOCOL_TEXT as T } from "@/components/protocol/styles";
 import { EYEBROW, PLAIN_CARD } from "@/components/ui/styles";
 import { HorseSwitcher } from "@/components/horse/HorseSwitcher";
@@ -304,6 +305,8 @@ export default function ProtocolListScreen() {
             )}
             {tab === "zorg" && <CareAdvice protocol={protocol} />}
             {tab === "analyse" && <ProtocolAnalysis analysis={protocol.analysis} />}
+            <ProtocolQuestions onFaq={() => router.push("/equiboost-faq")}
+              onShelby={() => router.push({ pathname: "/nova-chat", params: { horseId, protocolId: protocol.id } })} />
           </ScrollView>
           <Sheet
             visible={orders !== null}

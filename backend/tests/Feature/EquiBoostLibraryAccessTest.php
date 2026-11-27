@@ -127,6 +127,80 @@ class EquiBoostLibraryAccessTest extends TestCase
         $this->assertNull(app(EquiBoostAccess::class)->expiresAt($user->id));
     }
 
+    public function test_a_pause_stops_access_and_its_days_are_added_to_the_three_months(): void
+    {
+        $user = $this->customer();
+        $only = $this->item('only');
+        $protocol = $this->protocol($user);
+        $start = CarbonImmutable::parse(DB::table('protocols')->where('id', $protocol->id)->value('equiboost_started_at'), 'UTC');
+        $protocol->update(['status' => 'paused']);
+        $this->assertNotNull(DB::table('protocols')->where('id', $protocol->id)->value('equiboost_paused_at'));
+        $this->assertFalse($this->allowed($user, $only));
+        $this->assertDatabaseMissing('library_item_access', ['user_id' => $user->id, 'item_id' => $only->id]);
+
+        // Pretend the pause began ten days ago; only the database may set this value.
+        DB::statement('SET LOCAL session_replication_role = replica');
+        DB::table('protocols')->where('id', $protocol->id)->update(['equiboost_paused_at' => now()->subDays(10)]);
+        DB::statement('SET LOCAL session_replication_role = origin');
+        $protocol->update(['status' => 'active']);
+        $row = DB::table('protocols')->where('id', $protocol->id)->first();
+        $this->assertNull($row->equiboost_paused_at);
+        $this->assertGreaterThanOrEqual(10 * 86400, $row->equiboost_paused_seconds);
+        $this->assertLessThan(10 * 86400 + 120, $row->equiboost_paused_seconds);
+        $expires = $start->addMonthsNoOverflow(3)->addSeconds($row->equiboost_paused_seconds);
+        $this->assertTrue(app(EquiBoostAccess::class)->expiresAt($user->id)->equalTo($expires));
+        $this->assertTrue($this->allowed($user, $only));
+        $this->assertNotNull(DB::table('library_item_access')->where(['user_id' => $user->id, 'item_id' => $only->id])->value('expires_at'));
+        $synced = CarbonImmutable::parse(DB::table('library_item_access')->where(['user_id' => $user->id, 'item_id' => $only->id])->value('expires_at'), 'UTC');
+        $this->assertEqualsWithDelta($expires->getTimestamp(), $synced->getTimestamp(), 1, 'offline access in the app ends at the same moment');
+
+        $this->travelTo($start->addMonthsNoOverflow(3)->addDays(5));
+        $this->assertTrue($this->allowed($user, $only), 'the paused days are still to come');
+        $this->travelTo($expires);
+        $this->assertFalse($this->allowed($user, $only));
+
+        // The counters cannot be changed by hand.
+        DB::table('protocols')->where('id', $protocol->id)->update(['equiboost_paused_seconds' => 999999999, 'equiboost_paused_at' => now()]);
+        $this->assertSame($row->equiboost_paused_seconds, DB::table('protocols')->where('id', $protocol->id)->value('equiboost_paused_seconds'));
+        $this->assertNull(DB::table('protocols')->where('id', $protocol->id)->value('equiboost_paused_at'));
+    }
+
+    public function test_a_plan_paused_before_its_equiboost_start_adds_nothing(): void
+    {
+        $user = $this->customer();
+        $protocol = $this->protocol($user, 'paused');
+        $this->assertNull(DB::table('protocols')->where('id', $protocol->id)->value('equiboost_paused_at'));
+        $protocol->update(['status' => 'active']);
+        $this->assertSame(0, (int) DB::table('protocols')->where('id', $protocol->id)->value('equiboost_paused_seconds'));
+    }
+
+    public function test_earlier_pauses_are_counted_from_the_audit_log(): void
+    {
+        $user = $this->customer();
+        $resumed = $this->protocol($user);
+        $stillPaused = $this->protocol($user);
+        $unknown = $this->protocol($user);
+        DB::table('protocols')->whereIn('id', [$stillPaused->id, $unknown->id])->update(['status' => 'paused']);
+        $log = fn (Protocol $p, string $from, string $to, CarbonImmutable $at) => DB::table('audit_logs')->insert(['action' => 'updated', 'target_type' => 'Protocol',
+            'target_id' => $p->id, 'before' => json_encode(['status' => $from]), 'after' => json_encode(['status' => $to]), 'created_at' => $at]);
+        $now = CarbonImmutable::now('UTC');
+        $log($resumed, 'active', 'paused', $now->addDays(1));
+        $log($resumed, 'paused', 'active', $now->addDays(4));
+        $log($resumed, 'active', 'paused', $now->addDays(6));
+        $log($resumed, 'paused', 'archived', $now->addDays(8));
+        $log($stillPaused, 'active', 'paused', $now->addDays(2));
+
+        $migration = require database_path('migrations/2026_11_26_000002_add_equiboost_pause_time_to_protocols.php');
+        DB::statement('SET LOCAL session_replication_role = replica');
+        (fn () => $this->backfillFromAuditLog())->call($migration);
+        DB::statement('SET LOCAL session_replication_role = origin');
+
+        $this->assertEqualsWithDelta(5 * 86400, (int) DB::table('protocols')->where('id', $resumed->id)->value('equiboost_paused_seconds'), 1);
+        $this->assertNull(DB::table('protocols')->where('id', $resumed->id)->value('equiboost_paused_at'));
+        $this->assertEqualsWithDelta($now->addDays(2)->getTimestamp(), CarbonImmutable::parse(DB::table('protocols')->where('id', $stillPaused->id)->value('equiboost_paused_at'), 'UTC')->getTimestamp(), 1);
+        $this->assertNotNull(DB::table('protocols')->where('id', $unknown->id)->value('equiboost_paused_at'), 'a pause without a record counts from today');
+    }
+
     public function test_horse_transfer_archive_and_subscription_expiry_reconcile_sync_access(): void
     {
         $original = $this->customer();

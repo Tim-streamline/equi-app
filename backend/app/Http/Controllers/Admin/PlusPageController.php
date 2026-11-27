@@ -30,7 +30,9 @@ class PlusPageController extends Controller
             if (is_string($value)) $rules['content.'.$key] = ['required', 'string', 'max:5000'];
         }
         $rules['content.reviewsAreExamples'] = ['required', 'boolean'];
-        foreach (['steps' => ['title', 'body'], 'reviews' => ['title', 'quote', 'name'], 'faqs' => ['question', 'answer']] as $key => $fields) {
+        // Leaving the video title empty hides the video on the EquiBoost FAQ page.
+        $rules['content.memberFaqVideoTitle'] = ['present', 'nullable', 'string', 'max:500'];
+        foreach (['steps' => ['title', 'body'], 'reviews' => ['title', 'quote', 'name'], 'faqs' => ['question', 'answer'], 'memberFaqs' => ['question', 'answer']] as $key => $fields) {
             $rules['content.'.$key] = ['present', 'array', 'list', 'max:20'];
             $rules['content.'.$key.'.*'] = ['array:'.implode(',', $fields)];
             foreach ($fields as $field) $rules['content.'.$key.'.*.'.$field] = ['required', 'string', 'max:5000'];

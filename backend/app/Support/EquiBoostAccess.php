@@ -7,6 +7,9 @@ use Illuminate\Support\Facades\DB;
 
 class EquiBoostAccess
 {
+    /** Keep in step with database/sql/library-equiboost-pause-access.sql. */
+    private const END = "p.equiboost_started_at + interval '3 months' + p.equiboost_paused_seconds * interval '1 second'";
+
     public function expiresAt(string $userId): ?CarbonImmutable
     {
         $at = now()->utc()->format('Y-m-d H:i:s.u');
@@ -14,8 +17,9 @@ class EquiBoostAccess
             ->where('h.owner_id', $userId)->where('h.status', 'active')->where('p.status', 'active')
             ->whereNotNull('p.published_at')->where('p.published_at', '<=', $at)
             ->where('p.equiboost_started_at', '<=', $at)
-            ->whereRaw("p.equiboost_started_at + interval '3 months' > ?", [$at])
-            ->selectRaw("max(p.equiboost_started_at + interval '3 months') as expires_at")->value('expires_at');
+            // Time spent paused is added afterwards; while paused the protocol is not active and gives no access.
+            ->whereRaw(self::END." > ?", [$at])
+            ->selectRaw('max('.self::END.') as expires_at')->value('expires_at');
 
         return $expiry ? CarbonImmutable::parse($expiry, 'UTC') : null;
     }

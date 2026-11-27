@@ -11,7 +11,7 @@ Eerder met credits ontgrendelde items blijven toegankelijk, ook na een beleidswi
 
 ## EquiBoost-periode
 
-Toegang geldt voor de eigenaar van een actief paard met een gepubliceerd, actief persoonlijk protocol. De eerste activatie/publicatie legt `protocols.equiboost_started_at` vast. De periode eindigt drie kalendermaanden later. Pauzeren of opnieuw publiceren reset deze datum niet. Bij toekomstige publicatie begint de periode op die publicatiedatum. Bestaande gepubliceerde protocollen worden bij migratie vanaf hun bestaande publicatiedatum gerekend.
+Toegang geldt voor de eigenaar van een actief paard met een gepubliceerd, actief persoonlijk protocol. De eerste activatie/publicatie legt `protocols.equiboost_started_at` vast. De periode eindigt drie kalendermaanden later, plus de tijd dat het protocol gepauzeerd was. Tijdens een pauze is er geen EquiBoost-toegang; na het hervatten komt de pauzetijd erbij. De database houdt dit bij in `protocols.equiboost_paused_seconds` en `equiboost_paused_at` (trigger `track_equiboost_pause`, bij elke statuswijziging). Eerdere pauzes zijn bij de migratie uit de auditlog berekend; een lopende pauze zonder auditregel telt vanaf de migratiedatum. Opnieuw publiceren reset de startdatum niet. Bij toekomstige publicatie begint de periode op die publicatiedatum. Bestaande gepubliceerde protocollen worden bij migratie vanaf hun bestaande publicatiedatum gerekend.
 
 `library_items.equiboost_access` bevat `only`, `included` of NULL. De bestaande `credit_cost` blijft de prijs; er is geen tweede prijssysteem. Het oude `is_plus` blijft ondersteund voor bestaande data en oudere clients, en betekent regulier inbegrepen/gratis, niet EquiBoost.
 

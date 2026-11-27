@@ -8,8 +8,10 @@ use App\Models\ChatMessage;
 use App\Models\ChatSession;
 use App\Models\Horse;
 use App\Models\Plan;
+use App\Models\PlusPage;
 use App\Models\Subscription;
 use App\Models\User;
+use App\Support\Shelby\ShelbyAssistant;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\Client\Request as ClientRequest;
 use Illuminate\Support\Facades\Http;
@@ -154,6 +156,20 @@ class ShelbyChatTest extends TestCase
         $lock->release();
         Http::assertNothingSent();
         $this->assertSame(0, ChatMessage::count());
+    }
+
+    public function test_shelby_answers_equiboost_customers_with_the_faq_they_see_in_the_app(): void
+    {
+        $content = PlusPage::defaults();
+        $content['memberFaqs'] = [['question' => 'Mag ik een dag overslaan?', 'answer' => 'Eigen antwoord van Shelley.']];
+        PlusPage::create(['id' => PlusPage::PAGE_ID, 'content' => $content]);
+        $this->openAiSays('Goed dat je het vraagt.');
+        app(ShelbyAssistant::class)->answer('Mag ik een dag overslaan?', [], $this->horse, true);
+        app(ShelbyAssistant::class)->answer('Wat is EquiBoost?', [], $this->horse, false);
+        $sent = Http::recorded()->map(fn ($pair) => $pair[0]['instructions'])->values();
+        $this->assertStringContainsString("Vraag: Mag ik een dag overslaan?\nAntwoord: Eigen antwoord van Shelley.", $sent[0]);
+        $this->assertStringContainsString('vaste plek voor vragen over het EquiBoost traject', $sent[0]);
+        $this->assertStringNotContainsString('VEELGESTELDE VRAGEN TIJDENS EQUIBOOST', $sent[1]);
     }
 
     public function test_equiboost_is_offered_once_and_never_to_an_owner_who_has_it(): void

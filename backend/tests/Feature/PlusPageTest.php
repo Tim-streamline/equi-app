@@ -1,6 +1,6 @@
 <?php
 namespace Tests\Feature;
-use App\Models\{AdminUser, PlusPage};
+use App\Models\{AdminUser, LibraryItem, PlusPage};
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
@@ -68,6 +68,41 @@ class PlusPageTest extends TestCase
             ->assertJsonPath('content.heroTitle', 'Bestaande eigen tekst')
             ->assertJsonPath('content.pricePeriod', 'Traject op maat gedurende 3 maanden')
             ->assertJsonPath('content.price', '€ 147,50');
+    }
+    public function test_equiboost_faq_links_the_published_library_video_with_that_title(): void
+    {
+        $this->getJson('/api/protocol-page')->assertOk()->assertJsonCount(count(PlusPage::defaults()['memberFaqs']), 'content.memberFaqs')
+            ->assertJsonPath('content.memberFaqVideoTitle', 'Veelgestelde vragen tijdens EquiBoost')->assertJsonPath('memberFaqVideo', null);
+        LibraryItem::create(['title' => 'Veelgestelde vragen tijdens EquiBoost', 'slug' => 'faq-concept', 'format' => 'video']);
+        LibraryItem::create(['title' => 'Veelgestelde vragen tijdens EquiBoost', 'slug' => 'faq-later', 'format' => 'video', 'published_at' => now()->addDay()]);
+        $this->getJson('/api/protocol-page')->assertJsonPath('memberFaqVideo', null);
+        $video = LibraryItem::create(['title' => 'Veelgestelde vragen tijdens EquiBoost ', 'slug' => 'faq', 'format' => 'video', 'published_at' => now()->subDay()]);
+        $this->getJson('/api/protocol-page')->assertJsonPath('memberFaqVideo.id', $video->id)->assertJsonPath('memberFaqVideo.format', 'video');
+
+        $this->editor();
+        $content = PlusPage::defaults(); $content['memberFaqVideoTitle'] = ''; $content['memberFaqs'] = [['question' => 'Eigen vraag?', 'answer' => 'Eigen antwoord.']];
+        $this->post('/admin/plus-page', ['content' => json_encode($content)])->assertSessionHasNoErrors();
+        $this->getJson('/api/protocol-page')->assertJsonPath('memberFaqVideo', null)->assertJsonPath('content.memberFaqs.0.question', 'Eigen vraag?');
+        $content['memberFaqs'] = [['question' => '', 'answer' => 'Zonder vraag']];
+        $this->post('/admin/plus-page', ['content' => json_encode($content)])->assertSessionHasErrors('content.memberFaqs.0.question');
+    }
+    public function test_a_page_saved_before_the_equiboost_faq_keeps_its_own_questions_and_can_be_saved_again(): void
+    {
+        // Like staging: the editor rewrote the sales Q&A before the EquiBoost FAQ existed.
+        $content = PlusPage::defaults();
+        unset($content['memberFaqTitle'], $content['memberFaqBody'], $content['memberFaqVideoTitle'], $content['memberFaqs']);
+        $content['faqs'] = [['question' => 'Zijn er naast de prijs nog andere kosten?', 'answer' => 'Eigen antwoord.'], ['question' => 'Tweede eigen vraag?', 'answer' => 'Ook eigen.']];
+        PlusPage::create(['id' => PlusPage::PAGE_ID, 'content' => $content]);
+
+        $page = $this->getJson('/api/protocol-page')->assertOk()->assertJsonCount(2, 'content.faqs')->assertJsonCount(count(PlusPage::defaults()['memberFaqs']), 'content.memberFaqs')
+            ->assertJsonPath('content.faqs.0.question', 'Zijn er naast de prijs nog andere kosten?')->json();
+
+        // The admin form sends back what it loaded, now including the EquiBoost FAQ.
+        $this->editor();
+        $this->post('/admin/plus-page', ['content' => json_encode($page['content'])])->assertSessionHasNoErrors();
+        $saved = PlusPage::current()->content;
+        $this->assertSame($content['faqs'], $saved['faqs']);
+        $this->assertCount(count(PlusPage::defaults()['memberFaqs']), $saved['memberFaqs']);
     }
     public function test_content_management_requires_editor_role(): void
     {
