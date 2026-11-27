@@ -6,18 +6,23 @@ use App\Models\Protocol;
 use App\Models\ProtocolPhase;
 use Carbon\CarbonImmutable;
 
-/** Calendar-day boundaries, shared by the dashboard and scheduled reminders. */
+/** Phase boundaries on the plan clock (ProtocolClock), shared by the dashboard and scheduled reminders. */
 class ProtocolPhaseAvailability
 {
-    public function forPhase(Protocol $protocol, ProtocolPhase $phase, CarbonImmutable $now): array
+    public function forPhase(Protocol $protocol, ProtocolPhase $phase, CarbonImmutable $now, ?ProtocolClock $clock = null): array
     {
+        $clock ??= ProtocolClock::for($protocol, $now);
         $weeks = $phase->weeks->pluck('protocol_week_number');
         $first = (int) ($weeks->min() ?? $phase->week_start ?? 0);
         $last = (int) ($weeks->max() ?? $phase->week_end ?? 0);
-        $start = $protocol->started_at && $first > 0 && $last >= $first
-            ? CarbonImmutable::parse($protocol->started_at->toDateString(), $now->timezone)->startOfDay()->addWeeks($first - 1)
-            : null;
-        $end = $start?->addWeeks($last - $first + 1);
+        // Pauses and catching up move the dates; coming dates assume everything is given.
+        $planned = $protocol->started_at && $first > 0 && $last >= $first;
+        $startDate = $planned && $phase->id ? $clock->phaseStart($phase->id) : null;
+        $endDate = $startDate ? $clock->phaseEnd($phase->id) : null;
+        // A phase the clock does not know (not saved with the plan): its calendar weeks from the start.
+        $start = $startDate ? CarbonImmutable::parse($startDate, $now->timezone)->startOfDay()
+            : ($planned ? CarbonImmutable::parse($protocol->started_at->toDateString(), $now->timezone)->startOfDay()->addWeeks($first - 1) : null);
+        $end = $endDate ? CarbonImmutable::parse($endDate, $now->timezone)->startOfDay() : $start?->addWeeks($last - $first + 1);
         $available = $start?->subDays(7);
         $state = ! $start || $now->lt($available) ? 'locked'
             : ($now->lt($start) ? 'preview' : ($now->lt($end) ? 'active' : 'done'));
@@ -25,7 +30,7 @@ class ProtocolPhaseAvailability
         if ($completed && $state === 'active') $state = 'done';
 
         $duration = $first > 0 ? max(0, $last - $first + 1) : 0;
-        $currentWeek = $state === 'active' ? (int) floor($start->diffInDays($now->startOfDay()) / 7) + 1 : null;
+        $currentWeek = $state === 'active' ? max(1, min($duration, ($phase->id ? $clock->phaseWeekNow($phase->id) : null) ?? (int) floor($start->diffInDays($now->startOfDay()) / 7) + 1)) : null;
 
         return [
             'durationWeeks' => $duration, 'currentPhaseWeek' => $currentWeek,

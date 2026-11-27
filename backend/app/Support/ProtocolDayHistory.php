@@ -28,7 +28,10 @@ class ProtocolDayHistory
             $protocol->load('phases.weeks', 'phases.supplements.weeks', 'phases.supplements.intakes', 'phases.supplements.supplement');
             $start = CarbonImmutable::parse($protocol->started_at->toDateString(), $now->timezone);
             $weeks = $protocol->scheduledWeeks();
-            $end = $now->startOfDay()->subDay()->min($start->addWeeks($weeks)->subDay());
+            // The plan ends where the plan clock puts it: pauses and catching up move the end.
+            $clock = ProtocolClock::for($protocol, $now);
+            $planEnd = $clock->planEnd();
+            $end = $now->startOfDay()->subDay()->min($planEnd ? CarbonImmutable::parse($planEnd, $now->timezone)->subDay() : $start->addWeeks($weeks)->subDay());
             // Days after an early completion are not plan days: never freeze them as missed. Without a known
             // last day (an old completion) nothing new is frozen.
             $completion = app(ProtocolCompletion::class);
@@ -50,11 +53,13 @@ class ProtocolDayHistory
                 if ($existing->has($date) || $completion->containsDate($closedPeriods, $date)) {
                     continue;
                 }
-                $week = (int) floor($start->diffInDays($day) / 7) + 1;
-                $planned = $protocol->phases->flatMap(function ($phase) use ($week) {
-                    $weekIds = $phase->weeks->where('protocol_week_number', $week)->pluck('id');
-
-                    return $phase->supplements->filter(fn ($item) => $item->weeks->contains(fn ($link) => $weekIds->contains($link->protocol_phase_week_id)))
+                // Paused days are no plan days: nothing was planned, so nothing was missed.
+                $ids = $clock->activeOn($date);
+                if ($ids === null) {
+                    continue;
+                }
+                $planned = $protocol->phases->flatMap(function ($phase) use ($ids) {
+                    return $phase->supplements->filter(fn ($item) => in_array($item->id, $ids, true))
                         ->map(fn ($item) => ['id' => $item->id, 'name' => $item->name, 'description' => $item->description,
                             'instructions' => $item->instructions, 'phaseTitle' => $phase->title, 'phaseId' => $phase->id,
                             'administrationsPerDay' => $item->administrationsPerDay()]);
@@ -189,7 +194,7 @@ class ProtocolDayHistory
             'editable' => $protocol->status === 'active' && $date >= $now->subDays(7)->toDateString()
                 && ! app(ProtocolCompletion::class)->containsDate($protocol->closed_periods ?? [], $date),
             'editableUntil' => CarbonImmutable::parse($date, $now->timezone)->addDays(7)->toDateString(),
-            'weekNumber' => $protocol->started_at ? (int) floor(CarbonImmutable::parse($protocol->started_at->toDateString(), $now->timezone)->diffInDays(CarbonImmutable::parse($date, $now->timezone)) / 7) + 1 : null,
+            'weekNumber' => ProtocolClock::for($protocol, $now)->weekOn($date),
             'items' => $items, 'state' => $this->state($items),
         ];
     }

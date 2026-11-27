@@ -90,13 +90,8 @@ class ProtocolTiming
             return 0;
         }
 
-        if ($protocol->status === 'paused') {
-            return max(1, min($totalWeeks, (int) ($protocol->current_week ?: 1)));
-        }
-
-        $days = CarbonImmutable::parse($protocol->started_at->toDateString(), $now->timezone)->startOfDay()->diffInDays($now->startOfDay(), false);
-
-        return max(1, min($totalWeeks, (int) floor(max(0, $days) / 7) + 1));
+        // The plan clock skips paused days and keeps an extended week, also for a paused plan.
+        return max(1, min($totalWeeks, ProtocolClock::for($protocol, $now)->currentWeek()));
     }
 
 }

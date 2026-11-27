@@ -5,7 +5,7 @@ import { router } from 'expo-router';
 import { Button } from '@/components/ui/Button';
 import { useStoreMutations, useSupplementIntakesForDate } from '@/db/hooks';
 import type { DashboardPhase, DashboardProtocol, DashboardSupplement } from '@/lib/horse-dashboard';
-import { administrationKey, administrationLabel, inlineTiming, todayGroups, PHASE_COLORS } from '@/lib/protocol-today';
+import { administrationKey, administrationLabel, extensionText, inlineTiming, todayGroups, PHASE_COLORS } from '@/lib/protocol-today';
 import { selectionHaptic } from '@/lib/haptics';
 import { buildupState, dailyDoseChanges } from '@/lib/protocol-buildup';
 import { DoseBuildupSchedule } from './DoseBuildupSchedule';
@@ -31,6 +31,7 @@ export function ProtocolToday({ protocol, date, horseId, onPhase, SheetComponent
   const doseChanges = dailyDoseChanges(scheduled, date);
   const done = scheduled.filter(item => item.done).length;
   const percent = scheduled.length ? Math.round(done / scheduled.length * 100) : 0;
+  const extension = readOnly ? null : extensionText(protocol.extension, scheduled);
   const selected = rows.find(item => detailKey === `${date}:${administrationKey(item)}`);
   const active = protocol.phases.filter(phase => phase.state === 'active');
   const toggle = async (item: DashboardSupplement) => {
@@ -61,6 +62,7 @@ export function ProtocolToday({ protocol, date, horseId, onPhase, SheetComponent
           <View className="h-full rounded-full bg-mint-500" style={{ width: `${percent}%` }} />
         </View>
     </View>}
+    {extension && <Text className={`mb-5 ${T.secondary}`}>{extension}</Text>}
     {doseChanges.length > 0 && <View className="mb-5 gap-2 rounded-[22px] border-l-[3px] border-mint-500 bg-mint-50 p-4">
       <Text className={`${S.section} text-teal-700`}>Vandaag een nieuwe opbouwdag</Text>
       <Text className={T.secondary}>Controleer de hoeveelheid voordat je de producten geeft.</Text>

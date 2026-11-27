@@ -1,4 +1,4 @@
-import type { DashboardSupplement } from './horse-dashboard';
+import type { DashboardExtension, DashboardSupplement } from './horse-dashboard';
 
 export const PHASE_COLORS = ['#18BAB0', '#0D5C5B', '#5FD7CB', '#B58339'];
 
@@ -45,4 +45,22 @@ export function todayGroups(items: DashboardSupplement[], records: {
   const scheduled = [...groups].map(([label, rows]) => ({ label, number: rows[0]?.administration ?? 1, items: rows, done: rows.filter(row => row.done).length }))
     .sort((a, b) => a.number - b.number);
   return history.length ? [...scheduled, { label: 'Eerder geregistreerd', number: null, items: history, done: null }] : scheduled;
+}
+
+/**
+ * The sentence above Today's list while the last week of a phase is extended, e.g. "Brandnetel is in deze fase
+ * minder vaak gegeven. Geef het nog 5 dagen, daarna start week 7." Today's ticks count down right away.
+ */
+export function extensionText(extension: DashboardExtension | null | undefined, today: DashboardSupplement[]): string | null {
+  if (!extension?.items.length) return null;
+  const ticked = new Set(today.filter(item => item.done && !item.recordedOnly).map(item => item.id));
+  const open = extension.items
+    .map(item => ({ name: item.name, left: item.remaining - (ticked.has(item.id) ? 1 : 0) }))
+    .filter(item => item.left > 0);
+  // Only when every running phase is catching up does a next week (or the end of the plan) wait for them.
+  const waiting = extension.extended !== false;
+  const then = extension.nextWeek ? `start week ${extension.nextWeek}` : 'is je herstelplan rond';
+  if (!open.length) return !waiting ? null : extension.nextWeek ? `Morgen start week ${extension.nextWeek}.` : 'Morgen is je herstelplan rond.';
+  return open.map((item, index) => `${item.name} is in deze fase minder vaak gegeven. Geef het nog ${item.left} ${item.left === 1 ? 'dag' : 'dagen'}`
+    + (waiting && index === open.length - 1 ? `, daarna ${then}.` : '.')).join(' ');
 }
