@@ -125,6 +125,30 @@ class HorseDashboard
         ];
     }
 
+    /**
+     * The weekly updates the owner must fill in before using the app: one per active horse whose
+     * running plan has an open week (ProtocolWeeklyUpdate), sorted by horse name.
+     *
+     * @return list<array{horseId: string, horseName: string, protocolId: string, week: int}>
+     */
+    public function openWeeklyUpdates(User $user, CarbonImmutable $now): array
+    {
+        $weekly = app(ProtocolWeeklyUpdate::class);
+
+        return Protocol::query()->where('status', 'active')->publishedBy($now)
+            ->whereHas('horse', fn ($query) => $query->where('owner_id', $user->id)->where('status', 'active'))
+            ->with('phases.weeks', 'horse')->get()
+            ->map(fn (Protocol $protocol) => ['protocol' => $protocol, 'week' => $weekly->openWeek($protocol, $this->progress($protocol, $now), $now)])
+            ->filter(fn ($open) => $open['week'] !== null)
+            // A horse has one plan in progress; keep the one its dashboard shows.
+            ->sortBy(fn ($open) => [$open['protocol']->published_at?->getTimestamp() * -1, $open['protocol']->id])
+            ->unique(fn ($open) => $open['protocol']->horse_id)
+            ->sortBy(fn ($open) => Str::lower(Str::ascii((string) $open['protocol']->horse->name)))
+            ->map(fn ($open) => ['horseId' => $open['protocol']->horse_id, 'horseName' => (string) $open['protocol']->horse->name,
+                'protocolId' => $open['protocol']->id, 'week' => $open['week']])
+            ->values()->all();
+    }
+
     /** The light version of protocol() for a card: progress, status and the active phases. */
     public function summary(Protocol $protocol, CarbonImmutable $now): array
     {
@@ -219,11 +243,9 @@ class HorseDashboard
         $scheduledToday = ProtocolDayHistory::scheduled($today);
         $done = $scheduledToday->where('done', true)->count();
         $notifications = [];
-        $reminderDay = (int) ($protocol->customer_settings['weekly_update_day'] ?? 7);
-        $weeklyDue = ! $preview && $protocol->status === 'active' && $running && (($day - 1) % 7 + 1) >= $reminderDay
-            && ! DB::table('protocol_weekly_updates')->where('protocol_id', $protocol->id)->where('week_number', $week)->exists();
-        if ($weeklyDue) {
-            $notifications[] = ['id' => 'weekly-'.$week, 'type' => 'weekly_update', 'title' => 'Weekupdate invullen', 'body' => 'Hoe gaat het met '.$protocol->horse->name.' in week '.$week.'?', 'items' => []];
+        $weeklyWeek = $preview ? null : app(ProtocolWeeklyUpdate::class)->openWeek($protocol, compact('start', 'day', 'totalWeeks', 'running'), $now);
+        if ($weeklyWeek) {
+            $notifications[] = ['id' => 'weekly-'.$weeklyWeek, 'type' => 'weekly_update', 'week' => $weeklyWeek, 'title' => 'Weekupdate invullen', 'body' => 'Hoe gaat het met '.$protocol->horse->name.' in week '.$weeklyWeek.'?', 'items' => []];
         }
         foreach ($phases as $phase) {
             if ($protocol->status === 'active' && $phase['state'] === 'preview') {

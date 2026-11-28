@@ -32,6 +32,9 @@ class ProtocolCompletion
         if (($from === 'active' || $to === 'active') && Schema::hasColumn('protocols', 'intake_active_periods')) {
             $this->recordActivePeriod($protocol);
         }
+        if (Schema::hasColumn('protocols', 'pause_history')) {
+            $this->recordPause($protocol, $from, $to);
+        }
         if ($to === 'archived') {
             return;
         }
@@ -82,6 +85,43 @@ class ProtocolCompletion
         }
         $protocol->intake_active_periods = array_values(array_filter($periods, fn ($period) =>
             $period['until'] === null || $period['until'] > $oldest));
+    }
+
+    /**
+     * Every pause of the plan as {from: day it was paused, until: day it was resumed or null}, never pruned
+     * (unlike intake_active_periods). `since` is the first status change after this was introduced:
+     * the history is complete from that day on. The weekly update uses it (ProtocolWeeklyUpdate).
+     */
+    private function recordPause(Protocol $protocol, ?string $from, string $to): void
+    {
+        $today = CarbonImmutable::today($this->timezone($protocol))->toDateString();
+        $history = $protocol->pause_history ?? ['since' => $today, 'pauses' => []];
+        $last = array_key_last($history['pauses']);
+        if ($to === 'paused' && $from !== 'paused') {
+            $history['pauses'][] = ['from' => $today, 'until' => null];
+        } elseif ($from === 'paused' && $to !== 'paused' && $last !== null && $history['pauses'][$last]['until'] === null) {
+            $history['pauses'][$last]['until'] = $today;
+        }
+        $protocol->pause_history = $history;
+    }
+
+    /**
+     * Whether the plan was paused on a date, from pause_history: after the day of pausing and before the day of
+     * resuming (both of those days count as active). Null when the history does not reach back to that date.
+     */
+    public function pausedOn(Protocol $protocol, string $date): ?bool
+    {
+        $history = $protocol->pause_history;
+        if (! $history || $date < $history['since']) {
+            return null;
+        }
+        foreach ($history['pauses'] as $pause) {
+            if ($pause['from'] < $date && ($pause['until'] === null || $date < $pause['until'])) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     public function beforeKnownPause(Protocol $protocol, string $date): bool

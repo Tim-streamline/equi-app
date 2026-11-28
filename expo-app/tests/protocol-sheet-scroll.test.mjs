@@ -5,7 +5,8 @@ import ts from 'typescript';
 import { protocolStyleGlobals } from './protocol-styles.mjs';
 
 const source = await readFile(new URL('../app/(tabs)/(pager)/protocol.tsx', import.meta.url), 'utf8');
-const sheet = source.slice(source.indexOf('function Sheet('), source.indexOf('function WeeklySheet('));
+// Sheet is the last component in the file; the weekly update has its own screen (WeeklyUpdateGate).
+const sheet = source.slice(source.indexOf('function Sheet('));
 const { outputText } = ts.transpileModule(`export ${sheet}`, {
   compilerOptions: { jsx: ts.JsxEmit.ReactJSX, module: ts.ModuleKind.CommonJS },
 });
@@ -69,36 +70,4 @@ test('the backdrop is separate from the scroll gestures and the modal blocks the
   const backdrop = find(tree, node => node.props.testID === 'protocol-sheet-backdrop');
   assert.equal(backdrop.type, 'Pressable');
   assert.equal(find(backdrop, node => node.type === 'ScrollView'), undefined);
-});
-
-test('weekupdate input and save/cancel actions share the bounded keyboard scroll area and save once', async () => {
-  const weekly = source.slice(source.indexOf('function WeeklySheet('));
-  const code = ts.transpileModule(`export ${weekly}`, { compilerOptions: { jsx: ts.JsxEmit.ReactJSX, module: ts.ModuleKind.CommonJS } }).outputText;
-  const jsx = (type, props) => ({ type, props });
-  let hook = 0, saved = 0, closed = 0;
-  const state = ['Een weekupdate', false], requests = [];
-  const dependencies = {
-    ...Object.fromEntries(['Text', 'TextInput', 'KeyboardAvoidingView', 'KeyboardScrollView', 'Pressable', 'Modal', 'SafeAreaView', 'Button'].map(name => [name, name])),
-    Platform: { OS: 'android' },
-    useState: initial => { const index = hook++; return [state[index] ?? initial, value => { state[index] = value; }]; },
-    dashboardRequest: async (...args) => requests.push(args), deviceTimezone: () => 'Europe/Amsterdam',
-    Alert: { alert: () => assert.fail('Unexpected save failure') },
-    ...protocolStyleGlobals,
-  };
-  const exports = {};
-  new Function('require', 'exports', ...Object.keys(dependencies), code)(() => ({ jsx, jsxs: jsx }), exports, ...Object.values(dependencies));
-  const props = { visible: true, horseId: 'horse', protocolId: 'protocol', onClose: () => closed++, onSaved: async () => saved++ };
-  const tree = exports.WeeklySheet(props);
-  const panel = find(tree, node => node.type === 'SafeAreaView');
-  assert.equal(panel.props.style.maxHeight, '100%');
-  assert.equal(panel.props.style.flexShrink, 1);
-  const scroll = find(panel, node => node.type === 'KeyboardScrollView');
-  assert.ok(find(scroll, node => node.type === 'TextInput' && node.props.multiline));
-  assert.ok(find(scroll, node => node.type === 'Button' && node.props.title === 'Annuleren' && node.props.onPress === props.onClose));
-  const button = find(scroll, node => node.type === 'Button');
-  assert.equal(button.props.title, 'Weekupdate opslaan');
-  button.props.onPress();
-  await new Promise(resolve => setImmediate(resolve));
-  assert.deepEqual(requests, [['/api/horses/horse/weekly-update', { protocol_id: 'protocol', note: 'Een weekupdate', timezone: 'Europe/Amsterdam' }]]);
-  assert.equal(saved, 1); assert.equal(closed, 1); assert.equal(state[0], '');
 });

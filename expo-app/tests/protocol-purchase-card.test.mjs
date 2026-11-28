@@ -22,7 +22,7 @@ function app(overrides = {}) {
     useHorseDashboard: () => ({ horseId, data, revision: 0, refresh() {} }),
     useTabBarPadding: () => 76,
     ...Object.fromEntries(['HorseSwitcher', 'OfflineStrip', 'IconButton', 'ShoppingBag', 'ProtocolTabs'].map(name => [name, name])),
-    ...Object.fromEntries(['Today', 'Calendar', 'Nutrition', 'CareAdvice', 'ProtocolAnalysis', 'Sheet', 'WeeklySheet', 'Supplement', 'Label', 'ProtocolOrderList'].map(name => [name, name])),
+    ...Object.fromEntries(['Today', 'Calendar', 'Nutrition', 'CareAdvice', 'ProtocolAnalysis', 'Sheet', 'Supplement', 'Label', 'ProtocolOrderList'].map(name => [name, name])),
     HEADER_ICON: '#466362', useHeaderAction: action => { header = action; },
     router: { push: route => routes.push(route) },
     scopeOrderItems: (items, scope) => scope === 'all' ? items : [],

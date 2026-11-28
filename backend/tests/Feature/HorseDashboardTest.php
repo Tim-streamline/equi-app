@@ -887,8 +887,8 @@ class HorseDashboardTest extends TestCase
             ->assertJsonPath('protocol.phases.0.state', 'active')
             ->assertJsonPath('protocol.phases.1.state', 'preview')
             ->assertJsonPath('protocol.phases.1.accessible', true)
-            ->assertJsonPath('protocol.notifications.1.type', 'next_phase')
-            ->assertJsonPath('protocol.notifications.1.items.0.name', 'Herb 2')
+            ->assertJsonPath('protocol.notifications.0.type', 'next_phase')
+            ->assertJsonPath('protocol.notifications.0.items.0.name', 'Herb 2')
             ->assertJsonPath('protocol.today.total', 1);
     }
 
@@ -984,7 +984,7 @@ class HorseDashboardTest extends TestCase
     public function test_weekly_update_persists_and_clears_only_its_protocol_reminder(): void
     {
         $url = '/api/horses/'.$this->horse->id;
-        $this->protocol->update(['published_at' => now()]);
+        $this->protocol->update(['published_at' => now(), 'total_weeks' => 12]);
         $this->postJson($url.'/weekly-update', ['protocol_id' => $this->protocol->id, 'note' => 'Going well', 'mood' => 4, 'timezone' => 'America/New_York'])->assertOk();
         $this->getJson($url.'/dashboard')->assertOk()->assertJsonCount(1, 'protocol.notifications')
             ->assertJsonPath('protocol.notifications.0.type', 'next_phase');
@@ -994,6 +994,7 @@ class HorseDashboardTest extends TestCase
     public function test_pause_hides_weekly_update_and_rejects_an_already_open_form_until_resumed(): void
     {
         $url = '/api/horses/'.$this->horse->id;
+        $this->protocol->update(['total_weeks' => 12]);
         $this->getJson($url.'/dashboard')->assertOk()
             ->assertJsonPath('protocol.notifications.0.type', 'weekly_update');
         DB::table('protocol_weekly_updates')->insert([
@@ -1012,6 +1013,133 @@ class HorseDashboardTest extends TestCase
         $this->protocol->update(['status' => 'active']);
         $this->getJson($url.'/dashboard')->assertOk()->assertJsonPath('protocol.notifications.0.type', 'weekly_update');
         $this->postJson($url.'/weekly-update', ['protocol_id' => $this->protocol->id, 'note' => 'After resume'])->assertOk();
+    }
+
+    /** Started 2026-08-15 with 12 weeks; the plan has been active since 2026-08-01. */
+    private function twelveWeekPlan(): string
+    {
+        $this->protocol->forceFill(['total_weeks' => 12, 'intake_active_periods' => [['from' => '2026-08-01', 'until' => null]]])->save();
+
+        return '/api/horses/'.$this->horse->id;
+    }
+
+    private function openWeeklyWeek(string $url): ?int
+    {
+        return collect($this->getJson($url.'/dashboard')->assertOk()->json('protocol.notifications'))
+            ->firstWhere('type', 'weekly_update')['week'] ?? null;
+    }
+
+    public function test_a_missed_weekly_update_stays_open_in_the_next_week_until_it_is_filled_in(): void
+    {
+        $url = $this->twelveWeekPlan();
+        $this->travelTo(now()->setDate(2026, 8, 27)); // Day 13: week 2 has not reached day 7 yet; week 1 is open.
+        $this->assertSame(1, $this->openWeeklyWeek($url));
+        $this->travelTo(now()->setDate(2026, 8, 28)); // Day 14, the update day of week 2: only the latest week counts.
+        $this->assertSame(2, $this->openWeeklyWeek($url));
+        $this->travelTo(now()->setDate(2026, 8, 29)); // Day 15: week 3 has started, week 2 is still open.
+        $this->assertSame(2, $this->openWeeklyWeek($url));
+        $this->postJson($url.'/weekly-update', ['protocol_id' => $this->protocol->id, 'week' => 2, 'note' => 'Late but done'])->assertOk();
+        $this->assertDatabaseHas('protocol_weekly_updates', ['protocol_id' => $this->protocol->id, 'week_number' => 2, 'note' => 'Late but done']);
+        $this->assertNull($this->openWeeklyWeek($url));
+        $this->postJson($url.'/weekly-update', ['protocol_id' => $this->protocol->id, 'note' => 'Again'])
+            ->assertUnprocessable()->assertJsonPath('message', 'Er staat geen weekupdate open.');
+    }
+
+    public function test_after_several_missed_weeks_only_the_latest_week_is_asked_for(): void
+    {
+        $url = $this->twelveWeekPlan();
+        $this->travelTo(now()->setDate(2026, 9, 14)); // Day 31, week 5: weeks 1 to 4 were all missed.
+        $this->assertSame(4, $this->openWeeklyWeek($url));
+        $this->postJson($url.'/weekly-update', ['protocol_id' => $this->protocol->id, 'week' => 3, 'note' => 'Stale form'])
+            ->assertUnprocessable()->assertJsonPath('message', 'Er staat inmiddels een nieuwe weekupdate open. Je tekst staat nog klaar, dus je kunt hem opnieuw versturen.');
+        $this->postJson($url.'/weekly-update', ['protocol_id' => $this->protocol->id, 'week' => 4, 'note' => 'Catching up'])->assertOk();
+        $this->assertSame([4], DB::table('protocol_weekly_updates')->where('protocol_id', $this->protocol->id)->pluck('week_number')->all());
+        $this->assertNull($this->openWeeklyWeek($url));
+    }
+
+    public function test_weekly_updates_stop_three_weeks_before_the_end_of_the_plan(): void
+    {
+        $url = $this->twelveWeekPlan();
+        $this->travelTo(now()->setDate(2026, 10, 16)); // Day 63: the update day of week 9, the last week with an update.
+        $this->assertSame(9, $this->openWeeklyWeek($url));
+        $this->travelTo(now()->setDate(2026, 10, 30)); // Day 77, week 11: week 9 is still open until it is filled in.
+        $this->assertSame(9, $this->openWeeklyWeek($url));
+        $this->postJson($url.'/weekly-update', ['protocol_id' => $this->protocol->id, 'note' => 'Last update'])->assertOk();
+        $this->assertDatabaseHas('protocol_weekly_updates', ['protocol_id' => $this->protocol->id, 'week_number' => 9]);
+        $this->travelTo(now()->setDate(2026, 11, 6)); // Day 84, the update day of week 12: no update, the evaluation follows.
+        $this->assertNull($this->openWeeklyWeek($url));
+    }
+
+    public function test_a_week_whose_update_day_fell_in_a_pause_lapses(): void
+    {
+        $url = $this->twelveWeekPlan();
+        // A pause from before the pause history: the recorded active periods tell.
+        // Paused on 2026-08-26 and resumed on 2026-08-30: day 7 of week 2 (2026-08-28) fell in the pause.
+        $this->protocol->forceFill(['pause_history' => null,
+            'intake_active_periods' => [['from' => '2026-08-01', 'until' => '2026-08-26'], ['from' => '2026-08-30', 'until' => null]]])->save();
+        $this->travelTo(now()->setDate(2026, 8, 31));
+        $this->assertNull($this->openWeeklyWeek($url));
+        $this->travelTo(now()->setDate(2026, 9, 4)); // Day 21: the update day of week 3, after the pause.
+        $this->assertSame(3, $this->openWeeklyWeek($url));
+        // Paused on the update day itself: that day still counts, so the week stays open after resuming.
+        $this->protocol->forceFill(['intake_active_periods' => [['from' => '2026-08-01', 'until' => '2026-08-28'], ['from' => '2026-08-30', 'until' => null]]])->save();
+        $this->travelTo(now()->setDate(2026, 8, 31));
+        $this->assertSame(2, $this->openWeeklyWeek($url));
+    }
+
+    public function test_the_pause_history_decides_whether_an_update_day_fell_in_a_pause(): void
+    {
+        $url = $this->twelveWeekPlan();
+        $this->travelTo(now()->setDate(2026, 8, 26));
+        $this->protocol->refresh()->update(['status' => 'paused']);
+        $this->travelTo(now()->setDate(2026, 8, 30));
+        $this->protocol->refresh()->update(['status' => 'active']);
+        $this->assertSame(['since' => '2026-08-28', 'pauses' => [['from' => '2026-08-26', 'until' => '2026-08-30']]], $this->protocol->refresh()->pause_history);
+        $this->travelTo(now()->setDate(2026, 8, 31)); // Day 7 of week 2 (2026-08-28) fell in the pause.
+        $this->assertNull($this->openWeeklyWeek($url));
+        // Paused and resumed on the same day: no day of the plan was paused.
+        $this->protocol->refresh()->update(['status' => 'paused']);
+        $this->protocol->refresh()->update(['status' => 'active']);
+        $this->travelTo(now()->setDate(2026, 9, 4));
+        $this->assertSame(3, $this->openWeeklyWeek($url));
+    }
+
+    public function test_the_last_weekly_update_survives_a_long_pause_after_its_update_day(): void
+    {
+        $url = $this->twelveWeekPlan();
+        $this->travelTo(now()->setDate(2026, 10, 16)); // Day 63: the update day of week 9, the last week with an update.
+        $this->assertSame(9, $this->openWeeklyWeek($url));
+        // Paused the next day for eleven days: the active periods are pruned to a week when resuming.
+        $this->travelTo(now()->setDate(2026, 10, 17));
+        $this->protocol->refresh()->update(['status' => 'paused']);
+        $this->travelTo(now()->setDate(2026, 10, 28));
+        $this->protocol->refresh()->update(['status' => 'active']);
+        $this->assertSame([['from' => '2026-10-28', 'until' => null]], $this->protocol->refresh()->intake_active_periods);
+        $this->travelTo(now()->setDate(2026, 10, 30)); // Week 11: week 9 was active on its update day and is still open.
+        $this->assertSame(9, $this->openWeeklyWeek($url));
+        // But when its update day itself fell in a long pause, it lapses.
+        $this->protocol->forceFill(['pause_history' => ['since' => '2026-08-01', 'pauses' => [['from' => '2026-10-10', 'until' => '2026-10-28']]]])->save();
+        $this->assertNull($this->openWeeklyWeek($url));
+    }
+
+    public function test_open_weekly_updates_list_every_horse_of_the_owner_by_name(): void
+    {
+        $this->twelveWeekPlan();
+        $other = Horse::create(['owner_id' => $this->owner->id, 'name' => 'Alpha', 'weight_kg' => 500, 'status' => 'active']);
+        $plan = $other->protocols()->create(['title' => 'Alpha plan', 'status' => 'active', 'published_at' => now()->subDay(),
+            'started_at' => '2026-08-15', 'total_weeks' => 12, 'current_week' => 1]);
+        $stranger = Horse::create(['owner_id' => User::factory()->create()->id, 'name' => 'Not mine', 'weight_kg' => 500, 'status' => 'active']);
+        $stranger->protocols()->create(['title' => 'Other plan', 'status' => 'active', 'published_at' => now()->subDay(),
+            'started_at' => '2026-08-15', 'total_weeks' => 12, 'current_week' => 1]);
+        $this->getJson('/api/weekly-updates?timezone=Europe/Amsterdam')->assertOk()->assertExactJson(['weeklyUpdates' => [
+            ['horseId' => $other->id, 'horseName' => 'Alpha', 'protocolId' => $plan->id, 'week' => 2],
+            ['horseId' => $this->horse->id, 'horseName' => 'Test Horse', 'protocolId' => $this->protocol->id, 'week' => 2],
+        ]]);
+        $this->postJson('/api/horses/'.$other->id.'/weekly-update', ['protocol_id' => $plan->id, 'week' => 2, 'note' => 'Fine'])->assertOk();
+        $this->getJson('/api/weekly-updates')->assertOk()->assertJsonCount(1, 'weeklyUpdates')
+            ->assertJsonPath('weeklyUpdates.0.horseName', 'Test Horse');
+        $this->protocol->update(['status' => 'paused']);
+        $this->getJson('/api/weekly-updates')->assertOk()->assertJsonCount(0, 'weeklyUpdates');
     }
 
     public function test_future_and_finished_protocols_do_not_offer_daily_actions_or_reminders(): void
