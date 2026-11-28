@@ -48,14 +48,19 @@ class ProtocolWeeklyUpdate
     }
 
     /**
-     * Whether the plan was active on a date, from its recorded active periods (ProtocolCompletion).
-     * The day of a pause still counts as active. A plan without recorded periods has never been paused.
+     * Whether the plan was active on a date. The day of a pause still counts as active.
      *
-     * The periods are pruned to the last week at every status change. For the latest update day that is enough:
-     * it lies less than a week before today, so a period that contained it is still kept.
+     * First from the pause history, which is never pruned: the last update day (three weeks before the end)
+     * can stay open for weeks. Before that history begins, from the recorded active periods: those are pruned
+     * to the last week at every status change, which is enough for an update day less than a week ago.
+     * A plan without recorded periods has never been paused.
      */
     private function activeOn(Protocol $protocol, string $date): bool
     {
+        $paused = app(ProtocolCompletion::class)->pausedOn($protocol, $date);
+        if ($paused !== null) {
+            return ! $paused;
+        }
         $periods = $protocol->intake_active_periods ?? [];
         if ($periods === []) {
             return true;

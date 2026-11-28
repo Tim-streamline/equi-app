@@ -62,7 +62,7 @@ test('nothing is shown without an open weekly update', () => {
 });
 
 test('the weekly update covers the app and cannot be closed, only saved or logged out of', async () => {
-  const state = { 0: [moos, bram], 1: 0, 2: '  Mest steviger.  ' };
+  const state = { 0: [moos, bram], 1: 0, 2: { p1: '  Mest steviger.  ' } };
   const { tree, requests } = gate(state, [bram]);
   assert.equal(tree.type, 'Modal');
   assert.equal(tree.props.visible, true);
@@ -84,7 +84,22 @@ test('the weekly update covers the app and cannot be closed, only saved or logge
   assert.deepEqual(requests[0], ['/api/horses/h1/weekly-update', { protocol_id: 'p1', week: 4, note: 'Mest steviger.', timezone: 'Europe/Amsterdam' }]);
   assert.deepEqual(state[0], [bram]);
   assert.equal(state[1], 1);
-  assert.equal(state[2], '');
+  assert.deepEqual(state[2], {});
+});
+
+test('a draft stays with its own horse when a refresh moves on to another horse', () => {
+  const input = tree => all(tree, node => node.type === 'TextInput')[0];
+  const state = { 0: [moos, bram], 1: 0, 2: {} };
+  input(gate(state).tree).props.onChangeText('Over Moos');
+  assert.deepEqual(state[2], { p1: 'Over Moos' });
+  // Moos' update was filled in elsewhere: Bram comes first with an empty field.
+  state[0] = [bram];
+  const forBram = gate(state).tree;
+  assert.equal(input(forBram).props.value, '');
+  assert.equal(all(forBram, node => node.type === 'Button')[0].props.disabled, true);
+  // The week moved on for the same horse: the text stays.
+  state[0] = [{ ...moos, week: 5 }];
+  assert.equal(input(gate(state).tree).props.value, 'Over Moos');
 });
 
 test('the next horse follows with how many are left', () => {
@@ -94,6 +109,6 @@ test('the next horse follows with how many are left', () => {
 });
 
 test('saving is disabled while the field is empty', () => {
-  const save = all(gate({ 0: [moos], 2: '   ' }).tree, node => node.type === 'Button')[0];
+  const save = all(gate({ 0: [moos], 2: { p1: '   ' } }).tree, node => node.type === 'Button')[0];
   assert.equal(save.props.disabled, true);
 });

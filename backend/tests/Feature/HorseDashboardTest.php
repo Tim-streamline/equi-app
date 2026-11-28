@@ -1073,8 +1073,10 @@ class HorseDashboardTest extends TestCase
     public function test_a_week_whose_update_day_fell_in_a_pause_lapses(): void
     {
         $url = $this->twelveWeekPlan();
+        // A pause from before the pause history: the recorded active periods tell.
         // Paused on 2026-08-26 and resumed on 2026-08-30: day 7 of week 2 (2026-08-28) fell in the pause.
-        $this->protocol->forceFill(['intake_active_periods' => [['from' => '2026-08-01', 'until' => '2026-08-26'], ['from' => '2026-08-30', 'until' => null]]])->save();
+        $this->protocol->forceFill(['pause_history' => null,
+            'intake_active_periods' => [['from' => '2026-08-01', 'until' => '2026-08-26'], ['from' => '2026-08-30', 'until' => null]]])->save();
         $this->travelTo(now()->setDate(2026, 8, 31));
         $this->assertNull($this->openWeeklyWeek($url));
         $this->travelTo(now()->setDate(2026, 9, 4)); // Day 21: the update day of week 3, after the pause.
@@ -1083,6 +1085,41 @@ class HorseDashboardTest extends TestCase
         $this->protocol->forceFill(['intake_active_periods' => [['from' => '2026-08-01', 'until' => '2026-08-28'], ['from' => '2026-08-30', 'until' => null]]])->save();
         $this->travelTo(now()->setDate(2026, 8, 31));
         $this->assertSame(2, $this->openWeeklyWeek($url));
+    }
+
+    public function test_the_pause_history_decides_whether_an_update_day_fell_in_a_pause(): void
+    {
+        $url = $this->twelveWeekPlan();
+        $this->travelTo(now()->setDate(2026, 8, 26));
+        $this->protocol->refresh()->update(['status' => 'paused']);
+        $this->travelTo(now()->setDate(2026, 8, 30));
+        $this->protocol->refresh()->update(['status' => 'active']);
+        $this->assertSame(['since' => '2026-08-28', 'pauses' => [['from' => '2026-08-26', 'until' => '2026-08-30']]], $this->protocol->refresh()->pause_history);
+        $this->travelTo(now()->setDate(2026, 8, 31)); // Day 7 of week 2 (2026-08-28) fell in the pause.
+        $this->assertNull($this->openWeeklyWeek($url));
+        // Paused and resumed on the same day: no day of the plan was paused.
+        $this->protocol->refresh()->update(['status' => 'paused']);
+        $this->protocol->refresh()->update(['status' => 'active']);
+        $this->travelTo(now()->setDate(2026, 9, 4));
+        $this->assertSame(3, $this->openWeeklyWeek($url));
+    }
+
+    public function test_the_last_weekly_update_survives_a_long_pause_after_its_update_day(): void
+    {
+        $url = $this->twelveWeekPlan();
+        $this->travelTo(now()->setDate(2026, 10, 16)); // Day 63: the update day of week 9, the last week with an update.
+        $this->assertSame(9, $this->openWeeklyWeek($url));
+        // Paused the next day for eleven days: the active periods are pruned to a week when resuming.
+        $this->travelTo(now()->setDate(2026, 10, 17));
+        $this->protocol->refresh()->update(['status' => 'paused']);
+        $this->travelTo(now()->setDate(2026, 10, 28));
+        $this->protocol->refresh()->update(['status' => 'active']);
+        $this->assertSame([['from' => '2026-10-28', 'until' => null]], $this->protocol->refresh()->intake_active_periods);
+        $this->travelTo(now()->setDate(2026, 10, 30)); // Week 11: week 9 was active on its update day and is still open.
+        $this->assertSame(9, $this->openWeeklyWeek($url));
+        // But when its update day itself fell in a long pause, it lapses.
+        $this->protocol->forceFill(['pause_history' => ['since' => '2026-08-01', 'pauses' => [['from' => '2026-10-10', 'until' => '2026-10-28']]]])->save();
+        $this->assertNull($this->openWeeklyWeek($url));
     }
 
     public function test_open_weekly_updates_list_every_horse_of_the_owner_by_name(): void

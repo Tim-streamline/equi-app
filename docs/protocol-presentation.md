@@ -19,7 +19,7 @@ Sources: seven supplied PDF documents, read and first-page visual references ins
 Weekly update rule (`App\Support\ProtocolWeeklyUpdate`):
 - It opens on the update day of a protocol week (`weekly_update_day`, default day 7) and stays open until it is filled in, also after the next week has started.
 - Only the latest week counts: after several missed weeks the owner fills in the latest one, and older weeks lapse.
-- A week whose update day fell in a pause lapses. The day of pausing itself still counts.
+- A week whose update day fell in a pause lapses. The day of pausing itself still counts. This is read from `protocols.pause_history`, which keeps every pause and is never pruned (the last update can stay open for weeks). For dates before that history begins, the rule falls back to `intake_active_periods`.
 - Weekly updates stop three weeks before the end of the plan (week 9 of 12). After that the evaluation follows.
 
 `GET /api/weekly-updates` lists the open updates for every horse of the owner. The app shows them at the root (`WeeklyUpdateGate`), one horse at a time, over the whole app. The screen cannot be closed: saving is the way through, and logging out is the only other action. When the app sends `week` and that week has meanwhile lapsed, the server refuses the save, so text is never stored under the wrong week.

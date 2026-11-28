@@ -36,7 +36,7 @@ class Protocol extends Model
 {
     use HasUuids;
 
-    protected $hidden = ['intake_active_periods'];
+    protected $hidden = ['intake_active_periods', 'pause_history'];
 
     /** Internal creation path used while an intake is creating its draft protocol. */
     public bool $creatingForIntake = false;
@@ -182,6 +182,7 @@ class Protocol extends Model
             'completed_on' => 'date',
             'closed_periods' => 'array',
             'intake_active_periods' => 'array',
+            'pause_history' => 'array',
             'published_at' => 'datetime',
         ];
     }

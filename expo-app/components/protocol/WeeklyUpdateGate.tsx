@@ -31,7 +31,9 @@ function AccountWeeklyUpdateGate() {
   const [open, setOpen] = useState<OpenWeeklyUpdate[]>([]);
   // Horses saved in this round, so the screen can say "Paard 2 van 2".
   const [saved, setSaved] = useState(0);
-  const [note, setNote] = useState('');
+  // Drafts per plan: a refresh that moves on to another horse never carries text over to it,
+  // and a week that moves on for the same horse keeps the text.
+  const [drafts, setDrafts] = useState<Record<string, string>>({});
   const [busy, setBusy] = useState(false);
   const [loggingOut, setLoggingOut] = useState(false);
   const revision = useRef(accountSession.revision);
@@ -59,6 +61,9 @@ function AccountWeeklyUpdateGate() {
 
   const current = open[0];
   if (!current) return null;
+  const note = drafts[current.protocolId] ?? '';
+  const setNote = (value: string) => setDrafts(all => ({ ...all, [current.protocolId]: value }));
+  const clearNote = (protocolId: string) => setDrafts(({ [protocolId]: _done, ...rest }) => rest);
   const position = saved + 1;
   const total = saved + open.length;
   const { title, subtitle } = weeklyUpdateCopy(current.horseName, position, total);
@@ -72,7 +77,7 @@ function AccountWeeklyUpdateGate() {
       });
       setSaved(value => value + 1);
       setOpen(list => list.filter(item => item.protocolId !== current.protocolId));
-      setNote('');
+      clearNote(current.protocolId);
       void check();
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Probeer het opnieuw.';
@@ -81,8 +86,8 @@ function AccountWeeklyUpdateGate() {
       if (message.startsWith(WEEKLY_UPDATE_STALE)) {
         await check();
       } else if (message === 'Er staat geen weekupdate open.') {
-        // Filled in elsewhere or no longer open: move on without carrying this text to another horse.
-        setNote('');
+        // Filled in elsewhere or no longer open: drop this draft and move on.
+        clearNote(current.protocolId);
         await check();
       }
     } finally {
