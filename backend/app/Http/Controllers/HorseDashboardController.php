@@ -30,10 +30,19 @@ class HorseDashboardController extends Controller
         return response()->json($this->forClient($request, $dashboard->build($user, $horse, CarbonImmutable::now($data['timezone'] ?? config('app.timezone')), $data['month'] ?? null, ClientCapabilities::readOnlyPlans($request))));
     }
 
+    /** The weekly updates that block the app until they are filled in, for every horse of the owner. */
+    public function openWeeklyUpdates(Request $request, HorseDashboard $dashboard)
+    {
+        $user = User::query()->whereNull('disabled_at')->findOrFail($request->attributes->get('powersync_user_id'));
+        $data = $request->validate(['timezone' => ['sometimes', 'timezone']]);
+
+        return response()->json(['weeklyUpdates' => $dashboard->openWeeklyUpdates($user, CarbonImmutable::now($data['timezone'] ?? config('app.timezone')))]);
+    }
+
     public function weeklyUpdate(Request $request, Horse $horse, HorseDashboard $dashboard)
     {
         $user = $this->owner($request, $horse);
-        $data = $request->validate(['protocol_id' => ['required', 'uuid'], 'note' => ['required', 'string', 'max:10000'], 'mood' => ['nullable', 'integer', 'between:1,5'], 'timezone' => ['sometimes', 'timezone']]);
+        $data = $request->validate(['protocol_id' => ['required', 'uuid'], 'note' => ['required', 'string', 'max:10000'], 'mood' => ['nullable', 'integer', 'between:1,5'], 'week' => ['sometimes', 'integer', 'min:1'], 'timezone' => ['sometimes', 'timezone']]);
         $now = CarbonImmutable::now($data['timezone'] ?? config('app.timezone'));
         DB::transaction(function () use ($horse, $data, $now, $dashboard, $user) {
             // Serialize saving with admin pause/resume, including forms opened before a pause.
@@ -42,8 +51,11 @@ class HorseDashboardController extends Controller
                 ->publishedBy($now)->lockForUpdate()->firstOrFail();
             abort_if($protocol->status === 'paused', 422, 'Je herstelplan is gepauzeerd. Je kunt weer een weekupdate versturen zodra je plan is hervat.');
             $presentation = $dashboard->protocol($protocol, $now);
-            abort_unless(collect($presentation['notifications'])->contains('type', 'weekly_update'), 422, 'Er staat geen weekupdate open.');
-            DB::table('protocol_weekly_updates')->updateOrInsert(['protocol_id' => $protocol->id, 'week_number' => $presentation['currentWeek']], [
+            $week = collect($presentation['notifications'])->firstWhere('type', 'weekly_update')['week'] ?? null;
+            abort_unless($week, 422, 'Er staat geen weekupdate open.');
+            // A form opened for an earlier week that lapsed meanwhile: the owner sees the new week after a refresh.
+            abort_if(isset($data['week']) && (int) $data['week'] !== $week, 422, 'Er staat inmiddels een nieuwe weekupdate open. Je tekst staat nog klaar, dus je kunt hem opnieuw versturen.');
+            DB::table('protocol_weekly_updates')->updateOrInsert(['protocol_id' => $protocol->id, 'week_number' => $week], [
                 'user_id' => $user->id, 'note' => $data['note'], 'mood' => $data['mood'] ?? null, 'created_at' => now(), 'updated_at' => now(),
             ]);
         });

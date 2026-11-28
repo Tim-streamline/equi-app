@@ -22,6 +22,7 @@ import {
 import { LibraryThumbnailPreloader } from '@/components/library/LibraryThumbnailPreloader';
 import { LibraryContentSync } from '@/components/library/LibraryContentSync';
 import { ProtocolNotifications } from '@/components/notifications/ProtocolNotifications';
+import { WeeklyUpdateGate } from '@/components/protocol/WeeklyUpdateGate';
 import { DbProvider } from '@/db/provider';
 import { IntakeProvider } from '@/lib/intake/store';
 import { IntakeSchemaProvider } from '@/lib/intake/schema-provider';
@@ -70,6 +71,7 @@ function RootLayout() {
           <LibraryThumbnailPreloader />
           <LibraryContentSync />
           <ProtocolNotifications />
+          <WeeklyUpdateGate />
           <IntakeSchemaProvider>
             <IntakeProvider>
               <View style={{ flex: 1, backgroundColor: '#FBF8F3' }}>

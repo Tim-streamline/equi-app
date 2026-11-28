@@ -90,6 +90,7 @@ Route::middleware(AuthenticatePowerSyncJwt::class)->group(function () {
     Route::match(['get', 'post'], '/api/horses/{horse}/protocol-day', [HorseDashboardController::class, 'day']);
     Route::post('/api/horses/{horse}/protocol-orders', [HorseDashboardController::class, 'orders'])->middleware('throttle:protocol-orders');
     Route::post('/api/horses/{horse}/protocol-order-settings', [HorseDashboardController::class, 'orderSettings'])->middleware('throttle:protocol-orders');
+    Route::get('/api/weekly-updates', [HorseDashboardController::class, 'openWeeklyUpdates']);
     Route::post('/api/horses/{horse}/weekly-update', [HorseDashboardController::class, 'weeklyUpdate']);
     Route::post('/api/horses/{horse}/protocol-start', [HorseDashboardController::class, 'startProtocol']);
     Route::get('/api/protocols/{protocol}/evaluation', [\App\Http\Controllers\ProtocolEvaluationController::class, 'show'])->whereUuid('protocol');

@@ -15,6 +15,7 @@ import { IntakeProvider } from '@/lib/intake/store';
 import { IntakeSchemaProvider } from '@/lib/intake/schema-provider';
 import { LibraryContentSync } from '@/components/library/LibraryContentSync';
 import { MandatoryRefresh } from './MandatoryRefresh';
+import { WeeklyUpdateGate } from '@/components/protocol/WeeklyUpdateGate';
 
 export default function RootLayout() {
   const [loaded, error] = useFonts({ SourceSans3_400Regular, SourceSans3_500Medium, SourceSans3_600SemiBold, SourceSans3_700Bold, SourceSans3_400Regular_Italic, SourceSans3_600SemiBold_Italic });
@@ -25,6 +26,7 @@ export default function RootLayout() {
         <MandatoryRefresh><DbProvider><SubscriptionGate><IntakeSchemaProvider><IntakeProvider>
           <LibraryContentSync />
           <BrowserPushLifecycle />
+          <WeeklyUpdateGate />
           <Navigation />
         </IntakeProvider></IntakeSchemaProvider></SubscriptionGate></DbProvider></MandatoryRefresh>
       </View>

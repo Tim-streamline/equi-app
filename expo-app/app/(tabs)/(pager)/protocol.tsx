@@ -1,5 +1,4 @@
 import { PurchasedProtocols } from '@/components/intake/PurchasedProtocols';
-import { KeyboardTextInput as TextInput, KeyboardViewport as KeyboardAvoidingView, KeyboardScrollView } from '@/components/ui/KeyboardForm';
 import { LibraryThumbnail } from "@/components/library/LibraryThumbnail";
 import { Image } from 'expo-image';
 import { useEffect, useMemo, useRef, useState, type ReactNode, type ComponentProps } from "react";
@@ -10,12 +9,10 @@ import {
   Pressable,
   Modal,
   ActivityIndicator,
-  Alert,
-  Platform,
   useWindowDimensions,
 } from "react-native";
 import { router, useLocalSearchParams } from "expo-router";
-import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import {
   Check,
   X,
@@ -83,7 +80,6 @@ export default function ProtocolListScreen() {
   const orderSelections = (items: DashboardSupplement[], label?: string): OrderScope =>
     ({ selections: items.map((item) => ({ id: item.id, phaseId: item.phaseId })), label });
   const [phase, setPhase] = useState<DashboardPhase | null>(null);
-  const [weeklyOpen, setWeeklyOpen] = useState(false);
   const padBottom = useTabBarPadding();
   useEffect(() => {
     const requestedTab = protocolTab(tabParam);
@@ -92,7 +88,6 @@ export default function ProtocolListScreen() {
   useEffect(() => {
     setPhase(null);
     setOrders(null);
-    setWeeklyOpen(false);
     setMonth(undefined);
   }, [horseId]);
   const protocol = data?.protocol;
@@ -277,7 +272,6 @@ export default function ProtocolListScreen() {
                 horseId={horseId}
                 onOrder={(items, label) => setOrders(orderSelections(items, label))}
                 onPhase={openPhase}
-                onWeekly={() => setWeeklyOpen(true)}
               />
             )}
             {/* A completed plan stays readable; a later purchase's intake must still be reachable below it. */}
@@ -335,13 +329,6 @@ export default function ProtocolListScreen() {
             )}
             {visiblePhase && <ProtocolPhaseContent key={visiblePhase.id} phase={visiblePhase} date={data.date} orderItems={orderItems} completed={protocol.completed} onRefresh={refresh} />}
           </Sheet>
-          <WeeklySheet
-            visible={weeklyOpen}
-            horseId={horseId}
-            protocolId={protocol.id}
-            onClose={() => setWeeklyOpen(false)}
-            onSaved={refresh}
-          />
         </>
       )}
     </View>
@@ -438,20 +425,19 @@ function Today({
   horseId,
   onOrder,
   onPhase,
-  onWeekly,
 }: {
   protocol: DashboardProtocol;
   date: string;
   horseId: string;
   onOrder: (items: DashboardSupplement[], label?: string) => void;
   onPhase: (phase: DashboardPhase) => void;
-  onWeekly: () => void;
 }) {
   return (
     <>
       <ProtocolToday protocol={protocol} date={date} horseId={horseId} onPhase={onPhase} SheetComponent={Sheet} />
       <View className="gap-3">
-        {protocol.notifications.map((notice) => (
+        {/* The weekly update has its own screen over the whole app (WeeklyUpdateGate). */}
+        {protocol.notifications.filter((notice) => notice.type !== "weekly_update").map((notice) => (
           <View
             key={notice.id}
             className="rounded-[22px] border border-[#E9D9B8] bg-[#FBF4E8] p-5"
@@ -489,13 +475,9 @@ function Today({
               )}
               <Button
                 variant="ghost"
-                title={notice.type === "weekly_update" ? "Weekupdate invullen" : "Bekijk bestellijst"}
-                onPress={() =>
-                  notice.type === "weekly_update"
-                    ? onWeekly()
-                    : onOrder(notice.orderItems ?? notice.items,
-                      protocol.phases.find((item) => item.id === notice.phaseId)?.title)
-                }
+                title="Bekijk bestellijst"
+                onPress={() => onOrder(notice.orderItems ?? notice.items,
+                  protocol.phases.find((item) => item.id === notice.phaseId)?.title)}
               />
             </View>
           </View>
@@ -738,84 +720,6 @@ function Sheet({
           </View>
         </View>
       </View>
-    </Modal>
-  );
-}
-function WeeklySheet({
-  visible,
-  horseId,
-  protocolId,
-  onClose,
-  onSaved,
-}: {
-  visible: boolean;
-  horseId: string;
-  protocolId: string;
-  onClose: () => void;
-  onSaved: () => Promise<void>;
-}) {
-  const [note, setNote] = useState("");
-  const [busy, setBusy] = useState(false);
-  const save = async () => {
-    if (!note.trim() || busy) return;
-    setBusy(true);
-    try {
-      await dashboardRequest(`/api/horses/${horseId}/weekly-update`, {
-        protocol_id: protocolId,
-        note: note.trim(),
-        timezone: deviceTimezone(),
-      });
-      setNote("");
-      await onSaved();
-      onClose();
-    } catch (error) {
-      Alert.alert(
-        "Weekupdate niet opgeslagen",
-        error instanceof Error ? error.message : "Probeer het opnieuw.",
-      );
-    } finally {
-      setBusy(false);
-    }
-  };
-  return (
-    <Modal
-      visible={visible}
-      transparent
-      animationType="slide"
-      onRequestClose={onClose}
-    >
-      <KeyboardAvoidingView
-        behavior={Platform.OS === "ios" ? "padding" : "height"}
-        className="flex-1 justify-end bg-black/30"
-      >
-        <SafeAreaView
-          edges={["bottom"]}
-          style={{ maxHeight: '100%', flexShrink: 1 }}
-          className="rounded-t-[28px] bg-canvas"
-        >
-          <KeyboardScrollView style={{ flexGrow: 0 }} contentContainerStyle={{ padding: 20 }}>
-          <Text className={`mb-3 ${T.title}`}>
-            Weekupdate invullen
-          </Text>
-          <TextInput
-            accessibilityLabel="Weekupdate"
-            multiline
-            value={note}
-            onChangeText={setNote}
-            placeholder="Hoe gaat het met je paard deze week?"
-            maxLength={10000}
-            textAlignVertical="top"
-            className="mb-4 min-h-[130px] rounded-2xl border border-ink-15 bg-white p-4 font-sans text-[16px] text-ink"
-          />
-          <Button
-            title={busy ? "Opslaan…" : "Weekupdate opslaan"}
-            onPress={() => void save()}
-            disabled={busy || !note.trim()}
-          />
-          <Button variant="text" title="Annuleren" disabled={busy} onPress={onClose} className="mt-2" />
-          </KeyboardScrollView>
-        </SafeAreaView>
-      </KeyboardAvoidingView>
     </Modal>
   );
 }
